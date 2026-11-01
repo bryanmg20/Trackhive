@@ -1,6 +1,9 @@
 # Dependencias
 node_modules/
 
+#vscode
+.vscode/
+
 # Builds
 dist/
 build/
