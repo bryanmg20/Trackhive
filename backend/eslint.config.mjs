@@ -32,4 +32,19 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    // Clean Architecture: el dominio no importa NestJS ni el ORM
+    files: ['src/**/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['@nestjs/*'], message: 'El dominio no puede importar NestJS.' },
+            { group: ['@prisma/*', 'prisma'], message: 'El dominio no puede importar el ORM.' },
+          ],
+        },
+      ],
+    },
+  },
 );
