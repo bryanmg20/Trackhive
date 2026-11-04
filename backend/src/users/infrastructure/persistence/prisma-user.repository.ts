@@ -12,7 +12,7 @@ export class PrismaUserRepository implements IUserRepository {
     const data = PrismaUserMapper.toPersistence(user);
     await this.prisma.userModel.upsert({
       where: { id: user.id },
-      update: data,
+      update: { email: data.email },
       create: data,
     });
   }

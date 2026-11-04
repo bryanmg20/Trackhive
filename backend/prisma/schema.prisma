@@ -9,7 +9,16 @@ generator client {
 }
 
 model UserModel {
-  id        String   @id
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id             String    @id @db.Uuid
+  nombreCompleto String    @map("nombre_completo") @db.VarChar(120)
+  email          String    @unique @db.VarChar(160)
+  passwordHash   String    @map("password_hash") @db.VarChar(255)
+  // Valores permitidos (CHECK en la migración): ADMIN, PERSONAL, PUBLICO
+  rol            String    @db.VarChar(10)
+  activo         Boolean   @default(true)
+  ultimoAcceso   DateTime? @map("ultimo_acceso") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("usuario")
 }
