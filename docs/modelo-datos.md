@@ -352,7 +352,7 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | id | uuid | PK | |
 | nombre_completo | varchar(120) | | |
 | email | varchar(160) | UK | Correo de inicio de sesión |
-| password_hash | varchar(255) | | Hash bcrypt o argon2 |
+| password_hash | varchar(255) | | Hash argon2 |
 | rol | varchar(10) | CHECK | `ADMIN`, `PERSONAL`, `PUBLICO` |
 | activo | boolean | DEFAULT true | `false` = cuenta desactivada o eliminada |
 | ultimo_acceso | timestamptz | NULL | |
@@ -522,14 +522,15 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
 ## 5. Migraciones y datos semilla
 
 - **Migraciones:**
-  - Van en `backend/src/infrastructure/persistence/migrations/` y se nombran `<timestamp>-<Accion>.ts` (CLI de TypeORM). Cada una tiene su `down()`.
-  - `synchronize: false` fuera del entorno local. Una migración que ya está en `main` no se edita: se crea otra.
-  - El contenedor del backend corre `migration:run` al arrancar.
+  - Van en `backend/prisma/migrations/` (Prisma Migrate). En desarrollo se crean con `pnpm db:migrate:dev` y fuera de local se aplican con `pnpm db:migrate`.
+  - `prisma db push` no se usa fuera del entorno local. Una migración que ya está en `main` no se edita: se crea otra.
+  - Lo que el esquema de Prisma no expresa (`CHECK`, `EXCLUDE`, índices trigram) se agrega a mano en el SQL, creando la migración con `--create-only`.
   - Orden: extensiones → usuario y token → solicitante → material → solicitud e ítems → historial → cita y reservas → notificación → horario → vistas de reportes.
 - **Semillas:**
-  - Van en `backend/src/infrastructure/persistence/seeds/` y se ejecutan con `npm run seed`. Son idempotentes.
-  - Contenido: 1 admin, 2 funcionarios, 4 usuarios públicos, 10 solicitantes, 30 materiales, 20 solicitudes repartidas en todos los estados y 8 citas.
-  - Las contraseñas salen de variables de entorno.
+  - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
+  - Contenido actual: 1 admin, 2 funcionarios y 4 usuarios públicos.
+  - Contenido previsto, a medida que cada HU agregue sus tablas: 10 solicitantes, 30 materiales, 20 solicitudes repartidas en todos los estados y 8 citas.
+  - Las contraseñas salen de variables de entorno (`SEED_ADMIN_PASSWORD`, `SEED_DEMO_PASSWORD`).
   - Datos **ficticios**, con correos `@example.com`. No usar datos reales del CLENA sin autorización escrita.
 
 ## 6. Datos personales (Ley 1581 de 2012)

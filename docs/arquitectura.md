@@ -37,7 +37,7 @@ flowchart TB
 | D-03 | Un caso de uso por clase, con método `execute` | Propuesta |
 | D-04 | Inyección de dependencias por tokens | Propuesta |
 | D-05 | Entidades de persistencia separadas de las de dominio, con mapeadores | Propuesta |
-| D-06 | TypeORM como ORM | **Por ratificar** |
+| D-06 | Prisma como ORM | Ratificada |
 | D-07 | La máquina de estados vive en la entidad `Solicitud` | Propuesta |
 | D-08 | Historial de estados en tabla propia, solo de inserción | Propuesta |
 | D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
@@ -96,12 +96,12 @@ flowchart TB
 - **Justificación:** una clase única obligaría al dominio a importar decoradores del ORM, lo que rompe la regla de dependencia (y es motivo de descalificación del criterio de Arquitectura). Separarlas también permite que el modelo de tablas evolucione sin arrastrar a las reglas de negocio.
 - **Consecuencias:** código de mapeo adicional que se cubre con pruebas. Es el precio de un dominio puro.
 
-### D-06. TypeORM como ORM *(por ratificar)*
+### D-06. Prisma como ORM
 
-- **Decisión:** TypeORM con migraciones en SQL versionadas.
-- **Alternativas:** Prisma.
-- **Justificación:** tiene integración directa con NestJS (`@nestjs/typeorm`), las entidades se escriben como clases (fáciles de aislar tras mapeadores) y las migraciones admiten SQL arbitrario, que necesitamos para la restricción de exclusión de la agenda (D-09) y los índices `pg_trgm` (D-16). Prisma ofrece mejor ayuda de tipos, pero su esquema no expresa esas restricciones y habría que recurrir igualmente a SQL manual.
-- **Consecuencias:** hay que desactivar `synchronize` fuera del desarrollo local (requisito del curso) y revisar las migraciones generadas antes de fusionarlas. Si el equipo domina más Prisma, la decisión es reversible porque el ORM queda confinado a infraestructura.
+- **Decisión:** Prisma con migraciones en SQL versionadas (Prisma Migrate).
+- **Alternativas:** TypeORM.
+- **Justificación:** es el ORM con el que ya se construyó el módulo base, ofrece buena ayuda de tipos y genera las migraciones a partir de `schema.prisma`. Su esquema no expresa `CHECK`, la restricción de exclusión de la agenda (D-09) ni los índices `pg_trgm` (D-16), pero esas reglas se agregan a mano en el SQL de la migración, creada con `prisma migrate dev --create-only`.
+- **Consecuencias:** Prisma no tiene `synchronize`; su equivalente es `prisma db push`, que no se usa fuera del desarrollo local (requisito del curso). Fuera de local las migraciones se aplican con `prisma migrate deploy`. Hay que revisar las migraciones generadas antes de fusionarlas. La decisión es reversible porque el ORM queda confinado a infraestructura.
 
 ### D-07. La máquina de estados vive en la entidad `Solicitud`
 
@@ -239,7 +239,7 @@ backend/src/
 │   ├── dto/
 │   └── ports/         # NotificadorPort, RelojPort
 ├── infrastructure/
-│   ├── persistence/   # TypeORM o Prisma, mappers, migraciones, seeds
+│   ├── persistence/   # Repositorios Prisma y mappers (migraciones y semilla en backend/prisma/)
 │   ├── mail/          # implementación SMTP del NotificadorPort
 │   └── config/
 └── presentation/
