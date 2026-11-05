@@ -36,9 +36,9 @@ export class UserController {
     type: ErrorResponseDto,
   })
   async create(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
-    // El controlador NO habla con la base de datos:
-    // solo le pide al caso de uso que ejecute la acción.
-    // Los errores de dominio los traduce el filtro global.
+    // The controller does NOT talk to the database:
+    // it only asks the use case to execute the action.
+    // Domain errors are translated by the global filter.
     return this.createUserUseCase.execute(dto.email);
   }
 }

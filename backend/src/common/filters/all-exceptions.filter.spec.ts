@@ -59,7 +59,7 @@ describe('AllExceptionsFilter', () => {
     logSpy.mockRestore();
   });
 
-  it('responde los errores de validación con detalles por campo', () => {
+  it('responds to validation errors with per-field details', () => {
     run(
       new BadRequestException({
         code: 'VALIDATION_ERROR',
@@ -89,7 +89,7 @@ describe('AllExceptionsFilter', () => {
     expect(payload().timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/);
   });
 
-  it('traduce un BadRequestException sin estructura a un código estable', () => {
+  it('maps an unstructured BadRequestException to a stable code', () => {
     run(new BadRequestException('Dato inválido'));
 
     expect(payload()).toMatchObject({
@@ -101,7 +101,7 @@ describe('AllExceptionsFilter', () => {
     expect(payload()).not.toHaveProperty('details');
   });
 
-  it('traduce un error de dominio mapeado a su estado HTTP', () => {
+  it('maps a domain error to its HTTP status', () => {
     run(new InvalidEmailError());
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -114,7 +114,7 @@ describe('AllExceptionsFilter', () => {
     expect(logSpy).not.toHaveBeenCalled();
   });
 
-  it('responde 500 y registra un error de dominio sin mapeo', () => {
+  it('responds with 500 and logs an unmapped domain error', () => {
     run(new UnmappedDomainError());
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -127,7 +127,7 @@ describe('AllExceptionsFilter', () => {
     expect(logSpy).toHaveBeenCalled();
   });
 
-  it('no filtra detalles internos ante un error desconocido', () => {
+  it('does not leak internal details for an unknown error', () => {
     run(new Error('contraseña de la base de datos'));
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);

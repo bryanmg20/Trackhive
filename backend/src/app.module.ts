@@ -5,7 +5,7 @@ import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // carga el archivo .env
+    ConfigModule.forRoot({ isGlobal: true }), // loads the .env file
     PrismaModule,
     UsersModule,
   ],

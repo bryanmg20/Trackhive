@@ -17,7 +17,7 @@ const validationError = (
 });
 
 describe('flattenValidationErrors', () => {
-  it('conserva el campo y los mensajes, incluidos los anidados', () => {
+  it('keeps the field and messages, including nested ones', () => {
     const errors = [
       validationError('email', {
         isEmail: 'El correo no tiene un formato válido',
@@ -41,7 +41,22 @@ describe('flattenValidationErrors', () => {
     ]);
   });
 
-  it('crea un BadRequestException con el formato uniforme', () => {
+  it('translates the whitelist validation message for a forbidden field', () => {
+    const errors = [
+      validationError('role', {
+        whitelistValidation: 'property role should not exist',
+      }),
+    ];
+
+    expect(flattenValidationErrors(errors)).toEqual([
+      {
+        field: 'role',
+        messages: ['El campo role no está permitido.'],
+      },
+    ]);
+  });
+
+  it('creates a BadRequestException with the uniform format', () => {
     const exception = validationExceptionFactory([
       validationError('email', {
         isEmail: 'El correo no tiene un formato válido',

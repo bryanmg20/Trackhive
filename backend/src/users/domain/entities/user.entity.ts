@@ -7,7 +7,7 @@ export class User {
     public readonly id: string,
     public readonly email: string,
   ) {
-    // Regla de negocio: no existe un usuario con correo inválido
+    // Business rule: a user cannot exist with an invalid email
     if (!email || !EMAIL_REGEX.test(email)) {
       throw new InvalidEmailError();
     }

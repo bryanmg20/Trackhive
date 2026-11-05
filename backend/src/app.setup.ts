@@ -3,12 +3,12 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { setupSwagger } from './common/swagger/setup-swagger';
 import { validationExceptionFactory } from './common/validation/validation-error.factory';
 
-/** Prefijo global de la API versionada. */
+/** Global prefix for the versioned API. */
 export const API_PREFIX = 'api/v1';
 
 /**
- * Configuración compartida por `main.ts` y las pruebas: prefijo, validación,
- * filtro de errores y Swagger.
+ * Configuration shared by `main.ts` and the tests: prefix, validation,
+ * error filter and Swagger.
  */
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix(API_PREFIX);

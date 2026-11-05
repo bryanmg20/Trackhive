@@ -20,7 +20,7 @@ interface NormalizedError {
 
 const INTERNAL_ERROR_MESSAGE = 'Error interno del servidor';
 
-/** Códigos HTTP traducidos a un código estable de la API. */
+/** HTTP status codes mapped to a stable API code. */
 const CODE_BY_STATUS: Record<number, string> = {
   [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
   [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
@@ -33,8 +33,8 @@ const CODE_BY_STATUS: Record<number, string> = {
 };
 
 /**
- * Código de dominio -> estado HTTP. Cada error nuevo del dominio requiere
- * una línea aquí; si falta, el error se responde como 500 y se registra.
+ * Domain code -> HTTP status. Every new domain error requires a line here;
+ * otherwise it is returned as a 500 and logged.
  */
 const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   INVALID_EMAIL: HttpStatus.BAD_REQUEST,
@@ -65,7 +65,7 @@ function normalizeDetails(value: unknown): ErrorDetail[] | undefined {
 }
 
 /**
- * Traduce excepciones HTTP y errores de dominio al formato uniforme:
+ * Translates HTTP exceptions and domain errors into the uniform format:
  * `{ statusCode, code, message, details?, timestamp, path }`.
  */
 @Catch()
@@ -83,7 +83,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const stack =
         error.logError instanceof Error ? error.logError.stack : undefined;
       this.logger.error(
-        `Excepción no controlada en ${request.originalUrl ?? request.url}`,
+        `Unhandled exception at ${request.originalUrl ?? request.url}`,
         stack,
       );
     }
