@@ -5,11 +5,11 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-trackhive}
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:?Missing POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Missing POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD in .env}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:?Missing POSTGRES_PORT in .env}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,23 +24,16 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-      args:
-        DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-trackhive}?schema=public
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-trackhive}
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-trackhive}?schema=public
-      RUN_SEED: ${RUN_SEED:-true}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin-password}
-      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-demo-password}
+      DATABASE_URL: postgresql://${POSTGRES_USER:?Missing POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:?Missing POSTGRES_DB in .env}?schema=public
+      RUN_SEED: ${RUN_SEED:?Missing RUN_SEED in .env}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Missing SEED_ADMIN_PASSWORD in .env}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:?Missing SEED_DEMO_PASSWORD in .env}
     ports:
-      - "${BACKEND_PORT:-3000}:3000"
+      - "127.0.0.1:${BACKEND_PORT:?Missing BACKEND_PORT in .env}:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,7 +46,7 @@ services:
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "${FRONTEND_PORT:?Missing FRONTEND_PORT in .env}:80"
     depends_on:
       - backend
 
