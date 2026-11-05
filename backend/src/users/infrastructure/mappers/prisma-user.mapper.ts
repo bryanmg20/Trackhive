@@ -10,6 +10,10 @@ export class PrismaUserMapper {
     return {
       id: entity.id,
       email: entity.email,
+      // Temporary: HU-01 must send the real values
+      fullName: '',
+      passwordHash: '',
+      role: 'PUBLICO',
     };
   }
 }

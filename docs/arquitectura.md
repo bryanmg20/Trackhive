@@ -37,7 +37,7 @@ flowchart TB
 | D-03 | Un caso de uso por clase, con método `execute` | Propuesta |
 | D-04 | Inyección de dependencias por tokens | Propuesta |
 | D-05 | Entidades de persistencia separadas de las de dominio, con mapeadores | Propuesta |
-| D-06 | TypeORM como ORM | **Por ratificar** |
+| D-06 | Prisma como ORM | Ratificada |
 | D-07 | La máquina de estados vive en la entidad `Solicitud` | Propuesta |
 | D-08 | Historial de estados en tabla propia, solo de inserción | Propuesta |
 | D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
@@ -96,12 +96,12 @@ flowchart TB
 - **Justificación:** una clase única obligaría al dominio a importar decoradores del ORM, lo que rompe la regla de dependencia (y es motivo de descalificación del criterio de Arquitectura). Separarlas también permite que el modelo de tablas evolucione sin arrastrar a las reglas de negocio.
 - **Consecuencias:** código de mapeo adicional que se cubre con pruebas. Es el precio de un dominio puro.
 
-### D-06. TypeORM como ORM *(por ratificar)*
+### D-06. Prisma como ORM
 
-- **Decisión:** TypeORM con migraciones en SQL versionadas.
-- **Alternativas:** Prisma.
-- **Justificación:** tiene integración directa con NestJS (`@nestjs/typeorm`), las entidades se escriben como clases (fáciles de aislar tras mapeadores) y las migraciones admiten SQL arbitrario, que necesitamos para la restricción de exclusión de la agenda (D-09) y los índices `pg_trgm` (D-16). Prisma ofrece mejor ayuda de tipos, pero su esquema no expresa esas restricciones y habría que recurrir igualmente a SQL manual.
-- **Consecuencias:** hay que desactivar `synchronize` fuera del desarrollo local (requisito del curso) y revisar las migraciones generadas antes de fusionarlas. Si el equipo domina más Prisma, la decisión es reversible porque el ORM queda confinado a infraestructura.
+- **Decisión:** Prisma con migraciones en SQL versionadas (Prisma Migrate).
+- **Alternativas:** TypeORM.
+- **Justificación:** es el ORM con el que ya se construyó el módulo base, ofrece buena ayuda de tipos y genera las migraciones a partir de `schema.prisma`. Su esquema no expresa `CHECK`, la restricción de exclusión de la agenda (D-09) ni los índices `pg_trgm` (D-16), pero esas reglas se agregan a mano en el SQL de la migración, creada con `prisma migrate dev --create-only`.
+- **Consecuencias:** Prisma no tiene `synchronize`; su equivalente es `prisma db push`, que no se usa fuera del desarrollo local (requisito del curso). Fuera de local las migraciones se aplican con `prisma migrate deploy`. Hay que revisar las migraciones generadas antes de fusionarlas. La decisión es reversible porque el ORM queda confinado a infraestructura.
 
 ### D-07. La máquina de estados vive en la entidad `Solicitud`
 
@@ -112,21 +112,21 @@ flowchart TB
 
 ### D-08. Historial de estados en tabla propia, solo de inserción
 
-- **Decisión:** cada transición inserta una fila en `historial_estados` (estado anterior, nuevo, usuario, fecha, observación). Nunca se actualiza ni se borra.
-- **Alternativas:** guardar solo el estado actual; guardar las fechas de cada estado como columnas de `solicitudes`.
+- **Decisión:** cada transición inserta una fila en `status_history` (estado anterior, nuevo, usuario, fecha, observación). Nunca se actualiza ni se borra.
+- **Alternativas:** guardar solo el estado actual; guardar las fechas de cada estado como columnas de `requests`.
 - **Justificación:** el requisito de reportes (tiempos de atención) solo es calculable si se conoce cuándo ocurrió cada transición. Además da trazabilidad: se puede responder quién cambió qué y cuándo, algo valioso para un archivo patrimonial.
 - **Consecuencias:** la inserción del historial y la actualización de la solicitud ocurren en una misma transacción, coordinada desde el repositorio.
 
 ### D-09. Choques de agenda con restricción de exclusión en PostgreSQL
 
-- **Decisión:** la tabla `citas` lleva una restricción `EXCLUDE USING gist (material_id WITH =, tstzrange(inicio, fin) WITH &&) WHERE (estado <> 'CANCELADA')`, con la extensión `btree_gist`. Además, el caso de uso `AgendarCita` consulta la disponibilidad antes de insertar para devolver un mensaje claro; si la base rechaza la inserción por una carrera, el repositorio lo traduce a `ChoqueDeAgendaError`.
+- **Decisión:** la tabla `appointments` lleva una restricción `EXCLUDE USING gist (material_id WITH =, tstzrange(start_at, end_at) WITH &&) WHERE (status <> 'CANCELADA')`, con la extensión `btree_gist`. Además, el caso de uso `AgendarCita` consulta la disponibilidad antes de insertar para devolver un mensaje claro; si la base rechaza la inserción por una carrera, el repositorio lo traduce a `ChoqueDeAgendaError`.
 - **Alternativas:** solo verificar en el código antes de insertar; bloqueos explícitos a nivel de fila.
 - **Justificación:** la verificación en código sola es vulnerable a condiciones de carrera (dos funcionarios agendando el mismo material a la vez). La restricción de la base de datos garantiza la integridad sin importar cuántas instancias de la API corran.
 - **Consecuencias:** la regla vive en una migración SQL y en el dominio (que expresa el concepto), y debe documentarse en `docs/modelo-datos.md`. La combinación de verificación previa y restricción es deliberada: la primera da buena experiencia y la segunda da seguridad.
 
 ### D-10. Notificaciones por puerto, con tabla de salida y reintentos
 
-- **Decisión:** `CambiarEstadoSolicitud` no envía correos: registra una fila en `notificaciones` (estado `PENDIENTE`) dentro de la misma transacción del cambio de estado. Un proceso programado (`@nestjs/schedule`) la envía a través del `NotificadorPort`, implementado con SMTP (Nodemailer), y marca `ENVIADA` o `FALLIDA` con un contador de reintentos.
+- **Decisión:** `CambiarEstadoSolicitud` no envía correos: registra una fila en `notifications` (estado `PENDIENTE`) dentro de la misma transacción del cambio de estado. Un proceso programado (`@nestjs/schedule`) la envía a través del `NotificadorPort`, implementado con SMTP (Nodemailer), y marca `ENVIADA` o `FALLIDA` con un contador de reintentos.
 - **Alternativas:** enviar el correo de forma síncrona dentro del caso de uso; usar una cola externa (Redis, RabbitMQ).
 - **Justificación:** una caída del servidor SMTP no debe impedir ni revertir un cambio de estado legítimo. Una tabla de salida da fiabilidad sin sumar infraestructura nueva, algo importante porque el CLENA debe poder operarlo. Una cola externa se descarta por exceso de complejidad para este volumen.
 - **Consecuencias:** el correo no es instantáneo (llega en el siguiente ciclo del proceso, de segundos a un par de minutos). En desarrollo se usa Mailpit para inspeccionar correos sin enviarlos.
@@ -239,7 +239,7 @@ backend/src/
 │   ├── dto/
 │   └── ports/         # NotificadorPort, RelojPort
 ├── infrastructure/
-│   ├── persistence/   # TypeORM o Prisma, mappers, migraciones, seeds
+│   ├── persistence/   # Repositorios Prisma y mappers (migraciones y semilla en backend/prisma/)
 │   ├── mail/          # implementación SMTP del NotificadorPort
 │   └── config/
 └── presentation/
