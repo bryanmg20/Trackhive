@@ -44,9 +44,9 @@ flowchart TB
 | D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Propuesta |
 | D-11 | JWT (access y refresh) con rotación y contraseñas con argon2 | Propuesta |
 | D-12 | Autorización por roles con guards globales; propiedad de datos en casos de uso | Propuesta |
-| D-13 | Validación en dos niveles: forma en presentación, reglas en dominio | Propuesta |
-| D-14 | Errores de dominio traducidos por un filtro global | Propuesta |
-| D-15 | API REST versionada con OpenAPI; paginación por página y límite | Propuesta |
+| D-13 | Validación en dos niveles: forma en presentación, reglas en dominio | Implementada |
+| D-14 | Errores de dominio traducidos por un filtro global | Implementada |
+| D-15 | API REST versionada con OpenAPI; paginación por página y límite | Parcial (sin paginación) |
 | D-16 | Búsqueda de material con `pg_trgm`, sin motor de búsqueda externo | Propuesta |
 | D-17 | Sin integración automática con *Everything* ni lectura de buzón IMAP | Propuesta |
 | D-18 | Fechas en UTC (`timestamptz`) y presentación en `America/Bogota` | Propuesta |
