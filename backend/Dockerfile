@@ -1,4 +1,6 @@
-FROM node:22-bookworm-slim AS build
+﻿FROM node:22-bookworm-slim AS build
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* && corepack enable
 COPY backend/package.json backend/pnpm-lock.yaml backend/pnpm-workspace.yaml ./
@@ -19,4 +21,4 @@ COPY --from=build --chown=app:app /app/prisma ./prisma
 COPY --from=build --chown=app:app /app/package.json ./package.json
 USER app
 EXPOSE 3000
-CMD ["sh", "-c", "export DATABASE_URL=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/$POSTGRES_DB?schema=public && ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma db seed && exec node dist/main"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma db seed && exec node dist/main"]
