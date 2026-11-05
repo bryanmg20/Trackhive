@@ -40,7 +40,7 @@ class InMemoryUserRepository implements IUserRepository {
   }
 }
 
-describe('API versionada (e2e)', () => {
+describe('Versioned API (e2e)', () => {
   let app: INestApplication;
   let server: Server;
 
@@ -64,7 +64,7 @@ describe('API versionada (e2e)', () => {
     await app.close();
   });
 
-  it('publica el módulo de ejemplo bajo /api/v1', async () => {
+  it('exposes the sample module under /api/v1', async () => {
     const response = await request(server)
       .post('/api/v1/users')
       .send({ email: 'demo@trackhive.test' })
@@ -76,7 +76,7 @@ describe('API versionada (e2e)', () => {
     expect(body.id.length).toBeGreaterThan(0);
   });
 
-  it('rechaza entradas inválidas con el formato uniforme', async () => {
+  it('rejects invalid input with the uniform format', async () => {
     const response = await request(server)
       .post('/api/v1/users')
       .send({ email: 'no-es-un-correo' })
@@ -98,7 +98,7 @@ describe('API versionada (e2e)', () => {
     expect(typeof body.timestamp).toBe('string');
   });
 
-  it('rechaza campos no declarados en el DTO', async () => {
+  it('rejects fields not declared in the DTO', async () => {
     const response = await request(server)
       .post('/api/v1/users')
       .send({ email: 'demo@trackhive.test', role: 'ADMIN' })
@@ -109,16 +109,16 @@ describe('API versionada (e2e)', () => {
     expect(body.details).toEqual([
       {
         field: 'role',
-        messages: ['property role should not exist'],
+        messages: ['El campo role no está permitido.'],
       },
     ]);
   });
 
-  it('no expone las rutas sin el prefijo global', async () => {
+  it('does not expose routes without the global prefix', async () => {
     await request(server).post('/users').send({}).expect(404);
   });
 
-  it('documenta los endpoints en Swagger', async () => {
+  it('documents the endpoints in Swagger', async () => {
     await request(server)
       .get('/docs')
       .expect(200)
