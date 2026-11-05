@@ -23,7 +23,32 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Backend de Trackhive: API REST en NestJS con Prisma y PostgreSQL.
+
+## API
+
+- Prefijo global: `/api/v1`. Las rutas sin prefijo responden 404.
+- Swagger UI: `http://localhost:3000/docs`. Documento OpenAPI: `http://localhost:3000/docs-json`.
+- Validación global con `ValidationPipe` (`whitelist` y `forbidNonWhitelisted`). Los DTOs de entrada usan `class-validator` y `@ApiProperty` para reflejarse en Swagger.
+- Todos los errores usan el mismo formato:
+
+  ```json
+  {
+    "statusCode": 400,
+    "code": "VALIDATION_ERROR",
+    "message": "La petición contiene datos inválidos",
+    "details": [
+      { "field": "email", "messages": ["El correo no tiene un formato válido"] }
+    ],
+    "timestamp": "2026-11-04T15:00:00.000Z",
+    "path": "/api/v1/users"
+  }
+  ```
+
+  `code` es estable (por ejemplo `INVALID_EMAIL`) y `details` solo aparece en errores de validación.
+
+- Cada endpoint nuevo debe validar su entrada con un DTO y documentarse en Swagger (`@ApiTags`, `@ApiOperation`, `@Api*Response`) dentro de su propia HU.
+- Endpoint de referencia: `POST /api/v1/users` (`UsersModule`).
 
 ## Project setup
 

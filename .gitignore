@@ -1,6 +1,8 @@
 # Dependencias
 node_modules/
 
+
+AGENTS.md
 #vscode
 .vscode/
 
@@ -30,3 +32,6 @@ Thumbs.db
 # Datos y subidas locales
 uploads/
 pgdata/
+
+# Documento local de cambios (HU-37)
+CAMBIOS-HU-37.md
