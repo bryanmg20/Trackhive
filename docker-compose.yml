@@ -1,5 +1,7 @@
 services:
   postgres:
+    networks:
+      - trackhive-network
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
@@ -17,6 +19,8 @@ services:
       retries: 12
 
   backend:
+    networks:
+      - trackhive-network
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -32,6 +36,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-trackhive}?schema=public
+      RUN_SEED: ${RUN_SEED:-true}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin-password}
       SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-demo-password}
     ports:
@@ -41,6 +46,8 @@ services:
         condition: service_healthy
 
   frontend:
+    networks:
+      - trackhive-network
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -52,3 +59,6 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  trackhive-network:
