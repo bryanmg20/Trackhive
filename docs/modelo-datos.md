@@ -81,13 +81,13 @@ Notación: `<<AggregateRoot>>` es la raíz de un agregado (se guarda completa) y
 
 | Entidad | Qué es | Tabla(s) |
 |---|---|---|
-| **Solicitud** | Pedido de consulta, búsqueda o copia, identificado por un radicado. Contiene sus **ítems** (materiales pedidos y el resultado de buscarlos) y su **historial** de cambios de estado. | `solicitud`, `item_solicitud`, `historial_estado` |
-| **Solicitante** | Persona que pide. Puede no tener cuenta, si la solicitud la registró el personal. | `solicitante` |
-| **Material** | Pieza del acervo (documento, expediente, periódico, fotografía…) con ubicación física y estado de conservación. | `material` |
-| **Cita** | Franja para consultar el material en la sala. Contiene las **reservas** de cada material físico. | `cita`, `reserva_material` |
-| **Usuario** | Cuenta con rol `ADMIN`, `PERSONAL` o `PUBLICO`. | `usuario`, `token_refresco` |
-| **Notificación** | Correo que recibe el solicitante en cada cambio de estado. | `notificacion` |
-| *(configuración)* | Horario de atención y cupos de la sala. | `horario_atencion` |
+| **Solicitud** | Pedido de consulta, búsqueda o copia, identificado por un radicado. Contiene sus **ítems** (materiales pedidos y el resultado de buscarlos) y su **historial** de cambios de estado. | `requests`, `request_items`, `status_history` |
+| **Solicitante** | Persona que pide. Puede no tener cuenta, si la solicitud la registró el personal. | `requesters` |
+| **Material** | Pieza del acervo (documento, expediente, periódico, fotografía…) con ubicación física y estado de conservación. | `materials` |
+| **Cita** | Franja para consultar el material en la sala. Contiene las **reservas** de cada material físico. | `appointments`, `material_reservations` |
+| **Usuario** | Cuenta con rol `ADMIN`, `PERSONAL` o `PUBLICO`. | `users`, `refresh_tokens` |
+| **Notificación** | Correo que recibe el solicitante en cada cambio de estado. | `notifications` |
+| *(configuración)* | Horario de atención y cupos de la sala. | `service_hours` |
 
 | Objeto de valor | Regla |
 |---|---|
@@ -152,7 +152,7 @@ Un material físico **no puede tener dos reservas activas con franjas que se sol
 
 1. **Dominio:** `FranjaHoraria.seSolapaCon()` define qué es un choque.
 2. **Caso de uso `AgendarCita`:** antes de guardar, revisa las reservas existentes. Si hay choque, lanza `MaterialNoDisponible` (HTTP 409).
-3. **Base de datos:** `EXCLUDE USING gist (material_id WITH =, periodo WITH &&) WHERE (activa)` frena las peticiones simultáneas.
+3. **Base de datos:** `EXCLUDE USING gist (material_id WITH =, period WITH &&) WHERE (active)` frena las peticiones simultáneas.
 
 Además:
 
@@ -175,327 +175,327 @@ Leyenda: `PK` clave primaria · `FK` clave foránea · `UK` valor único · `IDX
 ```mermaid
 erDiagram
     direction LR
-    SOLICITANTE {
+    REQUESTERS {
         uuid id PK
-        uuid usuario_id FK, UK "IDX unico"
-        varchar(5) tipo_documento
-        varchar(20) numero_documento "IDX, UK con tipo_documento"
-        varchar(80) nombres "IDX GIN trgm con apellidos"
-        varchar(80) apellidos
+        uuid user_id FK, UK "IDX unico"
+        varchar(5) document_type
+        varchar(20) document_number "IDX, UK con document_type"
+        varchar(80) first_names "IDX GIN trgm con last_names"
+        varchar(80) last_names
         varchar(160) email "IDX"
-        varchar(20) telefono
-        varchar(15) tipo_solicitante
-        varchar(150) institucion
-        boolean acepta_tratamiento_datos
-        timestamptz fecha_consentimiento
-        varchar(10) version_politica_datos
-        timestamptz anonimizado_en
+        varchar(20) phone
+        varchar(15) requester_type
+        varchar(150) institution
+        boolean accepts_data_processing
+        timestamptz consented_at
+        varchar(10) privacy_policy_version
+        timestamptz anonymized_at
         timestamptz created_at
         timestamptz updated_at
     }
-    SOLICITUD {
+    REQUESTS {
         uuid id PK
-        varchar(16) codigo_radicado UK
-        uuid solicitante_id FK "IDX"
-        uuid creada_por_id FK "IDX"
-        uuid responsable_id FK "IDX"
-        varchar(25) tipo_solicitud
-        varchar(10) canal_origen
-        varchar(10) modalidad_entrega
-        varchar(15) proposito
-        text motivo
-        text descripcion_requerimiento
-        date fecha_deseada
-        date fecha_compromiso
-        varchar(5) prioridad
-        varchar(12) estado "IDX con fecha_compromiso"
-        varchar(25) motivo_rechazo
-        text observaciones
-        timestamptz fecha_registro "IDX"
-        timestamptz fecha_atencion
-        timestamptz fecha_cierre
+        varchar(16) tracking_code UK
+        uuid requester_id FK "IDX"
+        uuid created_by_id FK "IDX"
+        uuid assignee_id FK "IDX"
+        varchar(25) request_type
+        varchar(10) origin_channel
+        varchar(10) delivery_mode
+        varchar(15) purpose
+        text reason
+        text requirement_description
+        date desired_date
+        date committed_date
+        varchar(5) priority
+        varchar(12) status "IDX con committed_date"
+        varchar(25) rejection_reason
+        text notes
+        timestamptz registered_at "IDX"
+        timestamptz attended_at
+        timestamptz closed_at
         int version
         timestamptz updated_at
     }
-    ITEM_SOLICITUD {
+    REQUEST_ITEMS {
         uuid id PK
-        uuid solicitud_id FK "IDX, UK con material_id"
+        uuid request_id FK "IDX, UK con material_id"
         uuid material_id FK "IDX"
-        varchar(15) estado_item
-        varchar(10) tipo_acceso
-        text observacion
+        varchar(15) item_status
+        varchar(10) access_type
+        text note
         timestamptz created_at
     }
-    MATERIAL {
+    MATERIALS {
         uuid id PK
-        varchar(40) codigo_referencia UK
-        varchar(255) titulo "IDX GIN trgm"
-        varchar(15) tipo_material "IDX"
-        text descripcion
-        varchar(120) fondo_coleccion
-        varchar(30) periodo
-        varchar(40) deposito
-        varchar(40) estanteria
-        varchar(40) caja
-        varchar(255) ref_everything
-        boolean tiene_copia_digital
-        varchar(10) estado_conservacion
-        boolean consulta_restringida
-        boolean activo
+        varchar(40) reference_code UK
+        varchar(255) title "IDX GIN trgm"
+        varchar(15) material_type "IDX"
+        text description
+        varchar(120) collection
+        varchar(30) period
+        varchar(40) depot
+        varchar(40) shelf
+        varchar(40) box
+        varchar(255) everything_ref
+        boolean has_digital_copy
+        varchar(10) conservation_status
+        boolean restricted_access
+        boolean active
         timestamptz created_at
         timestamptz updated_at
     }
-    HISTORIAL_ESTADO {
+    STATUS_HISTORY {
         bigint id PK
-        uuid solicitud_id FK "IDX con fecha"
-        varchar(12) estado_anterior
-        varchar(12) estado_nuevo
-        uuid usuario_id FK "IDX"
-        text comentario
-        boolean visible_solicitante
-        timestamptz fecha
+        uuid request_id FK "IDX con changed_at"
+        varchar(12) previous_status
+        varchar(12) new_status
+        uuid user_id FK "IDX"
+        text comment
+        boolean visible_to_requester
+        timestamptz changed_at
     }
-    NOTIFICACION {
+    NOTIFICATIONS {
         uuid id PK
-        uuid solicitud_id FK "IDX"
-        bigint historial_estado_id FK, UK
-        varchar(160) destinatario_email
-        varchar(25) plantilla
-        varchar(200) asunto
-        text cuerpo
-        varchar(10) estado_envio "IDX con programada_para"
-        smallint intentos
-        text ultimo_error
-        timestamptz programada_para
-        timestamptz enviada_en
+        uuid request_id FK "IDX"
+        bigint status_history_id FK, UK
+        varchar(160) recipient_email
+        varchar(25) template
+        varchar(200) subject
+        text body
+        varchar(10) delivery_status "IDX con scheduled_at"
+        smallint attempts
+        text last_error
+        timestamptz scheduled_at
+        timestamptz sent_at
         timestamptz created_at
     }
-    CITA {
+    APPOINTMENTS {
         uuid id PK
-        uuid solicitud_id FK "IDX, unico si PROGRAMADA"
-        uuid agendada_por_id FK "IDX"
-        timestamptz inicio "IDX"
-        timestamptz fin
-        varchar(12) estado_cita
-        varchar(40) puesto
-        text observaciones
+        uuid request_id FK "IDX, unico si PROGRAMADA"
+        uuid scheduled_by_id FK "IDX"
+        timestamptz start_at "IDX"
+        timestamptz end_at
+        varchar(12) status
+        varchar(40) station
+        text notes
         timestamptz created_at
         timestamptz updated_at
     }
-    RESERVA_MATERIAL {
+    MATERIAL_RESERVATIONS {
         uuid id PK
-        uuid cita_id FK "IDX"
-        uuid material_id FK "IDX GiST con periodo"
-        tstzrange periodo "EXCLUDE sin solapes"
-        boolean activa
+        uuid appointment_id FK "IDX"
+        uuid material_id FK "IDX GiST con period"
+        tstzrange period "EXCLUDE sin solapes"
+        boolean active
         timestamptz created_at
     }
-    USUARIO {
+    USERS {
         uuid id PK
-        varchar(120) nombre_completo
+        varchar(120) full_name
         varchar(160) email UK
         varchar(255) password_hash
-        varchar(10) rol
-        boolean activo
-        timestamptz ultimo_acceso
+        varchar(10) role
+        boolean active
+        timestamptz last_login_at
         timestamptz created_at
         timestamptz updated_at
     }
-    TOKEN_REFRESCO {
+    REFRESH_TOKENS {
         uuid id PK
-        uuid usuario_id FK "IDX"
+        uuid user_id FK "IDX"
         varchar(255) token_hash UK
-        timestamptz expira_en
-        timestamptz revocado_en
+        timestamptz expires_at
+        timestamptz revoked_at
         timestamptz created_at
     }
-    HORARIO_ATENCION {
-        smallint dia_semana PK
-        time hora_apertura
-        time hora_cierre
-        smallint cupos_simultaneos
-        smallint duracion_cita_min
-        boolean activo
+    SERVICE_HOURS {
+        smallint weekday PK
+        time opens_at
+        time closes_at
+        smallint concurrent_slots
+        smallint appointment_duration_min
+        boolean active
     }
-    SOLICITANTE ||--o{ SOLICITUD : "realiza"
-    SOLICITUD ||--o{ ITEM_SOLICITUD : "incluye"
-    ITEM_SOLICITUD }o--|| MATERIAL : "referencia a"
-    SOLICITUD ||--|{ HISTORIAL_ESTADO : "registra cambios"
-    HISTORIAL_ESTADO |o--o| NOTIFICACION : "dispara"
-    SOLICITUD ||--o{ NOTIFICACION : "genera"
-    SOLICITUD ||--o{ CITA : "se agenda en"
-    CITA ||--o{ RESERVA_MATERIAL : "bloquea"
-    RESERVA_MATERIAL }o--|| MATERIAL : "reserva"
-    SOLICITUD }o--|| USUARIO : "registrada por"
-    SOLICITUD }o--o| USUARIO : "atendida por"
-    HISTORIAL_ESTADO }o--|| USUARIO : "ejecutado por"
-    CITA }o--|| USUARIO : "agendada por"
-    SOLICITANTE |o--o| USUARIO : "tiene cuenta"
-    USUARIO ||--o{ TOKEN_REFRESCO : "posee"
+    REQUESTERS ||--o{ REQUESTS : "realiza"
+    REQUESTS ||--o{ REQUEST_ITEMS : "incluye"
+    REQUEST_ITEMS }o--|| MATERIALS : "referencia a"
+    REQUESTS ||--|{ STATUS_HISTORY : "registra cambios"
+    STATUS_HISTORY |o--o| NOTIFICATIONS : "dispara"
+    REQUESTS ||--o{ NOTIFICATIONS : "genera"
+    REQUESTS ||--o{ APPOINTMENTS : "se agenda en"
+    APPOINTMENTS ||--o{ MATERIAL_RESERVATIONS : "bloquea"
+    MATERIAL_RESERVATIONS }o--|| MATERIALS : "reserva"
+    REQUESTS }o--|| USERS : "registrada por"
+    REQUESTS }o--o| USERS : "atendida por"
+    STATUS_HISTORY }o--|| USERS : "ejecutado por"
+    APPOINTMENTS }o--|| USERS : "agendada por"
+    REQUESTERS |o--o| USERS : "tiene cuenta"
+    USERS ||--o{ REFRESH_TOKENS : "posee"
 ```
 
 Decisiones principales:
 
 - Las enumeraciones son `varchar` con `CHECK`. Las PK son `uuid`, salvo el historial, que usa `bigint`.
-- `historial_estado` solo admite `INSERT`. Es la auditoría y la base del reporte de tiempos de atención.
-- `reserva_material.periodo` tiene una restricción `EXCLUDE USING gist`, así que la base de datos impide las dobles reservas.
+- `status_history` solo admite `INSERT`. Es la auditoría y la base del reporte de tiempos de atención.
+- `material_reservations.period` tiene una restricción `EXCLUDE USING gist`, así que la base de datos impide las dobles reservas.
 - Ninguna FK borra en cascada. Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
 
 ## 3. Descripción de tablas
 
 Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negocio tienen además `created_at` y `updated_at` (`timestamptz DEFAULT now()`), que no se listan.
 
-### usuario
+### users
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| nombre_completo | varchar(120) | | |
+| full_name | varchar(120) | | |
 | email | varchar(160) | UK | Correo de inicio de sesión |
 | password_hash | varchar(255) | | Hash argon2 |
-| rol | varchar(10) | CHECK | `ADMIN`, `PERSONAL`, `PUBLICO` |
-| activo | boolean | DEFAULT true | `false` = cuenta desactivada o eliminada |
-| ultimo_acceso | timestamptz | NULL | |
+| role | varchar(10) | CHECK | `ADMIN`, `PERSONAL`, `PUBLICO` |
+| active | boolean | DEFAULT true | `false` = cuenta desactivada o eliminada |
+| last_login_at | timestamptz | NULL | |
 
-### token_refresco
+### refresh_tokens
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| usuario_id | uuid | FK → usuario, IDX | |
+| user_id | uuid | FK → users, IDX | |
 | token_hash | varchar(255) | UK | Hash del refresh token, nunca el token en claro |
-| expira_en | timestamptz | | |
-| revocado_en | timestamptz | NULL | `NULL` = vigente |
+| expires_at | timestamptz | | |
+| revoked_at | timestamptz | NULL | `NULL` = vigente |
 
-### solicitante
+### requesters
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| usuario_id | uuid | FK → usuario, UK, NULL | Cuenta, si tiene |
-| tipo_documento | varchar(5) | CHECK, UK con número | `CC`, `CE`, `TI`, `PAS`, `NIT` |
-| numero_documento | varchar(20) | UK con tipo, IDX | Sin puntos ni espacios |
-| nombres, apellidos | varchar(80) | IDX trigram | |
+| user_id | uuid | FK → users, UK, NULL | Cuenta, si tiene |
+| document_type | varchar(5) | CHECK, UK con document_number | `CC`, `CE`, `TI`, `PAS`, `NIT` |
+| document_number | varchar(20) | UK con document_type, IDX | Sin puntos ni espacios |
+| first_names, last_names | varchar(80) | IDX trigram | |
 | email | varchar(160) | NULL, IDX | Para las notificaciones |
-| telefono | varchar(20) | NULL | `CHECK (email IS NOT NULL OR telefono IS NOT NULL)` |
-| tipo_solicitante | varchar(15) | CHECK | `INVESTIGADOR`, `ESTUDIANTE`, `DOCENTE`, `CIUDADANO`, `ENTIDAD` |
-| institucion | varchar(150) | NULL | |
-| acepta_tratamiento_datos | boolean | CHECK = true | Consentimiento (Ley 1581) |
-| fecha_consentimiento | timestamptz | | |
-| version_politica_datos | varchar(10) | | Versión del aviso aceptado |
-| anonimizado_en | timestamptz | NULL | Fecha en que se anonimizó (§6) |
+| phone | varchar(20) | NULL | `CHECK (email IS NOT NULL OR phone IS NOT NULL)` |
+| requester_type | varchar(15) | CHECK | `INVESTIGADOR`, `ESTUDIANTE`, `DOCENTE`, `CIUDADANO`, `ENTIDAD` |
+| institution | varchar(150) | NULL | |
+| accepts_data_processing | boolean | CHECK = true | Consentimiento (Ley 1581) |
+| consented_at | timestamptz | | |
+| privacy_policy_version | varchar(10) | | Versión del aviso aceptado |
+| anonymized_at | timestamptz | NULL | Fecha en que se anonimizó (§6) |
 
-### material
-
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | uuid | PK | |
-| codigo_referencia | varchar(40) | UK | Signatura topográfica |
-| titulo | varchar(255) | IDX trigram | |
-| tipo_material | varchar(15) | CHECK, IDX | `DOCUMENTO`, `EXPEDIENTE`, `PERIODICO`, `FOTOGRAFIA`, `LIBRO`, `MAPA`, `OTRO` |
-| descripcion, fondo_coleccion, periodo | text / varchar | NULL | Datos descriptivos |
-| deposito, estanteria, caja | varchar(40) | NULL | Ubicación física |
-| ref_everything | varchar(255) | NULL | Ruta o identificador del documento en *Everything* |
-| tiene_copia_digital | boolean | DEFAULT false | |
-| estado_conservacion | varchar(10) | CHECK | `OPTIMO`, `REGULAR`, `CRITICO` (con `CRITICO` no se consulta físicamente) |
-| consulta_restringida | boolean | DEFAULT false | Con `true` no se consulta físicamente |
-| activo | boolean | DEFAULT true | Baja lógica |
-
-### solicitud
+### materials
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| codigo_radicado | varchar(16) | UK | `SOL-AAAA-NNNNN` |
-| solicitante_id | uuid | FK → solicitante, IDX | |
-| creada_por_id | uuid | FK → usuario, IDX | Quién la registró |
-| responsable_id | uuid | FK → usuario, NULL, IDX | Funcionario asignado |
-| tipo_solicitud | varchar(25) | CHECK | `CONSULTA_SALA`, `BUSQUEDA_INFORMACION`, `REPRODUCCION` |
-| canal_origen | varchar(10) | CHECK | `WEB`, `PRESENCIAL`, `CORREO` |
-| modalidad_entrega | varchar(10) | CHECK | `PRESENCIAL`, `DIGITAL` |
-| proposito | varchar(15) | CHECK | Investigación, académico, trámite, genealogía… |
-| motivo | text | NULL | |
-| descripcion_requerimiento | text | | Lo que busca, en palabras del solicitante |
-| fecha_deseada | date | | |
-| fecha_compromiso | date | NULL, IDX con estado | La fija el personal |
-| prioridad | varchar(5) | CHECK, DEFAULT 'MEDIA' | `BAJA`, `MEDIA`, `ALTA` |
-| estado | varchar(12) | CHECK, IDX con fecha_compromiso | `RECIBIDA` … `RECHAZADA` (ver §1.3) |
-| motivo_rechazo | varchar(25) | NULL, CHECK | Obligatorio solo si `estado = 'RECHAZADA'` |
-| observaciones | text | NULL | Notas internas |
-| fecha_registro | timestamptz | IDX | Fecha de radicación |
-| fecha_atencion, fecha_cierre | timestamptz | NULL | |
+| reference_code | varchar(40) | UK | Signatura topográfica |
+| title | varchar(255) | IDX trigram | |
+| material_type | varchar(15) | CHECK, IDX | `DOCUMENTO`, `EXPEDIENTE`, `PERIODICO`, `FOTOGRAFIA`, `LIBRO`, `MAPA`, `OTRO` |
+| description, collection, period | text / varchar | NULL | Datos descriptivos |
+| depot, shelf, box | varchar(40) | NULL | Ubicación física |
+| everything_ref | varchar(255) | NULL | Ruta o identificador del documento en *Everything* |
+| has_digital_copy | boolean | DEFAULT false | |
+| conservation_status | varchar(10) | CHECK | `OPTIMO`, `REGULAR`, `CRITICO` (con `CRITICO` no se consulta físicamente) |
+| restricted_access | boolean | DEFAULT false | Con `true` no se consulta físicamente |
+| active | boolean | DEFAULT true | Baja lógica |
+
+### requests
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| id | uuid | PK | |
+| tracking_code | varchar(16) | UK | `SOL-AAAA-NNNNN` |
+| requester_id | uuid | FK → requesters, IDX | |
+| created_by_id | uuid | FK → users, IDX | Quién la registró |
+| assignee_id | uuid | FK → users, NULL, IDX | Funcionario asignado |
+| request_type | varchar(25) | CHECK | `CONSULTA_SALA`, `BUSQUEDA_INFORMACION`, `REPRODUCCION` |
+| origin_channel | varchar(10) | CHECK | `WEB`, `PRESENCIAL`, `CORREO` |
+| delivery_mode | varchar(10) | CHECK | `PRESENCIAL`, `DIGITAL` |
+| purpose | varchar(15) | CHECK | Investigación, académico, trámite, genealogía… |
+| reason | text | NULL | |
+| requirement_description | text | | Lo que busca, en palabras del solicitante |
+| desired_date | date | | |
+| committed_date | date | NULL, IDX con status | La fija el personal |
+| priority | varchar(5) | CHECK, DEFAULT 'MEDIA' | `BAJA`, `MEDIA`, `ALTA` |
+| status | varchar(12) | CHECK, IDX con committed_date | `RECIBIDA` … `RECHAZADA` (ver §1.3) |
+| rejection_reason | varchar(25) | NULL, CHECK | Obligatorio solo si `status = 'RECHAZADA'` |
+| notes | text | NULL | Notas internas |
+| registered_at | timestamptz | IDX | Fecha de radicación |
+| attended_at, closed_at | timestamptz | NULL | |
 | version | int | DEFAULT 1 | Bloqueo optimista |
 
-### item_solicitud
+### request_items
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| solicitud_id | uuid | FK → solicitud, UK con material_id | |
-| material_id | uuid | FK → material, IDX | Base del reporte de material más solicitado |
-| estado_item | varchar(15) | CHECK | `PENDIENTE`, `LOCALIZADO`, `NO_LOCALIZADO`, `NO_APTO` |
-| tipo_acceso | varchar(10) | CHECK | `FISICO`, `DIGITAL` (solo `FISICO` se reserva) |
-| observacion | text | NULL | |
+| request_id | uuid | FK → requests, UK con material_id | |
+| material_id | uuid | FK → materials, IDX | Base del reporte de material más solicitado |
+| item_status | varchar(15) | CHECK | `PENDIENTE`, `LOCALIZADO`, `NO_LOCALIZADO`, `NO_APTO` |
+| access_type | varchar(10) | CHECK | `FISICO`, `DIGITAL` (solo `FISICO` se reserva) |
+| note | text | NULL | |
 
-### historial_estado
+### status_history
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | bigint | PK (identity) | |
-| solicitud_id | uuid | FK → solicitud, IDX con fecha | |
-| estado_anterior | varchar(12) | NULL | `NULL` en la creación |
-| estado_nuevo | varchar(12) | CHECK | |
-| usuario_id | uuid | FK → usuario, IDX | Quién hizo el cambio |
-| comentario | text | NULL | Obligatorio al rechazar |
-| visible_solicitante | boolean | DEFAULT true | |
-| fecha | timestamptz | DEFAULT now() | |
+| request_id | uuid | FK → requests, IDX con changed_at | |
+| previous_status | varchar(12) | NULL | `NULL` en la creación |
+| new_status | varchar(12) | CHECK | |
+| user_id | uuid | FK → users, IDX | Quién hizo el cambio |
+| comment | text | NULL | Obligatorio al rechazar |
+| visible_to_requester | boolean | DEFAULT true | |
+| changed_at | timestamptz | DEFAULT now() | |
 
-### cita
-
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | uuid | PK | |
-| solicitud_id | uuid | FK → solicitud, IDX | Único entre las citas `PROGRAMADA` |
-| agendada_por_id | uuid | FK → usuario, IDX | |
-| inicio | timestamptz | IDX | Vista de calendario |
-| fin | timestamptz | CHECK fin > inicio | |
-| estado_cita | varchar(12) | CHECK | `PROGRAMADA`, `CUMPLIDA`, `CANCELADA`, `NO_ASISTIO` |
-| puesto, observaciones | varchar / text | NULL | |
-
-### reserva_material
+### appointments
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| cita_id | uuid | FK → cita, IDX | |
-| material_id | uuid | FK → material | |
-| periodo | tstzrange | EXCLUDE gist con material_id | Franja de la cita. **Impide las dobles reservas** |
-| activa | boolean | DEFAULT true | `false` al cancelar la cita o si el solicitante no asiste |
+| request_id | uuid | FK → requests, IDX | Único entre las citas `PROGRAMADA` |
+| scheduled_by_id | uuid | FK → users, IDX | |
+| start_at | timestamptz | IDX | Vista de calendario |
+| end_at | timestamptz | CHECK end_at > start_at | |
+| status | varchar(12) | CHECK | `PROGRAMADA`, `CUMPLIDA`, `CANCELADA`, `NO_ASISTIO` |
+| station, notes | varchar / text | NULL | |
 
-### notificacion
+### material_reservations
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| solicitud_id | uuid | FK → solicitud, IDX | |
-| historial_estado_id | bigint | FK → historial_estado, UK, NULL | Cambio que la disparó |
-| destinatario_email | varchar(160) | | |
-| plantilla, asunto, cuerpo | varchar / text | | Contenido del correo |
-| estado_envio | varchar(10) | CHECK, IDX con programada_para | `PENDIENTE`, `ENVIADA`, `FALLIDA` |
-| intentos | smallint | DEFAULT 0 | Reintentos |
-| ultimo_error | text | NULL | |
-| programada_para | timestamptz | | |
-| enviada_en | timestamptz | NULL | |
+| appointment_id | uuid | FK → appointments, IDX | |
+| material_id | uuid | FK → materials | |
+| period | tstzrange | EXCLUDE gist con material_id | Franja de la cita. **Impide las dobles reservas** |
+| active | boolean | DEFAULT true | `false` al cancelar la cita o si el solicitante no asiste |
 
-### horario_atencion
+### notifications
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| dia_semana | smallint | PK, CHECK 1–7 | 1 = lunes |
-| hora_apertura, hora_cierre | time | CHECK cierre > apertura | |
-| cupos_simultaneos | smallint | CHECK > 0 | Citas a la misma hora |
-| duracion_cita_min | smallint | DEFAULT 60 | |
-| activo | boolean | DEFAULT true | |
+| id | uuid | PK | |
+| request_id | uuid | FK → requests, IDX | |
+| status_history_id | bigint | FK → status_history, UK, NULL | Cambio que la disparó |
+| recipient_email | varchar(160) | | |
+| template, subject, body | varchar / text | | Contenido del correo |
+| delivery_status | varchar(10) | CHECK, IDX con scheduled_at | `PENDIENTE`, `ENVIADA`, `FALLIDA` |
+| attempts | smallint | DEFAULT 0 | Reintentos |
+| last_error | text | NULL | |
+| scheduled_at | timestamptz | | |
+| sent_at | timestamptz | NULL | |
+
+### service_hours
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| weekday | smallint | PK, CHECK 1–7 | 1 = lunes |
+| opens_at, closes_at | time | CHECK closes_at > opens_at | |
+| concurrent_slots | smallint | CHECK > 0 | Citas a la misma hora |
+| appointment_duration_min | smallint | DEFAULT 60 | |
+| active | boolean | DEFAULT true | |
 
 ## 4. Índices
 
@@ -503,21 +503,21 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
 
 | Tabla | Columna(s) | Motivo (búsqueda, filtro, etc.) |
 |---|---|---|
-| usuario | email (UK) | Inicio de sesión |
-| token_refresco | usuario_id | Revocar las sesiones de un usuario |
-| solicitante | (tipo_documento, numero_documento) (UK), numero_documento, email | Buscar a la persona en el registro asistido sin duplicarla |
-| solicitante | GIN trigram (nombres, apellidos) | Búsqueda por nombre con errores de escritura |
-| material | codigo_referencia (UK), GIN trigram (titulo), tipo_material | Buscar material para agregarlo a una solicitud |
-| solicitud | codigo_radicado (UK) | Consulta por radicado |
-| solicitud | (estado, fecha_compromiso) | Bandeja de trabajo y solicitudes vencidas |
-| solicitud | solicitante_id, responsable_id, creada_por_id | «Mis solicitudes», «asignadas a mí» |
-| solicitud | fecha_registro | Listados y reportes por periodo |
-| item_solicitud | material_id | Reporte de material más solicitado |
-| historial_estado | (solicitud_id, fecha), usuario_id | Línea de tiempo y tiempos de atención |
-| cita | inicio | Calendario por rango de fechas |
-| cita | solicitud_id (único parcial `WHERE estado_cita = 'PROGRAMADA'`), agendada_por_id | Una sola cita vigente por solicitud |
-| reserva_material | GiST (material_id, periodo), cita_id | Disponibilidad del material y liberar reservas |
-| notificacion | (estado_envio, programada_para), solicitud_id | Proceso de envío de correos |
+| users | email (UK) | Inicio de sesión |
+| refresh_tokens | user_id | Revocar las sesiones de un usuario |
+| requesters | (document_type, document_number) (UK), document_number, email | Buscar a la persona en el registro asistido sin duplicarla |
+| requesters | GIN trigram (first_names, last_names) | Búsqueda por nombre con errores de escritura |
+| materials | reference_code (UK), GIN trigram (title), material_type | Buscar material para agregarlo a una solicitud |
+| requests | tracking_code (UK) | Consulta por radicado |
+| requests | (status, committed_date) | Bandeja de trabajo y solicitudes vencidas |
+| requests | requester_id, assignee_id, created_by_id | «Mis solicitudes», «asignadas a mí» |
+| requests | registered_at | Listados y reportes por periodo |
+| request_items | material_id | Reporte de material más solicitado |
+| status_history | (request_id, changed_at), user_id | Línea de tiempo y tiempos de atención |
+| appointments | start_at | Calendario por rango de fechas |
+| appointments | request_id (único parcial `WHERE status = 'PROGRAMADA'`), scheduled_by_id | Una sola cita vigente por solicitud |
+| material_reservations | GiST (material_id, period), appointment_id | Disponibilidad del material y liberar reservas |
+| notifications | (delivery_status, scheduled_at), request_id | Proceso de envío de correos |
 
 ## 5. Migraciones y datos semilla
 
@@ -525,7 +525,8 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
   - Van en `backend/prisma/migrations/` (Prisma Migrate). En desarrollo se crean con `pnpm db:migrate:dev` y fuera de local se aplican con `pnpm db:migrate`.
   - `prisma db push` no se usa fuera del entorno local. Una migración que ya está en `main` no se edita: se crea otra.
   - Lo que el esquema de Prisma no expresa (`CHECK`, `EXCLUDE`, índices trigram) se agrega a mano en el SQL, creando la migración con `--create-only`.
-  - Orden: extensiones → usuario y token → solicitante → material → solicitud e ítems → historial → cita y reservas → notificación → horario → vistas de reportes.
+  - El contenedor del backend corre `pnpm db:migrate` al arrancar.
+  - Orden: extensiones → users y refresh_tokens → requesters → materials → requests y request_items → status_history → appointments y material_reservations → notifications → service_hours → vistas de reportes.
 - **Semillas:**
   - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
   - Contenido actual: 1 admin, 2 funcionarios y 4 usuarios públicos.
@@ -557,7 +558,7 @@ No se piden datos sensibles.
 **Eliminar la cuenta:** `DELETE /api/v1/me` anonimiza en una sola transacción:
 
 1. Cierra las solicitudes en curso y libera sus reservas.
-2. Reemplaza nombre, documento, correo y teléfono por valores neutros y marca `anonimizado_en`.
+2. Reemplaza nombre, documento, correo y teléfono por valores neutros y marca `anonymized_at`.
 3. Desactiva el usuario y revoca sus tokens.
 4. Borra el correo y el cuerpo de sus notificaciones.
 

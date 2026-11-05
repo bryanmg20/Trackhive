@@ -112,21 +112,21 @@ flowchart TB
 
 ### D-08. Historial de estados en tabla propia, solo de inserción
 
-- **Decisión:** cada transición inserta una fila en `historial_estados` (estado anterior, nuevo, usuario, fecha, observación). Nunca se actualiza ni se borra.
-- **Alternativas:** guardar solo el estado actual; guardar las fechas de cada estado como columnas de `solicitudes`.
+- **Decisión:** cada transición inserta una fila en `status_history` (estado anterior, nuevo, usuario, fecha, observación). Nunca se actualiza ni se borra.
+- **Alternativas:** guardar solo el estado actual; guardar las fechas de cada estado como columnas de `requests`.
 - **Justificación:** el requisito de reportes (tiempos de atención) solo es calculable si se conoce cuándo ocurrió cada transición. Además da trazabilidad: se puede responder quién cambió qué y cuándo, algo valioso para un archivo patrimonial.
 - **Consecuencias:** la inserción del historial y la actualización de la solicitud ocurren en una misma transacción, coordinada desde el repositorio.
 
 ### D-09. Choques de agenda con restricción de exclusión en PostgreSQL
 
-- **Decisión:** la tabla `citas` lleva una restricción `EXCLUDE USING gist (material_id WITH =, tstzrange(inicio, fin) WITH &&) WHERE (estado <> 'CANCELADA')`, con la extensión `btree_gist`. Además, el caso de uso `AgendarCita` consulta la disponibilidad antes de insertar para devolver un mensaje claro; si la base rechaza la inserción por una carrera, el repositorio lo traduce a `ChoqueDeAgendaError`.
+- **Decisión:** la tabla `appointments` lleva una restricción `EXCLUDE USING gist (material_id WITH =, tstzrange(start_at, end_at) WITH &&) WHERE (status <> 'CANCELADA')`, con la extensión `btree_gist`. Además, el caso de uso `AgendarCita` consulta la disponibilidad antes de insertar para devolver un mensaje claro; si la base rechaza la inserción por una carrera, el repositorio lo traduce a `ChoqueDeAgendaError`.
 - **Alternativas:** solo verificar en el código antes de insertar; bloqueos explícitos a nivel de fila.
 - **Justificación:** la verificación en código sola es vulnerable a condiciones de carrera (dos funcionarios agendando el mismo material a la vez). La restricción de la base de datos garantiza la integridad sin importar cuántas instancias de la API corran.
 - **Consecuencias:** la regla vive en una migración SQL y en el dominio (que expresa el concepto), y debe documentarse en `docs/modelo-datos.md`. La combinación de verificación previa y restricción es deliberada: la primera da buena experiencia y la segunda da seguridad.
 
 ### D-10. Notificaciones por puerto, con tabla de salida y reintentos
 
-- **Decisión:** `CambiarEstadoSolicitud` no envía correos: registra una fila en `notificaciones` (estado `PENDIENTE`) dentro de la misma transacción del cambio de estado. Un proceso programado (`@nestjs/schedule`) la envía a través del `NotificadorPort`, implementado con SMTP (Nodemailer), y marca `ENVIADA` o `FALLIDA` con un contador de reintentos.
+- **Decisión:** `CambiarEstadoSolicitud` no envía correos: registra una fila en `notifications` (estado `PENDIENTE`) dentro de la misma transacción del cambio de estado. Un proceso programado (`@nestjs/schedule`) la envía a través del `NotificadorPort`, implementado con SMTP (Nodemailer), y marca `ENVIADA` o `FALLIDA` con un contador de reintentos.
 - **Alternativas:** enviar el correo de forma síncrona dentro del caso de uso; usar una cola externa (Redis, RabbitMQ).
 - **Justificación:** una caída del servidor SMTP no debe impedir ni revertir un cambio de estado legítimo. Una tabla de salida da fiabilidad sin sumar infraestructura nueva, algo importante porque el CLENA debe poder operarlo. Una cola externa se descarta por exceso de complejidad para este volumen.
 - **Consecuencias:** el correo no es instantáneo (llega en el siguiente ciclo del proceso, de segundos a un par de minutos). En desarrollo se usa Mailpit para inspeccionar correos sin enviarlos.

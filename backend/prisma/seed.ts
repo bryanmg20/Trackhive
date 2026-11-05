@@ -2,67 +2,67 @@ import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 
-// Datos ficticios para la demo. Las contraseñas salen de variables de entorno.
-const USUARIOS = [
-  { nombreCompleto: 'Admin Demo', email: 'admin@example.com', rol: 'ADMIN' },
+// Fictitious demo data. Passwords come from environment variables.
+const USERS = [
+  { fullName: 'Admin Demo', email: 'admin@example.com', role: 'ADMIN' },
   {
-    nombreCompleto: 'Personal Demo Uno',
+    fullName: 'Personal Demo Uno',
     email: 'personal1@example.com',
-    rol: 'PERSONAL',
+    role: 'PERSONAL',
   },
   {
-    nombreCompleto: 'Personal Demo Dos',
+    fullName: 'Personal Demo Dos',
     email: 'personal2@example.com',
-    rol: 'PERSONAL',
+    role: 'PERSONAL',
   },
   {
-    nombreCompleto: 'Publico Demo Uno',
+    fullName: 'Publico Demo Uno',
     email: 'publico1@example.com',
-    rol: 'PUBLICO',
+    role: 'PUBLICO',
   },
   {
-    nombreCompleto: 'Publico Demo Dos',
+    fullName: 'Publico Demo Dos',
     email: 'publico2@example.com',
-    rol: 'PUBLICO',
+    role: 'PUBLICO',
   },
   {
-    nombreCompleto: 'Publico Demo Tres',
+    fullName: 'Publico Demo Tres',
     email: 'publico3@example.com',
-    rol: 'PUBLICO',
+    role: 'PUBLICO',
   },
   {
-    nombreCompleto: 'Publico Demo Cuatro',
+    fullName: 'Publico Demo Cuatro',
     email: 'publico4@example.com',
-    rol: 'PUBLICO',
+    role: 'PUBLICO',
   },
 ];
 
-function leerVariable(nombre: string): string {
-  const valor = process.env[nombre];
-  if (!valor) {
-    throw new Error(`Falta la variable de entorno ${nombre}`);
+function readEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing environment variable ${name}`);
   }
-  return valor;
+  return value;
 }
 
 async function main() {
-  const claveAdmin = leerVariable('SEED_ADMIN_PASSWORD');
-  const claveDemo = leerVariable('SEED_DEMO_PASSWORD');
+  const adminPassword = readEnv('SEED_ADMIN_PASSWORD');
+  const demoPassword = readEnv('SEED_DEMO_PASSWORD');
 
   const prisma = new PrismaClient();
   try {
-    for (const usuario of USUARIOS) {
-      const clave = usuario.rol === 'ADMIN' ? claveAdmin : claveDemo;
-      const passwordHash = await argon2.hash(clave);
+    for (const user of USERS) {
+      const password = user.role === 'ADMIN' ? adminPassword : demoPassword;
+      const passwordHash = await argon2.hash(password);
 
-      // upsert por correo: ejecutar la semilla varias veces no duplica usuarios
+      // Upsert by email: running the seed again does not duplicate users
       await prisma.userModel.upsert({
-        where: { email: usuario.email },
-        update: { ...usuario, passwordHash, activo: true },
-        create: { id: randomUUID(), ...usuario, passwordHash },
+        where: { email: user.email },
+        update: { ...user, passwordHash, active: true },
+        create: { id: randomUUID(), ...user, passwordHash },
       });
     }
-    console.log(`Semilla aplicada: ${USUARIOS.length} usuarios`);
+    console.log(`Seed applied: ${USERS.length} users`);
   } finally {
     await prisma.$disconnect();
   }
