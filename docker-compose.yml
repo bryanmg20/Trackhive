@@ -32,6 +32,8 @@ services:
       RUN_SEED: ${RUN_SEED:?Missing RUN_SEED in .env}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Missing SEED_ADMIN_PASSWORD in .env}
       SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:?Missing SEED_DEMO_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Missing JWT_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Missing JWT_REFRESH_SECRET in .env}
     ports:
       - "127.0.0.1:${BACKEND_PORT:?Missing BACKEND_PORT in .env}:3000"
     depends_on:
