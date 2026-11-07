@@ -42,6 +42,9 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   INVALID_PASSWORD_HASH: HttpStatus.BAD_REQUEST,
   INVALID_ROLE: HttpStatus.BAD_REQUEST,
   EMAIL_ALREADY_EXISTS: HttpStatus.CONFLICT,
+  INVALID_REQUEST_STATUS: HttpStatus.BAD_REQUEST,
+  REJECTION_REASON_REQUIRED: HttpStatus.BAD_REQUEST,
+  INVALID_STATUS_TRANSITION: HttpStatus.CONFLICT,
 };
 
 function codeFromStatus(statusCode: number): string {
