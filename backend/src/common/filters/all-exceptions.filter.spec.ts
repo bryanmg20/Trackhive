@@ -7,6 +7,9 @@ import {
 import { DomainError } from '../errors/domain.error';
 import { EmailAlreadyExistsError } from '../../users/domain/errors/email-already-exists.error';
 import { InvalidEmailError } from '../../users/domain/errors/invalid-email.error';
+import { InvalidRequestStatusError } from '../../requests/domain/errors/invalid-request-status.error';
+import { InvalidStatusTransitionError } from '../../requests/domain/errors/invalid-status-transition.error';
+import { RejectionReasonRequiredError } from '../../requests/domain/errors/rejection-reason-required.error';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 interface ErrorResponseBody {
@@ -125,6 +128,38 @@ describe('AllExceptionsFilter', () => {
       message: 'Ya existe una cuenta con ese correo',
       path: '/api/v1/users',
     });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps an invalid status transition to 409 Conflict', () => {
+    run(new InvalidStatusTransitionError('RECIBIDA', 'ATENDIDA'));
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(payload()).toMatchObject({
+      statusCode: HttpStatus.CONFLICT,
+      code: 'INVALID_STATUS_TRANSITION',
+      message: 'No se puede pasar una solicitud de Recibida a Atendida',
+      path: '/api/v1/users',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps a missing rejection reason to 400 Bad Request', () => {
+    run(new RejectionReasonRequiredError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(payload()).toMatchObject({
+      code: 'REJECTION_REASON_REQUIRED',
+      message: 'El motivo del rechazo es obligatorio',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps an unknown request status to 400 Bad Request', () => {
+    run(new InvalidRequestStatusError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(payload()).toMatchObject({ code: 'INVALID_REQUEST_STATUS' });
     expect(logSpy).not.toHaveBeenCalled();
   });
 
