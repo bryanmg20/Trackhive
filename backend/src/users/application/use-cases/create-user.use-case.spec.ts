@@ -37,7 +37,7 @@ describe('CreateUserUseCase', () => {
   beforeEach(() => {
     repository = new InMemoryUserRepository();
     hash = jest.fn((password: string) => Promise.resolve(`hashed:${password}`));
-    hasher = { hash };
+    hasher = { hash, verify: jest.fn() };
     useCase = new CreateUserUseCase(repository, hasher);
   });
 

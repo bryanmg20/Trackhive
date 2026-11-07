@@ -14,6 +14,7 @@ export class PrismaUserMapper {
       email: model.email,
       passwordHash: model.passwordHash,
       role: model.role,
+      active: model.active,
     });
   }
 
@@ -24,6 +25,7 @@ export class PrismaUserMapper {
       email: entity.email,
       passwordHash: entity.passwordHash,
       role: entity.role,
+      active: entity.active,
     };
   }
 }

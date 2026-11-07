@@ -15,6 +15,7 @@ export interface UserProps {
   email: string;
   passwordHash: string;
   role: UserRole;
+  active: boolean;
 }
 
 export class User {
@@ -23,6 +24,7 @@ export class User {
   public readonly email: string;
   public readonly passwordHash: string;
   public readonly role: UserRole;
+  public readonly active: boolean;
 
   constructor(props: UserProps) {
     const fullName = props.fullName?.trim() ?? '';
@@ -51,5 +53,6 @@ export class User {
     this.email = email;
     this.passwordHash = props.passwordHash;
     this.role = props.role;
+    this.active = props.active;
   }
 }

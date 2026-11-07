@@ -18,5 +18,7 @@ import { UserController } from './presentation/controllers/user.controller';
     },
     CreateUserUseCase,
   ],
+  // Login (AuthModule) reuses the user lookup and the password check
+  exports: [USER_REPOSITORY, PASSWORD_HASHER],
 })
 export class UsersModule {}

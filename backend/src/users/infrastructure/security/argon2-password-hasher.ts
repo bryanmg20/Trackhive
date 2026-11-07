@@ -7,4 +7,8 @@ export class Argon2PasswordHasher implements PasswordHasher {
   hash(plainPassword: string): Promise<string> {
     return argon2.hash(plainPassword);
   }
+
+  verify(plainPassword: string, passwordHash: string): Promise<boolean> {
+    return argon2.verify(passwordHash, plainPassword);
+  }
 }

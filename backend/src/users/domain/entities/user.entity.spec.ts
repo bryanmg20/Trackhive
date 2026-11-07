@@ -11,6 +11,7 @@ const validProps = (): UserProps => ({
   email: 'ana@mail.com',
   passwordHash: '$argon2id$hash',
   role: 'PUBLICO',
+  active: true,
 });
 
 describe('User', () => {

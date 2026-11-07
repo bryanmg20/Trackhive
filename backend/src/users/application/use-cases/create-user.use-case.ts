@@ -36,6 +36,7 @@ export class CreateUserUseCase {
       passwordHash,
       // Public registration can only create public accounts
       role: 'PUBLICO',
+      active: true,
     });
 
     await this.userRepo.save(user);
