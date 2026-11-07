@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DomainError } from '../errors/domain.error';
+import { EmailAlreadyExistsError } from '../../users/domain/errors/email-already-exists.error';
 import { InvalidEmailError } from '../../users/domain/errors/invalid-email.error';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
@@ -109,6 +110,19 @@ describe('AllExceptionsFilter', () => {
       statusCode: HttpStatus.BAD_REQUEST,
       code: 'INVALID_EMAIL',
       message: 'El correo no tiene un formato válido',
+      path: '/api/v1/users',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps a duplicate email to 409 Conflict', () => {
+    run(new EmailAlreadyExistsError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(payload()).toMatchObject({
+      statusCode: HttpStatus.CONFLICT,
+      code: 'EMAIL_ALREADY_EXISTS',
+      message: 'Ya existe una cuenta con ese correo',
       path: '/api/v1/users',
     });
     expect(logSpy).not.toHaveBeenCalled();
