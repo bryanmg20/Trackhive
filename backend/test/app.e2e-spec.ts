@@ -4,10 +4,12 @@ import type { Server } from 'http';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { USER_REPOSITORY } from '../src/users/application/tokens';
 import { User } from '../src/users/domain/entities/user.entity';
 import { IUserRepository } from '../src/users/domain/repositories/user.repository';
+import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
 interface CreatedUserBody {
   id: string;
@@ -68,6 +70,9 @@ describe('Versioned API (e2e)', () => {
     })
       .overrideProvider(USER_REPOSITORY)
       .useValue(repository)
+      // The startup purge of expired tokens (HU-3.1) needs a repository
+      .overrideProvider(REFRESH_TOKEN_REPOSITORY)
+      .useValue(new InMemoryRefreshTokenRepository())
       .overrideProvider(PrismaService)
       .useValue({ $queryRaw: jest.fn().mockResolvedValue([{ 1: 1 }]) })
       .compile();
