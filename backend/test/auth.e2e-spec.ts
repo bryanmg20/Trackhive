@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 import { createHash } from 'crypto';
@@ -8,6 +9,11 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
+import { RefreshToken } from '../src/auth/domain/entities/refresh-token.entity';
+import {
+  PURGE_EXPIRED_TOKENS_JOB,
+  PurgeExpiredTokensJob,
+} from '../src/auth/infrastructure/jobs/purge-expired-tokens.job';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { USER_REPOSITORY } from '../src/users/application/tokens';
 import { User } from '../src/users/domain/entities/user.entity';
@@ -191,5 +197,31 @@ describe('Session renewal (e2e)', () => {
     const body = response.body as { paths?: Record<string, unknown> };
     expect(body.paths).toHaveProperty('/api/v1/auth/refresh');
     expect(body.paths).toHaveProperty('/api/v1/auth/logout');
+  });
+
+  it('schedules the purge of expired tokens every day at 3:00, Bogotá time', () => {
+    const job = app.get(SchedulerRegistry).getCronJob(PURGE_EXPIRED_TOKENS_JOB);
+
+    expect(job.cronTime.source).toBe('0 3 * * *');
+    expect(job.cronTime.timeZone).toBe('America/Bogota');
+  });
+
+  it('purges expired tokens and keeps the sessions that are still valid', async () => {
+    const session = await login();
+    await refreshTokens.save(
+      new RefreshToken({
+        id: 'expired-token',
+        userId: 'user-1',
+        tokenHash: 'hash-of-an-expired-token',
+        expiresAt: new Date(Date.now() - 1000),
+        revokedAt: null,
+      }),
+    );
+
+    await app.get(PurgeExpiredTokensJob).run();
+
+    const ids = refreshTokens.findAll().map((token) => token.id);
+    expect(ids).not.toContain('expired-token');
+    await refresh(session.refreshToken).expect(200);
   });
 });
