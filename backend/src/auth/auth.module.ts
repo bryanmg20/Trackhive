@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from '../users/users.module';
 import { SessionTokenIssuer } from './application/services/session-token-issuer';
@@ -14,6 +15,8 @@ import { PrismaRefreshTokenRepository } from './infrastructure/persistence/prism
 import { JwtTokenService } from './infrastructure/security/jwt-token.service';
 import { Sha256TokenHasher } from './infrastructure/security/sha256-token-hasher';
 import { AuthController } from './presentation/controllers/auth.controller';
+import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
+import { RolesGuard } from './presentation/guards/roles.guard';
 
 @Module({
   // Secrets and lifetimes are passed per token in JwtTokenService
@@ -36,6 +39,16 @@ import { AuthController } from './presentation/controllers/auth.controller';
     LoginUseCase,
     RefreshSessionUseCase,
     LogoutUseCase,
+    // D-12: global guards, in this order. JwtAuthGuard sets request.user,
+    // which RolesGuard then checks
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
 export class AuthModule {}
