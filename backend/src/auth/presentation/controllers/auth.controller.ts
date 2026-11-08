@@ -15,8 +15,11 @@ import { RefreshTokenDto } from '../../application/dto/refresh-token.dto';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { RefreshSessionUseCase } from '../../application/use-cases/refresh-session.use-case';
+import { Public } from '../decorators/public.decorator';
 
 @ApiTags('Auth')
+// Login, refresh and logout run without an access token
+@Public()
 @Controller('auth')
 export class AuthController {
   constructor(

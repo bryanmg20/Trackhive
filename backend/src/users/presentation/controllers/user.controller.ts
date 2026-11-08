@@ -7,6 +7,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../../../auth/presentation/decorators/public.decorator';
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
 import { CreateUserDto } from '../../application/dto/create-user.dto';
 import { UserResponseDto } from '../../application/dto/user-response.dto';
@@ -17,6 +18,8 @@ import { CreateUserUseCase } from '../../application/use-cases/create-user.use-c
 export class UserController {
   constructor(private readonly createUserUseCase: CreateUserUseCase) {}
 
+  // Registration is open: the person has no account yet
+  @Public()
   @Post()
   @ApiOperation({
     summary: 'Registra una cuenta de usuario público',

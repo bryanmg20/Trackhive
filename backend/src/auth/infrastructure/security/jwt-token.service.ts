@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
+import { isUserRole } from '../../../users/domain/user-role';
 import type {
   SignedToken,
   TokenPayload,
@@ -47,6 +48,22 @@ export class JwtTokenService implements TokenService {
     } catch {
       // Bad signature, malformed or expired
       return false;
+    }
+  }
+
+  async verifyAccessToken(token: string): Promise<TokenPayload | null> {
+    try {
+      // Also rejects refresh tokens: they are signed with another secret
+      const payload = await this.jwt.verifyAsync<Partial<TokenPayload>>(token, {
+        secret: this.config.getOrThrow<string>('JWT_SECRET'),
+      });
+      if (typeof payload.sub !== 'string' || !isUserRole(payload.role ?? '')) {
+        return null;
+      }
+      return { sub: payload.sub, role: payload.role as TokenPayload['role'] };
+    } catch {
+      // Bad signature, malformed or expired
+      return null;
     }
   }
 

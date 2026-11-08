@@ -16,4 +16,6 @@ export interface TokenService {
   signRefreshToken(payload: TokenPayload): Promise<SignedToken>;
   /** True only for a refresh token signed by us that has not expired. */
   verifyRefreshToken(token: string): Promise<boolean>;
+  /** Payload of a valid, unexpired access token; null otherwise. */
+  verifyAccessToken(token: string): Promise<TokenPayload | null>;
 }

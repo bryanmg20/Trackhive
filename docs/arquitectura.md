@@ -43,7 +43,7 @@ flowchart TB
 | D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
 | D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Propuesta |
 | D-11 | JWT (access y refresh) con rotación y contraseñas con argon2 | Implementada |
-| D-12 | Autorización por roles con guards globales; propiedad de datos en casos de uso | Propuesta |
+| D-12 | Autorización por roles con guards globales; propiedad de datos en casos de uso | Implementada |
 | D-13 | Validación en dos niveles: forma en presentación, reglas en dominio | Implementada |
 | D-14 | Errores de dominio traducidos por un filtro global | Implementada |
 | D-15 | API REST versionada con OpenAPI; paginación por página y límite | Parcial (sin paginación) |
@@ -143,6 +143,7 @@ flowchart TB
 - **Decisión:** `JwtAuthGuard` y `RolesGuard` se registran como guards globales; los endpoints declaran sus roles con `@Roles()` y los públicos con `@Public()`. Reglas como "un usuario público solo ve sus propias solicitudes" se implementan en el caso de uso, que recibe el identificador del usuario.
 - **Alternativas:** aplicar guards endpoint por endpoint; resolver la propiedad en el guard.
 - **Justificación:** con guards globales ningún endpoint queda desprotegido por olvido. La propiedad de los datos es una regla de negocio, así que no corresponde a presentación.
+- **Implementación:** `JwtAuthGuard` valida el `Authorization: Bearer <accessToken>` y deja `{ id, role }` en `request.user`; sin token, o con uno inválido o vencido, responde 401. `RolesGuard` compara ese rol con los de `@Roles()` y responde 403 si no coincide. Ambos están en `backend/src/auth/presentation/`.
 - **Consecuencias:** los endpoints sin `@Roles()` exigen al menos autenticación; solo `@Public()` los abre.
 
 ### D-13. Validación en dos niveles
