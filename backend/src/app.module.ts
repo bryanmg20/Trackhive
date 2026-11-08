@@ -21,7 +21,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     HealthModule,
-    MaterialsModule
+    MaterialsModule,
   ],
 })
 export class AppModule {}
