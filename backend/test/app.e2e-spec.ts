@@ -205,12 +205,9 @@ describe('Versioned API (e2e)', () => {
   });
 
   it('reports health without an access token', async () => {
-    await request(server)
-      .get('/api/v1/health')
-      .expect(200)
-      .expect({
-        status: 'ok',
-        database: 'up',
-      });
+    await request(server).get('/api/v1/health').expect(200).expect({
+      status: 'ok',
+      database: 'up',
+    });
   });
 });

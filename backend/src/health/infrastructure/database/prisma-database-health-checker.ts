@@ -11,7 +11,10 @@ export class PrismaDatabaseHealthChecker implements DatabaseHealthChecker {
       await Promise.race([
         this.prisma.$queryRaw`SELECT 1`,
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Database health check timed out')), 3000),
+          setTimeout(
+            () => reject(new Error('Database health check timed out')),
+            3000,
+          ),
         ),
       ]);
       return true;
