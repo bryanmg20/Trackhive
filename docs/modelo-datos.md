@@ -364,7 +364,7 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | id | uuid | PK | |
 | user_id | uuid | FK → users, IDX | |
 | token_hash | varchar(255) | UK | Hash SHA-256 del refresh token, nunca el token en claro |
-| expires_at | timestamptz | | |
+| expires_at | timestamptz | | Las filas vencidas se borran cada día (HU-3.1) |
 | revoked_at | timestamptz | NULL | `NULL` = vigente |
 
 ### requesters

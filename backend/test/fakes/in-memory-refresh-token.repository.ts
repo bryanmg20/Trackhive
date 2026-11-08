@@ -35,6 +35,17 @@ export class InMemoryRefreshTokenRepository implements IRefreshTokenRepository {
     return Promise.resolve();
   }
 
+  deleteExpired(now: Date): Promise<number> {
+    let deleted = 0;
+    for (const token of [...this.tokens.values()]) {
+      if (token.isExpired(now)) {
+        this.tokens.delete(token.id);
+        deleted += 1;
+      }
+    }
+    return Promise.resolve(deleted);
+  }
+
   findAll(): RefreshToken[] {
     return [...this.tokens.values()];
   }

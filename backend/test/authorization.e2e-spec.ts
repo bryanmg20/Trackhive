@@ -5,9 +5,11 @@ import type { Server } from 'http';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { Roles } from '../src/auth/presentation/decorators/roles.decorator';
 import { PrismaService } from '../src/prisma/prisma.service';
 import type { UserRole } from '../src/users/domain/user-role';
+import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
 const ACCESS_SECRET = 'e2e-access-secret';
 const STAFF_PATH = '/api/v1/e2e-staff-only';
@@ -44,6 +46,9 @@ describe('Role-based authorization (e2e)', () => {
       imports: [AppModule],
       controllers: [StaffOnlyController],
     })
+      // The startup purge of expired tokens (HU-3.1) needs a repository
+      .overrideProvider(REFRESH_TOKEN_REPOSITORY)
+      .useValue(new InMemoryRefreshTokenRepository())
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();

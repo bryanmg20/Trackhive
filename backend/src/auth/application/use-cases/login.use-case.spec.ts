@@ -52,6 +52,7 @@ describe('LoginUseCase', () => {
         }),
       ),
       verifyRefreshToken: jest.fn(),
+      verifyAccessToken: jest.fn(),
     };
     const tokenHasher: TokenHasher = { hash: (token) => `sha256:${token}` };
     refreshTokens = new InMemoryRefreshTokenRepository();

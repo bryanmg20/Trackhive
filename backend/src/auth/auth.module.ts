@@ -10,7 +10,9 @@ import {
 } from './application/tokens';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { PurgeExpiredTokensUseCase } from './application/use-cases/purge-expired-tokens.use-case';
 import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case';
+import { PurgeExpiredTokensJob } from './infrastructure/jobs/purge-expired-tokens.job';
 import { PrismaRefreshTokenRepository } from './infrastructure/persistence/prisma-refresh-token.repository';
 import { JwtTokenService } from './infrastructure/security/jwt-token.service';
 import { Sha256TokenHasher } from './infrastructure/security/sha256-token-hasher';
@@ -39,6 +41,8 @@ import { RolesGuard } from './presentation/guards/roles.guard';
     LoginUseCase,
     RefreshSessionUseCase,
     LogoutUseCase,
+    PurgeExpiredTokensUseCase,
+    PurgeExpiredTokensJob,
     // D-12: global guards, in this order. JwtAuthGuard sets request.user,
     // which RolesGuard then checks
     {
