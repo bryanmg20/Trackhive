@@ -228,20 +228,17 @@ erDiagram
     }
     MATERIALS {
         uuid id PK
-        varchar(40) reference_code UK
+        varchar(40) catalog_code UK
         varchar(255) title "IDX GIN trgm"
-        varchar(15) material_type "IDX"
-        text description
-        varchar(120) collection
-        varchar(30) period
+        varchar(20) material_type "IDX"
+        varchar(150) author "IDX GIN trgm"
+        varchar(120) collection "IDX GIN trgm"
+        date publication_date
+        varchar(150) publisher
         varchar(40) depot
         varchar(40) shelf
         varchar(40) box
-        varchar(255) everything_ref
-        boolean has_digital_copy
-        varchar(10) conservation_status
-        boolean restricted_access
-        boolean active
+        varchar(20) status
         timestamptz created_at
         timestamptz updated_at
     }
