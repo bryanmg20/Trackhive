@@ -24,7 +24,7 @@
   padding: 0.1rem 0;
   border: 0;
   background: transparent;
-  color: var(--seal);
+  color: var(--gold-text);
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.1em;
@@ -36,7 +36,7 @@
 }
 
 .toggle:hover {
-  color: var(--seal-dark);
+  color: var(--gold-deep);
 }
 
 .input {

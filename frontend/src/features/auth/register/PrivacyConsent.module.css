@@ -64,7 +64,7 @@
   letter-spacing: 0.09em;
   line-height: 1.5;
   text-transform: uppercase;
-  color: var(--seal);
+  color: var(--gold-text);
 }
 
 .summary::-webkit-details-marker {
@@ -90,7 +90,7 @@
 }
 
 .summary:hover {
-  color: var(--seal-dark);
+  color: var(--gold-deep);
 }
 
 .summary:focus-visible {
@@ -128,7 +128,7 @@
 }
 
 .fullTextBody a {
-  color: var(--seal);
+  color: var(--gold-text);
   font-weight: 600;
   overflow-wrap: anywhere;
   text-decoration: underline;
@@ -136,7 +136,7 @@
 }
 
 .fullTextBody a:hover {
-  color: var(--seal-dark);
+  color: var(--gold-deep);
 }
 
 .acceptance {
@@ -183,7 +183,7 @@
   width: 1.05rem;
   height: 1.05rem;
   margin: 0.15rem 0 0;
-  accent-color: var(--seal);
+  accent-color: var(--gold);
   cursor: pointer;
 }
 

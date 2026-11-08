@@ -6,9 +6,14 @@
   --paper-muted: #c9d6cd;
   --surface: #fbfcfa;
   --surface-strong: #ffffff;
+  /* Rojo reservado para errores de validación */
   --seal: #a32e2a;
   --seal-dark: #7f211d;
-  --seal-on-ink: #df8a7e;
+  /* Acento de marca: dorado exacto para rellenos y formas */
+  --gold: #e8bc46;
+  --gold-text: #8a6a00;
+  --gold-deep: #6b5200;
+  --gold-ink: #11221d;
   --sage: #b7c8bc;
   --sage-deep: #7f9488;
   --muted: #52645b;

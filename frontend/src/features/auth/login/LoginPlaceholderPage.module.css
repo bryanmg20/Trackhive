@@ -11,7 +11,7 @@
   letter-spacing: 0.18em;
   line-height: 1.4;
   text-transform: uppercase;
-  color: var(--seal);
+  color: var(--gold-text);
 }
 
 .title {
@@ -80,11 +80,11 @@
   color: var(--ink);
   font-weight: 600;
   text-decoration: underline;
-  text-decoration-color: var(--seal);
-  text-decoration-thickness: 1px;
+  text-decoration-color: var(--gold);
+  text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
 
 .backLink:hover {
-  color: var(--seal);
+  color: var(--gold-text);
 }

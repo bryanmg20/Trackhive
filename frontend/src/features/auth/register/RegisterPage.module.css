@@ -11,7 +11,7 @@
   letter-spacing: 0.18em;
   line-height: 1.4;
   text-transform: uppercase;
-  color: var(--seal);
+  color: var(--gold-text);
 }
 
 .title,
@@ -57,11 +57,13 @@
   letter-spacing: 0.01em;
   transition:
     background-color 160ms ease,
+    color 160ms ease,
     transform 160ms ease;
 }
 
 .submit:hover:not(:disabled) {
-  background: var(--seal);
+  background: var(--gold);
+  color: var(--gold-ink);
 }
 
 .submit:active:not(:disabled) {
@@ -99,13 +101,13 @@
   color: var(--ink);
   font-weight: 600;
   text-decoration: underline;
-  text-decoration-color: var(--seal);
-  text-decoration-thickness: 1px;
+  text-decoration-color: var(--gold);
+  text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
 
 .loginLink:hover {
-  color: var(--seal);
+  color: var(--gold-text);
 }
 
 .formError {
@@ -157,7 +159,7 @@
 }
 
 .successTitle:focus-visible {
-  outline: 2px solid var(--seal);
+  outline: 2px solid var(--gold-text);
   outline-offset: 4px;
 }
 
@@ -197,9 +199,9 @@
   width: 7rem;
   height: 7rem;
   margin-top: 0.75rem;
-  border: 2px solid var(--seal);
+  border: 2px solid var(--gold);
   border-radius: 50%;
-  color: var(--seal);
+  color: var(--gold-text);
   font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 600;
@@ -216,7 +218,7 @@
   content: '';
   position: absolute;
   inset: 5px;
-  border: 1px solid var(--seal);
+  border: 1px solid var(--gold);
   border-radius: 50%;
 }
 
