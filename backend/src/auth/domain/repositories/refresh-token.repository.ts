@@ -11,4 +11,9 @@ export interface IRefreshTokenRepository {
   revoke(id: string, revokedAt: Date): Promise<boolean>;
   /** Revokes every active token of the user: closes all their sessions. */
   revokeAllForUser(userId: string, revokedAt: Date): Promise<void>;
+  /**
+   * Deletes the tokens already expired at `now`, revoked or not.
+   * Returns how many were deleted.
+   */
+  deleteExpired(now: Date): Promise<number>;
 }
