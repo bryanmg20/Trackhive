@@ -2,9 +2,11 @@ import { BadRequestException } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import { ErrorDetail } from '../errors/error-detail';
 
+const WHITELIST_CONSTRAINT = 'whitelistValidation';
+
 /**
- * Convierte los errores de class-validator en el formato uniforme de error,
- * conservando el campo y sus mensajes.
+ * Converts class-validator errors into the uniform error format,
+ * preserving the field and its messages.
  */
 export function flattenValidationErrors(
   errors: ValidationError[],
@@ -13,7 +15,11 @@ export function flattenValidationErrors(
   return errors.flatMap((error) => {
     const field = parent ? `${parent}.${error.property}` : error.property;
     const constraints = error.constraints
-      ? Object.values(error.constraints)
+      ? Object.entries(error.constraints).map(([constraint, message]) =>
+          constraint === WHITELIST_CONSTRAINT
+            ? `El campo ${field} no está permitido.`
+            : message,
+        )
       : [];
     const own: ErrorDetail[] =
       constraints.length > 0 ? [{ field, messages: constraints }] : [];

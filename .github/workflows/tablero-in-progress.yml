@@ -1,0 +1,88 @@
+name: Tablero - In Progress
+
+# Al crear una rama feat/<issue>-..., fix/<issue>-... o docs/<issue>-...,
+# mueve el issue <issue> a "In Progress" en el tablero de GitHub Projects.
+on:
+  create:
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_OWNER: bryanmg20
+  PROJECT_NUMBER: 2
+  STATUS_FIELD: Status
+  STATUS_VALUE: In Progress
+
+jobs:
+  mover-a-in-progress:
+    if: github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mover el issue a In Progress
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          BRANCH: ${{ github.event.ref }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          if [[ ! "$BRANCH" =~ ^(feat|fix|docs)/([0-9]+)- ]]; then
+            echo "La rama '$BRANCH' no tiene número de issue; no se cambia nada."
+            exit 0
+          fi
+          ISSUE="${BASH_REMATCH[2]}"
+
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Falta el secret PROJECT_TOKEN; no se puede mover el issue #$ISSUE."
+            exit 0
+          fi
+
+          # Campo Status del tablero y opción "In Progress".
+          read -r PROJECT_ID FIELD_ID OPTION_ID < <(gh api graphql \
+            -f query='query($owner: String!, $number: Int!, $field: String!) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  id
+                  field(name: $field) {
+                    ... on ProjectV2SingleSelectField { id options { id name } }
+                  }
+                }
+              }
+            }' \
+            -f owner="$PROJECT_OWNER" -F number="$PROJECT_NUMBER" -f field="$STATUS_FIELD" \
+            --jq '.data.user.projectV2 | [.id, .field.id, (.field.options[] | select(.name == "'"$STATUS_VALUE"'") | .id)] | @tsv')
+
+          if [ -z "$OPTION_ID" ]; then
+            echo "::warning::No se encontró la opción '$STATUS_VALUE' en el campo '$STATUS_FIELD'."
+            exit 0
+          fi
+
+          # Tarjeta del issue en ese tablero.
+          # Si el issue no existe, gh falla y no se cambia nada.
+          ITEM_ID=$(gh api graphql \
+            -f query='query($owner: String!, $repo: String!, $issue: Int!) {
+              repository(owner: $owner, name: $repo) {
+                issue(number: $issue) {
+                  projectItems(first: 20) { nodes { id project { id } } }
+                }
+              }
+            }' \
+            -f owner="$REPO_OWNER" -f repo="$REPO_NAME" -F issue="$ISSUE" \
+            --jq '.data.repository.issue.projectItems.nodes[]? | select(.project.id == "'"$PROJECT_ID"'") | .id' \
+            2>/dev/null) || ITEM_ID=""
+
+          if [ -z "$ITEM_ID" ]; then
+            echo "El issue #$ISSUE no está en el tablero; no se cambia nada."
+            exit 0
+          fi
+
+          gh api graphql \
+            -f query='mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project, itemId: $item, fieldId: $field,
+                value: { singleSelectOptionId: $option }
+              }) { projectV2Item { id } }
+            }' \
+            -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$FIELD_ID" -f option="$OPTION_ID" > /dev/null
+
+          echo "Issue #$ISSUE movido a '$STATUS_VALUE'."

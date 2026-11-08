@@ -11,7 +11,9 @@ import { IUserRepository } from '../src/users/domain/repositories/user.repositor
 
 interface CreatedUserBody {
   id: string;
+  fullName: string;
   email: string;
+  role: string;
 }
 
 interface ErrorBody {
@@ -38,18 +40,34 @@ class InMemoryUserRepository implements IUserRepository {
   findById(id: string): Promise<User | null> {
     return Promise.resolve(this.users.get(id) ?? null);
   }
+
+  findByEmail(email: string): Promise<User | null> {
+    const user = [...this.users.values()].find(
+      (candidate) => candidate.email === email,
+    );
+    return Promise.resolve(user ?? null);
+  }
 }
 
-describe('API versionada (e2e)', () => {
+const validRegistration = (email = 'ana@trackhive.test') => ({
+  fullName: 'Ana Pérez',
+  email,
+  password: 'secreto123',
+});
+
+describe('Versioned API (e2e)', () => {
   let app: INestApplication;
   let server: Server;
+  let repository: InMemoryUserRepository;
 
   beforeAll(async () => {
+    repository = new InMemoryUserRepository();
+
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(USER_REPOSITORY)
-      .useValue(new InMemoryUserRepository())
+      .useValue(repository)
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();
@@ -64,22 +82,64 @@ describe('API versionada (e2e)', () => {
     await app.close();
   });
 
-  it('publica el módulo de ejemplo bajo /api/v1', async () => {
+  it('registers a public account under /api/v1', async () => {
     const response = await request(server)
       .post('/api/v1/users')
-      .send({ email: 'demo@trackhive.test' })
+      .send(validRegistration())
       .expect(201);
 
     const body = response.body as CreatedUserBody;
-    expect(body.email).toBe('demo@trackhive.test');
+    expect(body).toMatchObject({
+      fullName: 'Ana Pérez',
+      email: 'ana@trackhive.test',
+      role: 'PUBLICO',
+    });
     expect(typeof body.id).toBe('string');
     expect(body.id.length).toBeGreaterThan(0);
+    expect(body).not.toHaveProperty('password');
+    expect(body).not.toHaveProperty('passwordHash');
+
+    const stored = await repository.findByEmail('ana@trackhive.test');
+    expect(stored?.passwordHash).toMatch(/^\$argon2/);
+    expect(stored?.passwordHash).not.toBe('secreto123');
   });
 
-  it('rechaza entradas inválidas con el formato uniforme', async () => {
+  it('normalizes the email to lowercase', async () => {
     const response = await request(server)
       .post('/api/v1/users')
-      .send({ email: 'no-es-un-correo' })
+      .send(validRegistration('  MAYUSCULAS@TRACKHIVE.TEST '))
+      .expect(201);
+
+    expect((response.body as CreatedUserBody).email).toBe(
+      'mayusculas@trackhive.test',
+    );
+  });
+
+  it('rejects an email that is already registered', async () => {
+    const email = 'duplicado@trackhive.test';
+
+    await request(server)
+      .post('/api/v1/users')
+      .send(validRegistration(email))
+      .expect(201);
+
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send(validRegistration(email.toUpperCase()))
+      .expect(409);
+
+    expect(response.body as ErrorBody).toMatchObject({
+      statusCode: 409,
+      code: 'EMAIL_ALREADY_EXISTS',
+      message: 'Ya existe una cuenta con ese correo',
+      path: '/api/v1/users',
+    });
+  });
+
+  it('rejects invalid input with the uniform format', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({ ...validRegistration(), email: 'no-es-un-correo' })
       .expect(400);
 
     const body = response.body as ErrorBody;
@@ -98,10 +158,24 @@ describe('API versionada (e2e)', () => {
     expect(typeof body.timestamp).toBe('string');
   });
 
-  it('rechaza campos no declarados en el DTO', async () => {
+  it('rejects a password shorter than 8 characters', async () => {
     const response = await request(server)
       .post('/api/v1/users')
-      .send({ email: 'demo@trackhive.test', role: 'ADMIN' })
+      .send({ ...validRegistration(), password: 'corta' })
+      .expect(400);
+
+    expect((response.body as ErrorBody).details).toEqual([
+      {
+        field: 'password',
+        messages: ['La contraseña debe tener al menos 8 caracteres'],
+      },
+    ]);
+  });
+
+  it('rejects fields not declared in the DTO', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({ ...validRegistration(), role: 'ADMIN' })
       .expect(400);
 
     const body = response.body as ErrorBody;
@@ -109,16 +183,16 @@ describe('API versionada (e2e)', () => {
     expect(body.details).toEqual([
       {
         field: 'role',
-        messages: ['property role should not exist'],
+        messages: ['El campo role no está permitido.'],
       },
     ]);
   });
 
-  it('no expone las rutas sin el prefijo global', async () => {
+  it('does not expose routes without the global prefix', async () => {
     await request(server).post('/users').send({}).expect(404);
   });
 
-  it('documenta los endpoints en Swagger', async () => {
+  it('documents the endpoints in Swagger', async () => {
     await request(server)
       .get('/docs')
       .expect(200)

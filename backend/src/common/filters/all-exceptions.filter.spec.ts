@@ -5,7 +5,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DomainError } from '../errors/domain.error';
+import { EmailAlreadyExistsError } from '../../users/domain/errors/email-already-exists.error';
 import { InvalidEmailError } from '../../users/domain/errors/invalid-email.error';
+import { InvalidRequestStatusError } from '../../requests/domain/errors/invalid-request-status.error';
+import { InvalidStatusTransitionError } from '../../requests/domain/errors/invalid-status-transition.error';
+import { RejectionReasonRequiredError } from '../../requests/domain/errors/rejection-reason-required.error';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 interface ErrorResponseBody {
@@ -59,7 +63,7 @@ describe('AllExceptionsFilter', () => {
     logSpy.mockRestore();
   });
 
-  it('responde los errores de validación con detalles por campo', () => {
+  it('responds to validation errors with per-field details', () => {
     run(
       new BadRequestException({
         code: 'VALIDATION_ERROR',
@@ -89,7 +93,7 @@ describe('AllExceptionsFilter', () => {
     expect(payload().timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/);
   });
 
-  it('traduce un BadRequestException sin estructura a un código estable', () => {
+  it('maps an unstructured BadRequestException to a stable code', () => {
     run(new BadRequestException('Dato inválido'));
 
     expect(payload()).toMatchObject({
@@ -101,7 +105,7 @@ describe('AllExceptionsFilter', () => {
     expect(payload()).not.toHaveProperty('details');
   });
 
-  it('traduce un error de dominio mapeado a su estado HTTP', () => {
+  it('maps a domain error to its HTTP status', () => {
     run(new InvalidEmailError());
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -114,7 +118,52 @@ describe('AllExceptionsFilter', () => {
     expect(logSpy).not.toHaveBeenCalled();
   });
 
-  it('responde 500 y registra un error de dominio sin mapeo', () => {
+  it('maps a duplicate email to 409 Conflict', () => {
+    run(new EmailAlreadyExistsError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(payload()).toMatchObject({
+      statusCode: HttpStatus.CONFLICT,
+      code: 'EMAIL_ALREADY_EXISTS',
+      message: 'Ya existe una cuenta con ese correo',
+      path: '/api/v1/users',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps an invalid status transition to 409 Conflict', () => {
+    run(new InvalidStatusTransitionError('RECIBIDA', 'ATENDIDA'));
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(payload()).toMatchObject({
+      statusCode: HttpStatus.CONFLICT,
+      code: 'INVALID_STATUS_TRANSITION',
+      message: 'No se puede pasar una solicitud de Recibida a Atendida',
+      path: '/api/v1/users',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps a missing rejection reason to 400 Bad Request', () => {
+    run(new RejectionReasonRequiredError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(payload()).toMatchObject({
+      code: 'REJECTION_REASON_REQUIRED',
+      message: 'El motivo del rechazo es obligatorio',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps an unknown request status to 400 Bad Request', () => {
+    run(new InvalidRequestStatusError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(payload()).toMatchObject({ code: 'INVALID_REQUEST_STATUS' });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('responds with 500 and logs an unmapped domain error', () => {
     run(new UnmappedDomainError());
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -127,7 +176,7 @@ describe('AllExceptionsFilter', () => {
     expect(logSpy).toHaveBeenCalled();
   });
 
-  it('no filtra detalles internos ante un error desconocido', () => {
+  it('does not leak internal details for an unknown error', () => {
     run(new Error('contraseña de la base de datos'));
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);

@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiInternalServerErrorResponse,
   ApiOperation,
@@ -18,17 +19,21 @@ export class UserController {
 
   @Post()
   @ApiOperation({
-    summary: 'Crea un usuario',
+    summary: 'Registra una cuenta de usuario público',
     description:
-      'Endpoint de referencia de la arquitectura base (HU-34): valida la ' +
-      'entrada con DTOs y documenta su contrato en Swagger.',
+      'Crea una cuenta con rol PUBLICO, almacena la contraseña con argon2 y ' +
+      'rechaza correos ya registrados.',
   })
   @ApiCreatedResponse({
-    description: 'Usuario creado',
+    description: 'Cuenta creada',
     type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Datos inválidos o campos no permitidos',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description: 'Ya existe una cuenta con ese correo',
     type: ErrorResponseDto,
   })
   @ApiInternalServerErrorResponse({
@@ -36,9 +41,13 @@ export class UserController {
     type: ErrorResponseDto,
   })
   async create(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
-    // El controlador NO habla con la base de datos:
-    // solo le pide al caso de uso que ejecute la acción.
-    // Los errores de dominio los traduce el filtro global.
-    return this.createUserUseCase.execute(dto.email);
+    // The controller does NOT talk to the database:
+    // it only asks the use case to execute the action.
+    // Domain errors are translated by the global filter.
+    return this.createUserUseCase.execute({
+      fullName: dto.fullName,
+      email: dto.email,
+      password: dto.password,
+    });
   }
 }

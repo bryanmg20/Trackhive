@@ -38,7 +38,7 @@ flowchart TB
 | D-04 | Inyección de dependencias por tokens | Propuesta |
 | D-05 | Entidades de persistencia separadas de las de dominio, con mapeadores | Propuesta |
 | D-06 | Prisma como ORM | Ratificada |
-| D-07 | La máquina de estados vive en la entidad `Solicitud` | Propuesta |
+| D-07 | La máquina de estados vive en la entidad `Solicitud` | Implementada |
 | D-08 | Historial de estados en tabla propia, solo de inserción | Propuesta |
 | D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
 | D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Propuesta |
@@ -105,7 +105,7 @@ flowchart TB
 
 ### D-07. La máquina de estados vive en la entidad `Solicitud`
 
-- **Decisión:** las transiciones (`RECIBIDA → EN_BUSQUEDA → DISPONIBLE → AGENDADA → ATENDIDA → CERRADA`, y `RECHAZADA` desde cualquier estado previo a `ATENDIDA`) se implementan como métodos de la entidad (`iniciarBusqueda()`, `agendar(cita)`, `rechazar(motivo)`...) que lanzan `TransicionEstadoInvalidaError` ante un cambio no permitido.
+- **Decisión:** las transiciones son las de `docs/modelo-datos.md` (§1.3): `RECIBIDA → EN_BUSQUEDA | RECHAZADA`; `EN_BUSQUEDA → DISPONIBLE | RECHAZADA`; `DISPONIBLE → AGENDADA (presencial) | ATENDIDA (digital) | CERRADA`; `AGENDADA → ATENDIDA | DISPONIBLE`; `ATENDIDA → CERRADA`. `RECHAZADA` y `CERRADA` son estados finales. Se implementan como métodos de la entidad `Request` (`startSearch()`, `markAvailable()`, `schedule()`, `attend()`, `close()`, `reject(reason)`), que lanzan `InvalidStatusTransitionError` (HTTP 409) ante un cambio no permitido. `markAvailable()` cubre las dos acciones de §1.3 que llegan a `DISPONIBLE` (`marcarDisponible` y `volverADisponible`).
 - **Alternativas:** validar las transiciones en el controlador, en el caso de uso o con una tabla de reglas en la base de datos.
 - **Justificación:** es la regla de negocio central y no debe poder eludirse desde ninguna otra capa. En el dominio se prueba con pruebas unitarias rápidas y sin infraestructura. Rechazar exige un motivo, y se modela como parámetro obligatorio del método.
 - **Consecuencias:** cualquier cambio de estado pasa por la entidad. Las reglas exactas se validan con el equipo de Introducción en la fase de Inception.
@@ -154,7 +154,7 @@ flowchart TB
 
 ### D-14. Errores de dominio traducidos por un filtro global
 
-- **Decisión:** el dominio y la aplicación lanzan excepciones propias (`TransicionEstadoInvalidaError`, `ChoqueDeAgendaError`, `SolicitudNoEncontradaError`...). Un filtro global en presentación las traduce a códigos HTTP y a un formato de error uniforme con un `code` estable.
+- **Decisión:** el dominio y la aplicación lanzan excepciones propias (`InvalidStatusTransitionError`, `ChoqueDeAgendaError`, `SolicitudNoEncontradaError`...). Un filtro global en presentación las traduce a códigos HTTP y a un formato de error uniforme con un `code` estable.
 - **Alternativas:** lanzar `HttpException` desde los casos de uso.
 - **Justificación:** las `HttpException` pertenecen a NestJS y contaminarían el núcleo. Un `code` estable permite al frontend reaccionar por tipo de error sin depender del texto del mensaje.
 - **Consecuencias:** cada error nuevo requiere una línea en el mapeo; un error sin mapear devuelve 500 y se registra en logs.

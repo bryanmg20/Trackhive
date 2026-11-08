@@ -16,7 +16,7 @@ export class ErrorDetailDto implements ErrorDetail {
   messages: string[];
 }
 
-/** Formato uniforme de todas las respuestas de error de la API. */
+/** Uniform format for every API error response. */
 export class ErrorResponseDto {
   @ApiProperty({ description: 'Código HTTP', example: 400 })
   statusCode: number;

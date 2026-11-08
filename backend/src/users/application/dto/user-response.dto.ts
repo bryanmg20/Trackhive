@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { UserRole } from '../../domain/user-role';
 
 export class UserResponseDto {
   @ApiProperty({
@@ -8,8 +9,21 @@ export class UserResponseDto {
   id: string;
 
   @ApiProperty({
+    description: 'Nombre completo del usuario',
+    example: 'Ana Pérez',
+  })
+  fullName: string;
+
+  @ApiProperty({
     description: 'Correo electrónico del usuario',
-    example: 'usuario@ejemplo.com',
+    example: 'investigador@ejemplo.com',
   })
   email: string;
+
+  @ApiProperty({
+    description: 'Rol asignado por el servidor',
+    enum: ['ADMIN', 'PERSONAL', 'PUBLICO'],
+    example: 'PUBLICO',
+  })
+  role: UserRole;
 }

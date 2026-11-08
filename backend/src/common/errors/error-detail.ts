@@ -1,4 +1,4 @@
-/** Detalle de un campo que no pasó la validación de entrada. */
+/** Detail of a field that failed input validation. */
 export interface ErrorDetail {
   field: string;
   messages: string[];

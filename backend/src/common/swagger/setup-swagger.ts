@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-/** Ruta de la interfaz de Swagger fuera del prefijo versionado. */
+/** Swagger UI path outside the versioned prefix. */
 export const SWAGGER_PATH = 'docs';
 
 export function setupSwagger(app: INestApplication): void {
