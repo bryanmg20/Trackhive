@@ -36,6 +36,11 @@ class FakeTokenService implements TokenService {
   verifyRefreshToken(token: string): Promise<boolean> {
     return Promise.resolve(token.startsWith('refresh-'));
   }
+
+  // Not used by the renewal: only the guards check access tokens (HU-04)
+  verifyAccessToken(): Promise<TokenPayload | null> {
+    return Promise.resolve(null);
+  }
 }
 
 const buildUser = (overrides: Partial<UserProps> = {}): User =>
