@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DomainError } from '../errors/domain.error';
+import { InvalidRefreshTokenError } from '../../auth/domain/errors/invalid-refresh-token.error';
 import { EmailAlreadyExistsError } from '../../users/domain/errors/email-already-exists.error';
 import { InvalidEmailError } from '../../users/domain/errors/invalid-email.error';
 import { InvalidRequestStatusError } from '../../requests/domain/errors/invalid-request-status.error';
@@ -127,6 +128,18 @@ describe('AllExceptionsFilter', () => {
       code: 'EMAIL_ALREADY_EXISTS',
       message: 'Ya existe una cuenta con ese correo',
       path: '/api/v1/users',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps an invalid refresh token to 401 Unauthorized', () => {
+    run(new InvalidRefreshTokenError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+    expect(payload()).toMatchObject({
+      statusCode: HttpStatus.UNAUTHORIZED,
+      code: 'INVALID_REFRESH_TOKEN',
+      message: 'La sesión no es válida o ya expiró',
     });
     expect(logSpy).not.toHaveBeenCalled();
   });

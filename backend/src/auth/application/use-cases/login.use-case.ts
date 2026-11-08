@@ -7,8 +7,7 @@ import {
 import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
 import { InvalidCredentialsError } from '../../domain/errors/invalid-credentials.error';
 import { LoginResponseDto } from '../dto/login-response.dto';
-import type { TokenService } from '../ports/token-service.port';
-import { TOKEN_SERVICE } from '../tokens';
+import { SessionTokenIssuer } from '../services/session-token-issuer';
 
 export interface LoginInput {
   email: string;
@@ -20,7 +19,7 @@ export class LoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
-    @Inject(TOKEN_SERVICE) private readonly tokenService: TokenService,
+    private readonly sessionTokenIssuer: SessionTokenIssuer,
   ) {}
 
   async execute(input: LoginInput): Promise<LoginResponseDto> {
@@ -40,11 +39,7 @@ export class LoginUseCase {
       throw new InvalidCredentialsError();
     }
 
-    const payload = { sub: user.id, role: user.role };
-    const [accessToken, refreshToken] = await Promise.all([
-      this.tokenService.signAccessToken(payload),
-      this.tokenService.signRefreshToken(payload),
-    ]);
-    return { accessToken, refreshToken };
+    // Stores the refresh token too, so it can be renewed and revoked (HU-03)
+    return this.sessionTokenIssuer.issue(user);
   }
 }

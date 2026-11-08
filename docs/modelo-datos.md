@@ -363,7 +363,7 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 |---|---|---|---|
 | id | uuid | PK | |
 | user_id | uuid | FK → users, IDX | |
-| token_hash | varchar(255) | UK | Hash del refresh token, nunca el token en claro |
+| token_hash | varchar(255) | UK | Hash SHA-256 del refresh token, nunca el token en claro |
 | expires_at | timestamptz | | |
 | revoked_at | timestamptz | NULL | `NULL` = vigente |
 

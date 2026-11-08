@@ -42,7 +42,7 @@ flowchart TB
 | D-08 | Historial de estados en tabla propia, solo de inserción | Propuesta |
 | D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
 | D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Propuesta |
-| D-11 | JWT (access y refresh) con rotación y contraseñas con argon2 | Propuesta |
+| D-11 | JWT (access y refresh) con rotación y contraseñas con argon2 | Implementada |
 | D-12 | Autorización por roles con guards globales; propiedad de datos en casos de uso | Propuesta |
 | D-13 | Validación en dos niveles: forma en presentación, reglas en dominio | Implementada |
 | D-14 | Errores de dominio traducidos por un filtro global | Implementada |
@@ -133,10 +133,10 @@ flowchart TB
 
 ### D-11. JWT (access y refresh) con rotación y argon2
 
-- **Decisión:** token de acceso de vida corta (por ejemplo, 15 minutos) y token de refresco de vida larga, con rotación en cada uso; se guarda en base de datos solo el hash del refresh token. Las contraseñas se almacenan con argon2.
-- **Alternativas:** sesiones con cookies en servidor; bcrypt; refresh token sin rotación.
-- **Justificación:** JWT con refresh es requisito del curso. La rotación limita el daño de un refresh robado, y guardar solo su hash evita que una filtración de la base entregue sesiones válidas. Argon2 resiste mejor ataques por GPU que bcrypt.
-- **Consecuencias:** hay que implementar la revocación (cierre de sesión e invalidación de la familia de tokens ante un reuso detectado).
+- **Decisión:** el access token dura 15 minutos y se firma con `JWT_SECRET`. El refresh token dura 7 días, se firma con `JWT_REFRESH_SECRET` y lleva un `jti` aleatorio para que dos tokens nunca sean iguales. Cada refresh token emitido se guarda en `refresh_tokens` solo como hash SHA-256. `POST /api/v1/auth/refresh` lo rota: revoca el token recibido y entrega un par nuevo. Si llega un token ya revocado (reuso), se revocan todas las sesiones del usuario. `POST /api/v1/auth/logout` revoca el token y responde 204 aunque no exista, como indica el RFC 7009. Las contraseñas se almacenan con argon2. Por ahora los tokens viajan en el cuerpo JSON; D-20 prevé llevar el refresh token a una cookie `httpOnly`.
+- **Alternativas:** sesiones con cookies en servidor; bcrypt; refresh token sin rotación; guardar el refresh token con argon2.
+- **Justificación:** JWT con refresh es requisito del curso. La rotación limita el daño de un refresh robado, y guardar solo su hash evita que una filtración de la base entregue sesiones válidas. Para el token basta SHA-256: es largo y aleatorio, así que no se adivina por fuerza bruta como una contraseña, y como el mismo token siempre da el mismo hash, se puede buscar por él. Argon2 usa una sal aleatoria y no permitiría esa búsqueda. Para las contraseñas sí se usa argon2, que resiste mejor ataques por GPU que bcrypt.
+- **Consecuencias:** el access token no se puede revocar: sigue sirviendo hasta 15 minutos después de cerrar sesión, y por eso dura poco. La tabla no guarda una familia de tokens, así que ante un reuso se cierran todas las sesiones del usuario y no solo la cadena afectada. Si el frontend lanza dos renovaciones a la vez con el mismo token, la segunda cuenta como reuso, así que debe esperar a que termine la primera. Las filas vencidas o revocadas se acumulan; falta una tarea que las limpie.
 
 ### D-12. Autorización por roles con guards globales; propiedad en casos de uso
 
@@ -199,7 +199,7 @@ flowchart TB
 - **Decisión:** React con TypeScript sobre Vite. React Query para los datos del servidor, React Hook Form (con validación por esquema) para formularios, React Router con rutas protegidas por rol y FullCalendar para la agenda. El access token se mantiene en memoria y el refresh token en una cookie `httpOnly` con `SameSite`.
 - **Alternativas:** guardar los tokens en `localStorage`; Redux para todo el estado.
 - **Justificación:** casi todo el estado de la aplicación es estado del servidor, que React Query gestiona (caché, reintentos, invalidación) sin código adicional. Guardar el token en `localStorage` lo expone a robo por XSS; en memoria más cookie `httpOnly` reduce ese riesgo. FullCalendar evita construir desde cero la vista de calendario, que es la parte de interfaz más costosa.
-- **Consecuencias:** requiere configurar CORS con credenciales y atributos de cookie coherentes entre entornos. La accesibilidad (contraste, etiquetas, teclado, textos escalables) se trata como criterio de revisión en cada PR.
+- **Consecuencias:** requiere configurar CORS con credenciales y atributos de cookie coherentes entre entornos. Mientras la cookie no esté implementada, el refresh token viaja en el cuerpo JSON (HU-03). Pasarlo a la cookie solo cambia la capa de presentación de `auth` y la configuración de la app (cookies y CORS); los casos de uso no dependen del transporte. La accesibilidad (contraste, etiquetas, teclado, textos escalables) se trata como criterio de revisión en cada PR.
 
 ### D-21. Pruebas: fakes en memoria para unitarias y PostgreSQL real para e2e
 
