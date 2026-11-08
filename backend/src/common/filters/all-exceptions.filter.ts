@@ -47,6 +47,9 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   INVALID_REQUEST_STATUS: HttpStatus.BAD_REQUEST,
   REJECTION_REASON_REQUIRED: HttpStatus.BAD_REQUEST,
   INVALID_STATUS_TRANSITION: HttpStatus.CONFLICT,
+  USER_NOT_FOUND: HttpStatus.NOT_FOUND,
+  // The mail server failed, not the request: like a proxy, answer 502
+  MAIL_DELIVERY_FAILED: HttpStatus.BAD_GATEWAY,
 };
 
 function codeFromStatus(statusCode: number): string {
