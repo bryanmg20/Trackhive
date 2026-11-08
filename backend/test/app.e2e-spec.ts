@@ -69,7 +69,7 @@ describe('Versioned API (e2e)', () => {
       .overrideProvider(USER_REPOSITORY)
       .useValue(repository)
       .overrideProvider(PrismaService)
-      .useValue({})
+      .useValue({ $queryRaw: jest.fn().mockResolvedValue([{ 1: 1 }]) })
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -202,5 +202,12 @@ describe('Versioned API (e2e)', () => {
 
     const body = response.body as { paths?: Record<string, unknown> };
     expect(body.paths).toHaveProperty('/api/v1/users');
+  });
+
+  it('reports health without an access token', async () => {
+    await request(server).get('/api/v1/health').expect(200).expect({
+      status: 'ok',
+      database: 'up',
+    });
   });
 });
