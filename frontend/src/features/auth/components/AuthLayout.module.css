@@ -11,8 +11,8 @@
   justify-content: space-between;
   gap: 3rem;
   padding: clamp(2rem, 5vw, 4.75rem);
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--gold);
+  color: var(--ink);
 }
 
 .brand {
@@ -27,11 +27,11 @@
   font-weight: 400;
   letter-spacing: -0.035em;
   line-height: 1;
-  color: var(--paper);
+  color: var(--ink);
 }
 
 .wordmarkDot {
-  color: var(--gold);
+  color: var(--gold-deep);
 }
 
 .brandTag {
@@ -40,7 +40,7 @@
   letter-spacing: 0.18em;
   line-height: 1.4;
   text-transform: uppercase;
-  color: var(--sage);
+  color: var(--ink-soft);
 }
 
 .panelCopy {
@@ -59,7 +59,7 @@
   letter-spacing: 0.18em;
   line-height: 1.4;
   text-transform: uppercase;
-  color: var(--sage);
+  color: var(--ink-soft);
 }
 
 .eyebrow::before {
@@ -76,11 +76,11 @@
   letter-spacing: -0.045em;
   line-height: 0.98;
   text-wrap: balance;
-  color: var(--paper);
+  color: var(--ink);
 }
 
 .statement em {
-  color: var(--sage);
+  color: var(--gold-deep);
   font-weight: 300;
 }
 
@@ -88,7 +88,7 @@
   max-width: 25rem;
   font-size: 0.98rem;
   line-height: 1.6;
-  color: var(--paper-muted);
+  color: var(--ink-soft);
 }
 
 .panelMeta {
@@ -96,13 +96,13 @@
   flex-wrap: wrap;
   gap: 0.65rem 1.4rem;
   padding-top: 1.25rem;
-  border-top: 1px solid rgba(232, 238, 233, 0.22);
+  border-top: 1px solid rgba(17, 34, 29, 0.25);
   font-family: var(--font-mono);
   font-size: 0.6rem;
   letter-spacing: 0.16em;
   line-height: 1.5;
   text-transform: uppercase;
-  color: var(--sage);
+  color: var(--ink-soft);
 }
 
 .content {
@@ -130,7 +130,7 @@
   align-items: center;
   justify-content: center;
   padding: 1.25rem 0.75rem;
-  background: var(--ink);
+  background: var(--gold);
 }
 
 .spineText {
@@ -143,7 +143,7 @@
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--sage);
+  color: var(--ink);
 }
 
 .cardBody {
@@ -216,7 +216,7 @@
   .spine {
     justify-content: flex-start;
     padding: 0.7rem 1.25rem;
-    border-bottom: 1px solid rgba(232, 238, 233, 0.16);
+    border-bottom: 1px solid rgba(17, 34, 29, 0.22);
   }
 
   .spineText {
