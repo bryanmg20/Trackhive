@@ -387,19 +387,21 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 
 ### materials
 
+Campos según HU-06, HU-07 y HU-20.
+
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| reference_code | varchar(40) | UK | Signatura topográfica |
+| catalog_code | varchar(40) | UK | Código de catalogación único |
 | title | varchar(255) | IDX trigram | |
-| material_type | varchar(15) | CHECK, IDX | `DOCUMENTO`, `EXPEDIENTE`, `PERIODICO`, `FOTOGRAFIA`, `LIBRO`, `MAPA`, `OTRO` |
-| description, collection, period | text / varchar | NULL | Datos descriptivos |
-| depot, shelf, box | varchar(40) | NULL | Ubicación física |
-| everything_ref | varchar(255) | NULL | Ruta o identificador del documento en *Everything* |
-| has_digital_copy | boolean | DEFAULT false | |
-| conservation_status | varchar(10) | CHECK | `OPTIMO`, `REGULAR`, `CRITICO` (con `CRITICO` no se consulta físicamente) |
-| restricted_access | boolean | DEFAULT false | Con `true` no se consulta físicamente |
-| active | boolean | DEFAULT true | Baja lógica |
+| material_type | varchar(20) | CHECK, IDX | `DOCUMENTO`, `PERIODICO`, `PROTOCOLO_NOTARIAL`, `OTRO` |
+| author | varchar(150) | NULL, IDX trigram | Opcional |
+| collection | varchar(120) | IDX trigram | Colección o tema |
+| publication_date | date | NULL | Solo periódicos |
+| publisher | varchar(150) | NULL | Empresa editora; solo periódicos |
+| depot, shelf, box | varchar(40) | | Ubicación física. Nunca se muestra al rol `PUBLICO` |
+| status | varchar(20) | CHECK | `DISPONIBLE`, `EN_USO`, `EN_RESTAURACION`, `NO_CONSULTABLE` |
+| created_at, updated_at | timestamptz | | |
 
 ### requests
 
@@ -507,7 +509,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
 | refresh_tokens | user_id | Revocar las sesiones de un usuario |
 | requesters | (document_type, document_number) (UK), document_number, email | Buscar a la persona en el registro asistido sin duplicarla |
 | requesters | GIN trigram (first_names, last_names) | Búsqueda por nombre con errores de escritura |
-| materials | reference_code (UK), GIN trigram (title), material_type | Buscar material para agregarlo a una solicitud |
+| materials | catalog_code (UK), GIN trigram (title, author, collection), material_type | Listar y buscar material (HU-07) y agregarlo a una solicitud |
 | requests | tracking_code (UK) | Consulta por radicado |
 | requests | (status, committed_date) | Bandeja de trabajo y solicitudes vencidas |
 | requests | requester_id, assignee_id, created_by_id | «Mis solicitudes», «asignadas a mí» |
