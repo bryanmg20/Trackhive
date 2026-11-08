@@ -41,7 +41,7 @@ flowchart TB
 | D-07 | La máquina de estados vive en la entidad `Solicitud` | Implementada |
 | D-08 | Historial de estados en tabla propia, solo de inserción | Propuesta |
 | D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
-| D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Propuesta |
+| D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Parcial (sin tabla de salida) |
 | D-11 | JWT (access y refresh) con rotación y contraseñas con argon2 | Implementada |
 | D-12 | Autorización por roles con guards globales; propiedad de datos en casos de uso | Implementada |
 | D-13 | Validación en dos niveles: forma en presentación, reglas en dominio | Implementada |
@@ -129,7 +129,7 @@ flowchart TB
 - **Decisión:** `CambiarEstadoSolicitud` no envía correos: registra una fila en `notifications` (estado `PENDIENTE`) dentro de la misma transacción del cambio de estado. Un proceso programado (`@nestjs/schedule`) la envía a través del `NotificadorPort`, implementado con SMTP (Nodemailer), y marca `ENVIADA` o `FALLIDA` con un contador de reintentos.
 - **Alternativas:** enviar el correo de forma síncrona dentro del caso de uso; usar una cola externa (Redis, RabbitMQ).
 - **Justificación:** una caída del servidor SMTP no debe impedir ni revertir un cambio de estado legítimo. Una tabla de salida da fiabilidad sin sumar infraestructura nueva, algo importante porque el CLENA debe poder operarlo. Una cola externa se descarta por exceso de complejidad para este volumen.
-- **Consecuencias:** el correo no es instantáneo (llega en el siguiente ciclo del proceso, de segundos a un par de minutos). En desarrollo se usa Mailpit para inspeccionar correos sin enviarlos.
+- **Consecuencias:** el correo no es instantáneo (llega en el siguiente ciclo del proceso, de segundos a un par de minutos). En desarrollo se usa Mailpit para inspeccionar correos sin enviarlos. HU-22 implementó el puerto con el nombre `MailSender` (`notifications/application/ports/`), su versión SMTP con Nodemailer (`SmtpMailSender`, configurada con las variables `SMTP_*`) y el servicio Mailpit en `docker-compose.yml`. La tabla `notifications` y el proceso que la envía quedan para HU-23. Un administrador puede comprobar la configuración con `POST /api/v1/notifications/test-email`, que le envía un correo de prueba a su propio correo.
 
 ### D-11. JWT (access y refresh) con rotación y argon2
 

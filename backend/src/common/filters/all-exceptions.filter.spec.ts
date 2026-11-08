@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { DomainError } from '../errors/domain.error';
 import { InvalidRefreshTokenError } from '../../auth/domain/errors/invalid-refresh-token.error';
+import { MailDeliveryFailedError } from '../../notifications/domain/errors/mail-delivery-failed.error';
 import { EmailAlreadyExistsError } from '../../users/domain/errors/email-already-exists.error';
+import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
 import { InvalidEmailError } from '../../users/domain/errors/invalid-email.error';
 import { InvalidRequestStatusError } from '../../requests/domain/errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../../requests/domain/errors/invalid-status-transition.error';
@@ -140,6 +142,29 @@ describe('AllExceptionsFilter', () => {
       statusCode: HttpStatus.UNAUTHORIZED,
       code: 'INVALID_REFRESH_TOKEN',
       message: 'La sesión no es válida o ya expiró',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps a missing user to 404 Not Found', () => {
+    run(new UserNotFoundError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+    expect(payload()).toMatchObject({
+      code: 'USER_NOT_FOUND',
+      message: 'El usuario no existe',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps a mail server failure to 502 Bad Gateway', () => {
+    run(new MailDeliveryFailedError());
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_GATEWAY);
+    expect(payload()).toMatchObject({
+      statusCode: HttpStatus.BAD_GATEWAY,
+      code: 'MAIL_DELIVERY_FAILED',
+      message: 'No se pudo enviar el correo. Revisa la configuración SMTP',
     });
     expect(logSpy).not.toHaveBeenCalled();
   });

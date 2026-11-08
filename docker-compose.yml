@@ -34,11 +34,28 @@ services:
       SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:?Missing SEED_DEMO_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?Missing JWT_SECRET in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Missing JWT_REFRESH_SECRET in .env}
+      SMTP_HOST: ${SMTP_HOST:?Missing SMTP_HOST in .env}
+      SMTP_PORT: ${SMTP_PORT:?Missing SMTP_PORT in .env}
+      # Optional: Mailpit needs no login
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:?Missing SMTP_FROM in .env}
     ports:
       - "127.0.0.1:${BACKEND_PORT:?Missing BACKEND_PORT in .env}:3000"
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Development mail server (D-10): keeps the emails without sending them.
+  # Inbox at http://localhost:8025; the backend sends to mailpit:1025.
+  mailpit:
+    networks:
+      - trackhive-network
+    image: axllent/mailpit:v1.32.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
   frontend:
     networks:
