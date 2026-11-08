@@ -5,8 +5,17 @@ export interface TokenPayload {
   role: UserRole;
 }
 
-/** Signs the session tokens without the use case knowing about JWT. */
+export interface SignedToken {
+  token: string;
+  expiresAt: Date;
+}
+
+/** Signs and checks the session tokens without the use cases knowing about JWT. */
 export interface TokenService {
   signAccessToken(payload: TokenPayload): Promise<string>;
-  signRefreshToken(payload: TokenPayload): Promise<string>;
+  signRefreshToken(payload: TokenPayload): Promise<SignedToken>;
+  /** True only for a refresh token signed by us that has not expired. */
+  verifyRefreshToken(token: string): Promise<boolean>;
+  /** Payload of a valid, unexpired access token; null otherwise. */
+  verifyAccessToken(token: string): Promise<TokenPayload | null>;
 }

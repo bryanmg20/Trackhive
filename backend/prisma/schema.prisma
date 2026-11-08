@@ -9,16 +9,33 @@ generator client {
 }
 
 model UserModel {
-  id           String    @id @db.Uuid
-  fullName     String    @map("full_name") @db.VarChar(120)
-  email        String    @unique @db.VarChar(160)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
+  id            String              @id @db.Uuid
+  fullName      String              @map("full_name") @db.VarChar(120)
+  email         String              @unique @db.VarChar(160)
+  passwordHash  String              @map("password_hash") @db.VarChar(255)
   // Allowed values (CHECK in the migration): ADMIN, PERSONAL, PUBLICO
-  role         String    @db.VarChar(10)
-  active       Boolean   @default(true)
-  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  role          String              @db.VarChar(10)
+  active        Boolean             @default(true)
+  lastLoginAt   DateTime?           @map("last_login_at") @db.Timestamptz
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  refreshTokens RefreshTokenModel[]
 
   @@map("users")
+}
+
+// One row per issued refresh token. Only its SHA-256 hash is stored (D-11)
+model RefreshTokenModel {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  // NULL = still valid
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  // No cascade: a user with sessions is deactivated, not deleted
+  user      UserModel @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
