@@ -38,6 +38,7 @@ function renderRegisterPage(redirectDelayMs = 4000) {
 async function fillForm(
   user: ReturnType<typeof userEvent.setup>,
   values = validValues,
+  acceptPrivacy = true,
 ) {
   await user.type(screen.getByLabelText('Nombre completo'), values.fullName);
   await user.type(
@@ -49,6 +50,11 @@ async function fillForm(
     screen.getByLabelText('Confirmar contraseña'),
     values.confirmPassword,
   );
+  if (acceptPrivacy) {
+    await user.click(
+      screen.getByRole('checkbox', { name: /acepto el aviso de privacidad/i }),
+    );
+  }
 }
 
 describe('RegisterPage', () => {
@@ -64,6 +70,16 @@ describe('RegisterPage', () => {
     expect(screen.getByLabelText('Correo electrónico')).toBeInTheDocument();
     expect(screen.getByLabelText('Contraseña')).toBeInTheDocument();
     expect(screen.getByLabelText('Confirmar contraseña')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Aviso de privacidad' }),
+    ).toBeVisible();
+    expect(screen.getByText(/Versión 1\.0/)).toBeVisible();
+    expect(
+      screen.getByRole('checkbox', {
+        name: /acepto el aviso de privacidad/i,
+      }),
+    ).not.toBeChecked();
+    expect(screen.getByText('Leer aviso completo')).toBeVisible();
     expect(screen.getByRole('link', { name: /ya tengo cuenta/i })).toHaveAttribute(
       'href',
       '/login',
@@ -81,6 +97,9 @@ describe('RegisterPage', () => {
       screen.getByLabelText('Confirmar contraseña'),
       'secret123',
     );
+    await user.click(
+      screen.getByRole('checkbox', { name: /acepto el aviso de privacidad/i }),
+    );
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(await screen.findByText('Escriba un correo válido.')).toBeVisible();
@@ -91,6 +110,41 @@ describe('RegisterPage', () => {
     expect(screen.getByLabelText('Confirmar contraseña')).toHaveValue(
       'secret123',
     );
+  });
+
+  it('blocks registration until the privacy notice is accepted and keeps the values', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(jsonResponse(201, null));
+    renderRegisterPage();
+
+    await fillForm(user, validValues, false);
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(
+      await screen.findByText(
+        'Debe aceptar el aviso de privacidad para crear su cuenta.',
+      ),
+    ).toBeVisible();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('checkbox', {
+        name: /acepto el aviso de privacidad/i,
+      }),
+    ).not.toBeChecked();
+    expect(screen.getByLabelText('Nombre completo')).toHaveValue('Ana Pérez');
+    expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
+      'ana@mail.com',
+    );
+    expect(screen.getByLabelText('Contraseña')).toHaveValue('secret123');
+
+    await user.click(
+      screen.getByRole('checkbox', { name: /acepto el aviso de privacidad/i }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Cuenta creada' }),
+    ).toBeVisible();
   });
 
   it('reports mismatched passwords next to the confirmation field', async () => {

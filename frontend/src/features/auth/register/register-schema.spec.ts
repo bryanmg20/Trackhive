@@ -6,6 +6,7 @@ const validValues = {
   email: 'ana@mail.com',
   password: 'secret123',
   confirmPassword: 'secret123',
+  acceptedPrivacy: true,
 };
 
 describe('registerSchema', () => {
@@ -19,6 +20,7 @@ describe('registerSchema', () => {
       email: '',
       password: '',
       confirmPassword: '',
+      acceptedPrivacy: false,
     });
 
     expect(result.success).toBe(false);
@@ -31,8 +33,29 @@ describe('registerSchema', () => {
           'email',
           'password',
           'confirmPassword',
+          'acceptedPrivacy',
         ]),
       );
+    }
+  });
+
+  it('requires accepting the privacy notice', () => {
+    const result = registerSchema.safeParse({
+      ...validValues,
+      acceptedPrivacy: false,
+    });
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(
+        result.error.issues.some(
+          (issue) =>
+            issue.path[0] === 'acceptedPrivacy' &&
+            issue.message ===
+              'Debe aceptar el aviso de privacidad para crear su cuenta.',
+        ),
+      ).toBe(true);
     }
   });
 

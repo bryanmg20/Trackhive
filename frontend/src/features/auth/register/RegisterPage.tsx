@@ -9,6 +9,7 @@ import {
 } from '../api/register-user';
 import { AuthLayout } from '../components/AuthLayout';
 import { TextField } from '../components/TextField';
+import { PrivacyConsent } from './PrivacyConsent';
 import {
   registerSchema,
   type RegisterFormValues,
@@ -62,6 +63,7 @@ export function RegisterPage({
       email: '',
       password: '',
       confirmPassword: '',
+      acceptedPrivacy: false,
     },
     mode: 'onSubmit',
     reValidateMode: 'onChange',
@@ -251,6 +253,11 @@ export function RegisterPage({
           autoComplete="new-password"
           error={errors.confirmPassword?.message}
           registration={register('confirmPassword')}
+        />
+
+        <PrivacyConsent
+          error={errors.acceptedPrivacy?.message}
+          registration={register('acceptedPrivacy')}
         />
 
         <button className={styles.submit} type="submit" disabled={isSubmitting}>

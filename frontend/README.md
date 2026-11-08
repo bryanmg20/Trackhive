@@ -41,22 +41,28 @@ El registro consume `POST /api/v1/users` con este cuerpo:
 { "fullName": "Ana Pérez", "email": "ana@mail.com", "password": "secret123" }
 ```
 
-La confirmación de contraseña es solo del cliente y no se envía. Se espera
-`201` en éxito; los errores usan el formato uniforme del backend
+La confirmación de contraseña es solo del cliente y no se envía. La casilla del
+aviso de privacidad también se valida en el cliente y tampoco se envía: el
+backend todavía no persiste el consentimiento. El aviso vigente es la versión
+`1.0`, con fecha de vigencia 7 de noviembre de 2026 (ver
+`src/features/auth/register/privacy-policy.ts`). Se espera `201` en éxito; los
+errores usan el formato uniforme del backend
 (`{ statusCode, code, message, details?, timestamp, path }`). Los `details`
 por campo se muestran junto al campo correspondiente y un `409` o
 `EMAIL_ALREADY_EXISTS` se muestra en el campo de correo.
 
-## Estado y bloqueo
+## Estado y alcance
 
-- **HU-01 pendiente:** el `POST /api/v1/users` actual solo acepta `email`, no
-  valida contraseña y guarda un `fullName` vacío. Enviar el cuerpo planeado
-  devuelve `400` porque el `ValidationPipe` usa `forbidNonWhitelisted`. La
-  pantalla queda implementada contra el contrato esperado y sus pruebas
-  simulan la API con `fetch`; no se debe afirmar que la integración real está
-  completa hasta que HU-01 se implemente.
+- **HU-01 integrado:** el `POST /api/v1/users` acepta `fullName`, `email` y
+  `password`, guarda la contraseña como hash y responde `409` si el correo ya
+  existe.
+- **HU-31 (aviso de privacidad):** la pantalla exige aceptar el aviso antes de
+  enviar el formulario. El texto real, la versión y la fecha de vigencia están
+  en `src/features/auth/register/privacy-policy.ts` y
+  `PrivacyConsent.tsx`. **Pendiente:** el backend aún no recibe ni guarda la
+  aceptación, la fecha y la versión.
 - **HU-46 no disponible:** el wireframe no está en `docs/`, así que el diseño
-  se derivó de los criterios de aceptación.
+  se derivó de los criterios de aceptación y de los tokens actuales del repo.
 - **HU-48 no disponible:** `/login` es un marcador temporal; al registrarse se
   redirige allí con un aviso y el correo registrado.
 
@@ -64,9 +70,10 @@ por campo se muestran junto al campo correspondiente y un `409` o
 
 `pnpm test` ejecuta Vitest con jsdom y Testing Library. Las pruebas de la
 pantalla cubren etiquetas, errores por campo que conservan lo escrito,
-contraseñas que no coinciden, detalles `400`, correo duplicado `409`, fallo de
-red, confirmación con navegación manual y redirección automática. La API se
-simula con `vi.stubGlobal('fetch', ...)`.
+contraseñas que no coinciden, aviso de privacidad obligatorio con versión
+visible, detalles `400`, correo duplicado `409`, fallo de red, confirmación con
+navegación manual y redirección automática. La API se simula con
+`vi.stubGlobal('fetch', ...)`.
 
 ## Estructura
 

@@ -22,6 +22,12 @@ export const registerSchema = z
       .min(8, 'Use al menos 8 caracteres.')
       .max(128, 'La contraseña no puede superar los 128 caracteres.'),
     confirmPassword: z.string().min(1, 'Repita su contraseña.'),
+    acceptedPrivacy: z
+      .boolean()
+      .refine(
+        (accepted) => accepted,
+        'Debe aceptar el aviso de privacidad para crear su cuenta.',
+      ),
   })
   .refine((values) => values.password === values.confirmPassword, {
     path: ['confirmPassword'],

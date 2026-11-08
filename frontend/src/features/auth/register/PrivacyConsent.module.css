@@ -1,0 +1,234 @@
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.15rem;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+}
+
+.noticeHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.9rem;
+}
+
+.noticeTitle {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.version {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.intro {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.fullText {
+  border-top: 1px solid var(--line);
+  padding-top: 0.55rem;
+}
+
+.summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--seal);
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary::before {
+  content: '+';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.fullText[open] .summary::before {
+  content: '−';
+}
+
+.summary:hover {
+  color: var(--seal-dark);
+}
+
+.summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.fullTextBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.7rem;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.fullTextBody h3 {
+  margin: 0.45rem 0 0;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.fullTextBody ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.fullTextBody li {
+  margin-bottom: 0.2rem;
+}
+
+.fullTextBody a {
+  color: var(--seal);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.fullTextBody a:hover {
+  color: var(--seal-dark);
+}
+
+.acceptance {
+  margin-top: 0.45rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--sage-deep);
+  border-radius: 5px;
+  background: var(--surface-strong);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.checkboxRow:hover {
+  border-color: var(--ink-soft);
+}
+
+.checkboxRow:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.checkboxRowError {
+  border-color: var(--seal);
+  background: var(--error-surface);
+}
+
+.checkboxRowError:focus-within {
+  outline-color: var(--seal);
+}
+
+.checkbox {
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--seal);
+  cursor: pointer;
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.checkboxText {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--seal);
+}
+
+.errorMark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.05rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+@media (max-width: 380px) {
+  .notice {
+    padding: 0.85rem;
+  }
+
+  .checkboxRow {
+    padding: 0.75rem 0.8rem;
+  }
+}
