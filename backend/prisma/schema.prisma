@@ -39,3 +39,33 @@ model RefreshTokenModel {
   @@index([userId])
   @@map("refresh_tokens")
 }
+
+// A piece of the archive collection (HU-07). The GIN trigram indexes need the
+// pg_trgm extension, which is created by hand in the migration (D-16)
+model MaterialModel {
+  id              String    @id @db.Uuid
+  catalogCode     String    @unique @map("catalog_code") @db.VarChar(40)
+  title           String    @db.VarChar(255)
+  // Allowed values (CHECK in the migration): DOCUMENTO, PERIODICO, PROTOCOLO_NOTARIAL, OTRO
+  materialType    String    @map("material_type") @db.VarChar(20)
+  author          String?   @db.VarChar(150)
+  collection      String    @db.VarChar(120)
+  // Periodicals only (HU-06). Nullable: some historic periodicals lack them
+  publicationDate DateTime? @map("publication_date") @db.Date
+  publisher       String?   @db.VarChar(150)
+  // Physical location. Never shown to the PUBLICO role
+  depot           String    @db.VarChar(40)
+  shelf           String    @db.VarChar(40)
+  box             String    @db.VarChar(40)
+  // Allowed values (CHECK in the migration): DISPONIBLE, EN_USO, EN_RESTAURACION, NO_CONSULTABLE
+  status          String    @db.VarChar(20)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([materialType])
+  // Text search with ILIKE '%...%' (HU-07)
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "materials_title_trgm_idx")
+  @@index([author(ops: raw("gin_trgm_ops"))], type: Gin, map: "materials_author_trgm_idx")
+  @@index([collection(ops: raw("gin_trgm_ops"))], type: Gin, map: "materials_collection_trgm_idx")
+  @@map("materials")
+}
