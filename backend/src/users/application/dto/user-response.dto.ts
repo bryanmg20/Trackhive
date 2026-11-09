@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { NAME_MAX_LENGTH } from '../../domain/person-name';
 import type { UserRole } from '../../domain/user-role';
 
 export class UserResponseDto {
@@ -9,10 +10,36 @@ export class UserResponseDto {
   id: string;
 
   @ApiProperty({
-    description: 'Nombre completo del usuario',
-    example: 'Ana Pérez',
+    description: 'Primer nombre',
+    example: 'Ana',
+    maxLength: NAME_MAX_LENGTH,
   })
-  fullName: string;
+  firstName: string;
+
+  @ApiProperty({
+    description: 'Segundo nombre; null si no tiene',
+    example: 'María',
+    maxLength: NAME_MAX_LENGTH,
+    type: String,
+    nullable: true,
+  })
+  middleName: string | null;
+
+  @ApiProperty({
+    description: 'Primer apellido',
+    example: 'Pérez',
+    maxLength: NAME_MAX_LENGTH,
+  })
+  lastName: string;
+
+  @ApiProperty({
+    description: 'Segundo apellido; null si no tiene',
+    example: 'Gómez',
+    maxLength: NAME_MAX_LENGTH,
+    type: String,
+    nullable: true,
+  })
+  secondLastName: string | null;
 
   @ApiProperty({
     description: 'Correo electrónico del usuario',

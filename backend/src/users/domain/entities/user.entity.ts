@@ -1,17 +1,19 @@
 import { InvalidEmailError } from '../errors/invalid-email.error';
-import { InvalidFullNameError } from '../errors/invalid-full-name.error';
 import { InvalidPasswordHashError } from '../errors/invalid-password-hash.error';
 import { InvalidRoleError } from '../errors/invalid-role.error';
+import { optionalName, requiredName } from '../person-name';
 import { isUserRole, UserRole } from '../user-role';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FULL_NAME_MAX_LENGTH = 120;
 const EMAIL_MAX_LENGTH = 160;
 const PASSWORD_HASH_MAX_LENGTH = 255;
 
 export interface UserProps {
   id: string;
-  fullName: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  secondLastName?: string | null;
   email: string;
   passwordHash: string;
   role: UserRole;
@@ -20,20 +22,23 @@ export interface UserProps {
 
 export class User {
   public readonly id: string;
-  public readonly fullName: string;
+  public readonly firstName: string;
+  public readonly middleName: string | null;
+  public readonly lastName: string;
+  public readonly secondLastName: string | null;
   public readonly email: string;
   public readonly passwordHash: string;
   public readonly role: UserRole;
   public readonly active: boolean;
 
   constructor(props: UserProps) {
-    const fullName = props.fullName?.trim() ?? '';
+    // Business rules: a user cannot exist with invalid account data
+    const firstName = requiredName(props.firstName, 'firstName');
+    const middleName = optionalName(props.middleName, 'middleName');
+    const lastName = requiredName(props.lastName, 'lastName');
+    const secondLastName = optionalName(props.secondLastName, 'secondLastName');
     const email = props.email?.trim().toLowerCase() ?? '';
 
-    // Business rules: a user cannot exist with invalid account data
-    if (!fullName || fullName.length > FULL_NAME_MAX_LENGTH) {
-      throw new InvalidFullNameError();
-    }
     if (!email || email.length > EMAIL_MAX_LENGTH || !EMAIL_REGEX.test(email)) {
       throw new InvalidEmailError();
     }
@@ -49,7 +54,10 @@ export class User {
     }
 
     this.id = props.id;
-    this.fullName = fullName;
+    this.firstName = firstName;
+    this.middleName = middleName;
+    this.lastName = lastName;
+    this.secondLastName = secondLastName;
     this.email = email;
     this.passwordHash = props.passwordHash;
     this.role = props.role;

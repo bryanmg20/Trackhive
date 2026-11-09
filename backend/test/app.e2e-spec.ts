@@ -13,7 +13,10 @@ import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.
 
 interface CreatedUserBody {
   id: string;
-  fullName: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  secondLastName: string | null;
   email: string;
   role: string;
 }
@@ -52,7 +55,10 @@ class InMemoryUserRepository implements IUserRepository {
 }
 
 const validRegistration = (email = 'ana@trackhive.test') => ({
-  fullName: 'Ana Pérez',
+  firstName: 'Ana',
+  middleName: 'María',
+  lastName: 'Pérez',
+  secondLastName: 'Gómez',
   email,
   password: 'secreto123',
 });
@@ -95,10 +101,14 @@ describe('Versioned API (e2e)', () => {
 
     const body = response.body as CreatedUserBody;
     expect(body).toMatchObject({
-      fullName: 'Ana Pérez',
+      firstName: 'Ana',
+      middleName: 'María',
+      lastName: 'Pérez',
+      secondLastName: 'Gómez',
       email: 'ana@trackhive.test',
       role: 'PUBLICO',
     });
+    expect(body).not.toHaveProperty('fullName');
     expect(typeof body.id).toBe('string');
     expect(body.id.length).toBeGreaterThan(0);
     expect(body).not.toHaveProperty('password');
@@ -107,6 +117,86 @@ describe('Versioned API (e2e)', () => {
     const stored = await repository.findByEmail('ana@trackhive.test');
     expect(stored?.passwordHash).toMatch(/^\$argon2/);
     expect(stored?.passwordHash).not.toBe('secreto123');
+  });
+
+  it('registers with only the required name fields', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({
+        firstName: 'Luis',
+        lastName: 'Rojas',
+        email: 'solo-obligatorios@trackhive.test',
+        password: 'secreto123',
+      })
+      .expect(201);
+
+    expect(response.body as CreatedUserBody).toMatchObject({
+      firstName: 'Luis',
+      middleName: null,
+      lastName: 'Rojas',
+      secondLastName: null,
+    });
+  });
+
+  it('stores blank optional name fields as null', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({
+        ...validRegistration('opcionales-vacios@trackhive.test'),
+        middleName: '   ',
+        secondLastName: '',
+      })
+      .expect(201);
+
+    expect(response.body as CreatedUserBody).toMatchObject({
+      middleName: null,
+      secondLastName: null,
+    });
+    const stored = await repository.findByEmail(
+      'opcionales-vacios@trackhive.test',
+    );
+    expect(stored?.middleName).toBeNull();
+    expect(stored?.secondLastName).toBeNull();
+  });
+
+  it('rejects a blank required name field and names it', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({ ...validRegistration(), lastName: '   ' })
+      .expect(400);
+
+    expect((response.body as ErrorBody).details).toEqual([
+      {
+        field: 'lastName',
+        messages: ['El primer apellido es obligatorio'],
+      },
+    ]);
+  });
+
+  it('rejects a registration without the first name', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({ ...validRegistration(), firstName: undefined })
+      .expect(400);
+
+    const fields = (response.body as ErrorBody).details?.map(
+      (detail) => detail.field,
+    );
+    expect(fields).toEqual(['firstName']);
+  });
+
+  it('rejects a name field longer than 40 characters', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({ ...validRegistration(), middleName: 'a'.repeat(41) })
+      .expect(400);
+
+    expect((response.body as ErrorBody).details).toEqual([
+      {
+        field: 'middleName',
+        messages: ['El segundo nombre no puede superar los 40 caracteres'],
+      },
+    ]);
   });
 
   it('normalizes the email to lowercase', async () => {
@@ -205,8 +295,42 @@ describe('Versioned API (e2e)', () => {
 
     const response = await request(server).get('/docs-json').expect(200);
 
-    const body = response.body as { paths?: Record<string, unknown> };
+    const body = response.body as {
+      paths?: Record<string, unknown>;
+      components: {
+        schemas: Record<
+          string,
+          {
+            required?: string[];
+            properties: Record<string, { nullable?: boolean }>;
+          }
+        >;
+      };
+    };
     expect(body.paths).toHaveProperty('/api/v1/users');
+
+    // The four name fields, with only the first name and last name required
+    const nameFields = [
+      'firstName',
+      'middleName',
+      'lastName',
+      'secondLastName',
+    ];
+    const createUser = body.components.schemas.CreateUserDto;
+    expect(Object.keys(createUser.properties)).toEqual(
+      expect.arrayContaining(nameFields),
+    );
+    expect(createUser.properties).not.toHaveProperty('fullName');
+    expect(createUser.required).toEqual(
+      expect.arrayContaining(['firstName', 'lastName']),
+    );
+    expect(createUser.required).not.toContain('middleName');
+    expect(createUser.required).not.toContain('secondLastName');
+
+    const userResponse = body.components.schemas.UserResponseDto;
+    expect(userResponse.properties).not.toHaveProperty('fullName');
+    expect(userResponse.properties.middleName.nullable).toBe(true);
+    expect(userResponse.properties.secondLastName.nullable).toBe(true);
   });
 
   it('reports health without an access token', async () => {

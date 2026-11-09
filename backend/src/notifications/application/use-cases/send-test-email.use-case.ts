@@ -29,15 +29,16 @@ export class SendTestEmailUseCase {
       throw new UserNotFoundError();
     }
 
+    const name = `${user.firstName} ${user.lastName}`;
     await this.mailSender.send({
       to: user.email,
       subject: 'Correo de prueba de Trackhive',
       text:
-        `Hola, ${user.fullName}:\n\n` +
+        `Hola, ${name}:\n\n` +
         'Este es un correo de prueba de Trackhive. Si lo recibiste, el ' +
         'envío de correos está bien configurado.',
       html:
-        `<p>Hola, ${escapeHtml(user.fullName)}:</p>` +
+        `<p>Hola, ${escapeHtml(name)}:</p>` +
         '<p>Este es un correo de prueba de Trackhive. Si lo recibiste, el ' +
         'envío de correos está bien configurado.</p>',
     });

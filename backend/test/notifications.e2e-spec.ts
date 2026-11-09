@@ -36,7 +36,8 @@ describe('Test email (e2e)', () => {
   const buildUser = (id: string, email: string, role: UserRole): User =>
     new User({
       id,
-      fullName: 'Persona Demo',
+      firstName: 'Persona',
+      lastName: 'Demo',
       email,
       passwordHash: 'hashed',
       role,

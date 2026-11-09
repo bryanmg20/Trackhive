@@ -1,33 +1,88 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { NAME_MAX_LENGTH } from '../../domain/person-name';
 
 const trimText = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
+
+// An optional name sent blank means "not given": it becomes null. It must run
+// before @IsOptional, which only skips null and undefined, not ''.
+const trimOptionalText = ({ value }: { value: unknown }): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
 
 const normalizeEmail = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
 
 export class CreateUserDto {
   @ApiProperty({
-    description: 'Nombre completo de la persona investigadora',
-    example: 'Ana Pérez',
-    maxLength: 120,
+    description: 'Primer nombre',
+    example: 'Ana',
+    maxLength: NAME_MAX_LENGTH,
   })
   @Transform(trimText)
-  @IsString({ message: 'El nombre completo debe ser texto' })
-  @IsNotEmpty({ message: 'El nombre completo es obligatorio' })
-  @MaxLength(120, {
-    message: 'El nombre completo no puede superar los 120 caracteres',
+  @IsString({ message: 'El primer nombre debe ser texto' })
+  @IsNotEmpty({ message: 'El primer nombre es obligatorio' })
+  @MaxLength(NAME_MAX_LENGTH, {
+    message: `El primer nombre no puede superar los ${NAME_MAX_LENGTH} caracteres`,
   })
-  fullName: string;
+  firstName: string;
+
+  @ApiPropertyOptional({
+    description: 'Segundo nombre. Si se omite o llega vacío, se guarda null',
+    example: 'María',
+    maxLength: NAME_MAX_LENGTH,
+    type: String,
+    nullable: true,
+  })
+  @Transform(trimOptionalText)
+  @IsOptional()
+  @IsString({ message: 'El segundo nombre debe ser texto' })
+  @MaxLength(NAME_MAX_LENGTH, {
+    message: `El segundo nombre no puede superar los ${NAME_MAX_LENGTH} caracteres`,
+  })
+  middleName?: string | null;
+
+  @ApiProperty({
+    description: 'Primer apellido',
+    example: 'Pérez',
+    maxLength: NAME_MAX_LENGTH,
+  })
+  @Transform(trimText)
+  @IsString({ message: 'El primer apellido debe ser texto' })
+  @IsNotEmpty({ message: 'El primer apellido es obligatorio' })
+  @MaxLength(NAME_MAX_LENGTH, {
+    message: `El primer apellido no puede superar los ${NAME_MAX_LENGTH} caracteres`,
+  })
+  lastName: string;
+
+  @ApiPropertyOptional({
+    description: 'Segundo apellido. Si se omite o llega vacío, se guarda null',
+    example: 'Gómez',
+    maxLength: NAME_MAX_LENGTH,
+    type: String,
+    nullable: true,
+  })
+  @Transform(trimOptionalText)
+  @IsOptional()
+  @IsString({ message: 'El segundo apellido debe ser texto' })
+  @MaxLength(NAME_MAX_LENGTH, {
+    message: `El segundo apellido no puede superar los ${NAME_MAX_LENGTH} caracteres`,
+  })
+  secondLastName?: string | null;
 
   @ApiProperty({
     description: 'Correo electrónico de la cuenta',

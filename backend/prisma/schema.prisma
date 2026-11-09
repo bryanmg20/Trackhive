@@ -10,7 +10,11 @@ generator client {
 
 model UserModel {
   id               String              @id @db.Uuid
-  fullName         String              @map("full_name") @db.VarChar(120)
+  // Same four name fields as RequesterModel (issue #96)
+  firstName        String              @map("first_name") @db.VarChar(40)
+  middleName       String?             @map("middle_name") @db.VarChar(40)
+  lastName         String              @map("last_name") @db.VarChar(40)
+  secondLastName   String?             @map("second_last_name") @db.VarChar(40)
   email            String              @unique @db.VarChar(160)
   passwordHash     String              @map("password_hash") @db.VarChar(255)
   // Allowed values (CHECK in the migration): ADMIN, PERSONAL, PUBLICO
@@ -79,8 +83,10 @@ model RequesterModel {
   userId                String?        @unique @map("user_id") @db.Uuid
   documentType          String?        @map("document_type") @db.VarChar(5)
   documentNumber        String?        @map("document_number") @db.VarChar(20)
-  firstNames            String         @map("first_names") @db.VarChar(80)
-  lastNames             String         @map("last_names") @db.VarChar(80)
+  firstName             String         @map("first_name") @db.VarChar(40)
+  middleName            String?        @map("middle_name") @db.VarChar(40)
+  lastName              String         @map("last_name") @db.VarChar(40)
+  secondLastName        String?        @map("second_last_name") @db.VarChar(40)
   email                 String?        @db.VarChar(160)
   phone                 String?        @db.VarChar(20)
   requesterType         String         @map("requester_type") @db.VarChar(15)
@@ -91,13 +97,14 @@ model RequesterModel {
   anonymizedAt          DateTime?      @map("anonymized_at") @db.Timestamptz
   createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt             DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  user                  UserModel?     @relation(fields: [userId], references: [id])
+  // Restrict, as created in the 20261109000000_create_requests migration
+  user                  UserModel?     @relation(fields: [userId], references: [id], onDelete: Restrict)
   requests              RequestModel[]
 
   @@unique([documentType, documentNumber])
   @@index([documentNumber])
   @@index([email])
-  @@index([firstNames(ops: raw("gin_trgm_ops")), lastNames(ops: raw("gin_trgm_ops"))], type: Gin, map: "requesters_name_trgm_idx")
+  @@index([firstName(ops: raw("gin_trgm_ops")), middleName(ops: raw("gin_trgm_ops")), lastName(ops: raw("gin_trgm_ops")), secondLastName(ops: raw("gin_trgm_ops"))], type: Gin, map: "requesters_name_trgm_idx")
   @@map("requesters")
 }
 
