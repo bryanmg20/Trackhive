@@ -12,13 +12,14 @@ classDiagram
 
     class Usuario {
         <<AggregateRoot>>
+        +NombrePersona nombre
         +Email email
         +Rol rol
     }
     class Solicitante {
         <<AggregateRoot>>
         +DocumentoIdentidad documento
-        +NombreCompleto nombre
+        +NombrePersona nombre
         +Email email
         +Consentimiento consentimiento
     }
@@ -95,7 +96,8 @@ Notación: `<<AggregateRoot>>` es la raíz de un agregado (se guarda completa) y
 | `FranjaHoraria` | `fin > inicio`. Dos franjas chocan si `a.inicio < b.fin` y `b.inicio < a.fin`. |
 | `Ubicacion` | Depósito, estantería y caja. |
 | `DocumentoIdentidad` | Tipo (CC, CE, TI, PAS, NIT) más número. Único por persona. |
-| `NombreCompleto`, `Email` | Nombre no vacío y correo con formato válido. |
+| `NombrePersona` | Primer nombre y primer apellido obligatorios; segundo nombre y segundo apellido opcionales. Máximo 40 caracteres cada uno. Igual en `Usuario` y `Solicitante`. |
+| `Email` | Correo con formato válido. |
 | `Consentimiento` | Aceptación del aviso de privacidad, con fecha y versión (Ley 1581). |
 
 ### 1.2 Relaciones
@@ -180,8 +182,10 @@ erDiagram
         uuid user_id FK, UK "IDX unico"
         varchar(5) document_type
         varchar(20) document_number "IDX, UK con document_type"
-        varchar(80) first_names "IDX GIN trgm con last_names"
-        varchar(80) last_names
+        varchar(40) first_name "IDX GIN trgm con los otros tres"
+        varchar(40) middle_name
+        varchar(40) last_name
+        varchar(40) second_last_name
         varchar(160) email "IDX"
         varchar(20) phone
         varchar(15) requester_type
@@ -288,7 +292,10 @@ erDiagram
     }
     USERS {
         uuid id PK
-        varchar(120) full_name
+        varchar(40) first_name
+        varchar(40) middle_name
+        varchar(40) last_name
+        varchar(40) second_last_name
         varchar(160) email UK
         varchar(255) password_hash
         varchar(10) role
@@ -346,7 +353,10 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| full_name | varchar(120) | | |
+| first_name | varchar(40) | | Primer nombre |
+| middle_name | varchar(40) | NULL | Segundo nombre |
+| last_name | varchar(40) | | Primer apellido |
+| second_last_name | varchar(40) | NULL | Segundo apellido |
 | email | varchar(160) | UK | Correo de inicio de sesión |
 | password_hash | varchar(255) | | Hash argon2 |
 | role | varchar(10) | CHECK | `ADMIN`, `PERSONAL`, `PUBLICO` |
@@ -371,7 +381,10 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | user_id | uuid | FK → users, UK, NULL | Cuenta, si tiene |
 | document_type | varchar(5) | CHECK, UK con document_number | `CC`, `CE`, `TI`, `PAS`, `NIT` |
 | document_number | varchar(20) | UK con document_type, IDX | Sin puntos ni espacios |
-| first_names, last_names | varchar(80) | IDX trigram | |
+| first_name | varchar(40) | IDX trigram | Primer nombre |
+| middle_name | varchar(40) | NULL, IDX trigram | Segundo nombre |
+| last_name | varchar(40) | IDX trigram | Primer apellido |
+| second_last_name | varchar(40) | NULL, IDX trigram | Segundo apellido |
 | email | varchar(160) | NULL, IDX | Para las notificaciones |
 | phone | varchar(20) | NULL | `CHECK (email IS NOT NULL OR phone IS NOT NULL)` |
 | requester_type | varchar(15) | CHECK | `INVESTIGADOR`, `ESTUDIANTE`, `DOCENTE`, `CIUDADANO`, `ENTIDAD` |
@@ -504,7 +517,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
 | users | email (UK) | Inicio de sesión |
 | refresh_tokens | user_id | Revocar las sesiones de un usuario |
 | requesters | (document_type, document_number) (UK), document_number, email | Buscar a la persona en el registro asistido sin duplicarla |
-| requesters | GIN trigram (first_names, last_names) | Búsqueda por nombre con errores de escritura |
+| requesters | GIN trigram (first_name, middle_name, last_name, second_last_name) | Búsqueda por nombre con errores de escritura |
 | materials | catalog_code (UK), GIN trigram (title, author, collection), material_type | Listar y buscar material (HU-07) y agregarlo a una solicitud |
 | requests | tracking_code (UK) | Consulta por radicado |
 | requests | (status, committed_date) | Bandeja de trabajo y solicitudes vencidas |
