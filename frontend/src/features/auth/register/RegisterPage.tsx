@@ -25,7 +25,10 @@ const GENERIC_ERROR_MESSAGE =
   'No pudimos crear su cuenta. Inténtelo de nuevo.';
 
 const REGISTER_FIELDS = [
-  'fullName',
+  'firstName',
+  'middleName',
+  'lastName',
+  'secondLastName',
   'email',
   'password',
   'confirmPassword',
@@ -59,7 +62,10 @@ export function RegisterPage({
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      fullName: '',
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      secondLastName: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -100,7 +106,11 @@ export function RegisterPage({
 
     try {
       await registerUser({
-        fullName: values.fullName,
+        firstName: values.firstName,
+        // Blank optional names are left out of the request, not sent as ''
+        middleName: values.middleName || undefined,
+        lastName: values.lastName,
+        secondLastName: values.secondLastName || undefined,
         email: values.email,
         password: values.password,
       });
@@ -193,7 +203,9 @@ export function RegisterPage({
       <header className={styles.header}>
         <p className={styles.eyebrow}>Registro</p>
         <h1 className={styles.title}>Cree su cuenta</h1>
-        <p className={styles.lede}>Todos los campos son obligatorios.</p>
+        <p className={styles.lede}>
+          Los campos marcados como opcionales pueden quedar vacíos.
+        </p>
       </header>
 
       {formError ? (
@@ -216,13 +228,42 @@ export function RegisterPage({
         aria-busy={isSubmitting}
         onSubmit={handleSubmit(onSubmit)}
       >
-        <TextField
-          id="fullName"
-          label="Nombre completo"
-          autoComplete="name"
-          error={errors.fullName?.message}
-          registration={register('fullName')}
-        />
+        <div className={styles.nameRow}>
+          <TextField
+            id="firstName"
+            label="Primer nombre"
+            autoComplete="given-name"
+            error={errors.firstName?.message}
+            registration={register('firstName')}
+          />
+
+          <TextField
+            id="middleName"
+            label="Segundo nombre (opcional)"
+            autoComplete="additional-name"
+            error={errors.middleName?.message}
+            registration={register('middleName')}
+          />
+        </div>
+
+        <div className={styles.nameRow}>
+          <TextField
+            id="lastName"
+            label="Primer apellido"
+            autoComplete="family-name"
+            error={errors.lastName?.message}
+            registration={register('lastName')}
+          />
+
+          {/* HTML has no autocomplete token for a second last name */}
+          <TextField
+            id="secondLastName"
+            label="Segundo apellido (opcional)"
+            autoComplete="off"
+            error={errors.secondLastName?.message}
+            registration={register('secondLastName')}
+          />
+        </div>
 
         <TextField
           id="email"

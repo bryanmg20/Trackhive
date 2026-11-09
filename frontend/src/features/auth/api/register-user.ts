@@ -1,5 +1,9 @@
 export interface RegisterUserInput {
-  fullName: string;
+  firstName: string;
+  // Optional: left out of the body when the person does not give one
+  middleName?: string;
+  lastName: string;
+  secondLastName?: string;
   email: string;
   password: string;
 }

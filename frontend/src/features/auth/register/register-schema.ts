@@ -2,14 +2,29 @@ import { z } from 'zod';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Same limit as the backend (NAME_MAX_LENGTH, issue #96)
+export const NAME_MAX_LENGTH = 40;
+
+const tooLongMessage = (label: string) =>
+  `${label} no puede superar los ${NAME_MAX_LENGTH} caracteres.`;
+
+const requiredName = (missingMessage: string, label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, missingMessage)
+    .max(NAME_MAX_LENGTH, tooLongMessage(label));
+
+// Optional names may stay blank; the page leaves them out of the request
+const optionalName = (label: string) =>
+  z.string().trim().max(NAME_MAX_LENGTH, tooLongMessage(label));
+
 export const registerSchema = z
   .object({
-    fullName: z
-      .string()
-      .trim()
-      .min(1, 'Escriba su nombre completo.')
-      .min(2, 'El nombre debe tener al menos 2 caracteres.')
-      .max(120, 'El nombre no puede superar los 120 caracteres.'),
+    firstName: requiredName('Escriba su primer nombre.', 'El primer nombre'),
+    middleName: optionalName('El segundo nombre'),
+    lastName: requiredName('Escriba su primer apellido.', 'El primer apellido'),
+    secondLastName: optionalName('El segundo apellido'),
     email: z
       .string()
       .trim()

@@ -7,7 +7,10 @@ import { RegisterPage } from './RegisterPage';
 const fetchMock = vi.fn();
 
 const validValues = {
-  fullName: 'Ana Pérez',
+  firstName: 'Ana',
+  middleName: '',
+  lastName: 'Pérez',
+  secondLastName: '',
   email: 'ana@mail.com',
   password: 'secret123',
   confirmPassword: 'secret123',
@@ -19,6 +22,11 @@ function jsonResponse(status: number, body: unknown): Response {
     status,
     json: async () => body,
   } as unknown as Response;
+}
+
+function sentBody(): Record<string, unknown> {
+  const init = fetchMock.mock.calls[0][1] as RequestInit;
+  return JSON.parse(init.body as string) as Record<string, unknown>;
 }
 
 function renderRegisterPage(redirectDelayMs = 4000) {
@@ -40,7 +48,20 @@ async function fillForm(
   values = validValues,
   acceptPrivacy = true,
 ) {
-  await user.type(screen.getByLabelText('Nombre completo'), values.fullName);
+  await user.type(screen.getByLabelText('Primer nombre'), values.firstName);
+  if (values.middleName) {
+    await user.type(
+      screen.getByLabelText('Segundo nombre (opcional)'),
+      values.middleName,
+    );
+  }
+  await user.type(screen.getByLabelText('Primer apellido'), values.lastName);
+  if (values.secondLastName) {
+    await user.type(
+      screen.getByLabelText('Segundo apellido (opcional)'),
+      values.secondLastName,
+    );
+  }
   await user.type(
     screen.getByLabelText('Correo electrónico'),
     values.email,
@@ -66,7 +87,15 @@ describe('RegisterPage', () => {
   it('renders a labelled field for every registration value', () => {
     renderRegisterPage();
 
-    expect(screen.getByLabelText('Nombre completo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Primer nombre')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Segundo nombre (opcional)'),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Primer apellido')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Segundo apellido (opcional)'),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('Nombre completo')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Correo electrónico')).toBeInTheDocument();
     expect(screen.getByLabelText('Contraseña')).toBeInTheDocument();
     expect(screen.getByLabelText('Confirmar contraseña')).toBeInTheDocument();
@@ -90,7 +119,8 @@ describe('RegisterPage', () => {
     const user = userEvent.setup();
     renderRegisterPage();
 
-    await user.type(screen.getByLabelText('Nombre completo'), 'A');
+    await user.type(screen.getByLabelText('Primer nombre'), 'A');
+    await user.type(screen.getByLabelText('Primer apellido'), 'P');
     await user.type(screen.getByLabelText('Correo electrónico'), 'ana@mail');
     await user.type(screen.getByLabelText('Contraseña'), 'secret123');
     await user.type(
@@ -104,7 +134,8 @@ describe('RegisterPage', () => {
 
     expect(await screen.findByText('Escriba un correo válido.')).toBeVisible();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Nombre completo')).toHaveValue('A');
+    expect(screen.getByLabelText('Primer nombre')).toHaveValue('A');
+    expect(screen.getByLabelText('Primer apellido')).toHaveValue('P');
     expect(screen.getByLabelText('Correo electrónico')).toHaveValue('ana@mail');
     expect(screen.getByLabelText('Contraseña')).toHaveValue('secret123');
     expect(screen.getByLabelText('Confirmar contraseña')).toHaveValue(
@@ -131,7 +162,8 @@ describe('RegisterPage', () => {
         name: /acepto el aviso de privacidad/i,
       }),
     ).not.toBeChecked();
-    expect(screen.getByLabelText('Nombre completo')).toHaveValue('Ana Pérez');
+    expect(screen.getByLabelText('Primer nombre')).toHaveValue('Ana');
+    expect(screen.getByLabelText('Primer apellido')).toHaveValue('Pérez');
     expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
       'ana@mail.com',
     );
@@ -145,6 +177,101 @@ describe('RegisterPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Cuenta creada' }),
     ).toBeVisible();
+  });
+
+  it('sends only the required names when the optional ones are blank', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(jsonResponse(201, null));
+    renderRegisterPage();
+
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Cuenta creada' }),
+    ).toBeVisible();
+    expect(sentBody()).toEqual({
+      firstName: 'Ana',
+      lastName: 'Pérez',
+      email: 'ana@mail.com',
+      password: 'secret123',
+    });
+  });
+
+  it('sends the four name fields when they are all filled', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(jsonResponse(201, null));
+    renderRegisterPage();
+
+    await fillForm(user, {
+      ...validValues,
+      middleName: 'María',
+      secondLastName: 'Gómez',
+    });
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Cuenta creada' }),
+    ).toBeVisible();
+    expect(sentBody()).toMatchObject({
+      firstName: 'Ana',
+      middleName: 'María',
+      lastName: 'Pérez',
+      secondLastName: 'Gómez',
+    });
+  });
+
+  it('asks for the first name and last name before sending', async () => {
+    const user = userEvent.setup();
+    renderRegisterPage();
+
+    await fillForm(user, { ...validValues, firstName: ' ', lastName: ' ' });
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(await screen.findByText('Escriba su primer nombre.')).toBeVisible();
+    expect(screen.getByText('Escriba su primer apellido.')).toBeVisible();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an optional name longer than 40 characters', async () => {
+    const user = userEvent.setup();
+    renderRegisterPage();
+
+    await fillForm(user, { ...validValues, middleName: 'a'.repeat(41) });
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(
+      await screen.findByText(
+        'El segundo nombre no puede superar los 40 caracteres.',
+      ),
+    ).toBeVisible();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a backend error about a name next to that field', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(
+      jsonResponse(400, {
+        code: 'VALIDATION_ERROR',
+        message: 'La petición contiene datos inválidos',
+        details: [
+          { field: 'lastName', messages: ['El primer apellido es obligatorio'] },
+        ],
+      }),
+    );
+    renderRegisterPage();
+
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(
+      await screen.findByText('El primer apellido es obligatorio'),
+    ).toBeVisible();
+    expect(screen.getByLabelText('Primer apellido')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(screen.getByLabelText('Primer apellido')).toHaveFocus();
   });
 
   it('reports mismatched passwords next to the confirmation field', async () => {
@@ -183,7 +310,8 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(await screen.findByText('El correo ya está registrado.')).toBeVisible();
-    expect(screen.getByLabelText('Nombre completo')).toHaveValue('Ana Pérez');
+    expect(screen.getByLabelText('Primer nombre')).toHaveValue('Ana');
+    expect(screen.getByLabelText('Primer apellido')).toHaveValue('Pérez');
     expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
       'ana@mail.com',
     );
