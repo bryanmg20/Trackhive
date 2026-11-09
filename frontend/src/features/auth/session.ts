@@ -4,8 +4,8 @@ export const USER_ROLES = ['ADMIN', 'PERSONAL', 'PUBLICO'] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 
-const ACCESS_TOKEN_KEY = 'trackhive.accessToken';
-const REFRESH_TOKEN_KEY = 'trackhive.refreshToken';
+const ACCESS_TOKEN_KEY = 'accessToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 
 function isUserRole(value: unknown): value is UserRole {
   return (
@@ -41,10 +41,6 @@ export function readRoleFromToken(accessToken: string): UserRole | null {
 }
 
 export function saveSession(session: LoginSession): void {
-  try {
-    sessionStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken);
-    sessionStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken);
-  } catch {
-    // Storage can be blocked (private mode); the login still succeeds.
-  }
+  localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken);
 }
