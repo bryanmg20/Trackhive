@@ -31,9 +31,11 @@ Cualquier otra ruta redirige a `/registro`.
 ## API
 
 En desarrollo, Vite reenvía las peticiones `/api` a `http://localhost:3000`
-(ver `vite.config.ts`). Para desplegar el frontend separado del backend, defina
-`VITE_API_URL` con el origen de la API (ver `.env.example`); si se omite, se
-usan rutas relativas.
+(ver `vite.config.ts`). En el despliegue con Docker, nginx reenvía `/api/`,
+`/docs` y `/docs-json` al servicio `backend:3000` (ver `nginx.conf`), así que
+no hace falta definir `VITE_API_URL` en `docker compose`. Para desplegar el
+frontend separado del backend, defina `VITE_API_URL` con el origen de la API
+(ver `.env.example`); si se omite, se usan rutas relativas.
 
 El registro consume `POST /api/v1/users` con este cuerpo:
 
