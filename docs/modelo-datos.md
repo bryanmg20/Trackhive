@@ -224,7 +224,6 @@ erDiagram
         varchar(15) item_status
         varchar(10) access_type
         text note
-        timestamptz created_at
     }
     MATERIALS {
         uuid id PK

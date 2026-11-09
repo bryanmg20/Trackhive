@@ -15,15 +15,18 @@ const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
 const GENERIC_ERROR_MESSAGE =
   'No pudimos iniciar su sesión. Inténtelo de nuevo.';
+const ACCESS_DENIED_MESSAGE =
+  'Esta funcionalidad está disponible solo para cuentas públicas.';
 
 const HOME_BY_ROLE: Record<UserRole, string> = {
-  PUBLICO: ROUTES.materials,
+  PUBLICO: ROUTES.newRequest,
   PERSONAL: ROUTES.requests,
   ADMIN: ROUTES.requests,
 };
 
 interface LoginLocationState {
   registeredEmail?: string;
+  accessDenied?: boolean;
 }
 
 export function LoginPage() {
@@ -31,7 +34,9 @@ export function LoginPage() {
   const location = useLocation();
   const state = location.state as LoginLocationState | null;
   const registeredEmail = state?.registeredEmail;
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(
+    state?.accessDenied ? ACCESS_DENIED_MESSAGE : null,
+  );
   const formErrorRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -50,11 +55,9 @@ export function LoginPage() {
   });
 
   useEffect(() => {
-    if (!formError) {
-      return;
+    if (formError) {
+      formErrorRef.current?.focus();
     }
-
-    formErrorRef.current?.focus();
   }, [formError]);
 
   const onSubmit = async (values: LoginFormValues) => {

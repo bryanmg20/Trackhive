@@ -1,0 +1,1 @@
+export const REQUEST_REPOSITORY = Symbol('REQUEST_REPOSITORY');

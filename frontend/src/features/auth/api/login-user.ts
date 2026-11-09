@@ -31,7 +31,6 @@ async function readJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
   } catch {
-    // The response did not contain JSON.
     return null;
   }
 }

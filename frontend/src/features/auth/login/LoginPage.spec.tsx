@@ -20,7 +20,13 @@ function base64Url(value: string): string {
 
 function tokenWithRole(role: string): string {
   const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = base64Url(JSON.stringify({ sub: 'user-1', role }));
+  const payload = base64Url(
+    JSON.stringify({
+      sub: 'user-1',
+      role,
+      exp: Math.floor(Date.now() / 1000) + 60,
+    }),
+  );
   return `${header}.${payload}.signature`;
 }
 
@@ -30,7 +36,10 @@ function renderLoginPage(state?: unknown) {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<p>Pantalla de registro</p>} />
-        <Route path="/materiales" element={<p>Pantalla buscar material</p>} />
+        <Route
+          path="/solicitudes/nueva"
+          element={<p>Pantalla de nueva solicitud</p>}
+        />
         <Route path="/solicitudes" element={<p>Pantalla solicitudes</p>} />
       </Routes>
     </MemoryRouter>,
@@ -63,7 +72,7 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('links to the registration screen with "Crear cuenta"', async () => {
+  it('links to the registration screen', async () => {
     const user = userEvent.setup();
     renderLoginPage();
 
@@ -110,7 +119,7 @@ describe('LoginPage', () => {
       }),
     );
     expect(
-      await screen.findByText('Pantalla buscar material'),
+      await screen.findByText('Pantalla de nueva solicitud'),
     ).toBeInTheDocument();
   });
 
@@ -127,7 +136,7 @@ describe('LoginPage', () => {
     await fillForm(user);
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
-    await screen.findByText('Pantalla buscar material');
+    await screen.findByText('Pantalla de nueva solicitud');
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/auth/login',
       expect.objectContaining({
@@ -137,33 +146,12 @@ describe('LoginPage', () => {
     );
   });
 
-  it('shows the invalid-credentials message and keeps the email on 401', async () => {
+  it('stores the session and sends a public user to request creation', async () => {
     const user = userEvent.setup();
-    fetchMock.mockResolvedValue(
-      jsonResponse(401, {
-        statusCode: 401,
-        code: 'INVALID_CREDENTIALS',
-        message: 'Correo o contraseña incorrectos',
-      }),
-    );
-    renderLoginPage();
-
-    await fillForm(user, 'ana@mail.com', 'wrong-pass');
-    await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Correo o contraseña incorrectos',
-    );
-    expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
-      'ana@mail.com',
-    );
-  });
-
-  it('sends a public user to "Buscar material"', async () => {
-    const user = userEvent.setup();
+    const accessToken = tokenWithRole('PUBLICO');
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        accessToken: tokenWithRole('PUBLICO'),
+        accessToken,
         refreshToken: 'refresh',
       }),
     );
@@ -173,13 +161,14 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
     expect(
-      await screen.findByText('Pantalla buscar material'),
+      await screen.findByText('Pantalla de nueva solicitud'),
     ).toBeInTheDocument();
+    expect(sessionStorage.getItem('trackhive.accessToken')).toBe(accessToken);
     expect(sessionStorage.getItem('trackhive.refreshToken')).toBe('refresh');
   });
 
   it.each(['PERSONAL', 'ADMIN'])(
-    'sends a %s user to "Solicitudes"',
+    'sends a %s user to staff requests',
     async (role) => {
       const user = userEvent.setup();
       fetchMock.mockResolvedValue(
@@ -199,16 +188,24 @@ describe('LoginPage', () => {
     },
   );
 
-  it('shows a connection error when the server cannot be reached', async () => {
+  it('shows invalid credentials and keeps the email on 401', async () => {
     const user = userEvent.setup();
-    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    fetchMock.mockResolvedValue(
+      jsonResponse(401, {
+        code: 'INVALID_CREDENTIALS',
+        message: 'Correo o contraseña incorrectos',
+      }),
+    );
     renderLoginPage();
 
-    await fillForm(user);
+    await fillForm(user, 'ana@mail.com', 'wrong-pass');
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /no pudimos conectar con el servidor/i,
+      'Correo o contraseña incorrectos',
+    );
+    expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
+      'ana@mail.com',
     );
   });
 
@@ -233,8 +230,21 @@ describe('LoginPage', () => {
     await user.keyboard('secret123{Enter}');
 
     expect(
-      await screen.findByText('Pantalla buscar material'),
+      await screen.findByText('Pantalla de nueva solicitud'),
     ).toBeInTheDocument();
+  });
+
+  it('shows a connection error when the server cannot be reached', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    renderLoginPage();
+
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no pudimos conectar con el servidor/i,
+    );
   });
 
   it('prefills the email after registration', () => {
@@ -243,6 +253,14 @@ describe('LoginPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Cuenta creada');
     expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
       'ana@mail.com',
+    );
+  });
+
+  it('explains why a non-public user cannot open the request page', () => {
+    renderLoginPage({ accessDenied: true });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Esta funcionalidad está disponible solo para cuentas públicas.',
     );
   });
 });
