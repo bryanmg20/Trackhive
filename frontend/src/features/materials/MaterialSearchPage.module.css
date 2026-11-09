@@ -1,0 +1,460 @@
+/* Desktop first; below 900px the sidebar folds and the table becomes cards */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: var(--paper);
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 4vw, 2.5rem);
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.wordmarkDot {
+  color: var(--gold-deep);
+}
+
+.topbarTag,
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.eyebrow {
+  color: var(--gold-text);
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 4vw, 2.5rem) 2rem;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.75rem;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 2.9rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.searchBar {
+  display: flex;
+  gap: 0.6rem;
+  max-width: 44rem;
+  margin-top: 0.6rem;
+}
+
+.searchBar input,
+.group input:not([type='radio']),
+.sortRow select {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+}
+
+.searchBar input {
+  flex: 1;
+}
+
+.primary {
+  min-height: 2.75rem;
+  padding: 0.6rem 1.25rem;
+  border: 0;
+  border-radius: 4px;
+  background: var(--gold);
+  color: var(--gold-ink);
+  font: inherit;
+  font-weight: 600;
+}
+
+.primary:disabled,
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 1rem;
+}
+
+.filtersToggle {
+  display: none;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.group legend,
+.group > label {
+  margin-bottom: 0.3rem;
+  padding: 0;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ink);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.option input,
+.checkCell input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--gold-text);
+}
+
+.hint,
+.muted {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.muted {
+  font-size: 0.9rem;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.resultsHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.sortRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.table th {
+  padding: 0.7rem 0.9rem;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-align: left;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+.table td {
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.9rem;
+  vertical-align: top;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background: var(--surface);
+}
+
+.checkCell {
+  width: 2.5rem;
+}
+
+.titleCell strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.code {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  background: var(--paper);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.status[data-status='DISPONIBLE'] {
+  background: var(--success-surface);
+  color: var(--success);
+}
+
+.status[data-status='NO_CONSULTABLE'] {
+  background: var(--error-surface);
+  color: var(--seal-dark);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--sage-deep);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.emptyTitle {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.8rem;
+  border-left: 3px solid var(--seal);
+  background: var(--error-surface);
+  color: var(--seal-dark);
+  font-size: 0.9rem;
+}
+
+.error a {
+  font-weight: 600;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pagination button,
+.filtersToggle {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+}
+
+.requestBar {
+  position: sticky;
+  bottom: 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface-strong);
+  box-shadow: 0 -8px 24px -18px rgba(17, 34, 29, 0.4);
+}
+
+.requestBarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0.75rem clamp(1rem, 4vw, 2.5rem);
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.searchBar input:focus-visible,
+.group input:focus-visible,
+.sortRow select:focus-visible,
+.primary:focus-visible,
+.pagination button:focus-visible,
+.filtersToggle:focus-visible,
+.checkCell input:focus-visible {
+  outline: 2px solid var(--gold-text);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .filtersToggle {
+    display: inline-flex;
+  }
+
+  .filters {
+    display: none;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface-strong);
+  }
+
+  .filters[data-open='true'] {
+    display: flex;
+  }
+
+  /* Table rows become stacked cards */
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table {
+    border: 0;
+    background: transparent;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .table tr {
+    position: relative;
+    margin-bottom: 0.75rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface-strong);
+  }
+
+  .table td {
+    padding: 0.15rem 0;
+    border: 0;
+  }
+
+  .table td[data-label]::before {
+    content: attr(data-label) ': ';
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .table tr:has(.checkCell) {
+    padding-left: 2.6rem;
+  }
+
+  .table td.checkCell {
+    position: absolute;
+    top: 0.95rem;
+    left: 0.9rem;
+    width: auto;
+  }
+
+  .pagination {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 420px) {
+  .searchBar {
+    flex-direction: column;
+  }
+
+  .topbarTag {
+    display: none;
+  }
+}

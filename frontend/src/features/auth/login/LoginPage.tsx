@@ -19,7 +19,7 @@ const ACCESS_DENIED_MESSAGE =
   'Esta funcionalidad está disponible solo para cuentas públicas.';
 
 const HOME_BY_ROLE: Record<UserRole, string> = {
-  PUBLICO: ROUTES.newRequest,
+  PUBLICO: ROUTES.materials,
   PERSONAL: ROUTES.requests,
   ADMIN: ROUTES.requests,
 };

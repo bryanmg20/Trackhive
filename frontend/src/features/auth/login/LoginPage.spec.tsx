@@ -36,10 +36,7 @@ function renderLoginPage(state?: unknown) {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<p>Pantalla de registro</p>} />
-        <Route
-          path="/solicitudes/nueva"
-          element={<p>Pantalla de nueva solicitud</p>}
-        />
+        <Route path="/materiales" element={<p>Pantalla buscar material</p>} />
         <Route path="/solicitudes" element={<p>Pantalla solicitudes</p>} />
       </Routes>
     </MemoryRouter>,
@@ -119,7 +116,7 @@ describe('LoginPage', () => {
       }),
     );
     expect(
-      await screen.findByText('Pantalla de nueva solicitud'),
+      await screen.findByText('Pantalla buscar material'),
     ).toBeInTheDocument();
   });
 
@@ -136,7 +133,7 @@ describe('LoginPage', () => {
     await fillForm(user);
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
-    await screen.findByText('Pantalla de nueva solicitud');
+    await screen.findByText('Pantalla buscar material');
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/auth/login',
       expect.objectContaining({
@@ -146,7 +143,7 @@ describe('LoginPage', () => {
     );
   });
 
-  it('stores the session and sends a public user to request creation', async () => {
+  it('stores the session and sends a public user to "Buscar material"', async () => {
     const user = userEvent.setup();
     const accessToken = tokenWithRole('PUBLICO');
     fetchMock.mockResolvedValue(
@@ -161,7 +158,7 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
     expect(
-      await screen.findByText('Pantalla de nueva solicitud'),
+      await screen.findByText('Pantalla buscar material'),
     ).toBeInTheDocument();
     expect(sessionStorage.getItem('trackhive.accessToken')).toBe(accessToken);
     expect(sessionStorage.getItem('trackhive.refreshToken')).toBe('refresh');
@@ -230,7 +227,7 @@ describe('LoginPage', () => {
     await user.keyboard('secret123{Enter}');
 
     expect(
-      await screen.findByText('Pantalla de nueva solicitud'),
+      await screen.findByText('Pantalla buscar material'),
     ).toBeInTheDocument();
   });
 

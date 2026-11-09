@@ -8,7 +8,7 @@ interface PendingPageProps {
   spineLabel: string;
 }
 
-/** Temporary destination until the real screen (HU-7.1, HU-12) exists. */
+/** Temporary destination until the real screen (HU-12) exists. */
 export function PendingPage({ title, spineLabel }: PendingPageProps) {
   return (
     <AuthLayout spineLabel={spineLabel}>
