@@ -20,6 +20,7 @@ model UserModel {
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   refreshTokens RefreshTokenModel[]
+  requester     RequesterModel?
 
   @@map("users")
 }
@@ -68,4 +69,76 @@ model MaterialModel {
   @@index([author(ops: raw("gin_trgm_ops"))], type: Gin, map: "materials_author_trgm_idx")
   @@index([collection(ops: raw("gin_trgm_ops"))], type: Gin, map: "materials_collection_trgm_idx")
   @@map("materials")
+}
+
+model RequesterModel {
+  id                    String         @id @db.Uuid
+  userId                String?        @unique @map("user_id") @db.Uuid
+  documentType          String?        @map("document_type") @db.VarChar(5)
+  documentNumber        String?        @map("document_number") @db.VarChar(20)
+  firstNames            String         @map("first_names") @db.VarChar(80)
+  lastNames             String         @map("last_names") @db.VarChar(80)
+  email                 String?        @db.VarChar(160)
+  phone                 String?        @db.VarChar(20)
+  requesterType         String         @map("requester_type") @db.VarChar(15)
+  institution           String?        @db.VarChar(150)
+  acceptsDataProcessing Boolean        @map("accepts_data_processing")
+  consentedAt           DateTime       @map("consented_at") @db.Timestamptz
+  privacyPolicyVersion  String         @map("privacy_policy_version") @db.VarChar(10)
+  anonymizedAt          DateTime?      @map("anonymized_at") @db.Timestamptz
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  user                  UserModel?     @relation(fields: [userId], references: [id])
+  requests              RequestModel[]
+
+  @@unique([documentType, documentNumber])
+  @@index([documentNumber])
+  @@index([email])
+  @@map("requesters")
+}
+
+model RequestModel {
+  id                     String             @id @db.Uuid
+  trackingCode           String             @unique @map("tracking_code") @db.VarChar(16)
+  requesterId            String             @map("requester_id") @db.Uuid
+  createdById            String             @map("created_by_id") @db.Uuid
+  assigneeId             String?            @map("assignee_id") @db.Uuid
+  requestType            String             @map("request_type") @db.VarChar(25)
+  originChannel          String             @map("origin_channel") @db.VarChar(10)
+  deliveryMode           String             @map("delivery_mode") @db.VarChar(10)
+  purpose                String             @map("purpose") @db.VarChar(15)
+  reason                 String?
+  requirementDescription String             @map("requirement_description")
+  desiredDate            DateTime           @map("desired_date") @db.Date
+  committedDate          DateTime?          @map("committed_date") @db.Date
+  priority               String             @default("MEDIA") @db.VarChar(5)
+  status                 String             @default("RECIBIDA") @db.VarChar(12)
+  rejectionReason        String?            @map("rejection_reason") @db.VarChar(25)
+  notes                  String?
+  registeredAt           DateTime           @default(now()) @map("registered_at") @db.Timestamptz
+  attendedAt             DateTime?          @map("attended_at") @db.Timestamptz
+  closedAt               DateTime?          @map("closed_at") @db.Timestamptz
+  version                Int                @default(1)
+  updatedAt              DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  requester              RequesterModel     @relation(fields: [requesterId], references: [id])
+  items                  RequestItemModel[]
+
+  @@index([requesterId])
+  @@index([createdById])
+  @@index([status, committedDate])
+  @@map("requests")
+}
+
+model RequestItemModel {
+  id         String       @id @db.Uuid
+  requestId  String       @map("request_id") @db.Uuid
+  materialId String       @map("material_id") @db.Uuid
+  itemStatus String       @default("PENDIENTE") @map("item_status") @db.VarChar(15)
+  accessType String       @default("FISICO") @map("access_type") @db.VarChar(10)
+  note       String?
+  request    RequestModel @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, materialId])
+  @@index([materialId])
+  @@map("request_items")
 }
