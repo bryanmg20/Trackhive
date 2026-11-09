@@ -85,9 +85,11 @@ export class PrismaRequestRepository implements RequestRepository {
 
   private async nextTrackingCode(): Promise<string> {
     const year = new Date().getUTCFullYear();
-    const count = await this.prisma.requestModel.count({
-      where: { trackingCode: { startsWith: `SOL-${year}-` } },
-    });
-    return `SOL-${year}-${String(count + 1).padStart(5, '0')}`;
+    // The sequence is race-safe: two concurrent requests never get the same
+    // number (unlike count + 1, which collides with the unique index).
+    const rows = await this.prisma.$queryRaw<Array<{ value: bigint }>>`
+      SELECT nextval('request_tracking_seq') AS value
+    `;
+    return `SOL-${year}-${String(Number(rows[0].value)).padStart(5, '0')}`;
   }
 }

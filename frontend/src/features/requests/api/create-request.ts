@@ -1,3 +1,5 @@
+import { readAccessToken } from '../../auth/session';
+
 export interface CreateRequestInput {
   materialIds: string[];
   reason: string;
@@ -41,7 +43,7 @@ export async function searchMaterials(
   const params = new URLSearchParams({ q: query });
   const response = await fetch(`/api/v1/materials?${params}`, {
     headers: {
-      Authorization: `Bearer ${localStorage.getItem('accessToken') ?? ''}`,
+      Authorization: `Bearer ${readAccessToken() ?? ''}`,
       Accept: 'application/json',
     },
   });
@@ -57,7 +59,7 @@ export async function createRequest(input: CreateRequestInput): Promise<CreateRe
   const response = await fetch('/api/v1/requests', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${localStorage.getItem('accessToken') ?? ''}`,
+      Authorization: `Bearer ${readAccessToken() ?? ''}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },

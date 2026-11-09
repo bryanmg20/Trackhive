@@ -4,9 +4,14 @@ import {
   addBusinessDays,
   CreateRequestUseCase,
   isAttendedDate,
+  todayInBogota,
 } from './create-request.use-case';
 
 describe('CreateRequestUseCase', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('adds ten weekdays without counting weekends', () => {
     const result = addBusinessDays(new Date('2026-11-06T00:00:00.000Z'), 10);
     expect(result.toISOString().slice(0, 10)).toBe('2026-11-20');
@@ -26,7 +31,7 @@ describe('CreateRequestUseCase', () => {
       }),
     };
     const useCase = new CreateRequestUseCase(repository);
-    const desiredDate = addBusinessDays(new Date(), 10);
+    const desiredDate = addBusinessDays(todayInBogota(), 10);
     desiredDate.setUTCDate(desiredDate.getUTCDate() + 1);
     while (desiredDate.getUTCDay() !== 6) {
       desiredDate.setUTCDate(desiredDate.getUTCDate() + 1);
@@ -45,12 +50,39 @@ describe('CreateRequestUseCase', () => {
     expect(repository.create).toHaveBeenCalled();
   });
 
+  it('uses the Bogota date after 19:00 even when UTC is already the next day', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-11-10T01:00:00.000Z'));
+
+    expect(todayInBogota().toISOString().slice(0, 10)).toBe('2026-11-09');
+
+    const repository = {
+      create: jest.fn().mockResolvedValue({
+        id: 'request-1',
+        trackingCode: 'SOL-2026-00001',
+        status: 'RECIBIDA',
+      }),
+    };
+    const useCase = new CreateRequestUseCase(repository);
+
+    await useCase.execute(
+      {
+        materialIds: ['material-1'],
+        reason: 'Consulta de investigación',
+        desiredDate: '2026-11-23',
+        deliveryMode: 'PRESENCIAL',
+      },
+      'user-1',
+    );
+
+    expect(repository.create).toHaveBeenCalled();
+  });
+
   it('rejects a date earlier than ten business days', async () => {
     const repository = {
       create: jest.fn(),
     };
     const useCase = new CreateRequestUseCase(repository);
-    const tomorrow = addBusinessDays(new Date(), 1);
+    const tomorrow = addBusinessDays(todayInBogota(), 1);
 
     await expect(
       useCase.execute(
@@ -70,7 +102,7 @@ describe('CreateRequestUseCase', () => {
     const useCase = new CreateRequestUseCase({
       create: jest.fn(),
     });
-    const desiredDate = addBusinessDays(new Date(), 10);
+    const desiredDate = addBusinessDays(todayInBogota(), 10);
 
     await expect(
       useCase.execute(

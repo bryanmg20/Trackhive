@@ -20,7 +20,13 @@ function base64Url(value: string): string {
 
 function tokenWithRole(role: string): string {
   const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = base64Url(JSON.stringify({ sub: 'user-1', role }));
+  const payload = base64Url(
+    JSON.stringify({
+      sub: 'user-1',
+      role,
+      exp: Math.floor(Date.now() / 1000) + 60,
+    }),
+  );
   return `${header}.${payload}.signature`;
 }
 
@@ -53,7 +59,7 @@ describe('LoginPage', () => {
   beforeEach(() => {
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
-    localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('renders labelled email and password fields and the submit button', () => {
@@ -88,7 +94,36 @@ describe('LoginPage', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('stores the session and sends a public user to request creation', async () => {
+  it('disables the button and shows loading while submitting', async () => {
+    const user = userEvent.setup();
+    let resolveFetch: (response: Response) => void = () => {};
+    fetchMock.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+    renderLoginPage();
+
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
+
+    const button = await screen.findByRole('button', {
+      name: /iniciando sesión/i,
+    });
+    expect(button).toBeDisabled();
+
+    resolveFetch(
+      jsonResponse(200, {
+        accessToken: tokenWithRole('PUBLICO'),
+        refreshToken: 'refresh',
+      }),
+    );
+    expect(
+      await screen.findByText('Pantalla de nueva solicitud'),
+    ).toBeInTheDocument();
+  });
+
+  it('sends the credentials to the login endpoint', async () => {
     const user = userEvent.setup();
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
@@ -101,13 +136,7 @@ describe('LoginPage', () => {
     await fillForm(user);
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
-    expect(
-      await screen.findByText('Pantalla de nueva solicitud'),
-    ).toBeInTheDocument();
-    expect(localStorage.getItem('accessToken')).toBe(
-      tokenWithRole('PUBLICO'),
-    );
-    expect(localStorage.getItem('refreshToken')).toBe('refresh');
+    await screen.findByText('Pantalla de nueva solicitud');
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/auth/login',
       expect.objectContaining({
@@ -115,6 +144,27 @@ describe('LoginPage', () => {
         body: JSON.stringify({ email: 'ana@mail.com', password: 'secret123' }),
       }),
     );
+  });
+
+  it('stores the session and sends a public user to request creation', async () => {
+    const user = userEvent.setup();
+    const accessToken = tokenWithRole('PUBLICO');
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        accessToken,
+        refreshToken: 'refresh',
+      }),
+    );
+    renderLoginPage();
+
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
+
+    expect(
+      await screen.findByText('Pantalla de nueva solicitud'),
+    ).toBeInTheDocument();
+    expect(sessionStorage.getItem('trackhive.accessToken')).toBe(accessToken);
+    expect(sessionStorage.getItem('trackhive.refreshToken')).toBe('refresh');
   });
 
   it.each(['PERSONAL', 'ADMIN'])(
@@ -157,6 +207,31 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
       'ana@mail.com',
     );
+  });
+
+  it('can be used with the keyboard only: Tab between fields, Enter to submit', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        accessToken: tokenWithRole('PUBLICO'),
+        refreshToken: 'refresh',
+      }),
+    );
+    renderLoginPage();
+
+    await user.tab();
+    expect(screen.getByLabelText('Correo electrónico')).toHaveFocus();
+    await user.keyboard('ana@mail.com');
+
+    // The "Mostrar" toggle sits between the email and password inputs.
+    await user.tab();
+    await user.tab();
+    expect(screen.getByLabelText('Contraseña')).toHaveFocus();
+    await user.keyboard('secret123{Enter}');
+
+    expect(
+      await screen.findByText('Pantalla de nueva solicitud'),
+    ).toBeInTheDocument();
   });
 
   it('shows a connection error when the server cannot be reached', async () => {

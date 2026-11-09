@@ -12,11 +12,14 @@ function tokenWithRole(role: string): string {
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('allows an active PUBLICO token to open the protected route', () => {
-    localStorage.setItem('accessToken', tokenWithRole('PUBLICO'));
+    sessionStorage.setItem(
+      'trackhive.accessToken',
+      tokenWithRole('PUBLICO'),
+    );
 
     render(
       <MemoryRouter initialEntries={['/solicitudes/nueva']}>
@@ -38,7 +41,10 @@ describe('ProtectedRoute', () => {
   });
 
   it('redirects a PERSONAL token to login', () => {
-    localStorage.setItem('accessToken', tokenWithRole('PERSONAL'));
+    sessionStorage.setItem(
+      'trackhive.accessToken',
+      tokenWithRole('PERSONAL'),
+    );
 
     render(
       <MemoryRouter initialEntries={['/solicitudes/nueva']}>

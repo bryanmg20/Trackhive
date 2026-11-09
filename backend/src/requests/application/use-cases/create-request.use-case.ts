@@ -15,6 +15,24 @@ export interface CreateRequestInput {
 
 export const minimumBusinessDays = 10;
 
+/**
+ * Returns today's date in the America/Bogota time zone, as a UTC-midnight Date.
+ * Using UTC directly would move the minimum forward after 19:00 in Colombia.
+ */
+export function todayInBogota(now: Date = new Date()): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(now)
+    .split('-')
+    .map(Number);
+
+  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+}
+
 export function isAttendedDate(date: Date): boolean {
   return date.getUTCDay() !== 0;
 }
@@ -43,7 +61,7 @@ export class CreateRequestUseCase {
     input: CreateRequestInput,
     userId: string,
   ): Promise<CreateRequestResponseDto> {
-    const today = new Date();
+    const today = todayInBogota();
     const desired = new Date(`${input.desiredDate}T00:00:00Z`);
     const minimum = addBusinessDays(today, minimumBusinessDays);
     if (
