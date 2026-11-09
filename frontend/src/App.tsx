@@ -3,6 +3,7 @@ import { LoginPage } from './features/auth/login/LoginPage';
 import { RegisterPage } from './features/auth/register/RegisterPage';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { NewRequestPage } from './features/requests/NewRequestPage';
+import { MaterialSearchPage } from './features/materials/MaterialSearchPage';
 import { PendingPage } from './features/pending/PendingPage';
 import { ROUTES } from './routes';
 
@@ -14,12 +15,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path={ROUTES.newRequest} element={<NewRequestPage />} />
       </Route>
-      <Route
-        path={ROUTES.materials}
-        element={
-          <PendingPage title="Buscar material" spineLabel="CONSULTA · MATERIAL" />
-        }
-      />
+      <Route path={ROUTES.materials} element={<MaterialSearchPage />} />
       <Route
         path={ROUTES.requests}
         element={
