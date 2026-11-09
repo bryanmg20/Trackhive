@@ -19,6 +19,6 @@ Closes #
 - [ ] Incluye su migración si toca la base de datos, y actualiza el diagrama ER.
 - [ ] Tiene pruebas unitarias de la lógica nueva, y prueba e2e si completa un flujo principal.
 - [ ] Si el usuario interactúa con la funcionalidad, incluye su pantalla integrada con la API.
-- [ ] Las pantallas son usables en 360 px, tienen etiquetas en los campos y se operan con teclado.
+- [ ] Las pantallas tienen etiquetas en los campos y se operan con teclado. Desde HU-29 (layout base), además son usables en 360 px; las pantallas anteriores se revisan en HU-29.
 - [ ] Solo pide los datos personales necesarios.
 - [ ] CI en verde y al menos una aprobación de un compañero.
