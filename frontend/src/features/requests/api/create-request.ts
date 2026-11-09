@@ -12,6 +12,47 @@ export interface CreateRequestResponse {
   status: 'RECIBIDA';
 }
 
+export interface MaterialSearchResult {
+  id: string;
+  catalogCode: string;
+  title: string;
+}
+
+interface MaterialSearchResponse {
+  items: MaterialSearchResult[];
+}
+
+async function readErrorMessage(response: Response): Promise<string> {
+  const body: unknown = await response.json();
+  if (
+    typeof body === 'object' &&
+    body !== null &&
+    'message' in body &&
+    typeof body.message === 'string'
+  ) {
+    return body.message;
+  }
+  return 'La solicitud no pudo completarse.';
+}
+
+export async function searchMaterials(
+  query: string,
+): Promise<MaterialSearchResult[]> {
+  const params = new URLSearchParams({ q: query });
+  const response = await fetch(`/api/v1/materials?${params}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('accessToken') ?? ''}`,
+      Accept: 'application/json',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  const body = (await response.json()) as MaterialSearchResponse;
+  return body.items;
+}
+
 export async function createRequest(input: CreateRequestInput): Promise<CreateRequestResponse> {
   const response = await fetch('/api/v1/requests', {
     method: 'POST',
@@ -22,12 +63,8 @@ export async function createRequest(input: CreateRequestInput): Promise<CreateRe
     },
     body: JSON.stringify(input),
   });
-  const body: unknown = await response.json();
   if (!response.ok) {
-    const message = typeof body === 'object' && body !== null && 'message' in body
-      ? String(body.message)
-      : 'No fue posible radicar la solicitud.';
-    throw new Error(message);
+    throw new Error(await readErrorMessage(response));
   }
-  return body as CreateRequestResponse;
+  return (await response.json()) as CreateRequestResponse;
 }

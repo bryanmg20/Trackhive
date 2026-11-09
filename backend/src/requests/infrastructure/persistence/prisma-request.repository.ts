@@ -6,6 +6,7 @@ import type {
   RequestRepository,
 } from '../../application/ports/request.repository.port';
 import type { CreateRequestInput } from '../../application/use-cases/create-request.use-case';
+import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
 
 @Injectable()
 export class PrismaRequestRepository implements RequestRepository {
@@ -46,7 +47,7 @@ export class PrismaRequestRepository implements RequestRepository {
       select: { id: true },
     });
     if (existingMaterials.length !== materialIds.length) {
-      throw new Error('Uno o más materiales seleccionados no existen.');
+      throw new RequestMaterialNotFoundError();
     }
 
     const trackingCode = await this.nextTrackingCode();

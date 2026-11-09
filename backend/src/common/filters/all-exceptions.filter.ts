@@ -49,6 +49,8 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   INVALID_STATUS_TRANSITION: HttpStatus.CONFLICT,
   USER_NOT_FOUND: HttpStatus.NOT_FOUND,
   INVALID_DESIRED_DATE: HttpStatus.BAD_REQUEST,
+  REQUEST_MATERIALS_REQUIRED: HttpStatus.BAD_REQUEST,
+  REQUEST_MATERIAL_NOT_FOUND: HttpStatus.NOT_FOUND,
   // The mail server failed, not the request: like a proxy, answer 502
   MAIL_DELIVERY_FAILED: HttpStatus.BAD_GATEWAY,
 };

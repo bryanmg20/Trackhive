@@ -1,13 +1,48 @@
 import { DesiredDateError } from '../../domain/errors/desired-date-invalid.error';
+import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
 import {
   addBusinessDays,
   CreateRequestUseCase,
+  isAttendedDate,
 } from './create-request.use-case';
 
 describe('CreateRequestUseCase', () => {
   it('adds ten weekdays without counting weekends', () => {
     const result = addBusinessDays(new Date('2026-11-06T00:00:00.000Z'), 10);
     expect(result.toISOString().slice(0, 10)).toBe('2026-11-20');
+  });
+
+  it('accepts Saturdays and rejects Sundays as attended dates', () => {
+    expect(isAttendedDate(new Date('2026-11-14T00:00:00.000Z'))).toBe(true);
+    expect(isAttendedDate(new Date('2026-11-15T00:00:00.000Z'))).toBe(false);
+  });
+
+  it('allows a Saturday after the ten-business-day minimum', async () => {
+    const repository = {
+      create: jest.fn().mockResolvedValue({
+        id: 'request-1',
+        trackingCode: 'SOL-2026-00001',
+        status: 'RECIBIDA',
+      }),
+    };
+    const useCase = new CreateRequestUseCase(repository);
+    const desiredDate = addBusinessDays(new Date(), 10);
+    desiredDate.setUTCDate(desiredDate.getUTCDate() + 1);
+    while (desiredDate.getUTCDay() !== 6) {
+      desiredDate.setUTCDate(desiredDate.getUTCDate() + 1);
+    }
+
+    await useCase.execute(
+      {
+        materialIds: ['material-1'],
+        reason: 'Consulta de investigación',
+        desiredDate: desiredDate.toISOString().slice(0, 10),
+        deliveryMode: 'PRESENCIAL',
+      },
+      'user-1',
+    );
+
+    expect(repository.create).toHaveBeenCalled();
   });
 
   it('rejects a date earlier than ten business days', async () => {
@@ -29,5 +64,24 @@ describe('CreateRequestUseCase', () => {
       ),
     ).rejects.toBeInstanceOf(DesiredDateError);
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('uses a dedicated error when there are no selected materials', async () => {
+    const useCase = new CreateRequestUseCase({
+      create: jest.fn(),
+    });
+    const desiredDate = addBusinessDays(new Date(), 10);
+
+    await expect(
+      useCase.execute(
+        {
+          materialIds: [],
+          reason: 'Consulta de investigación',
+          desiredDate: desiredDate.toISOString().slice(0, 10),
+          deliveryMode: 'PRESENCIAL',
+        },
+        'user-1',
+      ),
+    ).rejects.toBeInstanceOf(RequestMaterialsRequiredError);
   });
 });

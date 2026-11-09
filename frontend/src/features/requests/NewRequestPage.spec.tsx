@@ -17,6 +17,18 @@ describe('NewRequestPage', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          items: [
+            {
+              id: 'c1b438db-f082-466f-9535-ec2e0ff2de1f',
+              catalogCode: 'TH-DOC-0001',
+              title: 'Acta de fundación de la villa',
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
           id: 'request-1',
           trackingCode: 'SOL-2026-00001',
           status: 'RECIBIDA',
@@ -29,9 +41,15 @@ describe('NewRequestPage', () => {
 
     render(<NewRequestPage />);
 
-    await user.type(screen.getByLabelText('IDs de materiales'), 'material-1');
+    await user.type(screen.getByLabelText('Buscar en el archivo'), 'Acta');
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: /Acta de fundación de la villa/,
+      }),
+    );
     await user.type(
-      screen.getByLabelText('Motivo'),
+      screen.getByLabelText('Motivo de la consulta'),
       'Consulta para investigación',
     );
     fireEvent.change(screen.getByLabelText('Fecha deseada'), {

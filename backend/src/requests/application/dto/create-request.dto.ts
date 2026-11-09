@@ -9,6 +9,7 @@ import {
   Matches,
   MinLength,
   MaxLength,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateRequestDto {
@@ -19,6 +20,7 @@ export class CreateRequestDto {
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })
+  @IsUUID('4', { each: true })
   materialIds: string[];
 
   @ApiProperty({ example: 'Consulta para un trabajo de investigación' })
