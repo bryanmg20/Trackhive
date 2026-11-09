@@ -43,14 +43,20 @@ describe('CreateUserUseCase', () => {
 
   it('hashes the password and creates a public account', async () => {
     const response = await useCase.execute({
-      fullName: '  Ana Pérez  ',
+      firstName: '  Ana ',
+      middleName: ' María ',
+      lastName: ' Pérez ',
+      secondLastName: ' Gómez ',
       email: '  ANA@MAIL.COM ',
       password: 'secreto123',
     });
 
     expect(hash).toHaveBeenCalledWith('secreto123');
     expect(response).toMatchObject({
-      fullName: 'Ana Pérez',
+      firstName: 'Ana',
+      middleName: 'María',
+      lastName: 'Pérez',
+      secondLastName: 'Gómez',
       email: 'ana@mail.com',
       role: 'PUBLICO',
     });
@@ -63,9 +69,26 @@ describe('CreateUserUseCase', () => {
     expect(saved?.role).toBe('PUBLICO');
   });
 
+  it('creates an account with only the required name fields', async () => {
+    const response = await useCase.execute({
+      firstName: 'Ana',
+      lastName: 'Pérez',
+      email: 'ana@mail.com',
+      password: 'secreto123',
+    });
+
+    expect(response).toMatchObject({
+      firstName: 'Ana',
+      middleName: null,
+      lastName: 'Pérez',
+      secondLastName: null,
+    });
+  });
+
   it('rejects an email that is already registered', async () => {
     const input = {
-      fullName: 'Ana Pérez',
+      firstName: 'Ana',
+      lastName: 'Pérez',
       email: 'ana@mail.com',
       password: 'secreto123',
     };

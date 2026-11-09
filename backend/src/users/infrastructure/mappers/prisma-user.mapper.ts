@@ -10,7 +10,10 @@ export class PrismaUserMapper {
     }
     return new User({
       id: model.id,
-      fullName: model.fullName,
+      firstName: model.firstName,
+      middleName: model.middleName,
+      lastName: model.lastName,
+      secondLastName: model.secondLastName,
       email: model.email,
       passwordHash: model.passwordHash,
       role: model.role,
@@ -21,7 +24,10 @@ export class PrismaUserMapper {
   static toPersistence(entity: User) {
     return {
       id: entity.id,
-      fullName: entity.fullName,
+      firstName: entity.firstName,
+      middleName: entity.middleName,
+      lastName: entity.lastName,
+      secondLastName: entity.secondLastName,
       email: entity.email,
       passwordHash: entity.passwordHash,
       role: entity.role,

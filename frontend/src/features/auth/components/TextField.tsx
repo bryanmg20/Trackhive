@@ -11,6 +11,8 @@ interface TextFieldProps {
   registration: UseFormRegisterReturn;
   hint?: string;
   error?: string;
+  // Shows an "Opcional" tag; screen readers hear "(opcional)" in the label
+  optional?: boolean;
   inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode'];
   autoCapitalize?: InputHTMLAttributes<HTMLInputElement>['autoCapitalize'];
   spellCheck?: boolean;
@@ -24,6 +26,7 @@ export function TextField({
   registration,
   hint,
   error,
+  optional = false,
   inputMode,
   autoCapitalize,
   spellCheck,
@@ -44,7 +47,13 @@ export function TextField({
       <div className={styles.labelRow}>
         <label className={styles.label} htmlFor={id}>
           {label}
+          {optional ? <span className="sr-only"> (opcional)</span> : null}
         </label>
+        {optional ? (
+          <span className={styles.optional} aria-hidden="true">
+            Opcional
+          </span>
+        ) : null}
         {isPassword ? (
           <button
             type="button"

@@ -18,7 +18,10 @@ export class PrismaUserRepository implements IUserRepository {
       await this.prisma.userModel.upsert({
         where: { id: user.id },
         update: {
-          fullName: data.fullName,
+          firstName: data.firstName,
+          middleName: data.middleName,
+          lastName: data.lastName,
+          secondLastName: data.secondLastName,
           email: data.email,
           passwordHash: data.passwordHash,
           role: data.role,

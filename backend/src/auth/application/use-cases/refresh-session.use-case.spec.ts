@@ -46,7 +46,8 @@ class FakeTokenService implements TokenService {
 const buildUser = (overrides: Partial<UserProps> = {}): User =>
   new User({
     id: 'user-1',
-    fullName: 'Ana Pérez',
+    firstName: 'Ana',
+    lastName: 'Pérez',
     email: 'ana@mail.com',
     passwordHash: 'hashed:secreto123',
     role: 'PUBLICO',

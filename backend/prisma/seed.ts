@@ -2,36 +2,72 @@ import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 
+type SeedUser = {
+  firstName: string;
+  // Optional fields are explicit nulls, so running the seed again clears them
+  middleName: string | null;
+  lastName: string;
+  secondLastName: string | null;
+  email: string;
+  role: 'ADMIN' | 'PERSONAL' | 'PUBLICO';
+};
+
 // Fictitious demo data. Passwords come from environment variables.
-const USERS = [
-  { fullName: 'Admin Demo', email: 'admin@example.com', role: 'ADMIN' },
+// Some users have all four name fields and others only the required ones.
+const USERS: SeedUser[] = [
   {
-    fullName: 'Personal Demo Uno',
+    firstName: 'Admin',
+    middleName: null,
+    lastName: 'Demo',
+    secondLastName: null,
+    email: 'admin@example.com',
+    role: 'ADMIN',
+  },
+  {
+    firstName: 'Personal',
+    middleName: 'Uno',
+    lastName: 'Demo',
+    secondLastName: 'Prueba',
     email: 'personal1@example.com',
     role: 'PERSONAL',
   },
   {
-    fullName: 'Personal Demo Dos',
+    firstName: 'Personal',
+    middleName: 'Dos',
+    lastName: 'Demo',
+    secondLastName: null,
     email: 'personal2@example.com',
     role: 'PERSONAL',
   },
   {
-    fullName: 'Publico Demo Uno',
+    firstName: 'Publico',
+    middleName: 'Uno',
+    lastName: 'Demo',
+    secondLastName: 'Prueba',
     email: 'publico1@example.com',
     role: 'PUBLICO',
   },
   {
-    fullName: 'Publico Demo Dos',
+    firstName: 'Publico',
+    middleName: 'Dos',
+    lastName: 'Demo',
+    secondLastName: null,
     email: 'publico2@example.com',
     role: 'PUBLICO',
   },
   {
-    fullName: 'Publico Demo Tres',
+    firstName: 'Publico',
+    middleName: null,
+    lastName: 'Demo',
+    secondLastName: 'Tres',
     email: 'publico3@example.com',
     role: 'PUBLICO',
   },
   {
-    fullName: 'Publico Demo Cuatro',
+    firstName: 'Publico',
+    middleName: null,
+    lastName: 'Demo',
+    secondLastName: null,
     email: 'publico4@example.com',
     role: 'PUBLICO',
   },

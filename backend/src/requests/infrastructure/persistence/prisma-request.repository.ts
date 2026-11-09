@@ -18,10 +18,6 @@ export class PrismaRequestRepository implements RequestRepository {
     const user = await this.prisma.userModel.findUniqueOrThrow({
       where: { id: input.createdById },
     });
-    const names = user.fullName.trim().split(/\s+/);
-    const firstNames = names.slice(0, Math.ceil(names.length / 2)).join(' ');
-    const lastNames = names.slice(Math.ceil(names.length / 2)).join(' ');
-
     let requester = await this.prisma.requesterModel.findUnique({
       where: { userId: input.createdById },
     });
@@ -30,8 +26,11 @@ export class PrismaRequestRepository implements RequestRepository {
         data: {
           id: randomUUID(),
           userId: input.createdById,
-          firstNames,
-          lastNames: lastNames || firstNames,
+          // Same four name fields as the user's account (issue #96)
+          firstName: user.firstName,
+          middleName: user.middleName,
+          lastName: user.lastName,
+          secondLastName: user.secondLastName,
           email: user.email,
           requesterType: 'INVESTIGADOR',
           acceptsDataProcessing: true,

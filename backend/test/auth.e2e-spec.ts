@@ -50,7 +50,8 @@ describe('Session renewal (e2e)', () => {
     await users.save(
       new User({
         id: 'user-1',
-        fullName: 'Ana Pérez',
+        firstName: 'Ana',
+        lastName: 'Pérez',
         email: EMAIL,
         passwordHash: await argon2.hash(PASSWORD),
         role: 'PUBLICO',

@@ -13,7 +13,8 @@ const REFRESH_EXPIRES_AT = new Date('2026-11-14T15:00:00.000Z');
 const buildUser = (active = true): User =>
   new User({
     id: 'user-1',
-    fullName: 'Ana Pérez',
+    firstName: 'Ana',
+    lastName: 'Pérez',
     email: 'ana@mail.com',
     passwordHash: 'hashed:secreto123',
     role: 'PUBLICO',

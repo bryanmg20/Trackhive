@@ -48,7 +48,10 @@ export class UserController {
     // it only asks the use case to execute the action.
     // Domain errors are translated by the global filter.
     return this.createUserUseCase.execute({
-      fullName: dto.fullName,
+      firstName: dto.firstName,
+      middleName: dto.middleName,
+      lastName: dto.lastName,
+      secondLastName: dto.secondLastName,
       email: dto.email,
       password: dto.password,
     });

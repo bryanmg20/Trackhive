@@ -39,6 +39,13 @@
   gap: 1.15rem;
 }
 
+/* Names and last names go two per row when there is room, one per row on a phone */
+.nameRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 1.15rem;
+}
+
 .submit {
   display: inline-flex;
   align-items: center;
@@ -245,7 +252,8 @@
     margin-bottom: 1.4rem;
   }
 
-  .form {
+  .form,
+  .nameRow {
     gap: 1rem;
   }
 

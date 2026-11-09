@@ -9,7 +9,10 @@ import type { PasswordHasher } from '../ports/password-hasher.port';
 import { PASSWORD_HASHER, USER_REPOSITORY } from '../tokens';
 
 export interface CreateUserInput {
-  fullName: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  secondLastName?: string | null;
   email: string;
   password: string;
 }
@@ -31,7 +34,10 @@ export class CreateUserUseCase {
     const passwordHash = await this.passwordHasher.hash(input.password);
     const user = new User({
       id: randomUUID(),
-      fullName: input.fullName,
+      firstName: input.firstName,
+      middleName: input.middleName,
+      lastName: input.lastName,
+      secondLastName: input.secondLastName,
       email,
       passwordHash,
       // Public registration can only create public accounts

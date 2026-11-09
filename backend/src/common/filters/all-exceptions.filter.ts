@@ -38,7 +38,7 @@ const CODE_BY_STATUS: Record<number, string> = {
  */
 const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   INVALID_EMAIL: HttpStatus.BAD_REQUEST,
-  INVALID_FULL_NAME: HttpStatus.BAD_REQUEST,
+  INVALID_NAME: HttpStatus.BAD_REQUEST,
   INVALID_PASSWORD_HASH: HttpStatus.BAD_REQUEST,
   INVALID_ROLE: HttpStatus.BAD_REQUEST,
   EMAIL_ALREADY_EXISTS: HttpStatus.CONFLICT,

@@ -10,11 +10,17 @@ describe('SendTestEmailUseCase', () => {
   let mailSender: FakeMailSender;
   let useCase: SendTestEmailUseCase;
 
-  const saveAdmin = (fullName = 'Admin Demo'): Promise<void> =>
+  const saveAdmin = (
+    firstName = 'Admin',
+    lastName = 'Demo',
+    middleName: string | null = null,
+  ): Promise<void> =>
     users.save(
       new User({
         id: 'admin-1',
-        fullName,
+        firstName,
+        middleName,
+        lastName,
         email: 'admin@example.com',
         passwordHash: 'hashed',
         role: 'ADMIN',
@@ -43,8 +49,17 @@ describe('SendTestEmailUseCase', () => {
     expect(mailSender.sent[0].text).toContain('Hola, Admin Demo');
   });
 
+  it('greets with the first name and the first last name only', async () => {
+    await saveAdmin('Ana', 'Pérez', 'María');
+
+    await useCase.execute({ userId: 'admin-1' });
+
+    expect(mailSender.sent[0].text).toContain('Hola, Ana Pérez:');
+    expect(mailSender.sent[0].text).not.toContain('María');
+  });
+
   it('escapes the name in the HTML version of the email', async () => {
-    await saveAdmin('Ana <b>Pérez</b>');
+    await saveAdmin('Ana', '<b>Pérez</b>');
 
     await useCase.execute({ userId: 'admin-1' });
 

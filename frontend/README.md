@@ -40,8 +40,18 @@ frontend separado del backend, defina `VITE_API_URL` con el origen de la API
 El registro consume `POST /api/v1/users` con este cuerpo:
 
 ```json
-{ "fullName": "Ana Pérez", "email": "ana@mail.com", "password": "secret123" }
+{
+  "firstName": "Ana",
+  "middleName": "María",
+  "lastName": "Pérez",
+  "secondLastName": "Gómez",
+  "email": "ana@mail.com",
+  "password": "secret123"
+}
 ```
+
+`middleName` y `secondLastName` son opcionales: si quedan vacíos en el
+formulario, no se envían. Cada nombre admite hasta 40 caracteres.
 
 La confirmación de contraseña es solo del cliente y no se envía. La casilla del
 aviso de privacidad también se valida en el cliente y tampoco se envía: el
@@ -55,7 +65,8 @@ por campo se muestran junto al campo correspondiente y un `409` o
 
 ## Estado y alcance
 
-- **HU-01 integrado:** el `POST /api/v1/users` acepta `fullName`, `email` y
+- **HU-01 integrado:** el `POST /api/v1/users` acepta `firstName`,
+  `middleName`, `lastName`, `secondLastName` (issue #96), `email` y
   `password`, guarda la contraseña como hash y responde `409` si el correo ya
   existe.
 - **HU-31 (aviso de privacidad):** la pantalla exige aceptar el aviso antes de
