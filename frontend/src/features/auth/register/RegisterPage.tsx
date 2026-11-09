@@ -239,7 +239,8 @@ export function RegisterPage({
 
           <TextField
             id="middleName"
-            label="Segundo nombre (opcional)"
+            label="Segundo nombre"
+            optional
             autoComplete="additional-name"
             error={errors.middleName?.message}
             registration={register('middleName')}
@@ -258,7 +259,8 @@ export function RegisterPage({
           {/* HTML has no autocomplete token for a second last name */}
           <TextField
             id="secondLastName"
-            label="Segundo apellido (opcional)"
+            label="Segundo apellido"
+            optional
             autoComplete="off"
             error={errors.secondLastName?.message}
             registration={register('secondLastName')}

@@ -35,6 +35,16 @@
   text-transform: uppercase;
 }
 
+.optional {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
 .toggle:hover {
   color: var(--gold-deep);
 }
