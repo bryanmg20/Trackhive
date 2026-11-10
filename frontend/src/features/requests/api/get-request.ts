@@ -1,4 +1,5 @@
-import { readAccessToken } from '../../auth/session';
+import { apiUrl } from '../../auth/api/api-base-url';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
 import type {
   MaterialStatus,
   MaterialType,
@@ -61,12 +62,14 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 /** Calls the HU-13 endpoint `GET /api/v1/requests/:id`. */
 export async function getRequest(id: string): Promise<RequestDetail> {
-  const response = await fetch(`/api/v1/requests/${encodeURIComponent(id)}`, {
-    headers: {
-      Authorization: `Bearer ${readAccessToken() ?? ''}`,
-      Accept: 'application/json',
+  const response = await authenticatedFetch(
+    apiUrl(`/api/v1/requests/${encodeURIComponent(id)}`),
+    {
+      headers: {
+        Accept: 'application/json',
+      },
     },
-  });
+  );
   if (!response.ok) {
     throw new RequestsApiError(
       await readErrorMessage(response),

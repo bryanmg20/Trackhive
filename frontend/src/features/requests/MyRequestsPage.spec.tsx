@@ -128,7 +128,7 @@ describe('MyRequestsPage', () => {
       { headers: Record<string, string> },
     ];
     expect(init.headers.Authorization).toBe(
-      `Bearer ${tokenWithRole('PUBLICO')}`,
+      `Bearer ${sessionStorage.getItem('trackhive.accessToken')}`,
     );
   });
 

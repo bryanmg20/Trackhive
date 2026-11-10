@@ -6,6 +6,7 @@ import {
   MATERIAL_TYPE_LABELS,
 } from '../materials/api/search-materials';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
+import { SiteNav } from '../navigation/SiteNav';
 import { getRequest } from './api/get-request';
 import type { RequestDetail } from './api/get-request';
 import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
@@ -100,6 +101,7 @@ export function RequestDetailPage() {
           Trackhive<span className={searchStyles.wordmarkDot}>.</span>
         </p>
         <p className={searchStyles.topbarTag}>CLENA · Personal</p>
+        <SiteNav />
       </header>
 
       <main className={searchStyles.main}>
