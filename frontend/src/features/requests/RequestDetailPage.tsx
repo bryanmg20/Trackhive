@@ -103,7 +103,8 @@ export function RequestDetailPage() {
     result: Pick<
       ChangeRequestStatusResult,
       'id' | 'status' | 'allowedTransitions'
-    >,
+    > &
+      Partial<Pick<ChangeRequestStatusResult, 'rejectionReason'>>,
   ) {
     setResponse((current) =>
       current?.request?.id === result.id
@@ -113,6 +114,9 @@ export function RequestDetailPage() {
               ...current.request,
               status: result.status,
               allowedTransitions: result.allowedTransitions,
+              // Shows the «Motivo del rechazo» field right after rejecting (HU-16)
+              // An appointment (HU-18) sends none: the request is not rejected
+              rejectionReason: result.rejectionReason ?? null,
             },
           }
         : current,

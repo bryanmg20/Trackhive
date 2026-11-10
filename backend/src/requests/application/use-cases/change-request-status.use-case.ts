@@ -32,7 +32,8 @@ export class ChangeRequestStatusUseCase {
       throw new RequestNotFoundError();
     }
 
-    // Throws InvalidStatusTransitionError (409) before anything is saved
+    // Throws InvalidStatusTransitionError (409), or RejectionReasonRequiredError
+    // (400) when rejecting without a reason, before anything is saved (HU-16)
     const change = request.changeStatus(
       input.status,
       input.userId,
@@ -45,6 +46,7 @@ export class ChangeRequestStatusUseCase {
       id: request.id,
       status: request.status,
       allowedTransitions: request.allowedTransitions,
+      rejectionReason: request.rejectionReason,
       statusChange: {
         previousStatus: saved.previousStatus,
         newStatus: saved.newStatus,

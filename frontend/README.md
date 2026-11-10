@@ -103,11 +103,12 @@ toma al usuario del access token, así que la URL no lleva ningún identificador
 solo acepta `status`, `sort` (`registeredAt` o `desiredDate`), `order`, `page` y
 `limit`. Cualquier otro parámetro, como los filtros del personal, responde
 `400`. Cada solicitud trae `trackingCode`, `registeredAt`, `status`,
-`desiredDate`, `deliveryMode` y `materials`, sin el nombre ni el correo del
-solicitante.
+`desiredDate`, `deliveryMode`, `materials` y `rejectionReason` (HU-16; `null`
+salvo en las rechazadas), sin el nombre ni el correo del solicitante.
 
 La pantalla muestra el código de seguimiento, la fecha de radicación (en hora
-de Bogotá), el material, la fecha deseada y el estado; filtra por estado,
+de Bogotá), el material, la fecha deseada y el estado, y bajo una solicitud
+rechazada, el motivo que escribió el personal (HU-16); filtra por estado,
 ordena y pagina de 10 en 10. Se llega desde «Mis solicitudes» en la barra del
 buscador `/materiales` (solo para `PUBLICO`) y desde el enlace «Ver mis
 solicitudes» al radicar una solicitud.
@@ -131,9 +132,15 @@ la solicitud puede pasar según la máquina de estados del backend (HU-14). La
 tarjeta «Cambiar estado» muestra solo esas opciones, así que la regla no se
 duplica en React. Desde **Agendada** las opciones se leen «El solicitante
 asistió» (pasa a Atendida) y «El solicitante no asistió» (vuelve a
-Disponible). **Rechazada** no se ofrece todavía porque exige motivo: HU-16 la
-agrega a esta misma acción. En un estado final (Cerrada o Rechazada) no hay
-opciones.
+Disponible). En un estado final (Cerrada o Rechazada) no hay opciones.
+
+**Rechazada (HU-16)** se ofrece cuando la máquina de estados lo permite (desde
+Recibida o En búsqueda). Al elegirla, el campo de comentario pasa a «Motivo del
+rechazo (obligatorio)». Si queda vacío o en blanco, la pantalla muestra el
+error junto al campo, le da el foco y no llama a la API. El backend también lo
+impide (`400 REJECTION_REASON_REQUIRED`) y la base de datos lo refuerza con un
+CHECK. El motivo se envía como `comment`, se guarda en `rejection_reason` y en
+el historial, y el detalle lo muestra en «Motivo del rechazo» sin recargar.
 
 Al guardar se llama a `PATCH /api/v1/requests/:id/status` con
 `{ status, comment? }`; el comentario es opcional (máximo 500 caracteres) y no
@@ -172,22 +179,26 @@ visible, detalles `400`, correo duplicado `409`, fallo de red, confirmación con
 navegación manual y redirección automática. La API se simula con
 `vi.stubGlobal('fetch', ...)`.
 
-`MyRequestsPage.spec.tsx` cubre las columnas pedidas por HU-11, la fecha de
-radicación en hora de Bogotá, la URL de `/requests/mine`, la redirección de
-`PERSONAL`, `ADMIN` y visitantes a `/login`, el filtro por estado, el orden, la
-paginación, los dos mensajes de lista vacía, la sesión vencida y el fallo de red.
+`MyRequestsPage.spec.tsx` cubre las columnas pedidas por HU-11, el motivo bajo
+una solicitud rechazada (HU-16), la fecha de radicación en hora de Bogotá, la
+URL de `/requests/mine`, la redirección de `PERSONAL`, `ADMIN` y visitantes a
+`/login`, el filtro por estado, el orden, la paginación, los dos mensajes de
+lista vacía, la sesión vencida y el fallo de red.
 
 `RequestDetailPage.spec.tsx` cubre, además del detalle (HU-13), la acción de
 cambiar estado (HU-15): solo aparecen las transiciones válidas, «asistió» y «no
-asistió» desde Agendada, Rechazada no se ofrece, ningún cambio en estados
-finales, el cuerpo enviado con y sin comentario, la confirmación con fecha, hora
-y responsable, el nuevo estado en la cabecera, los errores `409` y `403`, y el
-uso solo con teclado. `api/change-request-status.spec.ts` cubre la petición
-`PATCH`. Para HU-18 cubre que Agendada no se ofrece en «Cambiar estado», el
-agendamiento con su confirmación y el nuevo estado, la fecha deseada visible y
-precargada, el error de domingo, la
-fecha vacía y que la tarjeta no aparece fuera de Disponible presencial;
-`api/schedule-appointment.spec.ts` cubre la petición `POST`.
+asistió» desde Agendada, ningún cambio en estados finales, el cuerpo enviado con
+y sin comentario, la confirmación con fecha, hora y responsable, el nuevo estado
+en la cabecera, los errores `409` y `403`, y el uso solo con teclado. Para HU-16
+cubre que Rechazada aparece solo cuando es válida, que el campo pasa a «Motivo
+del rechazo (obligatorio)», que un motivo vacío o en blanco muestra el error y
+no llama a la API, el cuerpo enviado al rechazar, el motivo visible en el detalle
+y el error `400` del backend. `api/change-request-status.spec.ts` cubre la
+petición `PATCH`. Para HU-18 cubre que Agendada no se ofrece en «Cambiar
+estado», el agendamiento con su confirmación y el nuevo estado, la fecha deseada
+visible y precargada, el error de domingo, la fecha vacía y que la tarjeta no
+aparece fuera de Disponible presencial; `api/schedule-appointment.spec.ts` cubre
+la petición `POST`.
 
 `StaffNewRequestPage.spec.tsx` cubre la búsqueda de solicitante encontrado y
 nuevo, los cuerpos enviados en cada caso, el error de fecha del backend junto al

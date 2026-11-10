@@ -15,6 +15,7 @@ import type {
   RequestStatus,
   SortOrder,
 } from './api/list-requests';
+import styles from './MyRequestsPage.module.css';
 import listStyles from './RequestsListPage.module.css';
 
 const PAGE_SIZE = 10;
@@ -308,6 +309,16 @@ export function MyRequestsPage() {
                           >
                             {REQUEST_STATUS_LABELS[item.status]}
                           </span>
+                          {/* The requester sees why it was rejected (HU-16) */}
+                          {item.status === 'RECHAZADA' &&
+                          item.rejectionReason ? (
+                            <p className={styles.reason}>
+                              <span className={styles.reasonLabel}>
+                                Motivo del rechazo:
+                              </span>{' '}
+                              {item.rejectionReason}
+                            </p>
+                          ) : null}
                         </td>
                       </tr>
                     ))}

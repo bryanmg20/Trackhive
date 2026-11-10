@@ -253,6 +253,7 @@ describe('RequestDetailPage', () => {
         id: REQUEST_ID,
         status: 'ATENDIDA',
         allowedTransitions: ['CERRADA'],
+        rejectionReason: null,
         statusChange: {
           previousStatus: 'AGENDADA',
           newStatus: 'ATENDIDA',
@@ -311,7 +312,7 @@ describe('RequestDetailPage', () => {
       ).toHaveAccessibleDescription('Vuelve a Disponible para agendar de nuevo.');
     });
 
-    it('does not offer Rechazada: rejecting needs a reason (HU-16)', async () => {
+    it('offers Rechazada next to the other valid transitions (HU-16)', async () => {
       const { section } = await setup(
         detail({
           status: 'RECIBIDA',
@@ -321,8 +322,20 @@ describe('RequestDetailPage', () => {
       );
 
       const options = within(section).getAllByRole('radio');
-      expect(options).toHaveLength(1);
-      expect(options[0]).toHaveAccessibleName('En búsqueda');
+      expect(options.map((option) => option.getAttribute('value'))).toEqual([
+        'EN_BUSQUEDA',
+        'RECHAZADA',
+      ]);
+      expect(
+        within(section).getByRole('radio', { name: 'Rechazada' }),
+      ).toHaveAccessibleDescription(
+        'No se atenderá. Debe escribir el motivo, que verá el solicitante.',
+      );
+    });
+
+    it('does not offer Rechazada when the state machine does not allow it', async () => {
+      const { section } = await setup();
+
       expect(
         within(section).queryByRole('radio', { name: 'Rechazada' }),
       ).not.toBeInTheDocument();
@@ -519,6 +532,152 @@ describe('RequestDetailPage', () => {
       expect(JSON.parse(patchCalls()[0][1].body as string)).toEqual({
         status: 'ATENDIDA',
         comment: 'Asistió',
+      });
+    });
+
+    describe('reject with a reason (HU-16)', () => {
+      const REASON = 'El material está restringido por la familia donante';
+      const received = () =>
+        detail({
+          status: 'RECIBIDA',
+          committedDate: null,
+          allowedTransitions: ['EN_BUSQUEDA', 'RECHAZADA'],
+        });
+      const rejected = () =>
+        ok(
+          changed({
+            status: 'RECHAZADA',
+            allowedTransitions: [],
+            rejectionReason: REASON,
+            statusChange: {
+              ...changed().statusChange,
+              previousStatus: 'RECIBIDA',
+              newStatus: 'RECHAZADA',
+              comment: REASON,
+            },
+          }),
+        );
+
+      it('turns the comment into the required reason when Rechazada is chosen', async () => {
+        const { user, section } = await setup(received());
+
+        expect(
+          within(section).getByLabelText('Comentario (opcional)'),
+        ).not.toBeRequired();
+
+        await user.click(within(section).getByRole('radio', { name: 'Rechazada' }));
+
+        const reason = within(section).getByLabelText(
+          'Motivo del rechazo (obligatorio)',
+        );
+        expect(reason).toBeRequired();
+        expect(reason).toHaveAccessibleDescription(
+          'El solicitante lo verá en «Mis solicitudes».',
+        );
+      });
+
+      it.each([
+        ['empty', ''],
+        ['blank', '    '],
+      ])(
+        'shows the error and saves nothing when the reason is %s',
+        async (_case, typed) => {
+          const { user, section } = await setup(received());
+
+          await user.click(
+            within(section).getByRole('radio', { name: 'Rechazada' }),
+          );
+          const reason = within(section).getByLabelText(
+            'Motivo del rechazo (obligatorio)',
+          );
+          if (typed) await user.type(reason, typed);
+          await user.click(
+            within(section).getByRole('button', { name: 'Guardar cambio' }),
+          );
+
+          expect(within(section).getByRole('alert')).toHaveTextContent(
+            'Escriba el motivo del rechazo: el solicitante lo verá en «Mis solicitudes».',
+          );
+          expect(reason).toHaveAttribute('aria-invalid', 'true');
+          expect(reason).toHaveFocus();
+          expect(patchCalls()).toHaveLength(0);
+          // Nothing changed on the page
+          const heading = screen.getByRole('heading', {
+            name: 'SOL-2026-00001',
+          });
+          expect(heading.parentElement).toHaveTextContent('Recibida');
+        },
+      );
+
+      it('clears the error as soon as the reason is typed', async () => {
+        const { user, section } = await setup(received());
+
+        await user.click(within(section).getByRole('radio', { name: 'Rechazada' }));
+        await user.click(
+          within(section).getByRole('button', { name: 'Guardar cambio' }),
+        );
+        await user.type(
+          within(section).getByLabelText('Motivo del rechazo (obligatorio)'),
+          'M',
+        );
+
+        expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
+      });
+
+      it('rejects with the reason and shows it on the page', async () => {
+        const { user, section } = await setup(received(), rejected());
+
+        await user.click(within(section).getByRole('radio', { name: 'Rechazada' }));
+        await user.type(
+          within(section).getByLabelText('Motivo del rechazo (obligatorio)'),
+          REASON,
+        );
+        await user.click(
+          within(section).getByRole('button', { name: 'Guardar cambio' }),
+        );
+
+        expect(await within(section).findByRole('status')).toHaveTextContent(
+          `pasó de Recibida a Rechazada`,
+        );
+        expect(within(section).getByRole('status')).toHaveTextContent(
+          `Motivo: «${REASON}»`,
+        );
+        expect(JSON.parse(patchCalls()[0][1].body as string)).toEqual({
+          status: 'RECHAZADA',
+          comment: REASON,
+        });
+
+        // The «Solicitud» card shows the reason and the request is final now
+        const requestCard = screen.getByRole('region', { name: 'Solicitud' });
+        expect(within(requestCard).getByText('Motivo del rechazo')).toBeInTheDocument();
+        expect(within(requestCard).getByText(REASON)).toBeInTheDocument();
+        expect(section).toHaveTextContent(
+          'es un estado final y no admite más cambios',
+        );
+      });
+
+      it('shows the backend error when it refuses the rejection', async () => {
+        const { user, section } = await setup(received(), {
+          ok: false,
+          status: 400,
+          json: async () => ({
+            code: 'REJECTION_REASON_REQUIRED',
+            message: 'El motivo del rechazo es obligatorio',
+          }),
+        });
+
+        await user.click(within(section).getByRole('radio', { name: 'Rechazada' }));
+        await user.type(
+          within(section).getByLabelText('Motivo del rechazo (obligatorio)'),
+          'x',
+        );
+        await user.click(
+          within(section).getByRole('button', { name: 'Guardar cambio' }),
+        );
+
+        expect(await within(section).findByRole('alert')).toHaveTextContent(
+          'El motivo del rechazo es obligatorio',
+        );
       });
     });
   });

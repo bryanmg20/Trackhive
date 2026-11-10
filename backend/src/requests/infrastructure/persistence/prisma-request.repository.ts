@@ -160,6 +160,7 @@ export class PrismaRequestRepository implements RequestRepository {
           deliveryMode: model.deliveryMode,
           desiredDate: model.desiredDate,
           registeredAt: model.registeredAt,
+          rejectionReason: model.rejectionReason,
           requester: {
             firstName: model.requester.firstName,
             middleName: model.requester.middleName,
@@ -363,6 +364,10 @@ export class PrismaRequestRepository implements RequestRepository {
         }),
         ...(change.newStatus === 'CERRADA' && {
           closedAt: change.changedAt,
+        }),
+        // HU-16: the reason the requester reads in «Mis solicitudes»
+        ...(change.newStatus === 'RECHAZADA' && {
+          rejectionReason: change.rejectionReason,
         }),
       },
     });

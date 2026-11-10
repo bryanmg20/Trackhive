@@ -12,6 +12,7 @@ const buildItem = (): RequestListItem => ({
   deliveryMode: 'DIGITAL',
   desiredDate: new Date('2026-12-01T00:00:00.000Z'),
   registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+  rejectionReason: null,
   requester: {
     firstName: 'Ana',
     middleName: null,
@@ -113,11 +114,32 @@ describe('ListMyRequestsUseCase', () => {
               title: 'Acta de fundación de la villa',
             },
           ],
+          rejectionReason: null,
         },
       ],
       page: 1,
       limit: 10,
       total: 3,
+    });
+  });
+
+  it('shows the requester the reason of a rejected request (HU-16)', async () => {
+    listByRequesterUser.mockResolvedValue({
+      items: [
+        {
+          ...buildItem(),
+          status: 'RECHAZADA',
+          rejectionReason: 'El material está restringido',
+        },
+      ],
+      total: 1,
+    });
+
+    const result = await useCase.execute({}, 'user-1');
+
+    expect(result.items[0]).toMatchObject({
+      status: 'RECHAZADA',
+      rejectionReason: 'El material está restringido',
     });
   });
 });

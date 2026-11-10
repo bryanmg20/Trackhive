@@ -74,6 +74,23 @@
   font: inherit;
 }
 
+.field textarea[aria-invalid='true'] {
+  border-color: var(--seal);
+}
+
+.fieldHint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* Same colors as the error block of the search page */
+.fieldError {
+  margin: 0;
+  color: var(--seal-dark);
+  font-size: 0.85rem;
+}
+
 .confirmation {
   margin: 0 0 1rem;
   padding: 0.75rem 1rem;

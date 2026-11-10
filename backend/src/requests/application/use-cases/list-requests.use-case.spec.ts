@@ -12,6 +12,7 @@ const buildItem = (): RequestListItem => ({
   deliveryMode: 'PRESENCIAL',
   desiredDate: new Date('2026-12-01T00:00:00.000Z'),
   registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+  rejectionReason: null,
   requester: {
     firstName: 'Juan',
     middleName: 'Carlos',

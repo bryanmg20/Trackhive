@@ -473,6 +473,7 @@ describe('Request registration (e2e)', () => {
       id: string;
       status: string;
       allowedTransitions: string[];
+      rejectionReason: string | null;
       statusChange: {
         previousStatus: string;
         newStatus: string;
@@ -673,8 +674,6 @@ describe('Request registration (e2e)', () => {
       {},
       { status: 'ROTA' },
       { status: 'RECIBIDA' },
-      // Rejecting needs a reason: HU-16
-      { status: 'RECHAZADA', comment: 'Material no localizado' },
       // Only reached by scheduling an appointment: HU-18
       { status: 'AGENDADA' },
       { status: 'ATENDIDA', comment: 'a'.repeat(501) },
@@ -690,6 +689,98 @@ describe('Request registration (e2e)', () => {
       expect((response.body as ErrorBody).code).toBe('VALIDATION_ERROR');
       expect(repository.findEntityById).not.toHaveBeenCalled();
       expect(repository.saveStatusChange).not.toHaveBeenCalled();
+    });
+
+    describe('rejecting with a reason (HU-16)', () => {
+      const REASON = 'El material está restringido por la familia donante';
+
+      beforeEach(() => {
+        repository.findEntityById.mockResolvedValue(entity('RECIBIDA'));
+      });
+
+      it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+        'lets %s reject with a reason and saves it for the requester',
+        async (role) => {
+          const response = await request(server)
+            .patch(statusPath(REQUEST_ID))
+            .set('Authorization', `Bearer ${accessToken(role, 'staff-7')}`)
+            .send({ status: 'RECHAZADA', comment: `  ${REASON}  ` })
+            .expect(200);
+
+          expect(savedChange()).toMatchObject({
+            previousStatus: 'RECIBIDA',
+            newStatus: 'RECHAZADA',
+            changedBy: 'staff-7',
+            comment: REASON,
+            rejectionReason: REASON,
+          });
+          expect(response.body as ChangeStatusBody).toMatchObject({
+            status: 'RECHAZADA',
+            allowedTransitions: [],
+            rejectionReason: REASON,
+            statusChange: { newStatus: 'RECHAZADA', comment: REASON },
+          });
+        },
+      );
+
+      it.each([
+        ['without a comment', {}],
+        ['with an empty comment', { comment: '' }],
+        ['with a blank comment', { comment: '    ' }],
+      ])(
+        'does not save a rejection %s: 400 REJECTION_REASON_REQUIRED',
+        async (_case, extra) => {
+          const response = await request(server)
+            .patch(statusPath(REQUEST_ID))
+            .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+            .send({ status: 'RECHAZADA', ...extra })
+            .expect(400);
+
+          expect(response.body as ErrorBody).toMatchObject({
+            statusCode: 400,
+            code: 'REJECTION_REASON_REQUIRED',
+            message: 'El motivo del rechazo es obligatorio',
+          });
+          expect(repository.saveStatusChange).not.toHaveBeenCalled();
+        },
+      );
+
+      it('rejects a reason longer than 500 characters with 400', async () => {
+        await request(server)
+          .patch(statusPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+          .send({ status: 'RECHAZADA', comment: 'm'.repeat(501) })
+          .expect(400);
+        expect(repository.saveStatusChange).not.toHaveBeenCalled();
+      });
+
+      it('rejects a PUBLICO user with 403 and changes nothing', async () => {
+        const response = await request(server)
+          .patch(statusPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+          .send({ status: 'RECHAZADA', comment: REASON })
+          .expect(403);
+
+        expect((response.body as ErrorBody).code).toBe('FORBIDDEN');
+        expect(repository.findEntityById).not.toHaveBeenCalled();
+        expect(repository.saveStatusChange).not.toHaveBeenCalled();
+      });
+
+      it('only rejects from RECIBIDA or EN_BUSQUEDA: 409 from AGENDADA', async () => {
+        repository.findEntityById.mockResolvedValue(entity('AGENDADA'));
+
+        const response = await request(server)
+          .patch(statusPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+          .send({ status: 'RECHAZADA', comment: REASON })
+          .expect(409);
+
+        expect(response.body as ErrorBody).toMatchObject({
+          code: 'INVALID_STATUS_TRANSITION',
+          message: 'No se puede pasar una solicitud de Agendada a Rechazada',
+        });
+        expect(repository.saveStatusChange).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -998,6 +1089,7 @@ describe('Request registration (e2e)', () => {
             deliveryMode: 'PRESENCIAL',
             desiredDate: new Date('2026-12-01T00:00:00.000Z'),
             registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+            rejectionReason: null,
             requester: {
               firstName: 'Ana',
               middleName: null,
@@ -1029,6 +1121,44 @@ describe('Request registration (e2e)', () => {
         materials: [
           { id: 'material-1', catalogCode: 'TH-DOC-0001', title: 'Acta' },
         ],
+        rejectionReason: null,
+      });
+    });
+
+    it('shows the requester the reason of a rejected request (HU-16)', async () => {
+      repository.listByRequesterUser.mockResolvedValueOnce({
+        items: [
+          {
+            id: 'request-1',
+            trackingCode: 'SOL-2026-00001',
+            status: 'RECHAZADA',
+            deliveryMode: 'PRESENCIAL',
+            desiredDate: new Date('2026-12-01T00:00:00.000Z'),
+            registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+            rejectionReason: 'El material está restringido',
+            requester: {
+              firstName: 'Ana',
+              middleName: null,
+              lastName: 'Pérez',
+              secondLastName: null,
+              email: 'ana@mail.com',
+            },
+            materials: [],
+          },
+        ],
+        total: 1,
+      });
+
+      const response = await request(server)
+        .get(MINE_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(200);
+
+      expect(
+        (response.body as { items: Record<string, unknown>[] }).items[0],
+      ).toMatchObject({
+        status: 'RECHAZADA',
+        rejectionReason: 'El material está restringido',
       });
     });
 

@@ -1,6 +1,7 @@
 import { DeliveryMode } from '../../domain/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
+import { RejectionReasonRequiredError } from '../../domain/errors/rejection-reason-required.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import { RequestStatus } from '../../domain/request-status';
@@ -102,6 +103,7 @@ describe('ChangeRequestStatusUseCase', () => {
       id: 'request-1',
       status: 'ATENDIDA',
       allowedTransitions: ['CERRADA'],
+      rejectionReason: null,
       statusChange: {
         previousStatus: 'AGENDADA',
         newStatus: 'ATENDIDA',
@@ -127,6 +129,46 @@ describe('ChangeRequestStatusUseCase', () => {
     expect(saveStatusChange.mock.calls[0][0]).toMatchObject({
       previousStatus: 'AGENDADA',
       newStatus: 'DISPONIBLE',
+    });
+  });
+
+  describe('rejecting (HU-16)', () => {
+    beforeEach(() => {
+      findEntityById.mockResolvedValue(buildRequest('EN_BUSQUEDA'));
+    });
+
+    it('saves the reason as the rejection reason and the history comment', async () => {
+      const result = await useCase.execute({
+        requestId: 'request-1',
+        status: 'RECHAZADA',
+        comment: 'El material no se encontró en el archivo',
+        userId: 'staff-1',
+      });
+
+      expect(saveStatusChange.mock.calls[0][0]).toMatchObject({
+        previousStatus: 'EN_BUSQUEDA',
+        newStatus: 'RECHAZADA',
+        changedBy: 'staff-1',
+        comment: 'El material no se encontró en el archivo',
+        rejectionReason: 'El material no se encontró en el archivo',
+      });
+      expect(result).toMatchObject({
+        status: 'RECHAZADA',
+        rejectionReason: 'El material no se encontró en el archivo',
+        // Final status: nothing else can be done
+        allowedTransitions: [],
+      });
+    });
+
+    it('throws RejectionReasonRequiredError and saves nothing without a reason', async () => {
+      await expect(
+        useCase.execute({
+          requestId: 'request-1',
+          status: 'RECHAZADA',
+          userId: 'staff-1',
+        }),
+      ).rejects.toThrow(RejectionReasonRequiredError);
+      expect(saveStatusChange).not.toHaveBeenCalled();
     });
   });
 

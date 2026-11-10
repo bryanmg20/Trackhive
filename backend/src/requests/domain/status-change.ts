@@ -12,4 +12,6 @@ export interface StatusChange {
   readonly changedBy: string;
   readonly changedAt: Date;
   readonly comment: string | null;
+  // Only when the change rejects the request: the reason the requester reads (HU-16)
+  readonly rejectionReason: string | null;
 }

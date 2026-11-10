@@ -24,6 +24,8 @@ export interface ChangeRequestStatusResult {
   id: string;
   status: RequestStatus;
   allowedTransitions: RequestStatus[];
+  // Only when the request was rejected (HU-16)
+  rejectionReason: string | null;
   statusChange: StatusChange;
 }
 

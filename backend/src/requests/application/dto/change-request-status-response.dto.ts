@@ -49,6 +49,14 @@ export class ChangeRequestStatusResponseDto {
   allowedTransitions: RequestStatus[];
 
   @ApiProperty({
+    description: 'Motivo del rechazo; solo si quedó rechazada (HU-16)',
+    nullable: true,
+    type: String,
+    example: null,
+  })
+  rejectionReason: string | null;
+
+  @ApiProperty({
     type: StatusChangeDto,
     description: 'Registro guardado en el historial de estados',
   })

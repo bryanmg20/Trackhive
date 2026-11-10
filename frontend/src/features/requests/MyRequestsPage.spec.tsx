@@ -22,6 +22,7 @@ function item(overrides: Record<string, unknown> = {}) {
     deliveryMode: 'PRESENCIAL',
     desiredDate: '2026-12-01',
     registeredAt: '2026-11-10T15:00:00.000Z',
+    rejectionReason: null,
     materials: [
       {
         id: 'material-1',
@@ -90,6 +91,29 @@ describe('MyRequestsPage', () => {
     expect(within(table).getByText('Acta de fundación')).toBeInTheDocument();
     expect(within(table).getByText('01/12/2026')).toBeInTheDocument();
     expect(screen.getByText('1 solicitud')).toBeInTheDocument();
+  });
+
+  it('shows the reason of a rejected request to its requester (HU-16)', async () => {
+    fetchMock.mockResolvedValue(
+      page([
+        item({
+          id: 'rejected',
+          trackingCode: 'SOL-2026-00002',
+          status: 'RECHAZADA',
+          rejectionReason: 'El material está restringido por la familia donante',
+        }),
+        item(),
+      ]),
+    );
+    renderPage('PUBLICO');
+
+    const table = await screen.findByRole('table');
+    const [, rejectedRow, otherRow] = within(table).getAllByRole('row');
+    expect(rejectedRow).toHaveTextContent('Rechazada');
+    expect(rejectedRow).toHaveTextContent(
+      'Motivo del rechazo: El material está restringido por la familia donante',
+    );
+    expect(otherRow).not.toHaveTextContent('Motivo del rechazo');
   });
 
   it('shows the registration day in Bogotá, not in UTC', async () => {

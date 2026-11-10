@@ -271,7 +271,9 @@ describe('PrismaRequestRepository', () => {
   });
 
   describe('list (HU-12)', () => {
-    const buildListPrisma = () => ({
+    const buildListPrisma = (
+      overrides: { status?: string; rejectionReason?: string | null } = {},
+    ) => ({
       requestModel: {
         findMany: jest.fn().mockReturnValue('find-many'),
         count: jest.fn().mockReturnValue('count'),
@@ -285,6 +287,8 @@ describe('PrismaRequestRepository', () => {
             deliveryMode: 'PRESENCIAL',
             desiredDate: new Date('2026-12-01T00:00:00.000Z'),
             registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+            rejectionReason: null,
+            ...overrides,
             requester: {
               firstName: 'Juan',
               middleName: null,
@@ -462,6 +466,22 @@ describe('PrismaRequestRepository', () => {
           },
         });
       });
+
+      it('returns the rejection reason of a rejected request (HU-16)', async () => {
+        const prisma = buildListPrisma({
+          status: 'RECHAZADA',
+          rejectionReason: 'El material está restringido',
+        });
+
+        const result = await new PrismaRequestRepository(
+          prisma as unknown as PrismaService,
+        ).listByRequesterUser('user-1', baseCriteria);
+
+        expect(result.items[0]).toMatchObject({
+          status: 'RECHAZADA',
+          rejectionReason: 'El material está restringido',
+        });
+      });
     });
   });
 
@@ -600,6 +620,7 @@ describe('PrismaRequestRepository', () => {
       changedBy: 'staff-1',
       changedAt: CHANGED_AT,
       comment: 'Asistió a la cita',
+      rejectionReason: null,
       ...overrides,
     });
 
@@ -689,6 +710,37 @@ describe('PrismaRequestRepository', () => {
             version: { increment: 1 },
             closedAt: CHANGED_AT,
           },
+        }),
+      );
+    });
+
+    it('saves the rejection reason when the request is rejected (HU-16)', async () => {
+      const { tx, repository } = buildTransaction();
+
+      await repository.saveStatusChange(
+        buildChange({
+          previousStatus: 'RECIBIDA',
+          newStatus: 'RECHAZADA',
+          comment: 'El material está restringido',
+          rejectionReason: 'El material está restringido',
+        }),
+      );
+
+      expect(tx.requestModel.updateMany).toHaveBeenCalledWith({
+        where: { id: 'request-1', status: 'RECIBIDA' },
+        data: {
+          status: 'RECHAZADA',
+          version: { increment: 1 },
+          rejectionReason: 'El material está restringido',
+        },
+      });
+      // The reason is also the comment of the history row (docs/modelo-datos.md)
+      expect(tx.statusHistoryModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            newStatus: 'RECHAZADA',
+            comment: 'El material está restringido',
+          }) as unknown,
         }),
       );
     });
@@ -788,6 +840,7 @@ describe('PrismaRequestRepository', () => {
       changedBy: 'staff-1',
       changedAt: CHANGED_AT,
       comment: null,
+      rejectionReason: null,
     };
 
     const buildTransaction = (updatedRows = 1) => {

@@ -173,10 +173,9 @@ describe('Request', () => {
   describe('changeStatus (HU-15)', () => {
     const NOW = new Date('2026-11-10T15:30:00.000Z');
 
-    // The changeable statuses are all the targets except RECHAZADA (needs a
-    // reason) and AGENDADA (only by scheduling an appointment, HU-18)
-    const isChangeableTarget = (status: RequestStatus) =>
-      status !== 'RECHAZADA' && status !== 'AGENDADA';
+    // Since HU-16 every target status of ACTIONS can be chosen, RECHAZADA
+    // included, except AGENDADA: only by scheduling an appointment (HU-18)
+    const isChangeableTarget = (status: RequestStatus) => status !== 'AGENDADA';
     const CHANGEABLE_VALID = VALID_TRANSITIONS.filter(
       (
         transition,
@@ -188,13 +187,17 @@ describe('Request', () => {
         isChangeableTarget(transition[1]),
     );
 
-    it('offers every target status except RECIBIDA, RECHAZADA and AGENDADA', () => {
+    it('offers every target status except RECIBIDA (initial) and AGENDADA', () => {
       expect(CHANGEABLE_STATUSES).toEqual([
         'EN_BUSQUEDA',
         'DISPONIBLE',
         'ATENDIDA',
         'CERRADA',
+        'RECHAZADA',
       ]);
+      expect([...CHANGEABLE_STATUSES].sort()).toEqual(
+        TARGET_STATUSES.filter(isChangeableTarget).sort(),
+      );
     });
 
     it.each(CHANGEABLE_VALID)(
@@ -212,6 +215,8 @@ describe('Request', () => {
           changedBy: 'staff-1',
           changedAt: NOW,
           comment: 'Revisado',
+          // When rejecting, the comment is the reason (HU-16)
+          rejectionReason: to === 'RECHAZADA' ? 'Revisado' : null,
         });
       },
     );
@@ -299,7 +304,7 @@ describe('Request', () => {
       expect(Object.isFrozen(change)).toBe(true);
     });
 
-    it.each(['RECHAZADA', 'RECIBIDA', 'ROTA'])(
+    it.each(['RECIBIDA', 'ROTA'])(
       'does not accept %s as a target and keeps the status',
       (target) => {
         const request = buildRequest('RECIBIDA');
@@ -337,6 +342,7 @@ describe('Request', () => {
         changedBy: 'staff-1',
         changedAt: NOW,
         comment: null,
+        rejectionReason: null,
       });
       expect(Object.isFrozen(change)).toBe(true);
     });
@@ -360,6 +366,66 @@ describe('Request', () => {
         InvalidStatusTransitionError,
       );
       expect(request.status).toBe('DISPONIBLE');
+    });
+  });
+
+  describe('changeStatus to RECHAZADA (HU-16)', () => {
+    it.each<RequestStatus>(['RECIBIDA', 'EN_BUSQUEDA'])(
+      'rejects a %s request and keeps the reason for the requester',
+      (from) => {
+        const request = buildRequest(from);
+
+        const change = request.changeStatus(
+          'RECHAZADA',
+          'staff-1',
+          '  El material está restringido por la familia donante  ',
+        );
+
+        expect(request.status).toBe('RECHAZADA');
+        expect(request.rejectionReason).toBe(
+          'El material está restringido por la familia donante',
+        );
+        expect(change).toMatchObject({
+          previousStatus: from,
+          newStatus: 'RECHAZADA',
+          comment: 'El material está restringido por la familia donante',
+          rejectionReason:
+            'El material está restringido por la familia donante',
+        });
+        expect(request.allowedTransitions).toEqual([]);
+      },
+    );
+
+    it.each([undefined, null, '', '   '])(
+      'does not reject without a reason (%j) and keeps the status',
+      (reason) => {
+        const request = buildRequest('RECIBIDA');
+
+        expect(() =>
+          request.changeStatus('RECHAZADA', 'staff-1', reason),
+        ).toThrow(RejectionReasonRequiredError);
+        expect(request.status).toBe('RECIBIDA');
+        expect(request.rejectionReason).toBeNull();
+      },
+    );
+
+    it('reports the invalid transition first when the reason is also missing', () => {
+      const request = buildRequest('AGENDADA');
+
+      expect(() => request.changeStatus('RECHAZADA', 'staff-1')).toThrow(
+        InvalidStatusTransitionError,
+      );
+      expect(request.status).toBe('AGENDADA');
+    });
+
+    it('does not mark any other change as a rejection', () => {
+      const change = buildRequest('RECIBIDA').changeStatus(
+        'EN_BUSQUEDA',
+        'staff-1',
+        'Se asignó a Ana',
+      );
+
+      expect(change.rejectionReason).toBeNull();
     });
   });
 
