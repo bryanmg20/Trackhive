@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { Material } from '../../domain/entities/material.entity';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
   IMaterialRepository,
@@ -33,6 +34,23 @@ export class PrismaMaterialRepository implements IMaterialRepository {
       items: models.map((model) => PrismaMaterialMapper.toDomain(model)),
       total,
     };
+  }
+
+  async findById(id: string): Promise<Material | null> {
+    const model = await this.prisma.materialModel.findUnique({ where: { id } });
+    return model ? PrismaMaterialMapper.toDomain(model) : null;
+  }
+
+  async saveStatusChange(material: Material): Promise<void> {
+    await this.prisma.materialModel.update({
+      where: { id: material.id },
+      data: {
+        status: material.status,
+        statusChangedAt: material.statusChangedAt,
+        statusChangedById: material.statusChangedBy,
+        statusChangeReason: material.statusChangeReason,
+      },
+    });
   }
 
   private buildWhere(

@@ -33,7 +33,11 @@ describe('SearchMaterialsUseCase', () => {
       ReturnType<IMaterialRepository['search']>,
       [MaterialSearchCriteria]
     >(() => Promise.resolve({ items: [buildMaterial()], total: 31 }));
-    useCase = new SearchMaterialsUseCase({ search });
+    useCase = new SearchMaterialsUseCase({
+      search,
+      findById: jest.fn(),
+      saveStatusChange: jest.fn(),
+    });
   });
 
   it('hides the physical location from the PUBLICO role', async () => {

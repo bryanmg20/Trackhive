@@ -60,6 +60,7 @@ export interface SearchMaterialsParams {
   q?: string;
   type?: MaterialType;
   collection?: string;
+  status?: MaterialStatus;
   sort: MaterialSortField;
   order: SortOrder;
   page: number;
@@ -107,6 +108,7 @@ export async function searchMaterials(
   if (params.q) query.set('q', params.q);
   if (params.type) query.set('type', params.type);
   if (params.collection) query.set('collection', params.collection);
+  if (params.status) query.set('status', params.status);
 
   const response = await fetch(`/api/v1/materials?${query}`, {
     headers: {

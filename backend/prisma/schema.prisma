@@ -9,24 +9,25 @@ generator client {
 }
 
 model UserModel {
-  id               String              @id @db.Uuid
+  id                    String              @id @db.Uuid
   // Same four name fields as RequesterModel (issue #96)
-  firstName        String              @map("first_name") @db.VarChar(40)
-  middleName       String?             @map("middle_name") @db.VarChar(40)
-  lastName         String              @map("last_name") @db.VarChar(40)
-  secondLastName   String?             @map("second_last_name") @db.VarChar(40)
-  email            String              @unique @db.VarChar(160)
-  passwordHash     String              @map("password_hash") @db.VarChar(255)
+  firstName             String              @map("first_name") @db.VarChar(40)
+  middleName            String?             @map("middle_name") @db.VarChar(40)
+  lastName              String              @map("last_name") @db.VarChar(40)
+  secondLastName        String?             @map("second_last_name") @db.VarChar(40)
+  email                 String              @unique @db.VarChar(160)
+  passwordHash          String              @map("password_hash") @db.VarChar(255)
   // Allowed values (CHECK in the migration): ADMIN, PERSONAL, PUBLICO
-  role             String              @db.VarChar(10)
-  active           Boolean             @default(true)
-  lastLoginAt      DateTime?           @map("last_login_at") @db.Timestamptz
-  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  refreshTokens    RefreshTokenModel[]
-  requester        RequesterModel?
-  createdRequests  RequestModel[]      @relation("RequestCreatedBy")
-  assignedRequests RequestModel[]      @relation("RequestAssignee")
+  role                  String              @db.VarChar(10)
+  active                Boolean             @default(true)
+  lastLoginAt           DateTime?           @map("last_login_at") @db.Timestamptz
+  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  refreshTokens         RefreshTokenModel[]
+  requester             RequesterModel?
+  createdRequests       RequestModel[]      @relation("RequestCreatedBy")
+  assignedRequests      RequestModel[]      @relation("RequestAssignee")
+  materialStatusChanges MaterialModel[]     @relation("MaterialStatusChangedBy")
 
   @@map("users")
 }
@@ -50,25 +51,30 @@ model RefreshTokenModel {
 // A piece of the archive collection (HU-07). The GIN trigram indexes need the
 // pg_trgm extension, which is created by hand in the migration (D-16)
 model MaterialModel {
-  id              String             @id @db.Uuid
-  catalogCode     String             @unique @map("catalog_code") @db.VarChar(40)
-  title           String             @db.VarChar(255)
+  id                 String             @id @db.Uuid
+  catalogCode        String             @unique @map("catalog_code") @db.VarChar(40)
+  title              String             @db.VarChar(255)
   // Allowed values (CHECK in the migration): DOCUMENTO, PERIODICO, PROTOCOLO_NOTARIAL, OTRO
-  materialType    String             @map("material_type") @db.VarChar(20)
-  author          String?            @db.VarChar(150)
-  collection      String             @db.VarChar(120)
+  materialType       String             @map("material_type") @db.VarChar(20)
+  author             String?            @db.VarChar(150)
+  collection         String             @db.VarChar(120)
   // Periodicals only (HU-06). Nullable: some historic periodicals lack them
-  publicationDate DateTime?          @map("publication_date") @db.Date
-  publisher       String?            @db.VarChar(150)
+  publicationDate    DateTime?          @map("publication_date") @db.Date
+  publisher          String?            @db.VarChar(150)
   // Physical location. Never shown to the PUBLICO role
-  depot           String             @db.VarChar(40)
-  shelf           String             @db.VarChar(40)
-  box             String             @db.VarChar(40)
+  depot              String             @db.VarChar(40)
+  shelf              String             @db.VarChar(40)
+  box                String             @db.VarChar(40)
   // Allowed values (CHECK in the migration): DISPONIBLE, EN_USO, EN_RESTAURACION, NO_CONSULTABLE
-  status          String             @db.VarChar(20)
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  requestItems    RequestItemModel[]
+  status             String             @db.VarChar(20)
+  // Last status change (HU-08). Null while the status was never changed
+  statusChangedAt    DateTime?          @map("status_changed_at") @db.Timestamptz
+  statusChangedById  String?            @map("status_changed_by") @db.Uuid
+  statusChangedBy    UserModel?         @relation("MaterialStatusChangedBy", fields: [statusChangedById], references: [id])
+  statusChangeReason String?            @map("status_change_reason") @db.VarChar(500)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  requestItems       RequestItemModel[]
 
   @@index([materialType])
   // Text search with ILIKE '%...%' (HU-07)

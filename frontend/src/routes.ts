@@ -3,5 +3,6 @@ export const ROUTES = {
   login: '/login',
   newRequest: '/solicitudes/nueva',
   materials: '/materiales',
+  staffMaterials: '/personal/materiales',
   requests: '/solicitudes',
 } as const;

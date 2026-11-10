@@ -24,6 +24,9 @@ export class PrismaMaterialMapper {
       publisher: model.publisher,
       location: { depot: model.depot, shelf: model.shelf, box: model.box },
       status: model.status,
+      statusChangedAt: model.statusChangedAt,
+      statusChangedBy: model.statusChangedById,
+      statusChangeReason: model.statusChangeReason,
       createdAt: model.createdAt,
       updatedAt: model.updatedAt,
     });
