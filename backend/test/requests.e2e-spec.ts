@@ -42,6 +42,7 @@ describe('Request registration (e2e)', () => {
       status: 'RECIBIDA',
     }),
     list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+    findById: jest.fn(),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
@@ -356,6 +357,91 @@ describe('Request registration (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
         .expect(400);
       expect(repository.list).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /requests/:id (detail, HU-13)', () => {
+    const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const detailPath = (id: string) => `${REQUESTS_PATH}/${id}`;
+    const detail = {
+      id: REQUEST_ID,
+      trackingCode: 'SOL-2026-00001',
+      status: 'RECIBIDA',
+      deliveryMode: 'PRESENCIAL',
+      originChannel: 'WEB',
+      reason: 'Investigación',
+      requirementDescription: 'Actas',
+      desiredDate: new Date('2026-12-01T00:00:00.000Z'),
+      committedDate: null,
+      registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+      rejectionReason: null,
+      requester: {
+        firstName: 'Juan',
+        middleName: null,
+        lastName: 'Pérez',
+        secondLastName: null,
+        email: 'juan@mail.com',
+        phone: null,
+        requesterType: 'INVESTIGADOR',
+        institution: null,
+        documentType: null,
+        documentNumber: null,
+      },
+      materials: [],
+    };
+
+    beforeEach(() => {
+      repository.findById.mockReset();
+      repository.findById.mockResolvedValue(detail);
+    });
+
+    it('rejects a request without an access token with 401', async () => {
+      await request(server).get(detailPath(REQUEST_ID)).expect(401);
+    });
+
+    it('rejects a PUBLICO user with 403 and does not query', async () => {
+      await request(server)
+        .get(detailPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(403);
+      expect(repository.findById).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s see the detail of a request',
+      async (role) => {
+        const response = await request(server)
+          .get(detailPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken(role)}`)
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          id: REQUEST_ID,
+          trackingCode: 'SOL-2026-00001',
+          status: 'RECIBIDA',
+          desiredDate: '2026-12-01',
+          requester: { name: 'Juan Pérez', email: 'juan@mail.com' },
+        });
+      },
+    );
+
+    it('rejects an id that is not a UUID with 400', async () => {
+      await request(server)
+        .get(detailPath('no-es-uuid'))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(400);
+      expect(repository.findById).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 when the request does not exist', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      const response = await request(server)
+        .get(detailPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REQUEST_NOT_FOUND');
     });
   });
 });

@@ -3,6 +3,7 @@ import { REQUEST_REPOSITORY } from './application/tokens';
 import { CreateRequestOnBehalfUseCase } from './application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from './application/use-cases/create-request.use-case';
 import { FindRequesterByEmailUseCase } from './application/use-cases/find-requester-by-email.use-case';
+import { GetRequestDetailUseCase } from './application/use-cases/get-request-detail.use-case';
 import { ListRequestsUseCase } from './application/use-cases/list-requests.use-case';
 import { PrismaRequestRepository } from './infrastructure/persistence/prisma-request.repository';
 import { RequestController } from './presentation/controllers/request.controller';
@@ -16,6 +17,7 @@ import { RequesterController } from './presentation/controllers/requester.contro
     CreateRequestOnBehalfUseCase,
     FindRequesterByEmailUseCase,
     ListRequestsUseCase,
+    GetRequestDetailUseCase,
   ],
 })
 export class RequestsModule {}
