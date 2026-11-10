@@ -832,6 +832,32 @@ describe('RequestDetailPage', () => {
       expect(heading.parentElement).toHaveTextContent('Disponible');
     });
 
+    it('shows the availability conflict on the detail screen and creates no appointment (HU-20)', async () => {
+      const conflictMessage =
+        'No se puede agendar la cita del viernes 20/11/2026: ' +
+        'TH-DOC-0001 · Acta de fundación ya tiene una cita ese día (solicitud SOL-2026-00012).';
+      const { user } = await setup(available(), {
+        ok: false,
+        status: 409,
+        json: async () => ({
+          code: 'MATERIAL_UNAVAILABLE',
+          message: conflictMessage,
+        }),
+      });
+      const section = screen.getByRole('region', { name: 'Agendar cita' });
+
+      await user.click(
+        within(section).getByRole('button', { name: 'Agendar cita' }),
+      );
+
+      expect(await within(section).findByRole('alert')).toHaveTextContent(
+        conflictMessage,
+      );
+      expect(within(section).queryByRole('status')).not.toBeInTheDocument();
+      const heading = screen.getByRole('heading', { name: 'SOL-2026-00001' });
+      expect(heading.parentElement).toHaveTextContent('Disponible');
+    });
+
     it('shows the date the requester asked for and starts on it', async () => {
       const { user } = await setup();
       const section = screen.getByRole('region', { name: 'Agendar cita' });

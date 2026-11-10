@@ -55,7 +55,7 @@ function toSaveError(caught: unknown): SaveError {
       sessionExpired: false,
     };
   }
-  // 400 (Sunday) and 409 (not DISPONIBLE) bring a clear message from the backend
+  // 400 (Sunday) and 409 (not DISPONIBLE or material conflict, HU-20) bring a clear message from the backend
   return { message: caught.message, sessionExpired: false };
 }
 
