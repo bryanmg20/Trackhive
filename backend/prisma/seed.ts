@@ -1,3 +1,4 @@
+
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
@@ -591,6 +592,41 @@ const ITEM_STATUS_BY_REQUEST_STATUS: Record<SeedRequestStatus, string> = {
   RECHAZADA: 'NO_LOCALIZADO',
 };
 
+type SeedAppointment = {
+  trackingCode: string;
+  appointmentDate: string;
+  status: 'PROGRAMADA' | 'CUMPLIDA' | 'CANCELADA' | 'NO_ASISTIO';
+  notes: string | null;
+};
+
+// Fictitious appointments across November and December 2026 (never on Sunday)
+const APPOINTMENTS: SeedAppointment[] = [
+  {
+    trackingCode: 'SOL-2026-90010',
+    appointmentDate: '2026-11-12',
+    status: 'CUMPLIDA',
+    notes: 'Consultó el informe de obras públicas en sala.',
+  },
+  {
+    trackingCode: 'SOL-2026-90008',
+    appointmentDate: '2026-11-14',
+    status: 'NO_ASISTIO',
+    notes: 'Solicitó reprogramación para finales de mes.',
+  },
+  {
+    trackingCode: 'SOL-2026-90007',
+    appointmentDate: '2026-11-18',
+    status: 'PROGRAMADA',
+    notes: null,
+  },
+  {
+    trackingCode: 'SOL-2026-90008',
+    appointmentDate: '2026-12-05',
+    status: 'PROGRAMADA',
+    notes: null,
+  },
+];
+
 function readEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -742,9 +778,46 @@ async function main() {
       requestsCreated += 1;
     }
 
+    let appointmentsCreated = 0;
+    for (const seedAppointment of APPOINTMENTS) {
+      const request = await prisma.requestModel.findUnique({
+        where: { trackingCode: seedAppointment.trackingCode },
+        include: { items: { select: { materialId: true } } },
+      });
+      if (!request) continue;
+
+      const appointmentDate = new Date(
+        `${seedAppointment.appointmentDate}T00:00:00.000Z`,
+      );
+      const existingAppointment = await prisma.appointmentModel.findFirst({
+        where: {
+          requestId: request.id,
+          appointmentDate,
+        },
+      });
+      if (existingAppointment) continue;
+
+      await prisma.appointmentModel.create({
+        data: {
+          id: randomUUID(),
+          requestId: request.id,
+          requesterId: request.requesterId,
+          scheduledById: staff.id,
+          appointmentDate,
+          status: seedAppointment.status,
+          notes: seedAppointment.notes,
+          materials: {
+            create: request.items.map(({ materialId }) => ({ materialId })),
+          },
+        },
+      });
+      appointmentsCreated += 1;
+    }
+
     console.log(
       `Seed applied: ${USERS.length} users, ${MATERIALS.length} materials, ` +
-        `${requestsCreated} new requests (${REQUESTS.length} in the seed)`,
+        `${requestsCreated} new requests (${REQUESTS.length} in the seed), ` +
+        `${appointmentsCreated} new appointments (${APPOINTMENTS.length} in the seed)`,
     );
   } finally {
     await prisma.$disconnect();

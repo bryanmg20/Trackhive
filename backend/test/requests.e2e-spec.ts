@@ -27,6 +27,7 @@ import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.
 
 const ACCESS_SECRET = 'e2e-access-secret';
 const REQUESTS_PATH = '/api/v1/requests';
+const APPOINTMENTS_PATH = '/api/v1/appointments';
 const MINE_PATH = '/api/v1/requests/mine';
 const ON_BEHALF_PATH = '/api/v1/requests/on-behalf';
 const REQUESTERS_PATH = '/api/v1/requesters/by-email';
@@ -53,6 +54,7 @@ describe('Request registration (e2e)', () => {
       status: 'RECIBIDA',
     }),
     list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+    listAppointments: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findById: jest.fn(),
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findEntityById: jest.fn(),
@@ -1243,6 +1245,198 @@ describe('Request registration (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
         .expect(400);
       expect(repository.listByRequesterUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /appointments (calendar list, HU-19)', () => {
+    it('rejects a request without an access token with 401', async () => {
+      await request(server).get(APPOINTMENTS_PATH).expect(401);
+      expect(repository.listAppointments).not.toHaveBeenCalled();
+    });
+
+    it('rejects a PUBLICO user with 403 and does not query', async () => {
+      const response = await request(server)
+        .get(APPOINTMENTS_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(403);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
+      expect(repository.listAppointments).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s list appointments with default pagination and order',
+      async (role) => {
+        await request(server)
+          .get(APPOINTMENTS_PATH)
+          .set('Authorization', `Bearer ${accessToken(role)}`)
+          .expect(200, { items: [], page: 1, limit: 20, total: 0 });
+
+        expect(repository.listAppointments).toHaveBeenCalledWith({
+          status: undefined,
+          from: undefined,
+          to: undefined,
+          requester: undefined,
+          material: undefined,
+          sort: 'appointmentDate',
+          order: 'asc',
+          page: 1,
+          limit: 20,
+        });
+      },
+    );
+
+    it('passes filters by material, requester, status, date range, order and page', async () => {
+      await request(server)
+        .get(APPOINTMENTS_PATH)
+        .query({
+          status: 'PROGRAMADA',
+          from: '2026-11-01',
+          to: '2026-11-30',
+          requester: 'juan pérez',
+          material: 'cabildo',
+          sort: 'createdAt',
+          order: 'desc',
+          page: 2,
+          limit: 10,
+        })
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(200);
+
+      expect(repository.listAppointments).toHaveBeenCalledWith({
+        status: 'PROGRAMADA',
+        from: '2026-11-01',
+        to: '2026-11-30',
+        requester: 'juan pérez',
+        material: 'cabildo',
+        sort: 'createdAt',
+        order: 'desc',
+        page: 2,
+        limit: 10,
+      });
+    });
+
+    it('returns the appointments with their date, status, service hours, requester and materials', async () => {
+      repository.listAppointments.mockResolvedValueOnce({
+        items: [
+          {
+            id: 'appointment-1',
+            appointmentDate: new Date('2026-11-20T00:00:00.000Z'),
+            status: 'PROGRAMADA',
+            notes: null,
+            createdAt: new Date('2026-11-10T15:00:00.000Z'),
+            request: {
+              id: 'request-1',
+              trackingCode: 'SOL-2026-00001',
+              status: 'AGENDADA',
+              deliveryMode: 'PRESENCIAL',
+            },
+            requester: {
+              id: 'requester-1',
+              firstName: 'Juan',
+              middleName: 'Carlos',
+              lastName: 'Pérez',
+              secondLastName: null,
+              email: 'juan@mail.com',
+              phone: '3001234567',
+              requesterType: 'INVESTIGADOR',
+              institution: 'Universidad del Norte',
+              documentType: 'CC',
+              documentNumber: '123456789',
+            },
+            scheduledBy: {
+              id: 'staff-1',
+              firstName: 'Ana',
+              middleName: null,
+              lastName: 'Gómez',
+              secondLastName: null,
+            },
+            materials: [
+              {
+                id: 'material-1',
+                catalogCode: 'TH-DOC-0001',
+                title: 'Acta de fundación de la villa',
+                materialType: 'DOCUMENTO',
+                depot: 'D-01',
+                shelf: 'E-01',
+                box: 'C-001',
+              },
+            ],
+          },
+        ],
+        total: 1,
+      });
+
+      const response = await request(server)
+        .get(APPOINTMENTS_PATH)
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(200);
+
+      expect(response.body).toEqual({
+        items: [
+          {
+            id: 'appointment-1',
+            date: '2026-11-20',
+            serviceHours: { opensAt: '08:00', closesAt: '17:00' },
+            status: 'PROGRAMADA',
+            notes: null,
+            createdAt: '2026-11-10T15:00:00.000Z',
+            request: {
+              id: 'request-1',
+              trackingCode: 'SOL-2026-00001',
+              status: 'AGENDADA',
+              deliveryMode: 'PRESENCIAL',
+            },
+            requester: {
+              id: 'requester-1',
+              name: 'Juan Carlos Pérez',
+              email: 'juan@mail.com',
+              phone: '3001234567',
+              requesterType: 'INVESTIGADOR',
+              institution: 'Universidad del Norte',
+              documentType: 'CC',
+              documentNumber: '123456789',
+            },
+            scheduledBy: {
+              id: 'staff-1',
+              name: 'Ana Gómez',
+            },
+            materials: [
+              {
+                id: 'material-1',
+                catalogCode: 'TH-DOC-0001',
+                title: 'Acta de fundación de la villa',
+                materialType: 'DOCUMENTO',
+                location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
+              },
+            ],
+          },
+        ],
+        page: 1,
+        limit: 20,
+        total: 1,
+      });
+    });
+
+    it.each([
+      { status: 'ROTA' },
+      { from: '20/11/2026' },
+      { to: '2026-13-01' },
+      { sort: 'status' },
+      { order: 'up' },
+      { page: 0 },
+      { limit: 101 },
+      { unknownParam: 'x' },
+    ])('rejects invalid parameters %j with 400', async (query) => {
+      await request(server)
+        .get(APPOINTMENTS_PATH)
+        .query(query)
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(400);
+      expect(repository.listAppointments).not.toHaveBeenCalled();
     });
   });
 });

@@ -60,6 +60,7 @@ describe('GetRequestDetailUseCase', () => {
       createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn(),
       list: jest.fn(),
+      listAppointments: jest.fn(),
       findById,
       listByRequesterUser: jest.fn(),
       findEntityById: jest.fn(),
