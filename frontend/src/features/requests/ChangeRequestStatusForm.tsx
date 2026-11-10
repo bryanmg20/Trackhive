@@ -36,7 +36,6 @@ const CHANGED_TIME_FORMAT = new Intl.DateTimeFormat('es-CO', {
 const TRANSITION_HINTS: Partial<Record<RequestStatus, string>> = {
   EN_BUSQUEDA: 'Se empieza a buscar el material.',
   DISPONIBLE: 'El material fue localizado.',
-  AGENDADA: 'Hay una cita para consultar el material en la sala.',
   // From DISPONIBLE it is only offered for a digital delivery
   ATENDIDA: 'Se entregó la copia digital.',
   CERRADA: 'La solicitud termina y no admite más cambios.',
@@ -116,9 +115,10 @@ export function ChangeRequestStatusForm({
   const [error, setError] = useState<SaveError | null>(null);
   const [lastChange, setLastChange] = useState<StatusChange | null>(null);
 
-  // Rejecting needs a reason: HU-16 adds RECHAZADA to this same action
+  // Rejecting needs a reason: HU-16 adds RECHAZADA to this same action.
+  // AGENDADA is only reached by scheduling an appointment (HU-18)
   const options = request.allowedTransitions.filter(
-    (status) => status !== 'RECHAZADA',
+    (status) => status !== 'RECHAZADA' && status !== 'AGENDADA',
   );
 
   async function save(event: FormEvent<HTMLFormElement>) {
