@@ -442,6 +442,155 @@ const MATERIALS: SeedMaterial[] = [
   },
 ];
 
+type SeedRequestStatus =
+  | 'RECIBIDA'
+  | 'EN_BUSQUEDA'
+  | 'DISPONIBLE'
+  | 'AGENDADA'
+  | 'ATENDIDA'
+  | 'CERRADA'
+  | 'RECHAZADA';
+
+type SeedRequest = {
+  // Fixed codes from 90001, so they never collide with the real sequence
+  trackingCode: string;
+  // Email of a public user, or of the visitor registered by the staff
+  requesterEmail: string;
+  status: SeedRequestStatus;
+  deliveryMode: 'PRESENCIAL' | 'DIGITAL';
+  desiredDate: string;
+  registeredAt: string;
+  materialCodes: string[];
+  // Only for RECHAZADA; the column holds at most 25 characters
+  rejectionReason?: string;
+};
+
+const VISITOR_EMAIL = 'visitante@example.com';
+
+// Fictitious requests: every status, public users and one visitor without account
+const REQUESTS: SeedRequest[] = [
+  {
+    trackingCode: 'SOL-2026-90001',
+    requesterEmail: 'publico1@example.com',
+    status: 'RECIBIDA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-10',
+    registeredAt: '2026-11-09T14:00:00Z',
+    materialCodes: ['TH-DOC-0001'],
+  },
+  {
+    trackingCode: 'SOL-2026-90002',
+    requesterEmail: 'publico2@example.com',
+    status: 'RECIBIDA',
+    deliveryMode: 'DIGITAL',
+    desiredDate: '2026-12-15',
+    registeredAt: '2026-11-08T09:30:00Z',
+    materialCodes: ['TH-PER-0001', 'TH-PER-0003'],
+  },
+  {
+    trackingCode: 'SOL-2026-90003',
+    requesterEmail: 'publico1@example.com',
+    status: 'EN_BUSQUEDA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-12',
+    registeredAt: '2026-11-05T16:45:00Z',
+    materialCodes: ['TH-NOT-0001'],
+  },
+  {
+    trackingCode: 'SOL-2026-90004',
+    requesterEmail: VISITOR_EMAIL,
+    status: 'EN_BUSQUEDA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-18',
+    registeredAt: '2026-11-04T11:15:00Z',
+    materialCodes: ['TH-DOC-0006'],
+  },
+  {
+    trackingCode: 'SOL-2026-90005',
+    requesterEmail: 'publico3@example.com',
+    status: 'DISPONIBLE',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-09',
+    registeredAt: '2026-10-30T10:00:00Z',
+    materialCodes: ['TH-DOC-0004', 'TH-DOC-0010'],
+  },
+  {
+    trackingCode: 'SOL-2026-90006',
+    requesterEmail: 'publico4@example.com',
+    status: 'DISPONIBLE',
+    deliveryMode: 'DIGITAL',
+    desiredDate: '2026-12-02',
+    registeredAt: '2026-10-28T15:20:00Z',
+    materialCodes: ['TH-OTR-0001'],
+  },
+  {
+    trackingCode: 'SOL-2026-90007',
+    requesterEmail: 'publico2@example.com',
+    status: 'AGENDADA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-03',
+    registeredAt: '2026-10-27T08:50:00Z',
+    materialCodes: ['TH-NOT-0003'],
+  },
+  {
+    trackingCode: 'SOL-2026-90008',
+    requesterEmail: 'publico1@example.com',
+    status: 'AGENDADA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-05',
+    registeredAt: '2026-10-26T13:10:00Z',
+    materialCodes: ['TH-PER-0007', 'TH-DOC-0002'],
+  },
+  {
+    trackingCode: 'SOL-2026-90009',
+    requesterEmail: 'publico3@example.com',
+    status: 'ATENDIDA',
+    deliveryMode: 'DIGITAL',
+    desiredDate: '2026-11-20',
+    registeredAt: '2026-10-15T09:00:00Z',
+    materialCodes: ['TH-PER-0005'],
+  },
+  {
+    trackingCode: 'SOL-2026-90010',
+    requesterEmail: 'publico4@example.com',
+    status: 'CERRADA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-11-12',
+    registeredAt: '2026-10-05T12:00:00Z',
+    materialCodes: ['TH-DOC-0008'],
+  },
+  {
+    trackingCode: 'SOL-2026-90011',
+    requesterEmail: 'publico2@example.com',
+    status: 'RECHAZADA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-01',
+    registeredAt: '2026-11-02T10:30:00Z',
+    materialCodes: ['TH-DOC-0005'],
+    rejectionReason: 'Material no localizado',
+  },
+  {
+    trackingCode: 'SOL-2026-90012',
+    requesterEmail: VISITOR_EMAIL,
+    status: 'RECHAZADA',
+    deliveryMode: 'PRESENCIAL',
+    desiredDate: '2026-12-04',
+    registeredAt: '2026-11-03T17:00:00Z',
+    materialCodes: ['TH-NOT-0005'],
+    rejectionReason: 'Material restringido',
+  },
+];
+
+const ITEM_STATUS_BY_REQUEST_STATUS: Record<SeedRequestStatus, string> = {
+  RECIBIDA: 'PENDIENTE',
+  EN_BUSQUEDA: 'PENDIENTE',
+  DISPONIBLE: 'LOCALIZADO',
+  AGENDADA: 'LOCALIZADO',
+  ATENDIDA: 'LOCALIZADO',
+  CERRADA: 'LOCALIZADO',
+  RECHAZADA: 'NO_LOCALIZADO',
+};
+
 function readEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -482,8 +631,120 @@ async function main() {
       });
     }
 
+    const staff = await prisma.userModel.findUniqueOrThrow({
+      where: { email: 'personal1@example.com' },
+    });
+
+    // The visitor has no account: the staff registered the request for them
+    let visitor = await prisma.requesterModel.findFirst({
+      where: { email: VISITOR_EMAIL },
+    });
+    visitor ??= await prisma.requesterModel.create({
+      data: {
+        id: randomUUID(),
+        userId: null,
+        firstName: 'Visitante',
+        middleName: null,
+        lastName: 'Demo',
+        secondLastName: null,
+        email: VISITOR_EMAIL,
+        phone: '3000000000',
+        requesterType: 'CIUDADANO',
+        institution: null,
+        documentType: null,
+        documentNumber: null,
+        acceptsDataProcessing: true,
+        consentedAt: new Date(),
+        privacyPolicyVersion: '1.0',
+      },
+    });
+
+    let requestsCreated = 0;
+    for (const seedRequest of REQUESTS) {
+      // Running the seed again does not duplicate requests
+      const existing = await prisma.requestModel.findUnique({
+        where: { trackingCode: seedRequest.trackingCode },
+      });
+      if (existing) continue;
+
+      const isVisitor = seedRequest.requesterEmail === VISITOR_EMAIL;
+      const user = isVisitor
+        ? null
+        : await prisma.userModel.findUniqueOrThrow({
+            where: { email: seedRequest.requesterEmail },
+          });
+      const requester = isVisitor
+        ? visitor
+        : ((await prisma.requesterModel.findUnique({
+            where: { userId: user!.id },
+          })) ??
+          (await prisma.requesterModel.create({
+            data: {
+              id: randomUUID(),
+              userId: user!.id,
+              firstName: user!.firstName,
+              middleName: user!.middleName,
+              lastName: user!.lastName,
+              secondLastName: user!.secondLastName,
+              email: user!.email,
+              phone: null,
+              requesterType: 'INVESTIGADOR',
+              institution: null,
+              documentType: null,
+              documentNumber: null,
+              acceptsDataProcessing: true,
+              consentedAt: new Date(),
+              privacyPolicyVersion: '1.0',
+            },
+          })));
+
+      const materials = await prisma.materialModel.findMany({
+        where: { catalogCode: { in: seedRequest.materialCodes } },
+        select: { id: true },
+      });
+      const registeredAt = new Date(seedRequest.registeredAt);
+      const attended =
+        seedRequest.status === 'ATENDIDA' || seedRequest.status === 'CERRADA';
+
+      await prisma.requestModel.create({
+        data: {
+          id: randomUUID(),
+          trackingCode: seedRequest.trackingCode,
+          requesterId: requester.id,
+          // A visitor's request is registered by the staff, the others by the user
+          createdById: isVisitor ? staff.id : user!.id,
+          requestType: 'CONSULTA_SALA',
+          originChannel: isVisitor ? 'PRESENCIAL' : 'WEB',
+          deliveryMode: seedRequest.deliveryMode,
+          purpose: 'INVESTIGACION',
+          reason: 'Consulta para un trabajo de investigación',
+          requirementDescription: 'Consulta para un trabajo de investigación',
+          desiredDate: new Date(seedRequest.desiredDate),
+          committedDate:
+            seedRequest.status === 'AGENDADA'
+              ? new Date(seedRequest.desiredDate)
+              : null,
+          status: seedRequest.status,
+          rejectionReason: seedRequest.rejectionReason ?? null,
+          registeredAt,
+          attendedAt: attended ? registeredAt : null,
+          closedAt: seedRequest.status === 'CERRADA' ? registeredAt : null,
+          items: {
+            create: materials.map(({ id }) => ({
+              id: randomUUID(),
+              materialId: id,
+              itemStatus: ITEM_STATUS_BY_REQUEST_STATUS[seedRequest.status],
+              accessType: 'FISICO',
+            })),
+          },
+        },
+      });
+      requestsCreated += 1;
+    }
+
     console.log(
-      `Seed applied: ${USERS.length} users, ${MATERIALS.length} materials`,
+      `Seed applied: ${USERS.length} users, ${MATERIALS.length} materials, ` +
+        `${requestsCreated} new requests (${REQUESTS.length} in the seed)`,
     );
   } finally {
     await prisma.$disconnect();

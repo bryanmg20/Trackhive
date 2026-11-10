@@ -20,9 +20,8 @@ const ACCESS_DENIED_MESSAGE =
 
 const HOME_BY_ROLE: Record<UserRole, string> = {
   PUBLICO: ROUTES.materials,
-  // Until the request list (HU-12) exists, the staff starts at the material list
-  PERSONAL: ROUTES.staffMaterials,
-  ADMIN: ROUTES.staffMaterials,
+  PERSONAL: ROUTES.requests,
+  ADMIN: ROUTES.requests,
 };
 
 interface LoginLocationState {

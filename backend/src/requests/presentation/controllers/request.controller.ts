@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -6,6 +6,7 @@ import {
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -16,9 +17,12 @@ import type { AuthenticatedUser } from '../../../auth/presentation/guards/authen
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
 import { CreateRequestOnBehalfDto } from '../../application/dto/create-request-on-behalf.dto';
 import { CreateRequestDto } from '../../application/dto/create-request.dto';
+import { ListRequestsQueryDto } from '../../application/dto/list-requests-query.dto';
+import { PaginatedRequestsResponseDto } from '../../application/dto/request-list-response.dto';
 import { CreateRequestResponseDto } from '../../application/dto/create-request-response.dto';
 import { CreateRequestOnBehalfUseCase } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from '../../application/use-cases/create-request.use-case';
+import { ListRequestsUseCase } from '../../application/use-cases/list-requests.use-case';
 
 @ApiTags('Requests')
 @ApiBearerAuth()
@@ -27,7 +31,43 @@ export class RequestController {
   constructor(
     private readonly createRequestUseCase: CreateRequestUseCase,
     private readonly createRequestOnBehalfUseCase: CreateRequestOnBehalfUseCase,
+    private readonly listRequestsUseCase: ListRequestsUseCase,
   ) {}
+
+  @Get()
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Lista y filtra las solicitudes',
+    description:
+      'Devuelve las solicitudes paginadas, con filtros por estado, rango de ' +
+      'fecha deseada, solicitante y material, y ordenamiento por fecha de ' +
+      'radicación o fecha deseada. Solo para PERSONAL y ADMIN.',
+  })
+  @ApiOkResponse({
+    description: 'Página de solicitudes',
+    type: PaginatedRequestsResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Parámetros de búsqueda inválidos o no permitidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden listar las solicitudes',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  list(
+    @Query() query: ListRequestsQueryDto,
+  ): Promise<PaginatedRequestsResponseDto> {
+    return this.listRequestsUseCase.execute(query);
+  }
 
   @Post()
   @Roles('PUBLICO')

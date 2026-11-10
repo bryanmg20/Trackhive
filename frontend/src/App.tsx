@@ -6,7 +6,7 @@ import { StaffRoute } from './features/auth/components/StaffRoute';
 import { NewRequestPage } from './features/requests/NewRequestPage';
 import { MaterialSearchPage } from './features/materials/MaterialSearchPage';
 import { StaffMaterialsPage } from './features/materials/StaffMaterialsPage';
-import { PendingPage } from './features/pending/PendingPage';
+import { RequestsListPage } from './features/requests/RequestsListPage';
 import { ROUTES } from './routes';
 
 function App() {
@@ -19,14 +19,9 @@ function App() {
       </Route>
       <Route element={<StaffRoute />}>
         <Route path={ROUTES.staffMaterials} element={<StaffMaterialsPage />} />
+        <Route path={ROUTES.requests} element={<RequestsListPage />} />
       </Route>
       <Route path={ROUTES.materials} element={<MaterialSearchPage />} />
-      <Route
-        path={ROUTES.requests}
-        element={
-          <PendingPage title="Solicitudes" spineLabel="PERSONAL · SOLICITUDES" />
-        }
-      />
       <Route path="*" element={<Navigate replace to={ROUTES.register} />} />
     </Routes>
   );

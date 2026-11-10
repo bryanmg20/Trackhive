@@ -18,6 +18,7 @@ describe('CreateRequestOnBehalfUseCase', () => {
       status: 'RECIBIDA',
     }),
     findRequesterByEmail: jest.fn(),
+    list: jest.fn(),
   };
   const useCase = new CreateRequestOnBehalfUseCase(repository);
 

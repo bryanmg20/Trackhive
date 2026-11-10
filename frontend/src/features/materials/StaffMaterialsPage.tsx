@@ -184,6 +184,14 @@ export function StaffMaterialsPage() {
           Trackhive<span className={searchStyles.wordmarkDot}>.</span>
         </p>
         <p className={searchStyles.topbarTag}>CLENA · Personal</p>
+        <nav className={styles.nav} aria-label="Secciones del personal">
+          <Link to={ROUTES.requests} aria-current={undefined}>
+            Solicitudes
+          </Link>
+          <Link to={ROUTES.staffMaterials} aria-current={'page'}>
+            Material
+          </Link>
+        </nav>
       </header>
 
       <main className={searchStyles.main}>

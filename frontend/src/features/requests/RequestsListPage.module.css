@@ -1,0 +1,76 @@
+.dates {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.dates label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.badge[data-status='RECHAZADA'] {
+  background: var(--error-surface, var(--paper));
+}
+
+.badge[data-status='DISPONIBLE'],
+.badge[data-status='AGENDADA'],
+.badge[data-status='ATENDIDA'] {
+  background: var(--success-surface);
+}
+
+.materials {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink);
+}
+
+.materials li + li {
+  margin-top: 0.15rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.nav a {
+  color: var(--ink);
+}
+
+.nav a[aria-current='page'] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.clearButton {
+  align-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gold-text);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  color: var(--ink);
+}

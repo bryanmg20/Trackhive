@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
   CreatedRequest,
+  RequestListCriteria,
+  RequestListResult,
   RequesterProfile,
   RequestRepository,
 } from '../../application/ports/request.repository.port';
@@ -11,6 +14,8 @@ import type {
   CreateRequestOnBehalfInput,
   RequesterInput,
 } from '../../application/use-cases/create-request-on-behalf.use-case';
+import { isDeliveryMode } from '../../domain/delivery-mode';
+import { isRequestStatus } from '../../domain/request-status';
 import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
 import { RequesterEmailMismatchError } from '../../domain/errors/requester-email-mismatch.error';
 import { RequesterNameRequiredError } from '../../domain/errors/requester-name-required.error';
@@ -96,6 +101,107 @@ export class PrismaRequestRepository implements RequestRepository {
       where: { email: { equals: email, mode: 'insensitive' } },
     });
     return user ? this.toUserProfile(user) : null;
+  }
+
+  async list(criteria: RequestListCriteria): Promise<RequestListResult> {
+    const where = this.buildListWhere(criteria);
+
+    // Same filter for the page and the total, in one transaction
+    const [models, total] = await this.prisma.$transaction([
+      this.prisma.requestModel.findMany({
+        where,
+        orderBy: [{ [criteria.sort]: criteria.order }, { id: 'asc' }],
+        skip: (criteria.page - 1) * criteria.limit,
+        take: criteria.limit,
+        include: {
+          requester: true,
+          items: { include: { material: true } },
+        },
+      }),
+      this.prisma.requestModel.count({ where }),
+    ]);
+
+    return {
+      items: models.map((model) => {
+        if (
+          !isRequestStatus(model.status) ||
+          !isDeliveryMode(model.deliveryMode)
+        ) {
+          throw new Error(`Request ${model.id} has an invalid stored value`);
+        }
+        return {
+          id: model.id,
+          trackingCode: model.trackingCode,
+          status: model.status,
+          deliveryMode: model.deliveryMode,
+          desiredDate: model.desiredDate,
+          registeredAt: model.registeredAt,
+          requester: {
+            firstName: model.requester.firstName,
+            middleName: model.requester.middleName,
+            lastName: model.requester.lastName,
+            secondLastName: model.requester.secondLastName,
+            email: model.requester.email,
+          },
+          materials: model.items.map(({ material }) => ({
+            id: material.id,
+            catalogCode: material.catalogCode,
+            title: material.title,
+          })),
+        };
+      }),
+      total,
+    };
+  }
+
+  private buildListWhere(
+    criteria: RequestListCriteria,
+  ): Prisma.RequestModelWhereInput {
+    const and: Prisma.RequestModelWhereInput[] = [];
+
+    if (criteria.status) {
+      and.push({ status: criteria.status });
+    }
+    if (criteria.desiredFrom || criteria.desiredTo) {
+      and.push({
+        desiredDate: {
+          ...(criteria.desiredFrom && {
+            gte: new Date(`${criteria.desiredFrom}T00:00:00.000Z`),
+          }),
+          ...(criteria.desiredTo && {
+            lte: new Date(`${criteria.desiredTo}T00:00:00.000Z`),
+          }),
+        },
+      });
+    }
+    // Every word must match some field, so "juan pérez" finds "Juan Carlos Pérez"
+    for (const word of criteria.requester?.split(/\s+/).filter(Boolean) ?? []) {
+      const text = { contains: word, mode: 'insensitive' as const };
+      and.push({
+        requester: {
+          OR: [
+            { firstName: text },
+            { middleName: text },
+            { lastName: text },
+            { secondLastName: text },
+            { email: text },
+            { documentNumber: text },
+          ],
+        },
+      });
+    }
+    if (criteria.material) {
+      const text = {
+        contains: criteria.material,
+        mode: 'insensitive' as const,
+      };
+      and.push({
+        items: {
+          some: { material: { OR: [{ title: text }, { catalogCode: text }] } },
+        },
+      });
+    }
+    return and.length > 0 ? { AND: and } : {};
   }
 
   private async resolveRequester(
