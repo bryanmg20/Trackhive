@@ -1,5 +1,6 @@
 import { InvalidEmailError } from '../errors/invalid-email.error';
 import { InvalidPasswordHashError } from '../errors/invalid-password-hash.error';
+import { InvalidPrivacyConsentError } from '../errors/invalid-privacy-consent.error';
 import { InvalidRoleError } from '../errors/invalid-role.error';
 import { optionalName, requiredName } from '../person-name';
 import { isUserRole, UserRole } from '../user-role';
@@ -18,6 +19,9 @@ export interface UserProps {
   passwordHash: string;
   role: UserRole;
   active: boolean;
+  // Public registrations always set both; seeded/admin accounts may have none
+  privacyPolicyAcceptedAt?: Date | null;
+  privacyPolicyVersion?: string | null;
 }
 
 export class User {
@@ -30,6 +34,8 @@ export class User {
   public readonly passwordHash: string;
   public readonly role: UserRole;
   public readonly active: boolean;
+  public readonly privacyPolicyAcceptedAt: Date | null;
+  public readonly privacyPolicyVersion: string | null;
 
   constructor(props: UserProps) {
     // Business rules: a user cannot exist with invalid account data
@@ -53,6 +59,15 @@ export class User {
       throw new InvalidRoleError();
     }
 
+    const privacyPolicyAcceptedAt = props.privacyPolicyAcceptedAt ?? null;
+    const privacyPolicyVersion = props.privacyPolicyVersion?.trim() || null;
+    if (
+      (privacyPolicyAcceptedAt === null) !==
+      (privacyPolicyVersion === null)
+    ) {
+      throw new InvalidPrivacyConsentError();
+    }
+
     this.id = props.id;
     this.firstName = firstName;
     this.middleName = middleName;
@@ -62,5 +77,7 @@ export class User {
     this.passwordHash = props.passwordHash;
     this.role = props.role;
     this.active = props.active;
+    this.privacyPolicyAcceptedAt = privacyPolicyAcceptedAt;
+    this.privacyPolicyVersion = privacyPolicyVersion;
   }
 }

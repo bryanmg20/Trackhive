@@ -1,7 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  Equals,
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -10,6 +12,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { NAME_MAX_LENGTH } from '../../domain/person-name';
+import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/privacy-policy';
 
 const trimText = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -117,4 +120,25 @@ export class CreateUserDto {
     message: 'La contraseña debe contener al menos un carácter visible',
   })
   password: string;
+
+  @ApiProperty({
+    description:
+      'Aceptación expresa del aviso de privacidad. Debe ser true para crear la cuenta',
+    example: true,
+  })
+  @Equals(true, {
+    message: 'Debe aceptar el aviso de privacidad para crear la cuenta',
+  })
+  acceptedPrivacy: boolean;
+
+  @ApiProperty({
+    description: 'Versión del aviso de privacidad que la persona aceptó',
+    example: CURRENT_PRIVACY_POLICY_VERSION,
+    maxLength: 10,
+  })
+  @Transform(trimText)
+  @IsIn([CURRENT_PRIVACY_POLICY_VERSION], {
+    message: 'Debe aceptar la versión vigente del aviso de privacidad',
+  })
+  privacyPolicyVersion: string;
 }

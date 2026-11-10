@@ -54,6 +54,8 @@ export class UserController {
       secondLastName: dto.secondLastName,
       email: dto.email,
       password: dto.password,
+      acceptedPrivacy: dto.acceptedPrivacy,
+      privacyPolicyVersion: dto.privacyPolicyVersion,
     });
   }
 }

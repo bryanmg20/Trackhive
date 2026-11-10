@@ -61,6 +61,8 @@ const validRegistration = (email = 'ana@trackhive.test') => ({
   secondLastName: 'Gómez',
   email,
   password: 'secreto123',
+  acceptedPrivacy: true,
+  privacyPolicyVersion: '1.0',
 });
 
 describe('Versioned API (e2e)', () => {
@@ -117,6 +119,45 @@ describe('Versioned API (e2e)', () => {
     const stored = await repository.findByEmail('ana@trackhive.test');
     expect(stored?.passwordHash).toMatch(/^\$argon2/);
     expect(stored?.passwordHash).not.toBe('secreto123');
+    expect(stored?.privacyPolicyAcceptedAt).toBeInstanceOf(Date);
+    expect(stored?.privacyPolicyVersion).toBe('1.0');
+  });
+
+  it('rejects a registration without privacy consent', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({
+        ...validRegistration('sin-consentimiento@trackhive.test'),
+        acceptedPrivacy: false,
+      })
+      .expect(400);
+
+    expect((response.body as ErrorBody).details).toEqual([
+      {
+        field: 'acceptedPrivacy',
+        messages: ['Debe aceptar el aviso de privacidad para crear la cuenta'],
+      },
+    ]);
+    expect(
+      await repository.findByEmail('sin-consentimiento@trackhive.test'),
+    ).toBeNull();
+  });
+
+  it('rejects a registration with an outdated privacy notice version', async () => {
+    const response = await request(server)
+      .post('/api/v1/users')
+      .send({
+        ...validRegistration('version-vencida@trackhive.test'),
+        privacyPolicyVersion: '0.9',
+      })
+      .expect(400);
+
+    expect((response.body as ErrorBody).details).toEqual([
+      {
+        field: 'privacyPolicyVersion',
+        messages: ['Debe aceptar la versión vigente del aviso de privacidad'],
+      },
+    ]);
   });
 
   it('registers with only the required name fields', async () => {
@@ -127,6 +168,8 @@ describe('Versioned API (e2e)', () => {
         lastName: 'Rojas',
         email: 'solo-obligatorios@trackhive.test',
         password: 'secreto123',
+        acceptedPrivacy: true,
+        privacyPolicyVersion: '1.0',
       })
       .expect(201);
 
@@ -322,7 +365,12 @@ describe('Versioned API (e2e)', () => {
     );
     expect(createUser.properties).not.toHaveProperty('fullName');
     expect(createUser.required).toEqual(
-      expect.arrayContaining(['firstName', 'lastName']),
+      expect.arrayContaining([
+        'firstName',
+        'lastName',
+        'acceptedPrivacy',
+        'privacyPolicyVersion',
+      ]),
     );
     expect(createUser.required).not.toContain('middleName');
     expect(createUser.required).not.toContain('secondLastName');
