@@ -67,7 +67,7 @@ export class RequestsApiError extends Error {
   }
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+export async function readErrorMessage(response: Response): Promise<string> {
   try {
     const body: unknown = await response.json();
     if (

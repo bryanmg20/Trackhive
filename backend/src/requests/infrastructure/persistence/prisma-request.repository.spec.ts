@@ -414,6 +414,52 @@ describe('PrismaRequestRepository', () => {
         },
       });
     });
+
+    describe('listByRequesterUser (HU-11)', () => {
+      it("only counts and pages the requests of the user's requester", async () => {
+        const prisma = buildListPrisma();
+
+        const result = await new PrismaRequestRepository(
+          prisma as unknown as PrismaService,
+        ).listByRequesterUser('user-1', baseCriteria);
+
+        const where = { AND: [{ requester: { userId: 'user-1' } }, {}] };
+        expect(prisma.requestModel.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where,
+            orderBy: [{ registeredAt: 'desc' }, { id: 'asc' }],
+            skip: 20,
+            take: 10,
+          }),
+        );
+        expect(prisma.requestModel.count).toHaveBeenCalledWith({ where });
+        expect(result.total).toBe(1);
+        expect(result.items[0]).toMatchObject({
+          trackingCode: 'SOL-2026-00001',
+          status: 'RECIBIDA',
+        });
+      });
+
+      it('keeps the user condition when filtering by status', async () => {
+        const prisma = buildListPrisma();
+
+        await new PrismaRequestRepository(
+          prisma as unknown as PrismaService,
+        ).listByRequesterUser('user-1', {
+          ...baseCriteria,
+          status: 'AGENDADA',
+        });
+
+        expect(prisma.requestModel.count).toHaveBeenCalledWith({
+          where: {
+            AND: [
+              { requester: { userId: 'user-1' } },
+              { AND: [{ status: 'AGENDADA' }] },
+            ],
+          },
+        });
+      });
+    });
   });
 
   describe('findById (HU-13)', () => {

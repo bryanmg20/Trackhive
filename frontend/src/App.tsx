@@ -6,6 +6,7 @@ import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { StaffRoute } from './features/auth/components/StaffRoute';
 import { HOME_BY_ROLE } from './features/auth/role-home';
 import { readSessionRole } from './features/auth/session';
+import { MyRequestsPage } from './features/requests/MyRequestsPage';
 import { NewRequestPage } from './features/requests/NewRequestPage';
 import { StaffNewRequestPage } from './features/requests/StaffNewRequestPage';
 import { MaterialSearchPage } from './features/materials/MaterialSearchPage';
@@ -29,6 +30,7 @@ function App() {
       </Route>
       <Route element={<ProtectedRoute />}>
         <Route path={ROUTES.newRequest} element={<NewRequestPage />} />
+        <Route path={ROUTES.myRequests} element={<MyRequestsPage />} />
       </Route>
       <Route element={<StaffRoute />}>
         <Route path={ROUTES.staffMaterials} element={<StaffMaterialsPage />} />

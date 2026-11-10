@@ -21,6 +21,11 @@ export const SECTIONS: readonly Section[] = [
     roles: ALL_ROLES,
   },
   {
+    to: ROUTES.myRequests,
+    label: 'Mis solicitudes',
+    roles: ['PUBLICO'],
+  },
+  {
     to: ROUTES.newRequest,
     label: 'Nueva solicitud',
     roles: ['PUBLICO'],

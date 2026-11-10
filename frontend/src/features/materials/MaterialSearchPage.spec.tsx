@@ -219,4 +219,24 @@ describe('MaterialSearchPage', () => {
     );
     expect(screen.getByRole('link', { name: 'Iniciar sesión' })).toBeInTheDocument();
   });
+
+  it('links a public user to «Mis solicitudes» (HU-11)', async () => {
+    fetchMock.mockResolvedValue(page([material(1)]));
+    renderPage('PUBLICO');
+    await screen.findByRole('table');
+
+    expect(
+      screen.getByRole('link', { name: 'Mis solicitudes' }),
+    ).toHaveAttribute('href', '/mis-solicitudes');
+  });
+
+  it('does not show «Mis solicitudes» to the staff', async () => {
+    fetchMock.mockResolvedValue(page([material(1)]));
+    renderPage('PERSONAL');
+    await screen.findByRole('table');
+
+    expect(
+      screen.queryByRole('link', { name: 'Mis solicitudes' }),
+    ).not.toBeInTheDocument();
+  });
 });
