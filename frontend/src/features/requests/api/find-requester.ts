@@ -1,11 +1,10 @@
-import { readAccessToken } from '../../auth/session';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
+import { apiUrl } from '../../auth/api/api-base-url';
 import {
   RequestApiError,
   networkRequestApiError,
   readRequestApiError,
 } from './request-api-error';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
 export interface RequesterProfile {
   requesterId: string | null;
@@ -49,11 +48,10 @@ export async function findRequesterByEmail(
   let response: Response;
 
   try {
-    response = await fetch(
-      `${API_BASE_URL}/api/v1/requesters/by-email?${query}`,
+    response = await authenticatedFetch(
+      apiUrl(`/api/v1/requesters/by-email?${query}`),
       {
         headers: {
-          Authorization: `Bearer ${readAccessToken() ?? ''}`,
           Accept: 'application/json',
         },
       },

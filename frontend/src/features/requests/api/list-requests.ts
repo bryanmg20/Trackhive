@@ -1,4 +1,5 @@
-import { readAccessToken } from '../../auth/session';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
+import { apiUrl } from '../../auth/api/api-base-url';
 
 export const REQUEST_STATUSES = [
   'RECIBIDA',
@@ -99,9 +100,8 @@ export async function listRequests(
   if (params.requester) query.set('requester', params.requester);
   if (params.material) query.set('material', params.material);
 
-  const response = await fetch(`/api/v1/requests?${query}`, {
+  const response = await authenticatedFetch(apiUrl(`/api/v1/requests?${query}`), {
     headers: {
-      Authorization: `Bearer ${readAccessToken() ?? ''}`,
       Accept: 'application/json',
     },
   });

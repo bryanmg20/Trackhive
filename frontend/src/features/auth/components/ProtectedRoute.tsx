@@ -1,10 +1,10 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { ROUTES } from '../../../routes';
-import { readAccessToken, readRoleFromToken } from '../session';
+import { readSessionRole } from '../session';
 
+/** Only a PUBLICO account can open these screens. */
 export function ProtectedRoute() {
-  const token = readAccessToken();
-  const role = token ? readRoleFromToken(token) : null;
+  const role = readSessionRole();
 
   return role === 'PUBLICO' ? (
     <Outlet />
@@ -12,7 +12,7 @@ export function ProtectedRoute() {
     <Navigate
       replace
       to={ROUTES.login}
-      state={{ accessDenied: Boolean(token) }}
+      state={{ accessDenied: role !== null }}
     />
   );
 }

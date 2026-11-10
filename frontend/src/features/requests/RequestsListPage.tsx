@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
+import { SiteNav } from '../navigation/SiteNav';
 import {
   listRequests,
   REQUEST_STATUS_LABELS,
@@ -158,14 +159,7 @@ export function RequestsListPage() {
           Trackhive<span className={searchStyles.wordmarkDot}>.</span>
         </p>
         <p className={searchStyles.topbarTag}>CLENA · Personal</p>
-        <nav className={styles.nav} aria-label="Secciones del personal">
-          <Link to={ROUTES.requests} aria-current={'page'}>
-            Solicitudes
-          </Link>
-          <Link to={ROUTES.staffMaterials} aria-current={undefined}>
-            Material
-          </Link>
-        </nav>
+        <SiteNav />
       </header>
 
       <main className={searchStyles.main}>

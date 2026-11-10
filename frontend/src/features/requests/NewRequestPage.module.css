@@ -4,6 +4,10 @@
   gap: 1.65rem;
 }
 
+.siteNav {
+  margin-bottom: 1.25rem;
+}
+
 .header {
   display: flex;
   flex-direction: column;

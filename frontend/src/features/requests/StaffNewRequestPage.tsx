@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
+import { SiteNav } from '../navigation/SiteNav';
 import { createRequestOnBehalf } from './api/create-request-on-behalf';
 import type {
   DeliveryMode,
@@ -489,6 +490,7 @@ export function StaffNewRequestPage() {
           Trackhive<span className={shellStyles.wordmarkDot}>.</span>
         </p>
         <p className={shellStyles.topbarTag}>CLENA · Personal</p>
+        <SiteNav />
       </header>
 
       <main className={shellStyles.main}>
