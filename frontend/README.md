@@ -34,7 +34,7 @@ pnpm build    # tsc -b && vite build
 | `/personal/materiales`           | Estado del material (HU-08)                                | `PERSONAL`/`ADMIN` |
 | `/personal/solicitudes/nueva`    | Registrar solicitud a nombre de un visitante (HU-93)       | `PERSONAL`/`ADMIN` |
 | `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
-| `/solicitudes/:id`               | Detalle de una solicitud y cambio de estado (HU-13, HU-15) | `PERSONAL`/`ADMIN` |
+| `/solicitudes/:id`               | Detalle de una solicitud, cambio de estado y agendar cita (HU-13, HU-15, HU-18) | `PERSONAL`/`ADMIN` |
 
 Las rutas del usuario público viven dentro de `ProtectedRoute`; cualquier otro
 rol o una sesión vencida redirige a `/login`. Las rutas de personal viven dentro
@@ -112,6 +112,18 @@ ordena y pagina de 10 en 10. Se llega desde «Mis solicitudes» en la barra del
 buscador `/materiales` (solo para `PUBLICO`) y desde el enlace «Ver mis
 solicitudes» al radicar una solicitud.
 
+### Agendar cita de consulta (HU-18)
+
+La tarjeta «Agendar cita» aparece solo cuando `allowedTransitions` incluye
+**Agendada**, es decir, en una solicitud Disponible con entrega presencial.
+Muestra la fecha que pidió el solicitante y el campo empieza en ella; el
+personal la puede cambiar. Se elige el día (sin hora) y se llama a `POST /api/v1/requests/:id/appointments`
+con `{ date }`. La confirmación muestra el día, el horario de atención de ese
+día (lunes a viernes 8:00–17:00, sábados 9:00–13:00), el solicitante y el
+material. Un domingo lo rechaza el backend y su mensaje se muestra en la
+tarjeta. **Agendada** no aparece en «Cambiar estado»: solo se alcanza
+agendando.
+
 ### Cambiar estado de una solicitud (HU-15)
 
 El detalle `/solicitudes/:id` trae `allowedTransitions`: los estados a los que
@@ -171,7 +183,11 @@ asistió» desde Agendada, Rechazada no se ofrece, ningún cambio en estados
 finales, el cuerpo enviado con y sin comentario, la confirmación con fecha, hora
 y responsable, el nuevo estado en la cabecera, los errores `409` y `403`, y el
 uso solo con teclado. `api/change-request-status.spec.ts` cubre la petición
-`PATCH`.
+`PATCH`. Para HU-18 cubre que Agendada no se ofrece en «Cambiar estado», el
+agendamiento con su confirmación y el nuevo estado, la fecha deseada visible y
+precargada, el error de domingo, la
+fecha vacía y que la tarjeta no aparece fuera de Disponible presencial;
+`api/schedule-appointment.spec.ts` cubre la petición `POST`.
 
 `StaffNewRequestPage.spec.tsx` cubre la búsqueda de solicitante encontrado y
 nuevo, los cuerpos enviados en cada caso, el error de fecha del backend junto al

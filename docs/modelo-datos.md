@@ -139,7 +139,7 @@ stateDiagram-v2
 | `RECIBIDA` → `EN_BUSQUEDA` | Se asignan un responsable y una fecha compromiso. |
 | `RECIBIDA` / `EN_BUSQUEDA` → `RECHAZADA` | Motivo obligatorio. |
 | `EN_BUSQUEDA` → `DISPONIBLE` | Al menos un material, y todos localizados. |
-| `DISPONIBLE` → `AGENDADA` | La entrega es presencial y hay una cita programada. |
+| `DISPONIBLE` → `AGENDADA` | La entrega es presencial y hay una cita programada. Solo se alcanza agendando la cita (HU-18), no desde «Cambiar estado». |
 | `DISPONIBLE` → `ATENDIDA` | La entrega es digital. |
 | `AGENDADA` → `ATENDIDA` | La cita se cumplió. |
 | `AGENDADA` → `DISPONIBLE` | La cita se canceló o el solicitante no asistió. Se liberan las reservas. |
@@ -275,15 +275,18 @@ erDiagram
     }
     APPOINTMENTS {
         uuid id PK
-        uuid request_id FK "IDX, unico si PROGRAMADA"
+        uuid request_id FK "IDX"
+        uuid requester_id FK "IDX"
         uuid scheduled_by_id FK "IDX"
-        timestamptz start_at "IDX"
-        timestamptz end_at
+        date appointment_date "IDX"
         varchar(12) status
-        varchar(40) station
         text notes
         timestamptz created_at
         timestamptz updated_at
+    }
+    APPOINTMENT_MATERIALS {
+        uuid appointment_id PK, FK
+        uuid material_id PK, FK "IDX"
     }
     MATERIAL_RESERVATIONS {
         uuid id PK
@@ -333,6 +336,9 @@ erDiagram
     REQUESTS ||--o{ NOTIFICATIONS : "genera"
     REQUESTS ||--o{ APPOINTMENTS : "se agenda en"
     APPOINTMENTS ||--o{ MATERIAL_RESERVATIONS : "bloquea"
+    APPOINTMENTS ||--|{ APPOINTMENT_MATERIALS : "incluye"
+    APPOINTMENT_MATERIALS }o--|| MATERIALS : "material"
+    APPOINTMENTS }o--|| REQUESTERS : "para"
     MATERIAL_RESERVATIONS }o--|| MATERIALS : "reserva"
     REQUESTS }o--|| USERS : "registrada por"
     REQUESTS }o--o| USERS : "atendida por"
@@ -476,15 +482,26 @@ Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila po
 
 ### appointments
 
+Creada en HU-18 (migración `20261112000000_create_appointments`). La cita es **por día, sin hora**: el solicitante puede consultar el material durante todo el horario de atención de ese día (lunes a viernes 8:00–17:00, sábados 9:00–13:00). El personal la crea desde la acción «Agendar cita» del detalle de una solicitud `DISPONIBLE` con entrega presencial, y la solicitud pasa a `AGENDADA` en la misma transacción.
+
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| request_id | uuid | FK → requests, IDX | Único entre las citas `PROGRAMADA` |
-| scheduled_by_id | uuid | FK → users, IDX | |
-| start_at | timestamptz | IDX | Vista de calendario |
-| end_at | timestamptz | CHECK end_at > start_at | |
-| status | varchar(12) | CHECK | `PROGRAMADA`, `CUMPLIDA`, `CANCELADA`, `NO_ASISTIO` |
-| station, notes | varchar / text | NULL | |
+| request_id | uuid | FK → requests, IDX | Solo una cita `PROGRAMADA` a la vez: agendar exige que la solicitud esté en `DISPONIBLE` (bloqueo optimista) |
+| requester_id | uuid | FK → requesters, IDX | Solicitante de la cita |
+| scheduled_by_id | uuid | FK → users, IDX | Quién la agendó |
+| appointment_date | date | IDX, CHECK no domingo | Vista de calendario |
+| status | varchar(12) | CHECK, DEFAULT `PROGRAMADA` | `PROGRAMADA`, `CUMPLIDA`, `CANCELADA`, `NO_ASISTIO`. Al registrar «asistió» pasa a `CUMPLIDA` y «no asistió», a `NO_ASISTIO` |
+| notes | text | NULL | |
+
+### appointment_materials
+
+Creada en HU-18. Todos los materiales de la solicitud, copiados al agendar la cita.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| appointment_id | uuid | PK con material_id, FK → appointments | |
+| material_id | uuid | FK → materials, IDX | Base para el control de dobles reservas por día (HU-20) |
 
 ### material_reservations
 
@@ -538,8 +555,9 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
 | requests | registered_at | Listados y reportes por periodo |
 | request_items | material_id | Reporte de material más solicitado |
 | status_history | (request_id, changed_at), user_id | Línea de tiempo y tiempos de atención |
-| appointments | start_at | Calendario por rango de fechas |
-| appointments | request_id (único parcial `WHERE status = 'PROGRAMADA'`), scheduled_by_id | Una sola cita vigente por solicitud |
+| appointments | appointment_date | Calendario por rango de fechas |
+| appointments | request_id, requester_id, scheduled_by_id | Citas de una solicitud, de un solicitante o de quien agendó |
+| appointment_materials | material_id | Citas de un material (dobles reservas, HU-20) |
 | material_reservations | GiST (material_id, period), appointment_id | Disponibilidad del material y liberar reservas |
 | notifications | (delivery_status, scheduled_at), request_id | Proceso de envío de correos |
 
