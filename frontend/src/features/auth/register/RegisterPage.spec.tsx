@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -115,6 +115,33 @@ describe('RegisterPage', () => {
     );
   });
 
+  it('explains the purpose of every data field in the privacy notice', () => {
+    renderRegisterPage();
+
+    const table = screen.getByRole('table', {
+      name: 'Finalidad de cada dato',
+    });
+
+    for (const label of [
+      'Primer nombre',
+      'Segundo nombre (opcional)',
+      'Primer apellido',
+      'Segundo apellido (opcional)',
+      'Correo electrónico',
+      'Contraseña',
+      'Fecha y versión del aviso aceptado',
+      'Datos de sus solicitudes',
+    ]) {
+      expect(
+        within(table).getByRole('rowheader', { name: label }),
+      ).toBeVisible();
+    }
+
+    expect(
+      within(table).getByText(/permitirle iniciar sesión/i),
+    ).toBeVisible();
+  });
+
   it('shows per-field errors and keeps the typed values after an invalid submit', async () => {
     const user = userEvent.setup();
     renderRegisterPage();
@@ -195,6 +222,8 @@ describe('RegisterPage', () => {
       lastName: 'Pérez',
       email: 'ana@mail.com',
       password: 'secret123',
+      acceptedPrivacy: true,
+      privacyPolicyVersion: '1.0',
     });
   });
 

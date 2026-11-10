@@ -38,6 +38,75 @@ export function PrivacyConsent({
           vendemos su información.
         </p>
 
+        <div className={styles.purposes}>
+          <h3 className={styles.purposesTitle} id="privacy-purposes-title">
+            Finalidad de cada dato
+          </h3>
+          <div className={styles.purposesScroll}>
+            <table
+              className={styles.purposesTable}
+              aria-labelledby="privacy-purposes-title"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">Dato</th>
+                  <th scope="col">Para qué lo usamos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Primer nombre</th>
+                  <td>Identificarle y dirigirnos a usted en la atención.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Segundo nombre (opcional)</th>
+                  <td>
+                    Diferenciarle de otras personas con nombres similares.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Primer apellido</th>
+                  <td>Identificarle y dirigirnos a usted en la atención.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Segundo apellido (opcional)</th>
+                  <td>
+                    Diferenciarle de otras personas con apellidos similares.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Correo electrónico</th>
+                  <td>
+                    Crear y administrar su cuenta, permitirle iniciar sesión y
+                    enviarle avisos sobre sus solicitudes.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Contraseña</th>
+                  <td>
+                    Proteger el acceso a su cuenta; se almacena únicamente como
+                    hash.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Fecha y versión del aviso aceptado</th>
+                  <td>
+                    Dejar constancia de que usted autorizó el tratamiento de sus
+                    datos.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Datos de sus solicitudes</th>
+                  <td>
+                    Tramitar, responder y hacer seguimiento a sus solicitudes, y
+                    generar reportes con información agregada.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <details className={styles.fullText}>
           <summary className={styles.summary}>Leer aviso completo</summary>
 

@@ -6,6 +6,8 @@ export interface RegisterUserInput {
   secondLastName?: string;
   email: string;
   password: string;
+  acceptedPrivacy: boolean;
+  privacyPolicyVersion: string;
 }
 
 export interface ApiErrorDetail {
