@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -185,5 +185,51 @@ describe('StaffMaterialsPage', () => {
 
     expect(screen.queryByLabelText('Estado')).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('filters by type, status and collection like the public search', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(listResponse([material()]));
+    renderPage('PERSONAL');
+    await screen.findByText('Acta 1');
+
+    await user.click(screen.getByRole('radio', { name: 'Periódico' }));
+    await user.click(screen.getByRole('radio', { name: 'En restauración' }));
+    await user.type(
+      screen.getByLabelText('Colección o tema'),
+      'Prensa regional{Enter}',
+    );
+
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls;
+      const url = new URL(
+        calls[calls.length - 1][0] as string,
+        'http://localhost',
+      );
+      expect(url.searchParams.get('type')).toBe('PERIODICO');
+      expect(url.searchParams.get('status')).toBe('EN_RESTAURACION');
+      expect(url.searchParams.get('collection')).toBe('Prensa regional');
+      expect(url.searchParams.get('page')).toBe('1');
+    });
+  });
+
+  it('sorts the list with the chosen field and direction', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(listResponse([material()]));
+    renderPage('PERSONAL');
+    await screen.findByText('Acta 1');
+
+    await user.selectOptions(screen.getByLabelText('Ordenar por'), 'author');
+    await user.selectOptions(screen.getByLabelText('Dirección'), 'desc');
+
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls;
+      const url = new URL(
+        calls[calls.length - 1][0] as string,
+        'http://localhost',
+      );
+      expect(url.searchParams.get('sort')).toBe('author');
+      expect(url.searchParams.get('order')).toBe('desc');
+    });
   });
 });
