@@ -173,22 +173,34 @@ describe('Request', () => {
   describe('changeStatus (HU-15)', () => {
     const NOW = new Date('2026-11-10T15:30:00.000Z');
 
-    // Since HU-16 every target status of ACTIONS can be chosen, RECHAZADA included
-    it('offers every target status except RECIBIDA, the initial one', () => {
+    // Since HU-16 every target status of ACTIONS can be chosen, RECHAZADA
+    // included, except AGENDADA: only by scheduling an appointment (HU-18)
+    const isChangeableTarget = (status: RequestStatus) => status !== 'AGENDADA';
+    const CHANGEABLE_VALID = VALID_TRANSITIONS.filter(
+      (
+        transition,
+      ): transition is [RequestStatus, ChangeableStatus, DeliveryMode] =>
+        isChangeableTarget(transition[1]),
+    );
+    const CHANGEABLE_INVALID = INVALID_TRANSITIONS.filter(
+      (transition): transition is [RequestStatus, ChangeableStatus] =>
+        isChangeableTarget(transition[1]),
+    );
+
+    it('offers every target status except RECIBIDA (initial) and AGENDADA', () => {
       expect(CHANGEABLE_STATUSES).toEqual([
         'EN_BUSQUEDA',
         'DISPONIBLE',
-        'AGENDADA',
         'ATENDIDA',
         'CERRADA',
         'RECHAZADA',
       ]);
       expect([...CHANGEABLE_STATUSES].sort()).toEqual(
-        [...TARGET_STATUSES].sort(),
+        TARGET_STATUSES.filter(isChangeableTarget).sort(),
       );
     });
 
-    it.each(VALID_TRANSITIONS)(
+    it.each(CHANGEABLE_VALID)(
       'allows %s -> %s (%s) and records who, when and the comment',
       (from, to, deliveryMode) => {
         const request = buildRequest(from, deliveryMode);
@@ -209,7 +221,7 @@ describe('Request', () => {
       },
     );
 
-    it.each(INVALID_TRANSITIONS)(
+    it.each(CHANGEABLE_INVALID)(
       'rejects %s -> %s with 409 and keeps the status',
       (from, to) => {
         for (const deliveryMode of ['PRESENCIAL', 'DIGITAL'] as const) {
@@ -303,6 +315,58 @@ describe('Request', () => {
         expect(request.status).toBe('RECIBIDA');
       },
     );
+
+    it('does not reach AGENDADA: it needs an appointment (HU-18)', () => {
+      const request = buildRequest('DISPONIBLE', 'PRESENCIAL');
+
+      expect(() =>
+        request.changeStatus('AGENDADA' as ChangeableStatus, 'staff-1'),
+      ).toThrow(InvalidRequestStatusError);
+      expect(request.status).toBe('DISPONIBLE');
+    });
+  });
+
+  describe('scheduleAppointment (HU-18)', () => {
+    const NOW = new Date('2026-11-10T15:30:00.000Z');
+
+    it('moves a presential DISPONIBLE request to AGENDADA and records who and when', () => {
+      const request = buildRequest('DISPONIBLE', 'PRESENCIAL');
+
+      const change = request.scheduleAppointment('staff-1', NOW);
+
+      expect(request.status).toBe('AGENDADA');
+      expect(change).toEqual({
+        requestId: '1',
+        previousStatus: 'DISPONIBLE',
+        newStatus: 'AGENDADA',
+        changedBy: 'staff-1',
+        changedAt: NOW,
+        comment: null,
+        rejectionReason: null,
+      });
+      expect(Object.isFrozen(change)).toBe(true);
+    });
+
+    it.each(REQUEST_STATUSES.filter((status) => status !== 'DISPONIBLE'))(
+      'does not schedule a request in %s and keeps the status',
+      (status) => {
+        const request = buildRequest(status, 'PRESENCIAL');
+
+        expect(() => request.scheduleAppointment('staff-1')).toThrow(
+          InvalidStatusTransitionError,
+        );
+        expect(request.status).toBe(status);
+      },
+    );
+
+    it('does not schedule a request with a digital delivery', () => {
+      const request = buildRequest('DISPONIBLE', 'DIGITAL');
+
+      expect(() => request.scheduleAppointment('staff-1')).toThrow(
+        InvalidStatusTransitionError,
+      );
+      expect(request.status).toBe('DISPONIBLE');
+    });
   });
 
   describe('changeStatus to RECHAZADA (HU-16)', () => {

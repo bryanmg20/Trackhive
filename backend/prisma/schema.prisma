@@ -9,30 +9,31 @@ generator client {
 }
 
 model UserModel {
-  id                      String              @id @db.Uuid
+  id                      String               @id @db.Uuid
   // Same four name fields as RequesterModel (issue #96)
-  firstName               String              @map("first_name") @db.VarChar(40)
-  middleName              String?             @map("middle_name") @db.VarChar(40)
-  lastName                String              @map("last_name") @db.VarChar(40)
-  secondLastName          String?             @map("second_last_name") @db.VarChar(40)
-  email                   String              @unique @db.VarChar(160)
-  passwordHash            String              @map("password_hash") @db.VarChar(255)
+  firstName               String               @map("first_name") @db.VarChar(40)
+  middleName              String?              @map("middle_name") @db.VarChar(40)
+  lastName                String               @map("last_name") @db.VarChar(40)
+  secondLastName          String?              @map("second_last_name") @db.VarChar(40)
+  email                   String               @unique @db.VarChar(160)
+  passwordHash            String               @map("password_hash") @db.VarChar(255)
   // Allowed values (CHECK in the migration): ADMIN, PERSONAL, PUBLICO
-  role                    String              @db.VarChar(10)
-  active                  Boolean             @default(true)
+  role                    String               @db.VarChar(10)
+  active                  Boolean              @default(true)
   // Consent of public registrations (Ley 1581). NULL on seeded accounts.
   // Both columns are set together (CHECK in the migration).
-  privacyPolicyAcceptedAt DateTime?           @map("privacy_policy_accepted_at") @db.Timestamptz
-  privacyPolicyVersion    String?             @map("privacy_policy_version") @db.VarChar(10)
-  lastLoginAt             DateTime?           @map("last_login_at") @db.Timestamptz
-  createdAt               DateTime            @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt               DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  privacyPolicyAcceptedAt DateTime?            @map("privacy_policy_accepted_at") @db.Timestamptz
+  privacyPolicyVersion    String?              @map("privacy_policy_version") @db.VarChar(10)
+  lastLoginAt             DateTime?            @map("last_login_at") @db.Timestamptz
+  createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   refreshTokens           RefreshTokenModel[]
   requester               RequesterModel?
-  createdRequests         RequestModel[]      @relation("RequestCreatedBy")
-  assignedRequests        RequestModel[]      @relation("RequestAssignee")
-  materialStatusChanges   MaterialModel[]     @relation("MaterialStatusChangedBy")
+  createdRequests         RequestModel[]       @relation("RequestCreatedBy")
+  assignedRequests        RequestModel[]       @relation("RequestAssignee")
+  materialStatusChanges   MaterialModel[]      @relation("MaterialStatusChangedBy")
   requestStatusChanges    StatusHistoryModel[]
+  scheduledAppointments   AppointmentModel[]
 
   @@map("users")
 }
@@ -56,30 +57,31 @@ model RefreshTokenModel {
 // A piece of the archive collection (HU-07). The GIN trigram indexes need the
 // pg_trgm extension, which is created by hand in the migration (D-16)
 model MaterialModel {
-  id                 String             @id @db.Uuid
-  catalogCode        String             @unique @map("catalog_code") @db.VarChar(40)
-  title              String             @db.VarChar(255)
+  id                 String                     @id @db.Uuid
+  catalogCode        String                     @unique @map("catalog_code") @db.VarChar(40)
+  title              String                     @db.VarChar(255)
   // Allowed values (CHECK in the migration): DOCUMENTO, PERIODICO, PROTOCOLO_NOTARIAL, OTRO
-  materialType       String             @map("material_type") @db.VarChar(20)
-  author             String?            @db.VarChar(150)
-  collection         String             @db.VarChar(120)
+  materialType       String                     @map("material_type") @db.VarChar(20)
+  author             String?                    @db.VarChar(150)
+  collection         String                     @db.VarChar(120)
   // Periodicals only (HU-06). Nullable: some historic periodicals lack them
-  publicationDate    DateTime?          @map("publication_date") @db.Date
-  publisher          String?            @db.VarChar(150)
+  publicationDate    DateTime?                  @map("publication_date") @db.Date
+  publisher          String?                    @db.VarChar(150)
   // Physical location. Never shown to the PUBLICO role
-  depot              String             @db.VarChar(40)
-  shelf              String             @db.VarChar(40)
-  box                String             @db.VarChar(40)
+  depot              String                     @db.VarChar(40)
+  shelf              String                     @db.VarChar(40)
+  box                String                     @db.VarChar(40)
   // Allowed values (CHECK in the migration): DISPONIBLE, EN_USO, EN_RESTAURACION, NO_CONSULTABLE
-  status             String             @db.VarChar(20)
+  status             String                     @db.VarChar(20)
   // Last status change (HU-08). Null while the status was never changed
-  statusChangedAt    DateTime?          @map("status_changed_at") @db.Timestamptz
-  statusChangedById  String?            @map("status_changed_by") @db.Uuid
-  statusChangedBy    UserModel?         @relation("MaterialStatusChangedBy", fields: [statusChangedById], references: [id])
-  statusChangeReason String?            @map("status_change_reason") @db.VarChar(500)
-  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  statusChangedAt    DateTime?                  @map("status_changed_at") @db.Timestamptz
+  statusChangedById  String?                    @map("status_changed_by") @db.Uuid
+  statusChangedBy    UserModel?                 @relation("MaterialStatusChangedBy", fields: [statusChangedById], references: [id])
+  statusChangeReason String?                    @map("status_change_reason") @db.VarChar(500)
+  createdAt          DateTime                   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime                   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   requestItems       RequestItemModel[]
+  appointments       AppointmentMaterialModel[]
 
   @@index([materialType])
   // Text search with ILIKE '%...%' (HU-07)
@@ -90,27 +92,28 @@ model MaterialModel {
 }
 
 model RequesterModel {
-  id                    String         @id @db.Uuid
-  userId                String?        @unique @map("user_id") @db.Uuid
-  documentType          String?        @map("document_type") @db.VarChar(5)
-  documentNumber        String?        @map("document_number") @db.VarChar(20)
-  firstName             String         @map("first_name") @db.VarChar(40)
-  middleName            String?        @map("middle_name") @db.VarChar(40)
-  lastName              String         @map("last_name") @db.VarChar(40)
-  secondLastName        String?        @map("second_last_name") @db.VarChar(40)
-  email                 String?        @db.VarChar(160)
-  phone                 String?        @db.VarChar(20)
-  requesterType         String         @map("requester_type") @db.VarChar(15)
-  institution           String?        @db.VarChar(150)
-  acceptsDataProcessing Boolean        @map("accepts_data_processing")
-  consentedAt           DateTime       @map("consented_at") @db.Timestamptz
-  privacyPolicyVersion  String         @map("privacy_policy_version") @db.VarChar(10)
-  anonymizedAt          DateTime?      @map("anonymized_at") @db.Timestamptz
-  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt             DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id                    String             @id @db.Uuid
+  userId                String?            @unique @map("user_id") @db.Uuid
+  documentType          String?            @map("document_type") @db.VarChar(5)
+  documentNumber        String?            @map("document_number") @db.VarChar(20)
+  firstName             String             @map("first_name") @db.VarChar(40)
+  middleName            String?            @map("middle_name") @db.VarChar(40)
+  lastName              String             @map("last_name") @db.VarChar(40)
+  secondLastName        String?            @map("second_last_name") @db.VarChar(40)
+  email                 String?            @db.VarChar(160)
+  phone                 String?            @db.VarChar(20)
+  requesterType         String             @map("requester_type") @db.VarChar(15)
+  institution           String?            @db.VarChar(150)
+  acceptsDataProcessing Boolean            @map("accepts_data_processing")
+  consentedAt           DateTime           @map("consented_at") @db.Timestamptz
+  privacyPolicyVersion  String             @map("privacy_policy_version") @db.VarChar(10)
+  anonymizedAt          DateTime?          @map("anonymized_at") @db.Timestamptz
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   // Restrict, as created in the 20261109000000_create_requests migration
-  user                  UserModel?     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user                  UserModel?         @relation(fields: [userId], references: [id], onDelete: Restrict)
   requests              RequestModel[]
+  appointments          AppointmentModel[]
 
   @@unique([documentType, documentNumber])
   @@index([documentNumber])
@@ -120,35 +123,36 @@ model RequesterModel {
 }
 
 model RequestModel {
-  id                     String             @id @db.Uuid
-  trackingCode           String             @unique @map("tracking_code") @db.VarChar(16)
-  requesterId            String             @map("requester_id") @db.Uuid
-  createdById            String             @map("created_by_id") @db.Uuid
-  assigneeId             String?            @map("assignee_id") @db.Uuid
-  requestType            String             @map("request_type") @db.VarChar(25)
-  originChannel          String             @map("origin_channel") @db.VarChar(10)
-  deliveryMode           String             @map("delivery_mode") @db.VarChar(10)
-  purpose                String             @map("purpose") @db.VarChar(15)
+  id                     String               @id @db.Uuid
+  trackingCode           String               @unique @map("tracking_code") @db.VarChar(16)
+  requesterId            String               @map("requester_id") @db.Uuid
+  createdById            String               @map("created_by_id") @db.Uuid
+  assigneeId             String?              @map("assignee_id") @db.Uuid
+  requestType            String               @map("request_type") @db.VarChar(25)
+  originChannel          String               @map("origin_channel") @db.VarChar(10)
+  deliveryMode           String               @map("delivery_mode") @db.VarChar(10)
+  purpose                String               @map("purpose") @db.VarChar(15)
   reason                 String?
-  requirementDescription String             @map("requirement_description")
-  desiredDate            DateTime           @map("desired_date") @db.Date
-  committedDate          DateTime?          @map("committed_date") @db.Date
-  priority               String             @default("MEDIA") @db.VarChar(5)
-  status                 String             @default("RECIBIDA") @db.VarChar(12)
+  requirementDescription String               @map("requirement_description")
+  desiredDate            DateTime             @map("desired_date") @db.Date
+  committedDate          DateTime?            @map("committed_date") @db.Date
+  priority               String               @default("MEDIA") @db.VarChar(5)
+  status                 String               @default("RECIBIDA") @db.VarChar(12)
   // Free text the requester reads (HU-16). Required and not blank only when
   // the status is RECHAZADA (CHECK in the migrations)
-  rejectionReason        String?            @map("rejection_reason") @db.VarChar(500)
+  rejectionReason        String?              @map("rejection_reason") @db.VarChar(500)
   notes                  String?
-  registeredAt           DateTime           @default(now()) @map("registered_at") @db.Timestamptz
-  attendedAt             DateTime?          @map("attended_at") @db.Timestamptz
-  closedAt               DateTime?          @map("closed_at") @db.Timestamptz
-  version                Int                @default(1)
-  updatedAt              DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  requester              RequesterModel     @relation(fields: [requesterId], references: [id])
-  createdBy              UserModel          @relation("RequestCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  assignee               UserModel?         @relation("RequestAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  registeredAt           DateTime             @default(now()) @map("registered_at") @db.Timestamptz
+  attendedAt             DateTime?            @map("attended_at") @db.Timestamptz
+  closedAt               DateTime?            @map("closed_at") @db.Timestamptz
+  version                Int                  @default(1)
+  updatedAt              DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  requester              RequesterModel       @relation(fields: [requesterId], references: [id])
+  createdBy              UserModel            @relation("RequestCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  assignee               UserModel?           @relation("RequestAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
   items                  RequestItemModel[]
   statusHistory          StatusHistoryModel[]
+  appointments           AppointmentModel[]
 
   @@index([requesterId])
   @@index([createdById])
@@ -194,4 +198,44 @@ model StatusHistoryModel {
   @@index([requestId, changedAt])
   @@index([userId])
   @@map("status_history")
+}
+
+// A whole day to consult the material in the reading room (HU-18). It has no
+// time: the requester can come during the service hours of that day
+model AppointmentModel {
+  id              String                     @id @db.Uuid
+  requestId       String                     @map("request_id") @db.Uuid
+  requesterId     String                     @map("requester_id") @db.Uuid
+  // Who scheduled it
+  scheduledById   String                     @map("scheduled_by_id") @db.Uuid
+  // Never a Sunday (CHECK in the migration)
+  appointmentDate DateTime                   @map("appointment_date") @db.Date
+  // Allowed values (CHECK in the migration): PROGRAMADA, CUMPLIDA, CANCELADA, NO_ASISTIO
+  status          String                     @default("PROGRAMADA") @db.VarChar(12)
+  notes           String?
+  createdAt       DateTime                   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  request         RequestModel               @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  requester       RequesterModel             @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+  scheduledBy     UserModel                  @relation(fields: [scheduledById], references: [id], onDelete: Restrict)
+  materials       AppointmentMaterialModel[]
+
+  // Calendar by date range (§4 of docs/modelo-datos.md)
+  @@index([appointmentDate])
+  @@index([requestId])
+  @@index([requesterId])
+  @@index([scheduledById])
+  @@map("appointments")
+}
+
+// Every material of the request, booked for the day of its appointment (HU-18)
+model AppointmentMaterialModel {
+  appointmentId String           @map("appointment_id") @db.Uuid
+  materialId    String           @map("material_id") @db.Uuid
+  appointment   AppointmentModel @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  material      MaterialModel    @relation(fields: [materialId], references: [id], onDelete: Restrict)
+
+  @@id([appointmentId, materialId])
+  @@index([materialId])
+  @@map("appointment_materials")
 }

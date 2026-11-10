@@ -113,9 +113,6 @@ export class Request {
       case 'DISPONIBLE':
         this.markAvailable();
         break;
-      case 'AGENDADA':
-        this.schedule();
-        break;
       case 'ATENDIDA':
         this.attend();
         break;
@@ -127,6 +124,29 @@ export class Request {
         break;
     }
 
+    return this.recordChange(previousStatus, changedBy, comment, now);
+  }
+
+  /**
+   * «Agendar cita» (HU-18): the only way to reach AGENDADA. It goes through
+   * schedule(), so the request must be DISPONIBLE with a presential delivery,
+   * and returns the record of the change for status_history.
+   */
+  scheduleAppointment(
+    scheduledBy: string,
+    now: Date = new Date(),
+  ): StatusChange {
+    const previousStatus = this.currentStatus;
+    this.schedule();
+    return this.recordChange(previousStatus, scheduledBy, null, now);
+  }
+
+  private recordChange(
+    previousStatus: RequestStatus,
+    changedBy: string,
+    comment: string | null | undefined,
+    now: Date,
+  ): StatusChange {
     const rejected = this.currentStatus === 'RECHAZADA';
     return Object.freeze({
       requestId: this.id,

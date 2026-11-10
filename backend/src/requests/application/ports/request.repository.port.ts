@@ -130,6 +130,23 @@ export interface SavedStatusChange {
   };
 }
 
+/** An appointment as it was saved (HU-18), with the names to show. */
+export interface SavedAppointment {
+  id: string;
+  // UTC midnight of the day
+  date: Date;
+  status: 'PROGRAMADA';
+  requester: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  };
+  materials: { id: string; catalogCode: string; title: string }[];
+  statusChange: SavedStatusChange;
+}
+
 export interface RequestRepository {
   create(
     input: CreateRequestInput & { createdById: string },
@@ -162,4 +179,12 @@ export interface RequestRepository {
    * is no longer in `previousStatus` because someone else changed it first.
    */
   saveStatusChange(change: StatusChange): Promise<SavedStatusChange>;
+
+  /**
+   * Schedules an appointment (HU-18) in one transaction: saves the change to
+   * AGENDADA with its row in status_history, like saveStatusChange, and
+   * creates the appointment for `date` with the requester and every material
+   * of the request.
+   */
+  saveAppointment(change: StatusChange, date: Date): Promise<SavedAppointment>;
 }

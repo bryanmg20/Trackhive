@@ -23,6 +23,7 @@ describe('CreateRequestOnBehalfUseCase', () => {
     listByRequesterUser: jest.fn(),
     findEntityById: jest.fn(),
     saveStatusChange: jest.fn(),
+    saveAppointment: jest.fn(),
   };
   const useCase = new CreateRequestOnBehalfUseCase(repository);
 

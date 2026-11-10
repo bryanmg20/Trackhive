@@ -53,6 +53,7 @@ describe('ChangeRequestStatusUseCase', () => {
       listByRequesterUser: jest.fn(),
       findEntityById,
       saveStatusChange,
+      saveAppointment: jest.fn(),
     };
     useCase = new ChangeRequestStatusUseCase(repository);
   });

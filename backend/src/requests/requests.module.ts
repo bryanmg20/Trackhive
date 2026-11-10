@@ -7,6 +7,7 @@ import { FindRequesterByEmailUseCase } from './application/use-cases/find-reques
 import { GetRequestDetailUseCase } from './application/use-cases/get-request-detail.use-case';
 import { ListMyRequestsUseCase } from './application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from './application/use-cases/list-requests.use-case';
+import { ScheduleAppointmentUseCase } from './application/use-cases/schedule-appointment.use-case';
 import { PrismaRequestRepository } from './infrastructure/persistence/prisma-request.repository';
 import { RequestController } from './presentation/controllers/request.controller';
 import { RequesterController } from './presentation/controllers/requester.controller';
@@ -22,6 +23,7 @@ import { RequesterController } from './presentation/controllers/requester.contro
     GetRequestDetailUseCase,
     ListMyRequestsUseCase,
     ChangeRequestStatusUseCase,
+    ScheduleAppointmentUseCase,
   ],
 })
 export class RequestsModule {}

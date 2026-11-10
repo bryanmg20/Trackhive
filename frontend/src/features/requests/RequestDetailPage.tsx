@@ -13,6 +13,7 @@ import type { RequestDetail } from './api/get-request';
 import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
 import { ChangeRequestStatusForm } from './ChangeRequestStatusForm';
 import styles from './RequestDetailPage.module.css';
+import { ScheduleAppointmentForm } from './ScheduleAppointmentForm';
 
 const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
@@ -96,9 +97,15 @@ export function RequestDetailPage() {
   const request = isLoading ? null : response.request;
   const error = isLoading ? null : response.error;
 
-  // After a status change (HU-15) the page shows the new status and its next
-  // transitions without loading the request again
-  function applyStatusChange(result: ChangeRequestStatusResult) {
+  // After a status change (HU-15) or an appointment (HU-18) the page shows the
+  // new status and its next transitions without loading the request again
+  function applyStatusChange(
+    result: Pick<
+      ChangeRequestStatusResult,
+      'id' | 'status' | 'allowedTransitions'
+    > &
+      Partial<Pick<ChangeRequestStatusResult, 'rejectionReason'>>,
+  ) {
     setResponse((current) =>
       current?.request?.id === result.id
         ? {
@@ -108,7 +115,8 @@ export function RequestDetailPage() {
               status: result.status,
               allowedTransitions: result.allowedTransitions,
               // Shows the «Motivo del rechazo» field right after rejecting (HU-16)
-              rejectionReason: result.rejectionReason,
+              // An appointment (HU-18) sends none: the request is not rejected
+              rejectionReason: result.rejectionReason ?? null,
             },
           }
         : current,
@@ -162,6 +170,12 @@ export function RequestDetailPage() {
             </div>
 
             <div className={styles.sections}>
+              <ScheduleAppointmentForm
+                key={`appointment-${request.id}`}
+                request={request}
+                onScheduled={applyStatusChange}
+              />
+
               <ChangeRequestStatusForm
                 key={request.id}
                 request={request}

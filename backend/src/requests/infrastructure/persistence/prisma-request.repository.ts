@@ -10,6 +10,7 @@ import type {
   RequestListResult,
   RequesterProfile,
   RequestRepository,
+  SavedAppointment,
   SavedStatusChange,
 } from '../../application/ports/request.repository.port';
 import type { CreateRequestInput } from '../../application/use-cases/create-request.use-case';
@@ -262,41 +263,56 @@ export class PrismaRequestRepository implements RequestRepository {
   async saveStatusChange(change: StatusChange): Promise<SavedStatusChange> {
     // The new status and its history row are saved together or not at all (D-08)
     return this.prisma.$transaction(async (tx) => {
-      // Optimistic lock: update only if the request is still in the status the
-      // transition was validated against. If another person changed it in the
-      // meantime, nothing is written and the history stays consistent.
-      const { count } = await tx.requestModel.updateMany({
-        where: { id: change.requestId, status: change.previousStatus },
-        data: {
-          status: change.newStatus,
-          version: { increment: 1 },
-          ...(change.newStatus === 'ATENDIDA' && {
-            attendedAt: change.changedAt,
-          }),
-          ...(change.newStatus === 'CERRADA' && {
-            closedAt: change.changedAt,
-          }),
-          // HU-16: the reason the requester reads in «Mis solicitudes»
-          ...(change.newStatus === 'RECHAZADA' && {
-            rejectionReason: change.rejectionReason,
-          }),
+      const saved = await this.applyStatusChange(tx, change);
+
+      // Leaving AGENDADA settles its appointment, so the request can be
+      // scheduled again: ATENDIDA = the requester attended, DISPONIBLE = not
+      if (change.previousStatus === 'AGENDADA') {
+        await tx.appointmentModel.updateMany({
+          where: { requestId: change.requestId, status: 'PROGRAMADA' },
+          data: {
+            status: change.newStatus === 'ATENDIDA' ? 'CUMPLIDA' : 'NO_ASISTIO',
+          },
+        });
+      }
+      return saved;
+    });
+  }
+
+  async saveAppointment(
+    change: StatusChange,
+    date: Date,
+  ): Promise<SavedAppointment> {
+    // The change to AGENDADA, its history row and the appointment are saved
+    // together or not at all
+    return this.prisma.$transaction(async (tx) => {
+      const statusChange = await this.applyStatusChange(tx, change);
+
+      const request = await tx.requestModel.findUniqueOrThrow({
+        where: { id: change.requestId },
+        select: {
+          requesterId: true,
+          items: { select: { materialId: true } },
         },
       });
-      if (count === 0) {
-        throw new RequestStatusConflictError();
-      }
 
-      const row = await tx.statusHistoryModel.create({
+      const appointment = await tx.appointmentModel.create({
         data: {
+          id: randomUUID(),
           requestId: change.requestId,
-          previousStatus: change.previousStatus,
-          newStatus: change.newStatus,
-          userId: change.changedBy,
-          comment: change.comment,
-          changedAt: change.changedAt,
+          requesterId: request.requesterId,
+          scheduledById: change.changedBy,
+          appointmentDate: date,
+          status: 'PROGRAMADA',
+          // Every material of the request (HU-18)
+          materials: {
+            create: request.items.map(({ materialId }) => ({ materialId })),
+          },
         },
-        include: {
-          user: {
+        select: {
+          id: true,
+          appointmentDate: true,
+          requester: {
             select: {
               id: true,
               firstName: true,
@@ -305,17 +321,89 @@ export class PrismaRequestRepository implements RequestRepository {
               secondLastName: true,
             },
           },
+          materials: {
+            select: {
+              material: {
+                select: { id: true, catalogCode: true, title: true },
+              },
+            },
+            orderBy: { material: { catalogCode: 'asc' } },
+          },
         },
       });
 
       return {
-        previousStatus: change.previousStatus,
-        newStatus: change.newStatus,
-        changedAt: row.changedAt,
-        comment: row.comment,
-        changedBy: row.user,
+        id: appointment.id,
+        date: appointment.appointmentDate,
+        status: 'PROGRAMADA',
+        requester: appointment.requester,
+        materials: appointment.materials.map(({ material }) => material),
+        statusChange,
       };
     });
+  }
+
+  /**
+   * Saves the new status and inserts its row in status_history inside the
+   * transaction `tx` (D-08).
+   */
+  private async applyStatusChange(
+    tx: Prisma.TransactionClient,
+    change: StatusChange,
+  ): Promise<SavedStatusChange> {
+    // Optimistic lock: update only if the request is still in the status the
+    // transition was validated against. If another person changed it in the
+    // meantime, nothing is written and the history stays consistent.
+    const { count } = await tx.requestModel.updateMany({
+      where: { id: change.requestId, status: change.previousStatus },
+      data: {
+        status: change.newStatus,
+        version: { increment: 1 },
+        ...(change.newStatus === 'ATENDIDA' && {
+          attendedAt: change.changedAt,
+        }),
+        ...(change.newStatus === 'CERRADA' && {
+          closedAt: change.changedAt,
+        }),
+        // HU-16: the reason the requester reads in «Mis solicitudes»
+        ...(change.newStatus === 'RECHAZADA' && {
+          rejectionReason: change.rejectionReason,
+        }),
+      },
+    });
+    if (count === 0) {
+      throw new RequestStatusConflictError();
+    }
+
+    const row = await tx.statusHistoryModel.create({
+      data: {
+        requestId: change.requestId,
+        previousStatus: change.previousStatus,
+        newStatus: change.newStatus,
+        userId: change.changedBy,
+        comment: change.comment,
+        changedAt: change.changedAt,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            secondLastName: true,
+          },
+        },
+      },
+    });
+
+    return {
+      previousStatus: change.previousStatus,
+      newStatus: change.newStatus,
+      changedAt: row.changedAt,
+      comment: row.comment,
+      changedBy: row.user,
+    };
   }
 
   private buildListWhere(

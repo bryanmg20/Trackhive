@@ -637,6 +637,9 @@ describe('PrismaRequestRepository', () => {
               Promise.resolve({ id: BigInt(1), ...data, user: STAFF }),
             ),
         },
+        appointmentModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
       };
       const prisma = {
         $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
@@ -777,6 +780,180 @@ describe('PrismaRequestRepository', () => {
         RequestStatusConflictError,
       );
       expect(tx.statusHistoryModel.create).not.toHaveBeenCalled();
+    });
+
+    // Leaving AGENDADA settles the appointment, so it can be scheduled again (HU-18)
+    it.each([
+      ['ATENDIDA', 'CUMPLIDA'],
+      ['DISPONIBLE', 'NO_ASISTIO'],
+    ] as const)(
+      'marks the scheduled appointment as %s -> %s',
+      async (newStatus, appointmentStatus) => {
+        const { tx, repository } = buildTransaction();
+
+        await repository.saveStatusChange(buildChange({ newStatus }));
+
+        expect(tx.appointmentModel.updateMany).toHaveBeenCalledWith({
+          where: { requestId: 'request-1', status: 'PROGRAMADA' },
+          data: { status: appointmentStatus },
+        });
+      },
+    );
+
+    it('does not touch appointments when the request was not scheduled', async () => {
+      const { tx, repository } = buildTransaction();
+
+      await repository.saveStatusChange(
+        buildChange({ previousStatus: 'ATENDIDA', newStatus: 'CERRADA' }),
+      );
+
+      expect(tx.appointmentModel.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('saveAppointment (HU-18)', () => {
+    const CHANGED_AT = new Date('2026-11-10T15:30:00.000Z');
+    const DATE = new Date('2026-11-20T00:00:00.000Z');
+    const STAFF = {
+      id: 'staff-1',
+      firstName: 'Ana',
+      middleName: null,
+      lastName: 'Gómez',
+      secondLastName: null,
+    };
+    const REQUESTER = {
+      id: 'requester-1',
+      firstName: 'Juan',
+      middleName: null,
+      lastName: 'Pérez',
+      secondLastName: null,
+    };
+    const MATERIALS = [
+      { id: 'material-1', catalogCode: 'AHB-001', title: 'Actas de 1890' },
+      { id: 'material-2', catalogCode: 'AHB-002', title: 'El Heraldo, 1935' },
+    ];
+
+    const CHANGE: StatusChange = {
+      requestId: 'request-1',
+      previousStatus: 'DISPONIBLE',
+      newStatus: 'AGENDADA',
+      changedBy: 'staff-1',
+      changedAt: CHANGED_AT,
+      comment: null,
+      rejectionReason: null,
+    };
+
+    const buildTransaction = (updatedRows = 1) => {
+      const tx = {
+        requestModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: updatedRows }),
+          findUniqueOrThrow: jest.fn().mockResolvedValue({
+            requesterId: 'requester-1',
+            items: [{ materialId: 'material-1' }, { materialId: 'material-2' }],
+          }),
+        },
+        statusHistoryModel: {
+          create: jest
+            .fn()
+            .mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+              Promise.resolve({ id: BigInt(1), ...data, user: STAFF }),
+            ),
+        },
+        appointmentModel: {
+          create: jest.fn().mockResolvedValue({
+            id: 'appointment-1',
+            appointmentDate: DATE,
+            requester: REQUESTER,
+            materials: MATERIALS.map((material) => ({ material })),
+          }),
+        },
+      };
+      const prisma = {
+        $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+          callback(tx),
+        ),
+      };
+      const repository = new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      );
+      return { tx, prisma, repository };
+    };
+
+    it('saves AGENDADA, its history row and the appointment in one transaction', async () => {
+      const { prisma, tx, repository } = buildTransaction();
+
+      await repository.saveAppointment(CHANGE, DATE);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(tx.requestModel.updateMany).toHaveBeenCalledWith({
+        where: { id: 'request-1', status: 'DISPONIBLE' },
+        data: { status: 'AGENDADA', version: { increment: 1 } },
+      });
+      expect(tx.statusHistoryModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            previousStatus: 'DISPONIBLE',
+            newStatus: 'AGENDADA',
+            userId: 'staff-1',
+          }) as unknown,
+        }),
+      );
+    });
+
+    it('creates the appointment for the day with the requester and every material', async () => {
+      const { tx, repository } = buildTransaction();
+
+      await repository.saveAppointment(CHANGE, DATE);
+
+      expect(tx.appointmentModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            id: expect.any(String) as string,
+            requestId: 'request-1',
+            requesterId: 'requester-1',
+            scheduledById: 'staff-1',
+            appointmentDate: DATE,
+            status: 'PROGRAMADA',
+            materials: {
+              create: [
+                { materialId: 'material-1' },
+                { materialId: 'material-2' },
+              ],
+            },
+          },
+        }),
+      );
+    });
+
+    it('returns the saved appointment with names and materials', async () => {
+      const { repository } = buildTransaction();
+
+      const saved = await repository.saveAppointment(CHANGE, DATE);
+
+      expect(saved).toEqual({
+        id: 'appointment-1',
+        date: DATE,
+        status: 'PROGRAMADA',
+        requester: REQUESTER,
+        materials: MATERIALS,
+        statusChange: {
+          previousStatus: 'DISPONIBLE',
+          newStatus: 'AGENDADA',
+          changedAt: CHANGED_AT,
+          comment: null,
+          changedBy: STAFF,
+        },
+      });
+    });
+
+    it('creates no appointment when someone changed the status first', async () => {
+      const { tx, repository } = buildTransaction(0);
+
+      await expect(repository.saveAppointment(CHANGE, DATE)).rejects.toThrow(
+        RequestStatusConflictError,
+      );
+      expect(tx.statusHistoryModel.create).not.toHaveBeenCalled();
+      expect(tx.appointmentModel.create).not.toHaveBeenCalled();
     });
   });
 });

@@ -16,7 +16,7 @@ const failedFields = async (plain: Record<string, unknown>) =>
   (await check(plain)).map((error) => error.property);
 
 describe('ChangeRequestStatusDto', () => {
-  it.each(['EN_BUSQUEDA', 'DISPONIBLE', 'AGENDADA', 'ATENDIDA', 'CERRADA'])(
+  it.each(['EN_BUSQUEDA', 'DISPONIBLE', 'ATENDIDA', 'CERRADA'])(
     'accepts the status %s without a comment',
     async (status) => {
       expect(await check({ status })).toHaveLength(0);
@@ -67,8 +67,9 @@ describe('ChangeRequestStatusDto', () => {
     ).toHaveLength(0);
   });
 
-  // RECIBIDA is only the initial status
-  it.each(['RECIBIDA', 'ROTA', 'atendida', 'rechazada'])(
+  // RECIBIDA is only the initial status; AGENDADA is only reached by
+  // scheduling an appointment (HU-18)
+  it.each(['RECIBIDA', 'AGENDADA', 'ROTA', 'atendida', 'rechazada'])(
     'rejects the status %s',
     async (status) => {
       expect(await failedFields({ status })).toContain('status');

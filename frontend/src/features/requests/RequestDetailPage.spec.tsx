@@ -442,8 +442,12 @@ describe('RequestDetailPage', () => {
       expect(JSON.parse(patchCalls()[0][1].body as string)).toEqual({
         status: 'DISPONIBLE',
       });
+      // Agendada is not an option here: it needs an appointment (HU-18)
       expect(
-        within(section).getByRole('radio', { name: 'Agendada' }),
+        within(section).queryByRole('radio', { name: 'Agendada' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: 'Agendar cita' }),
       ).toBeInTheDocument();
     });
 
@@ -676,5 +680,210 @@ describe('RequestDetailPage', () => {
         );
       });
     });
+  });
+
+  describe('schedule appointment (HU-18)', () => {
+    const APPOINTMENTS_PATH = `/api/v1/requests/${REQUEST_ID}/appointments`;
+
+    const available = (overrides: Record<string, unknown> = {}) =>
+      detail({
+        status: 'DISPONIBLE',
+        allowedTransitions: ['AGENDADA', 'CERRADA'],
+        ...overrides,
+      });
+
+    function scheduled(overrides: Record<string, unknown> = {}) {
+      return {
+        id: REQUEST_ID,
+        status: 'AGENDADA',
+        allowedTransitions: ['DISPONIBLE', 'ATENDIDA'],
+        appointment: {
+          id: 'appointment-1',
+          date: '2026-11-20',
+          serviceHours: { opensAt: '08:00', closesAt: '17:00' },
+          status: 'PROGRAMADA',
+          requester: { id: 'requester-1', name: 'Juan Carlos Pérez' },
+          materials: [
+            {
+              id: 'material-1',
+              catalogCode: 'TH-DOC-0001',
+              title: 'Acta de fundación de la villa',
+            },
+          ],
+        },
+        statusChange: {
+          previousStatus: 'DISPONIBLE',
+          newStatus: 'AGENDADA',
+          changedAt: '2026-11-10T15:30:00.000Z',
+          changedBy: { id: 'staff-1', name: 'Ana Gómez' },
+          comment: null,
+        },
+        ...overrides,
+      };
+    }
+
+    // GET answers the detail; POST answers `postResponse`
+    async function setup(
+      detailBody: Record<string, unknown> = available(),
+      postResponse: unknown = {
+        ok: true,
+        status: 201,
+        json: async () => scheduled(),
+      },
+    ) {
+      fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === 'POST' ? postResponse : ok(detailBody),
+        ),
+      );
+      const { default: userEvent } =
+        await import('@testing-library/user-event');
+      const user = userEvent.setup();
+      renderAt(`/solicitudes/${REQUEST_ID}`, 'PERSONAL');
+      await screen.findByRole('heading', { name: 'SOL-2026-00001' });
+      return { user };
+    }
+
+    function postCalls() {
+      return fetchMock.mock.calls.filter(
+        ([, init]) => (init as RequestInit | undefined)?.method === 'POST',
+      ) as [string, RequestInit][];
+    }
+
+    it('does not offer Agendada in «Cambiar estado» for a Disponible request', async () => {
+      await setup();
+
+      const changeStatus = screen.getByRole('region', {
+        name: 'Cambiar estado',
+      });
+      expect(
+        within(changeStatus).queryByRole('radio', { name: 'Agendada' }),
+      ).not.toBeInTheDocument();
+      expect(within(changeStatus).getAllByRole('radio')).toHaveLength(1);
+      expect(
+        within(changeStatus).getByRole('radio', { name: 'Cerrada' }),
+      ).toBeInTheDocument();
+    });
+
+    it('schedules the chosen day and shows the hours, the requester and the material', async () => {
+      const { user } = await setup();
+      const section = screen.getByRole('region', { name: 'Agendar cita' });
+
+      await user.clear(within(section).getByLabelText('Fecha de la cita'));
+      await user.type(
+        within(section).getByLabelText('Fecha de la cita'),
+        '2026-11-20',
+      );
+      await user.click(
+        within(section).getByRole('button', { name: 'Agendar cita' }),
+      );
+
+      const confirmation = await within(section).findByRole('status');
+      expect(confirmation).toHaveTextContent(
+        'Cita agendada para el viernes 20/11/2026. Juan Carlos Pérez puede consultar el material durante todo el horario de atención, de 8:00 a 17:00.',
+      );
+      expect(
+        within(confirmation).getByText(
+          'Acta de fundación de la villa (TH-DOC-0001)',
+        ),
+      ).toBeInTheDocument();
+
+      const [[url, init]] = postCalls();
+      expect(url).toBe(APPOINTMENTS_PATH);
+      expect(JSON.parse(init.body as string)).toEqual({ date: '2026-11-20' });
+
+      // The request is now Agendada and cannot be scheduled again
+      const heading = screen.getByRole('heading', { name: 'SOL-2026-00001' });
+      expect(heading.parentElement).toHaveTextContent('Agendada');
+      expect(
+        within(section).queryByRole('button', { name: 'Agendar cita' }),
+      ).not.toBeInTheDocument();
+      // «Cambiar estado» now offers attended or not
+      expect(
+        screen.getByRole('radio', { name: 'El solicitante asistió' }),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the backend error for a Sunday and keeps the status', async () => {
+      const { user } = await setup(available(), {
+        ok: false,
+        status: 400,
+        json: async () => ({
+          code: 'INVALID_APPOINTMENT_DATE',
+          message:
+            'El CLENA no atiende los domingos. Elija una fecha de lunes a sábado.',
+        }),
+      });
+      const section = screen.getByRole('region', { name: 'Agendar cita' });
+
+      await user.clear(within(section).getByLabelText('Fecha de la cita'));
+      await user.type(
+        within(section).getByLabelText('Fecha de la cita'),
+        '2026-11-22',
+      );
+      await user.click(
+        within(section).getByRole('button', { name: 'Agendar cita' }),
+      );
+
+      expect(await within(section).findByRole('alert')).toHaveTextContent(
+        'El CLENA no atiende los domingos. Elija una fecha de lunes a sábado.',
+      );
+      const heading = screen.getByRole('heading', { name: 'SOL-2026-00001' });
+      expect(heading.parentElement).toHaveTextContent('Disponible');
+    });
+
+    it('shows the date the requester asked for and starts on it', async () => {
+      const { user } = await setup();
+      const section = screen.getByRole('region', { name: 'Agendar cita' });
+      const input = within(section).getByLabelText('Fecha de la cita');
+
+      expect(section).toHaveTextContent(
+        'El solicitante pidió el martes 01/12/2026.',
+      );
+      expect(input).toHaveValue('2026-12-01');
+      expect(input).toHaveAccessibleDescription(
+        /El solicitante pidió el martes 01\/12\/2026\./,
+      );
+
+      // Without changing it, the desired date is sent
+      await user.click(
+        within(section).getByRole('button', { name: 'Agendar cita' }),
+      );
+      await within(section).findByRole('status');
+      expect(JSON.parse(postCalls()[0][1].body as string)).toEqual({
+        date: '2026-12-01',
+      });
+    });
+
+    it('asks to choose the date before scheduling', async () => {
+      const { user } = await setup();
+      const section = screen.getByRole('region', { name: 'Agendar cita' });
+
+      await user.clear(within(section).getByLabelText('Fecha de la cita'));
+      await user.click(
+        within(section).getByRole('button', { name: 'Agendar cita' }),
+      );
+
+      expect(within(section).getByRole('alert')).toHaveTextContent(
+        'Elija la fecha de la cita.',
+      );
+      expect(postCalls()).toHaveLength(0);
+    });
+
+    it.each([
+      ['RECIBIDA', 'PRESENCIAL', ['EN_BUSQUEDA', 'RECHAZADA']],
+      ['AGENDADA', 'PRESENCIAL', ['DISPONIBLE', 'ATENDIDA']],
+      // A digital delivery is attended without an appointment
+      ['DISPONIBLE', 'DIGITAL', ['ATENDIDA', 'CERRADA']],
+    ])(
+      'offers no appointment for a %s request with %s delivery',
+      async (status, deliveryMode, allowedTransitions) => {
+        await setup(detail({ status, deliveryMode, allowedTransitions }));
+
+        expect(
+          screen.queryByRole('region', { name: 'Agendar cita' }),
+        ).not.toBeInTheDocument();
+      },
+    );
   });
 });

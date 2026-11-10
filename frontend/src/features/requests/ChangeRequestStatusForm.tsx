@@ -36,7 +36,6 @@ const CHANGED_TIME_FORMAT = new Intl.DateTimeFormat('es-CO', {
 const TRANSITION_HINTS: Partial<Record<RequestStatus, string>> = {
   EN_BUSQUEDA: 'Se empieza a buscar el material.',
   DISPONIBLE: 'El material fue localizado.',
-  AGENDADA: 'Hay una cita para consultar el material en la sala.',
   // From DISPONIBLE it is only offered for a digital delivery
   ATENDIDA: 'Se entregó la copia digital.',
   CERRADA: 'La solicitud termina y no admite más cambios.',
@@ -127,7 +126,10 @@ export function ChangeRequestStatusForm({
   const [lastChange, setLastChange] = useState<StatusChange | null>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
 
-  const options = request.allowedTransitions;
+  // AGENDADA is only reached by scheduling an appointment (HU-18)
+  const options = request.allowedTransitions.filter(
+    (status) => status !== 'AGENDADA',
+  );
   // When rejecting, the comment is the reason the requester reads (HU-16)
   const rejecting = selected === 'RECHAZADA';
 
