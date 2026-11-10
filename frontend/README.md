@@ -172,6 +172,20 @@ deja el estado como estaba.
   elegir materiales en `/personal/materiales` (#109), registrar la solicitud y mostrar
   el comprobante con el código de seguimiento. No modifica el backend.
 
+## Accesibilidad
+
+- Los tokens de `src/styles/global.css` mantienen al menos 4.5:1 para texto y
+  3:1 para el borde de los controles. `src/styles/global.a11y.spec.ts` verifica
+  esos contrastes y que el tamaño base sea escalable.
+- `:root` usa `font-size: 100%` y las pantallas usan `rem`/`clamp`, de modo que
+  el texto respeta el tamaño configurado por la persona usuaria y el zoom del
+  navegador.
+- Los formularios usan etiquetas visibles asociadas con `htmlFor`, un foco
+  visible global y el orden natural del DOM para recorrerlos con Tab.
+- `pnpm lint` incluye `eslint-plugin-jsx-a11y`. El CI ejecuta ese lint en cada
+  PR del frontend, y cada pantalla nueva debe conservar etiquetas y operación
+  con teclado (Definition of Done).
+
 ## Pruebas
 
 `pnpm test` ejecuta Vitest con jsdom y Testing Library. Las pruebas de la
