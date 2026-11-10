@@ -9,11 +9,20 @@ export interface SelectedMaterial {
 
 export const MATERIALS_QUERY_PARAM = 'materiales';
 
-/** `/solicitudes/nueva?materiales=<id1>,<id2>` */
-export function buildNewRequestPath(materialIds: string[]): string {
+function buildRequestPath(route: string, materialIds: string[]): string {
   // Commas are kept literal so the URL stays readable (URLSearchParams would encode them)
   const value = materialIds.map(encodeURIComponent).join(',');
-  return `${ROUTES.newRequest}?${MATERIALS_QUERY_PARAM}=${value}`;
+  return `${route}?${MATERIALS_QUERY_PARAM}=${value}`;
+}
+
+/** `/solicitudes/nueva?materiales=<id1>,<id2>` */
+export function buildNewRequestPath(materialIds: string[]): string {
+  return buildRequestPath(ROUTES.newRequest, materialIds);
+}
+
+/** `/personal/solicitudes/nueva?materiales=<id1>,<id2>` */
+export function buildStaffNewRequestPath(materialIds: string[]): string {
+  return buildRequestPath(ROUTES.staffNewRequest, materialIds);
 }
 
 /** Reads the material IDs from `?materiales=`, without blanks or repeats. */

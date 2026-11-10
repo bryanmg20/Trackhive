@@ -4,7 +4,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { readAccessToken, readRoleFromToken } from '../auth/session';
 import type { SelectedMaterial } from '../requests/selected-materials';
-import { buildNewRequestPath } from '../requests/selected-materials';
+import {
+  buildNewRequestPath,
+  buildStaffNewRequestPath,
+} from '../requests/selected-materials';
 import {
   MATERIAL_STATUS_LABELS,
   MATERIAL_TYPE_LABELS,
@@ -40,7 +43,11 @@ const SORT_LABELS: Record<MaterialSortField, string> = {
 export function MaterialSearchPage() {
   const navigate = useNavigate();
   const token = readAccessToken();
-  const isPublicUser = token ? readRoleFromToken(token) === 'PUBLICO' : false;
+  const role = token ? readRoleFromToken(token) : null;
+  const isStaff = role === 'PERSONAL' || role === 'ADMIN';
+  // Any signed-in role picks materials here: the public user requests them for
+  // themselves, the staff registers the request on behalf of a visitor (HU-93).
+  const canSelect = role === 'PUBLICO' || isStaff;
 
   const [text, setText] = useState('');
   const [collection, setCollection] = useState('');
@@ -115,7 +122,10 @@ export function MaterialSearchPage() {
   }
 
   function requestSelected() {
-    navigate(buildNewRequestPath(selected.map((item) => item.id)), {
+    const path = isStaff
+      ? buildStaffNewRequestPath(selected.map((item) => item.id))
+      : buildNewRequestPath(selected.map((item) => item.id));
+    navigate(path, {
       state: { materials: selected },
     });
   }
@@ -291,7 +301,7 @@ export function MaterialSearchPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      {isPublicUser ? (
+                      {canSelect ? (
                         <th scope="col" className={styles.checkCell}>
                           <span className="sr-only">Seleccionar</span>
                         </th>
@@ -304,7 +314,7 @@ export function MaterialSearchPage() {
                   <tbody>
                     {result.items.map((material) => (
                       <tr key={material.id}>
-                        {isPublicUser ? (
+                        {canSelect ? (
                           <td className={styles.checkCell}>
                             <input
                               type="checkbox"
@@ -370,7 +380,7 @@ export function MaterialSearchPage() {
         </div>
       </main>
 
-      {isPublicUser ? (
+      {canSelect ? (
         <div className={styles.requestBar}>
           <div className={styles.requestBarInner}>
             <p aria-live="polite">
@@ -384,7 +394,7 @@ export function MaterialSearchPage() {
               onClick={requestSelected}
               disabled={selected.length === 0}
             >
-              Solicitar
+              {isStaff ? 'Registrar solicitud' : 'Solicitar'}
             </button>
           </div>
         </div>
