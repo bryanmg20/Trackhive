@@ -74,3 +74,21 @@
 .clearButton:hover {
   color: var(--ink);
 }
+
+.shortcutRow {
+  margin-top: 0.4rem;
+}
+
+.shortcut {
+  color: var(--gold-text);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-transform: uppercase;
+}
+
+.shortcut:hover {
+  color: var(--gold-deep);
+}

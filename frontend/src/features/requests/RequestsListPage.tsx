@@ -195,6 +195,11 @@ export function RequestsListPage() {
               Buscar
             </button>
           </form>
+          <p className={styles.shortcutRow}>
+            <Link className={styles.shortcut} to={ROUTES.staffNewRequest}>
+              Registrar solicitud de visitante ›
+            </Link>
+          </p>
         </section>
 
         <div className={searchStyles.layout}>

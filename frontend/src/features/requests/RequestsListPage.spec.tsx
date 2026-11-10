@@ -297,4 +297,14 @@ describe('RequestsListPage', () => {
       screen.queryByRole('button', { name: 'Quitar filtros' }),
     ).not.toBeInTheDocument();
   });
+
+  it('links to the screen to register a visitor request', async () => {
+    fetchMock.mockResolvedValue(page([item()]));
+    renderPage('PERSONAL');
+    await screen.findByRole('table');
+
+    expect(
+      screen.getByRole('link', { name: /registrar solicitud de visitante/i }),
+    ).toHaveAttribute('href', '/personal/solicitudes/nueva');
+  });
 });
