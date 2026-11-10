@@ -4,7 +4,8 @@ Interfaz web de Trackhive (React + TypeScript + Vite). Cubre el registro de
 investigadores (HU-47), el inicio de sesión, el buscador de material (HU-7.1),
 la gestión del estado del material (HU-08), el registro de solicitudes del
 personal a nombre de un visitante (HU-93), el listado de solicitudes del
-personal (HU-12) y «Mis solicitudes» del usuario público (HU-11).
+personal (HU-12), el detalle de una solicitud con la acción de cambiar su
+estado (HU-13 y HU-15) y «Mis solicitudes» del usuario público (HU-11).
 
 ## Requisitos
 
@@ -33,6 +34,7 @@ pnpm build    # tsc -b && vite build
 | `/personal/materiales`           | Estado del material (HU-08)                                | `PERSONAL`/`ADMIN` |
 | `/personal/solicitudes/nueva`    | Registrar solicitud a nombre de un visitante (HU-93)       | `PERSONAL`/`ADMIN` |
 | `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
+| `/solicitudes/:id`               | Detalle de una solicitud y cambio de estado (HU-13, HU-15) | `PERSONAL`/`ADMIN` |
 
 Las rutas del usuario público viven dentro de `ProtectedRoute`; cualquier otro
 rol o una sesión vencida redirige a `/login`. Las rutas de personal viven dentro
@@ -110,6 +112,26 @@ ordena y pagina de 10 en 10. Se llega desde «Mis solicitudes» en la barra del
 buscador `/materiales` (solo para `PUBLICO`) y desde el enlace «Ver mis
 solicitudes» al radicar una solicitud.
 
+### Cambiar estado de una solicitud (HU-15)
+
+El detalle `/solicitudes/:id` trae `allowedTransitions`: los estados a los que
+la solicitud puede pasar según la máquina de estados del backend (HU-14). La
+tarjeta «Cambiar estado» muestra solo esas opciones, así que la regla no se
+duplica en React. Desde **Agendada** las opciones se leen «El solicitante
+asistió» (pasa a Atendida) y «El solicitante no asistió» (vuelve a
+Disponible). **Rechazada** no se ofrece todavía porque exige motivo: HU-16 la
+agrega a esta misma acción. En un estado final (Cerrada o Rechazada) no hay
+opciones.
+
+Al guardar se llama a `PATCH /api/v1/requests/:id/status` con
+`{ status, comment? }`; el comentario es opcional (máximo 500 caracteres) y no
+se envía si queda vacío. La respuesta trae el nuevo `status`, sus
+`allowedTransitions` y el registro guardado en el historial (`statusChange`,
+con fecha, hora y responsable), que la pantalla muestra como confirmación en
+hora de Bogotá sin volver a cargar la solicitud. Un `409` (transición no
+permitida u otra persona la cambió primero) muestra el mensaje del backend y
+deja el estado como estaba.
+
 ## Estado y alcance
 
 - **HU-01 integrado:** el `POST /api/v1/users` acepta `firstName`,
@@ -142,6 +164,14 @@ navegación manual y redirección automática. La API se simula con
 radicación en hora de Bogotá, la URL de `/requests/mine`, la redirección de
 `PERSONAL`, `ADMIN` y visitantes a `/login`, el filtro por estado, el orden, la
 paginación, los dos mensajes de lista vacía, la sesión vencida y el fallo de red.
+
+`RequestDetailPage.spec.tsx` cubre, además del detalle (HU-13), la acción de
+cambiar estado (HU-15): solo aparecen las transiciones válidas, «asistió» y «no
+asistió» desde Agendada, Rechazada no se ofrece, ningún cambio en estados
+finales, el cuerpo enviado con y sin comentario, la confirmación con fecha, hora
+y responsable, el nuevo estado en la cabecera, los errores `409` y `403`, y el
+uso solo con teclado. `api/change-request-status.spec.ts` cubre la petición
+`PATCH`.
 
 `StaffNewRequestPage.spec.tsx` cubre la búsqueda de solicitante encontrado y
 nuevo, los cuerpos enviados en cada caso, el error de fecha del backend junto al
