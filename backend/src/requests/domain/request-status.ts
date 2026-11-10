@@ -26,8 +26,8 @@ export function isRequestStatus(value: string): value is RequestStatus {
 
 /**
  * Statuses the staff can choose in the «cambiar estado» action (HU-15).
- * RECIBIDA is only the initial status, and RECHAZADA needs a reason, so it
- * goes through reject() (HU-16).
+ * RECIBIDA is only the initial status. RECHAZADA requires the comment, which
+ * is the reason the requester reads (HU-16).
  */
 export const CHANGEABLE_STATUSES = [
   'EN_BUSQUEDA',
@@ -35,6 +35,7 @@ export const CHANGEABLE_STATUSES = [
   'AGENDADA',
   'ATENDIDA',
   'CERRADA',
+  'RECHAZADA',
 ] as const satisfies readonly RequestStatus[];
 
 export type ChangeableStatus = (typeof CHANGEABLE_STATUSES)[number];

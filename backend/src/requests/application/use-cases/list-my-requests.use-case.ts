@@ -23,6 +23,8 @@ function toDto(item: RequestListItem): MyRequestListItemDto {
     desiredDate: item.desiredDate.toISOString().slice(0, 10),
     registeredAt: item.registeredAt.toISOString(),
     materials: item.materials,
+    // The requester sees why their request was rejected (HU-16)
+    rejectionReason: item.rejectionReason,
   };
 }
 

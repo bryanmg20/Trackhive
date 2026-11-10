@@ -92,7 +92,8 @@ export class Request {
    * same action methods, so the transition rules of HU-14 apply, and returns
    * the record of who changed the status, when and why. Blank comment = none.
    * From AGENDADA, ATENDIDA means the requester attended and DISPONIBLE that
-   * they did not.
+   * they did not. To reject, the comment is the reason and it is required
+   * (HU-16): without it, reject() throws RejectionReasonRequiredError.
    */
   changeStatus(
     next: ChangeableStatus,
@@ -121,8 +122,12 @@ export class Request {
       case 'CERRADA':
         this.close();
         break;
+      case 'RECHAZADA':
+        this.reject(comment ?? '');
+        break;
     }
 
+    const rejected = this.currentStatus === 'RECHAZADA';
     return Object.freeze({
       requestId: this.id,
       previousStatus,
@@ -130,6 +135,7 @@ export class Request {
       changedBy,
       changedAt: now,
       comment: comment?.trim() || null,
+      rejectionReason: rejected ? this.currentRejectionReason : null,
     });
   }
 

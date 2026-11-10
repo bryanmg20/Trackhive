@@ -51,8 +51,24 @@ describe('ChangeRequestStatusDto', () => {
     expect(await failedFields({})).toContain('status');
   });
 
-  // RECIBIDA is only the initial status; RECHAZADA needs a reason (HU-16)
-  it.each(['RECIBIDA', 'RECHAZADA', 'ROTA', 'atendida'])(
+  // The shape of a rejection is valid; the domain requires the reason (HU-16)
+  it('accepts RECHAZADA with its reason in the comment', async () => {
+    expect(
+      await check({ status: 'RECHAZADA', comment: 'Material restringido' }),
+    ).toHaveLength(0);
+  });
+
+  it('accepts a reason of up to 500 characters', async () => {
+    expect(
+      await check({
+        status: 'RECHAZADA',
+        comment: 'm'.repeat(MAX_STATUS_COMMENT_LENGTH),
+      }),
+    ).toHaveLength(0);
+  });
+
+  // RECIBIDA is only the initial status
+  it.each(['RECIBIDA', 'ROTA', 'atendida', 'rechazada'])(
     'rejects the status %s',
     async (status) => {
       expect(await failedFields({ status })).toContain('status');
