@@ -16,6 +16,7 @@ const buildRepository = () => ({
   createOnBehalf: jest.fn(),
   findRequesterByEmail: jest.fn(),
   list: jest.fn(),
+  listAppointments: jest.fn(),
   findById: jest.fn(),
   listByRequesterUser: jest.fn(),
   findEntityById: jest.fn(),

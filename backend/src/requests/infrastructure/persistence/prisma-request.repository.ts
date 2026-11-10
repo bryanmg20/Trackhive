@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
+  AppointmentListCriteria,
+  AppointmentListResult,
   CreatedRequest,
   MyRequestListCriteria,
   RequestDetail,
@@ -20,6 +22,7 @@ import type {
   CreateRequestOnBehalfInput,
   RequesterInput,
 } from '../../application/use-cases/create-request-on-behalf.use-case';
+import { isAppointmentStatus } from '../../domain/appointment-status';
 import { isDeliveryMode } from '../../domain/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
 import { isRequestStatus } from '../../domain/request-status';
@@ -114,6 +117,98 @@ export class PrismaRequestRepository implements RequestRepository {
 
   async list(criteria: RequestListCriteria): Promise<RequestListResult> {
     return this.findPage(this.buildListWhere(criteria), criteria);
+  }
+
+  async listAppointments(
+    criteria: AppointmentListCriteria,
+  ): Promise<AppointmentListResult> {
+    const where = this.buildAppointmentListWhere(criteria);
+    const [models, total] = await this.prisma.$transaction([
+      this.prisma.appointmentModel.findMany({
+        where,
+        orderBy: [{ [criteria.sort]: criteria.order }, { id: 'asc' }],
+        skip: (criteria.page - 1) * criteria.limit,
+        take: criteria.limit,
+        include: {
+          request: {
+            select: {
+              id: true,
+              trackingCode: true,
+              status: true,
+              deliveryMode: true,
+            },
+          },
+          requester: {
+            select: {
+              id: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              secondLastName: true,
+              email: true,
+              phone: true,
+              requesterType: true,
+              institution: true,
+              documentType: true,
+              documentNumber: true,
+            },
+          },
+          scheduledBy: {
+            select: {
+              id: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              secondLastName: true,
+            },
+          },
+          materials: {
+            include: { material: true },
+            orderBy: { material: { catalogCode: 'asc' } },
+          },
+        },
+      }),
+      this.prisma.appointmentModel.count({ where }),
+    ]);
+
+    return {
+      items: models.map((model) => {
+        if (
+          !isAppointmentStatus(model.status) ||
+          !isRequestStatus(model.request.status) ||
+          !isDeliveryMode(model.request.deliveryMode)
+        ) {
+          throw new Error(
+            `Appointment ${model.id} has an invalid stored value`,
+          );
+        }
+        return {
+          id: model.id,
+          appointmentDate: model.appointmentDate,
+          status: model.status,
+          notes: model.notes,
+          createdAt: model.createdAt,
+          request: {
+            id: model.request.id,
+            trackingCode: model.request.trackingCode,
+            status: model.request.status,
+            deliveryMode: model.request.deliveryMode,
+          },
+          requester: model.requester,
+          scheduledBy: model.scheduledBy,
+          materials: model.materials.map(({ material }) => ({
+            id: material.id,
+            catalogCode: material.catalogCode,
+            title: material.title,
+            materialType: material.materialType,
+            depot: material.depot,
+            shelf: material.shelf,
+            box: material.box,
+          })),
+        };
+      }),
+      total,
+    };
   }
 
   async listByRequesterUser(
@@ -507,6 +602,55 @@ export class PrismaRequestRepository implements RequestRepository {
       };
       and.push({
         items: {
+          some: { material: { OR: [{ title: text }, { catalogCode: text }] } },
+        },
+      });
+    }
+    return and.length > 0 ? { AND: and } : {};
+  }
+
+  private buildAppointmentListWhere(
+    criteria: AppointmentListCriteria,
+  ): Prisma.AppointmentModelWhereInput {
+    const and: Prisma.AppointmentModelWhereInput[] = [];
+
+    if (criteria.status) {
+      and.push({ status: criteria.status });
+    }
+    if (criteria.from || criteria.to) {
+      and.push({
+        appointmentDate: {
+          ...(criteria.from && {
+            gte: new Date(`${criteria.from}T00:00:00.000Z`),
+          }),
+          ...(criteria.to && {
+            lte: new Date(`${criteria.to}T00:00:00.000Z`),
+          }),
+        },
+      });
+    }
+    for (const word of criteria.requester?.split(/\s+/).filter(Boolean) ?? []) {
+      const text = { contains: word, mode: 'insensitive' as const };
+      and.push({
+        requester: {
+          OR: [
+            { firstName: text },
+            { middleName: text },
+            { lastName: text },
+            { secondLastName: text },
+            { email: text },
+            { documentNumber: text },
+          ],
+        },
+      });
+    }
+    if (criteria.material) {
+      const text = {
+        contains: criteria.material,
+        mode: 'insensitive' as const,
+      };
+      and.push({
+        materials: {
           some: { material: { OR: [{ title: text }, { catalogCode: text }] } },
         },
       });

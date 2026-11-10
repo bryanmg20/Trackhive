@@ -8,6 +8,7 @@ export const ROUTES = {
   staffMaterials: '/personal/materiales',
   requests: '/solicitudes',
   requestDetail: '/solicitudes/:id',
+  calendar: '/calendario',
 } as const;
 
 export function requestDetailPath(id: string): string {

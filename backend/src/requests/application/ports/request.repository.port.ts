@@ -1,4 +1,5 @@
 import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
+import type { AppointmentStatus } from '../../domain/appointment-status';
 import type { DeliveryMode } from '../../domain/delivery-mode';
 import type { Request } from '../../domain/entities/request.entity';
 import type { RequestStatus } from '../../domain/request-status';
@@ -160,6 +161,76 @@ export interface SavedAppointment {
   statusChange: SavedStatusChange;
 }
 
+export const APPOINTMENT_SORT_FIELDS = [
+  'appointmentDate',
+  'createdAt',
+] as const;
+
+export type AppointmentSortField = (typeof APPOINTMENT_SORT_FIELDS)[number];
+
+export interface AppointmentListCriteria {
+  status?: AppointmentStatus;
+  // Appointment date range, both ends included, as YYYY-MM-DD
+  from?: string;
+  to?: string;
+  // Free text matched against the requester's names, email and document number
+  requester?: string;
+  // Free text matched against the title or catalog code of an appointment material
+  material?: string;
+  sort: AppointmentSortField;
+  order: SortOrder;
+  page: number;
+  limit: number;
+}
+
+export interface AppointmentListItem {
+  id: string;
+  appointmentDate: Date;
+  status: AppointmentStatus;
+  notes: string | null;
+  createdAt: Date;
+  request: {
+    id: string;
+    trackingCode: string;
+    status: RequestStatus;
+    deliveryMode: DeliveryMode;
+  };
+  requester: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+    email: string | null;
+    phone: string | null;
+    requesterType: string;
+    institution: string | null;
+    documentType: string | null;
+    documentNumber: string | null;
+  };
+  scheduledBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  };
+  materials: {
+    id: string;
+    catalogCode: string;
+    title: string;
+    materialType: string;
+    depot: string;
+    shelf: string;
+    box: string;
+  }[];
+}
+
+export interface AppointmentListResult {
+  items: AppointmentListItem[];
+  total: number;
+}
+
 export interface RequestRepository {
   create(
     input: CreateRequestInput & { createdById: string },
@@ -172,6 +243,10 @@ export interface RequestRepository {
   findRequesterByEmail(email: string): Promise<RequesterProfile | null>;
 
   list(criteria: RequestListCriteria): Promise<RequestListResult>;
+
+  listAppointments(
+    criteria: AppointmentListCriteria,
+  ): Promise<AppointmentListResult>;
 
   findById(id: string): Promise<RequestDetail | null>;
   /**

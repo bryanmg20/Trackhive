@@ -1104,4 +1104,157 @@ describe('PrismaRequestRepository', () => {
       expect(tx.notificationModel.create).not.toHaveBeenCalled();
     });
   });
+
+  describe('listAppointments (HU-19)', () => {
+    const buildAppointmentsPrisma = () => ({
+      appointmentModel: {
+        findMany: jest.fn().mockReturnValue('find-many'),
+        count: jest.fn().mockReturnValue('count'),
+      },
+      $transaction: jest.fn().mockResolvedValue([
+        [
+          {
+            id: 'appointment-1',
+            appointmentDate: new Date('2026-11-20T00:00:00.000Z'),
+            status: 'PROGRAMADA',
+            notes: null,
+            createdAt: new Date('2026-11-10T15:00:00.000Z'),
+            request: {
+              id: 'request-1',
+              trackingCode: 'SOL-2026-00001',
+              status: 'AGENDADA',
+              deliveryMode: 'PRESENCIAL',
+            },
+            requester: {
+              id: 'requester-1',
+              firstName: 'Juan',
+              middleName: null,
+              lastName: 'Pérez',
+              secondLastName: null,
+              email: 'juan@mail.com',
+              phone: '3001234567',
+              requesterType: 'INVESTIGADOR',
+              institution: null,
+              documentType: 'CC',
+              documentNumber: '123456789',
+            },
+            scheduledBy: {
+              id: 'staff-1',
+              firstName: 'Ana',
+              middleName: null,
+              lastName: 'Gómez',
+              secondLastName: null,
+            },
+            materials: [
+              {
+                material: {
+                  id: 'material-1',
+                  catalogCode: 'TH-DOC-0001',
+                  title: 'Acta de fundación de la villa',
+                  materialType: 'DOCUMENTO',
+                  depot: 'D-01',
+                  shelf: 'E-01',
+                  box: 'C-001',
+                },
+              },
+            ],
+          },
+        ],
+        1,
+      ]),
+    });
+
+    const baseCriteria = {
+      sort: 'appointmentDate' as const,
+      order: 'asc' as const,
+      page: 2,
+      limit: 10,
+    };
+
+    it('lists and counts appointments in one transaction with pagination and order', async () => {
+      const prisma = buildAppointmentsPrisma();
+
+      const result = await new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      ).listAppointments(baseCriteria);
+
+      expect(prisma.appointmentModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+          orderBy: [{ appointmentDate: 'asc' }, { id: 'asc' }],
+          skip: 10,
+          take: 10,
+        }),
+      );
+      expect(prisma.appointmentModel.count).toHaveBeenCalledWith({ where: {} });
+      expect(result.total).toBe(1);
+      expect(result.items[0]).toMatchObject({
+        id: 'appointment-1',
+        status: 'PROGRAMADA',
+        request: { trackingCode: 'SOL-2026-00001' },
+        materials: [
+          {
+            id: 'material-1',
+            catalogCode: 'TH-DOC-0001',
+            title: 'Acta de fundación de la villa',
+            depot: 'D-01',
+          },
+        ],
+      });
+    });
+
+    it('filters by status, date range, requester words and material', async () => {
+      const prisma = buildAppointmentsPrisma();
+
+      await new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      ).listAppointments({
+        ...baseCriteria,
+        status: 'PROGRAMADA',
+        from: '2026-11-01',
+        to: '2026-11-30',
+        requester: 'juan pérez',
+        material: 'cabildo',
+      });
+
+      const [countArgs] = prisma.appointmentModel.count.mock.calls as [
+        [{ where: { AND: unknown[] } }],
+      ];
+      expect(countArgs[0].where.AND).toEqual([
+        { status: 'PROGRAMADA' },
+        {
+          appointmentDate: {
+            gte: new Date('2026-11-01T00:00:00.000Z'),
+            lte: new Date('2026-11-30T00:00:00.000Z'),
+          },
+        },
+        expect.objectContaining({
+          requester: {
+            OR: expect.arrayContaining([
+              { firstName: { contains: 'juan', mode: 'insensitive' } },
+            ]) as unknown,
+          },
+        }),
+        expect.objectContaining({
+          requester: {
+            OR: expect.arrayContaining([
+              { lastName: { contains: 'pérez', mode: 'insensitive' } },
+            ]) as unknown,
+          },
+        }),
+        {
+          materials: {
+            some: {
+              material: {
+                OR: [
+                  { title: { contains: 'cabildo', mode: 'insensitive' } },
+                  { catalogCode: { contains: 'cabildo', mode: 'insensitive' } },
+                ],
+              },
+            },
+          },
+        },
+      ]);
+    });
+  });
 });

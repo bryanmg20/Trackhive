@@ -48,6 +48,7 @@ describe('ListMyRequestsUseCase', () => {
       createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn(),
       list,
+      listAppointments: jest.fn(),
       findById: jest.fn(),
       listByRequesterUser,
       findEntityById: jest.fn(),
