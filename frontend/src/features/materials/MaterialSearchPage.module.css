@@ -28,6 +28,23 @@
   color: var(--gold-deep);
 }
 
+/* Sections of the public user: «Buscar material | Mis solicitudes» (HU-11) */
+.nav {
+  display: flex;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.nav a {
+  color: var(--ink);
+}
+
+.nav a[aria-current='page'] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 .topbarTag,
 .eyebrow {
   font-family: var(--font-mono);
