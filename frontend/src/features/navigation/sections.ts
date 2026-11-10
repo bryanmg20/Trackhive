@@ -7,7 +7,6 @@ export interface Section {
   roles: readonly UserRole[];
 }
 
-const ALL_ROLES: readonly UserRole[] = ['PUBLICO', 'PERSONAL', 'ADMIN'];
 const STAFF_ROLES: readonly UserRole[] = ['PERSONAL', 'ADMIN'];
 
 /**
@@ -18,7 +17,7 @@ export const SECTIONS: readonly Section[] = [
   {
     to: ROUTES.materials,
     label: 'Buscar material',
-    roles: ALL_ROLES,
+    roles: ['PUBLICO'],
   },
   {
     to: ROUTES.myRequests,
