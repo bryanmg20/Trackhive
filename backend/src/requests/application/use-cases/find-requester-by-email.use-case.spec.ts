@@ -23,6 +23,7 @@ describe('FindRequesterByEmailUseCase', () => {
       create: jest.fn(),
       createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn().mockResolvedValue(profile),
+      list: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 
@@ -43,6 +44,7 @@ describe('FindRequesterByEmailUseCase', () => {
       create: jest.fn(),
       createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn().mockResolvedValue(null),
+      list: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 

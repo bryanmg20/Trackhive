@@ -41,6 +41,7 @@ describe('Request registration (e2e)', () => {
       trackingCode: 'SOL-2026-00002',
       status: 'RECIBIDA',
     }),
+    list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
@@ -273,6 +274,88 @@ describe('Request registration (e2e)', () => {
         statusCode: 404,
         code: 'REQUESTER_NOT_FOUND',
       });
+    });
+  });
+
+  describe('GET /requests (list, HU-12)', () => {
+    beforeEach(() => {
+      repository.list.mockClear();
+    });
+
+    it('rejects a request without an access token with 401', async () => {
+      await request(server).get(REQUESTS_PATH).expect(401);
+    });
+
+    it('rejects a PUBLICO user with 403 and does not query', async () => {
+      await request(server)
+        .get(REQUESTS_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(403);
+      expect(repository.list).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s list with the default order and page',
+      async (role) => {
+        await request(server)
+          .get(REQUESTS_PATH)
+          .set('Authorization', `Bearer ${accessToken(role)}`)
+          .expect(200, { items: [], page: 1, limit: 20, total: 0 });
+
+        expect(repository.list).toHaveBeenCalledWith(
+          expect.objectContaining({
+            sort: 'registeredAt',
+            order: 'desc',
+            page: 1,
+            limit: 20,
+          }),
+        );
+      },
+    );
+
+    it('passes the filters and the order to the repository', async () => {
+      await request(server)
+        .get(REQUESTS_PATH)
+        .query({
+          status: 'AGENDADA',
+          desiredFrom: '2026-12-01',
+          desiredTo: '2026-12-31',
+          requester: 'juan',
+          material: 'cabildo',
+          sort: 'desiredDate',
+          order: 'asc',
+          page: 2,
+          limit: 5,
+        })
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(200);
+
+      expect(repository.list).toHaveBeenCalledWith({
+        status: 'AGENDADA',
+        desiredFrom: '2026-12-01',
+        desiredTo: '2026-12-31',
+        requester: 'juan',
+        material: 'cabildo',
+        sort: 'desiredDate',
+        order: 'asc',
+        page: 2,
+        limit: 5,
+      });
+    });
+
+    it.each([
+      { status: 'ROTA' },
+      { desiredFrom: '2026-13-45' },
+      { sort: 'status' },
+      { limit: 1000 },
+      { unknown: 'x' },
+    ])('rejects invalid parameters %j with 400', async (query) => {
+      await request(server)
+        .get(REQUESTS_PATH)
+        .query(query)
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(400);
+      expect(repository.list).not.toHaveBeenCalled();
     });
   });
 });

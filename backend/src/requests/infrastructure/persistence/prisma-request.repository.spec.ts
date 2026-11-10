@@ -266,4 +266,153 @@ describe('PrismaRequestRepository', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('list (HU-12)', () => {
+    const buildListPrisma = () => ({
+      requestModel: {
+        findMany: jest.fn().mockReturnValue('find-many'),
+        count: jest.fn().mockReturnValue('count'),
+      },
+      $transaction: jest.fn().mockResolvedValue([
+        [
+          {
+            id: 'request-1',
+            trackingCode: 'SOL-2026-00001',
+            status: 'RECIBIDA',
+            deliveryMode: 'PRESENCIAL',
+            desiredDate: new Date('2026-12-01T00:00:00.000Z'),
+            registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+            requester: {
+              firstName: 'Juan',
+              middleName: null,
+              lastName: 'Pérez',
+              secondLastName: null,
+              email: 'juan@mail.com',
+            },
+            items: [
+              {
+                material: {
+                  id: 'material-1',
+                  catalogCode: 'TH-DOC-0001',
+                  title: 'Acta',
+                },
+              },
+            ],
+          },
+        ],
+        1,
+      ]),
+    });
+
+    const baseCriteria = {
+      sort: 'registeredAt' as const,
+      order: 'desc' as const,
+      page: 3,
+      limit: 10,
+    };
+
+    it('applies no filter when the criteria only has order and page', async () => {
+      const prisma = buildListPrisma();
+
+      const result = await new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      ).list(baseCriteria);
+
+      expect(prisma.requestModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+          orderBy: [{ registeredAt: 'desc' }, { id: 'asc' }],
+          skip: 20,
+          take: 10,
+        }),
+      );
+      expect(prisma.requestModel.count).toHaveBeenCalledWith({ where: {} });
+      expect(result.total).toBe(1);
+      expect(result.items[0]).toMatchObject({
+        trackingCode: 'SOL-2026-00001',
+        materials: [
+          { id: 'material-1', catalogCode: 'TH-DOC-0001', title: 'Acta' },
+        ],
+      });
+    });
+
+    it('filters by status and by an inclusive desired date range', async () => {
+      const prisma = buildListPrisma();
+
+      await new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      ).list({
+        ...baseCriteria,
+        status: 'AGENDADA',
+        desiredFrom: '2026-12-01',
+        desiredTo: '2026-12-31',
+      });
+
+      expect(prisma.requestModel.count).toHaveBeenCalledWith({
+        where: {
+          AND: [
+            { status: 'AGENDADA' },
+            {
+              desiredDate: {
+                gte: new Date('2026-12-01T00:00:00.000Z'),
+                lte: new Date('2026-12-31T00:00:00.000Z'),
+              },
+            },
+          ],
+        },
+      });
+    });
+
+    it('requires every word of the requester text to match some field', async () => {
+      const prisma = buildListPrisma();
+
+      await new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      ).list({ ...baseCriteria, requester: 'juan  pérez' });
+
+      const [countArgs] = prisma.requestModel.count.mock.calls as [
+        [{ where: { AND: { requester: { OR: unknown[] } }[] } }],
+      ];
+      const { where } = countArgs[0];
+      expect(where.AND).toHaveLength(2);
+      expect(where.AND[0].requester.OR).toContainEqual({
+        firstName: { contains: 'juan', mode: 'insensitive' },
+      });
+      expect(where.AND[1].requester.OR).toContainEqual({
+        lastName: { contains: 'pérez', mode: 'insensitive' },
+      });
+    });
+
+    it('filters by the title or catalog code of a requested material', async () => {
+      const prisma = buildListPrisma();
+
+      await new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      ).list({ ...baseCriteria, material: 'cabildo' });
+
+      expect(prisma.requestModel.count).toHaveBeenCalledWith({
+        where: {
+          AND: [
+            {
+              items: {
+                some: {
+                  material: {
+                    OR: [
+                      { title: { contains: 'cabildo', mode: 'insensitive' } },
+                      {
+                        catalogCode: {
+                          contains: 'cabildo',
+                          mode: 'insensitive',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+    });
+  });
 });

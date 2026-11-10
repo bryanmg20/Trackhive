@@ -37,10 +37,7 @@ function renderLoginPage(state?: unknown) {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<p>Pantalla de registro</p>} />
         <Route path="/materiales" element={<p>Pantalla buscar material</p>} />
-        <Route
-          path="/personal/materiales"
-          element={<p>Pantalla material del personal</p>}
-        />
+        <Route path="/solicitudes" element={<p>Pantalla solicitudes</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -168,7 +165,7 @@ describe('LoginPage', () => {
   });
 
   it.each(['PERSONAL', 'ADMIN'])(
-    'sends a %s user to the staff material list',
+    'sends a %s user to staff requests',
     async (role) => {
       const user = userEvent.setup();
       fetchMock.mockResolvedValue(
@@ -183,7 +180,7 @@ describe('LoginPage', () => {
       await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
       expect(
-        await screen.findByText('Pantalla material del personal'),
+        await screen.findByText('Pantalla solicitudes'),
       ).toBeInTheDocument();
     },
   );

@@ -15,6 +15,7 @@ const buildRepository = () => ({
   }),
   createOnBehalf: jest.fn(),
   findRequesterByEmail: jest.fn(),
+  list: jest.fn(),
 });
 
 describe('CreateRequestUseCase', () => {
