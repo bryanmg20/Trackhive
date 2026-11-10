@@ -7,9 +7,11 @@ import {
 } from '../materials/api/search-materials';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import { SiteNav } from '../navigation/SiteNav';
+import type { ChangeRequestStatusResult } from './api/change-request-status';
 import { getRequest } from './api/get-request';
 import type { RequestDetail } from './api/get-request';
 import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
+import { ChangeRequestStatusForm } from './ChangeRequestStatusForm';
 import styles from './RequestDetailPage.module.css';
 
 const NETWORK_ERROR_MESSAGE =
@@ -94,6 +96,23 @@ export function RequestDetailPage() {
   const request = isLoading ? null : response.request;
   const error = isLoading ? null : response.error;
 
+  // After a status change (HU-15) the page shows the new status and its next
+  // transitions without loading the request again
+  function applyStatusChange(result: ChangeRequestStatusResult) {
+    setResponse((current) =>
+      current?.request?.id === result.id
+        ? {
+            ...current,
+            request: {
+              ...current.request,
+              status: result.status,
+              allowedTransitions: result.allowedTransitions,
+            },
+          }
+        : current,
+    );
+  }
+
   return (
     <div className={searchStyles.shell}>
       <header className={searchStyles.topbar}>
@@ -141,6 +160,12 @@ export function RequestDetailPage() {
             </div>
 
             <div className={styles.sections}>
+              <ChangeRequestStatusForm
+                key={request.id}
+                request={request}
+                onChanged={applyStatusChange}
+              />
+
               <section className={styles.card} aria-labelledby="sec-requester">
                 <h2 id="sec-requester" className={styles.cardTitle}>
                   Solicitante
