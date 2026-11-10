@@ -92,3 +92,13 @@
 .shortcut:hover {
   color: var(--gold-deep);
 }
+
+.detailLink {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.detailLink:hover {
+  color: var(--gold-text);
+}

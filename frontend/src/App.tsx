@@ -3,10 +3,12 @@ import { LoginPage } from './features/auth/login/LoginPage';
 import { RegisterPage } from './features/auth/register/RegisterPage';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { StaffRoute } from './features/auth/components/StaffRoute';
+import { MyRequestsPage } from './features/requests/MyRequestsPage';
 import { NewRequestPage } from './features/requests/NewRequestPage';
 import { StaffNewRequestPage } from './features/requests/StaffNewRequestPage';
 import { MaterialSearchPage } from './features/materials/MaterialSearchPage';
 import { StaffMaterialsPage } from './features/materials/StaffMaterialsPage';
+import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestsListPage } from './features/requests/RequestsListPage';
 import { ROUTES } from './routes';
 
@@ -17,10 +19,12 @@ function App() {
       <Route path={ROUTES.login} element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path={ROUTES.newRequest} element={<NewRequestPage />} />
+        <Route path={ROUTES.myRequests} element={<MyRequestsPage />} />
       </Route>
       <Route element={<StaffRoute />}>
         <Route path={ROUTES.staffMaterials} element={<StaffMaterialsPage />} />
         <Route path={ROUTES.requests} element={<RequestsListPage />} />
+        <Route path={ROUTES.requestDetail} element={<RequestDetailPage />} />
         <Route
           path={ROUTES.staffNewRequest}
           element={<StaffNewRequestPage />}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { ROUTES } from '../../routes';
+import { requestDetailPath, ROUTES } from '../../routes';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import {
   listRequests,
@@ -382,7 +382,12 @@ export function RequestsListPage() {
                     {result.items.map((item) => (
                       <tr key={item.id}>
                         <td className={searchStyles.titleCell}>
-                          <strong>{item.trackingCode}</strong>
+                          <Link
+                            className={styles.detailLink}
+                            to={requestDetailPath(item.id)}
+                          >
+                            <strong>{item.trackingCode}</strong>
+                          </Link>
                           <span className={searchStyles.code}>
                             Radicada {formatDate(item.registeredAt)}
                           </span>

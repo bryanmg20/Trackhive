@@ -17,6 +17,7 @@ import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.
 
 const ACCESS_SECRET = 'e2e-access-secret';
 const REQUESTS_PATH = '/api/v1/requests';
+const MINE_PATH = '/api/v1/requests/mine';
 const ON_BEHALF_PATH = '/api/v1/requests/on-behalf';
 const REQUESTERS_PATH = '/api/v1/requesters/by-email';
 
@@ -42,6 +43,8 @@ describe('Request registration (e2e)', () => {
       status: 'RECIBIDA',
     }),
     list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+    findById: jest.fn(),
+    listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
@@ -59,11 +62,8 @@ describe('Request registration (e2e)', () => {
     }),
   };
 
-  const accessToken = (role: UserRole) =>
-    jwt.sign(
-      { sub: 'user-1', role },
-      { secret: ACCESS_SECRET, expiresIn: 900 },
-    );
+  const accessToken = (role: UserRole, sub = 'user-1') =>
+    jwt.sign({ sub, role }, { secret: ACCESS_SECRET, expiresIn: 900 });
 
   const validBody = () => ({
     materialIds: ['c3f6c8f0-1c2b-4e3d-8f4a-123456789abc'],
@@ -356,6 +356,227 @@ describe('Request registration (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
         .expect(400);
       expect(repository.list).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /requests/:id (detail, HU-13)', () => {
+    const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const detailPath = (id: string) => `${REQUESTS_PATH}/${id}`;
+    const detail = {
+      id: REQUEST_ID,
+      trackingCode: 'SOL-2026-00001',
+      status: 'RECIBIDA',
+      deliveryMode: 'PRESENCIAL',
+      originChannel: 'WEB',
+      reason: 'Investigación',
+      requirementDescription: 'Actas',
+      desiredDate: new Date('2026-12-01T00:00:00.000Z'),
+      committedDate: null,
+      registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+      rejectionReason: null,
+      requester: {
+        firstName: 'Juan',
+        middleName: null,
+        lastName: 'Pérez',
+        secondLastName: null,
+        email: 'juan@mail.com',
+        phone: null,
+        requesterType: 'INVESTIGADOR',
+        institution: null,
+        documentType: null,
+        documentNumber: null,
+      },
+      materials: [],
+    };
+
+    beforeEach(() => {
+      repository.findById.mockReset();
+      repository.findById.mockResolvedValue(detail);
+    });
+
+    it('rejects a request without an access token with 401', async () => {
+      await request(server).get(detailPath(REQUEST_ID)).expect(401);
+    });
+
+    it('rejects a PUBLICO user with 403 and does not query', async () => {
+      await request(server)
+        .get(detailPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(403);
+      expect(repository.findById).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s see the detail of a request',
+      async (role) => {
+        const response = await request(server)
+          .get(detailPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken(role)}`)
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          id: REQUEST_ID,
+          trackingCode: 'SOL-2026-00001',
+          status: 'RECIBIDA',
+          desiredDate: '2026-12-01',
+          requester: { name: 'Juan Pérez', email: 'juan@mail.com' },
+        });
+      },
+    );
+
+    it('rejects an id that is not a UUID with 400', async () => {
+      await request(server)
+        .get(detailPath('no-es-uuid'))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(400);
+      expect(repository.findById).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 when the request does not exist', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      const response = await request(server)
+        .get(detailPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REQUEST_NOT_FOUND');
+    });
+  });
+
+  describe('GET /requests/mine (my requests, HU-11)', () => {
+    it('rejects a request without an access token with 401', async () => {
+      await request(server).get(MINE_PATH).expect(401);
+      expect(repository.listByRequesterUser).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'rejects a %s user with 403 and does not query',
+      async (role) => {
+        const response = await request(server)
+          .get(MINE_PATH)
+          .set('Authorization', `Bearer ${accessToken(role)}`)
+          .expect(403);
+
+        expect(response.body as ErrorBody).toMatchObject({
+          statusCode: 403,
+          code: 'FORBIDDEN',
+        });
+        expect(repository.listByRequesterUser).not.toHaveBeenCalled();
+      },
+    );
+
+    it('lets a PUBLICO user list with the default order and page', async () => {
+      await request(server)
+        .get(MINE_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(200, { items: [], page: 1, limit: 20, total: 0 });
+
+      expect(repository.listByRequesterUser).toHaveBeenCalledWith('user-1', {
+        status: undefined,
+        sort: 'registeredAt',
+        order: 'desc',
+        page: 1,
+        limit: 20,
+      });
+      // "mine" is its own route, not the staff list
+      expect(repository.list).not.toHaveBeenCalled();
+    });
+
+    it('only asks for the requests of the user in the token', async () => {
+      await request(server)
+        .get(MINE_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO', 'user-2')}`)
+        .expect(200);
+
+      expect(repository.listByRequesterUser).toHaveBeenCalledTimes(1);
+      expect(repository.listByRequesterUser).toHaveBeenCalledWith(
+        'user-2',
+        expect.anything(),
+      );
+    });
+
+    it('passes the status filter, the order and the page', async () => {
+      await request(server)
+        .get(MINE_PATH)
+        .query({
+          status: 'AGENDADA',
+          sort: 'desiredDate',
+          order: 'asc',
+          page: 2,
+          limit: 5,
+        })
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(200);
+
+      expect(repository.listByRequesterUser).toHaveBeenCalledWith('user-1', {
+        status: 'AGENDADA',
+        sort: 'desiredDate',
+        order: 'asc',
+        page: 2,
+        limit: 5,
+      });
+    });
+
+    it('returns tracking code, registration date and status, without the requester data', async () => {
+      repository.listByRequesterUser.mockResolvedValueOnce({
+        items: [
+          {
+            id: 'request-1',
+            trackingCode: 'SOL-2026-00001',
+            status: 'AGENDADA',
+            deliveryMode: 'PRESENCIAL',
+            desiredDate: new Date('2026-12-01T00:00:00.000Z'),
+            registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+            requester: {
+              firstName: 'Ana',
+              middleName: null,
+              lastName: 'Pérez',
+              secondLastName: null,
+              email: 'ana@mail.com',
+            },
+            materials: [
+              { id: 'material-1', catalogCode: 'TH-DOC-0001', title: 'Acta' },
+            ],
+          },
+        ],
+        total: 1,
+      });
+
+      const response = await request(server)
+        .get(MINE_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(200);
+
+      const body = response.body as { items: Record<string, unknown>[] };
+      expect(body.items[0]).toEqual({
+        id: 'request-1',
+        trackingCode: 'SOL-2026-00001',
+        status: 'AGENDADA',
+        deliveryMode: 'PRESENCIAL',
+        desiredDate: '2026-12-01',
+        registeredAt: '2026-11-10T15:00:00.000Z',
+        materials: [
+          { id: 'material-1', catalogCode: 'TH-DOC-0001', title: 'Acta' },
+        ],
+      });
+    });
+
+    it.each([
+      { status: 'ROTA' },
+      { sort: 'status' },
+      { limit: 1000 },
+      // Staff filters do not apply to my own requests
+      { requester: 'juan' },
+      { material: 'cabildo' },
+      { desiredFrom: '2026-12-01' },
+    ])('rejects invalid parameters %j with 400', async (query) => {
+      await request(server)
+        .get(MINE_PATH)
+        .query(query)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .expect(400);
+      expect(repository.listByRequesterUser).not.toHaveBeenCalled();
     });
   });
 });

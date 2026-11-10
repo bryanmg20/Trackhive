@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
   CreatedRequest,
+  MyRequestListCriteria,
+  RequestDetail,
   RequestListCriteria,
   RequestListResult,
   RequesterProfile,
@@ -104,8 +106,25 @@ export class PrismaRequestRepository implements RequestRepository {
   }
 
   async list(criteria: RequestListCriteria): Promise<RequestListResult> {
-    const where = this.buildListWhere(criteria);
+    return this.findPage(this.buildListWhere(criteria), criteria);
+  }
 
+  async listByRequesterUser(
+    userId: string,
+    criteria: MyRequestListCriteria,
+  ): Promise<RequestListResult> {
+    // Filter by the account linked to the requester, never by the email: a
+    // visitor's requester can share an email without being this user (HU-11)
+    return this.findPage(
+      { AND: [{ requester: { userId } }, this.buildListWhere(criteria)] },
+      criteria,
+    );
+  }
+
+  private async findPage(
+    where: Prisma.RequestModelWhereInput,
+    criteria: Pick<RequestListCriteria, 'sort' | 'order' | 'page' | 'limit'>,
+  ): Promise<RequestListResult> {
     // Same filter for the page and the total, in one transaction
     const [models, total] = await this.prisma.$transaction([
       this.prisma.requestModel.findMany({
@@ -151,6 +170,63 @@ export class PrismaRequestRepository implements RequestRepository {
         };
       }),
       total,
+    };
+  }
+
+  async findById(id: string): Promise<RequestDetail | null> {
+    const model = await this.prisma.requestModel.findUnique({
+      where: { id },
+      include: {
+        requester: true,
+        items: { include: { material: true } },
+      },
+    });
+    if (!model) {
+      return null;
+    }
+    if (!isRequestStatus(model.status) || !isDeliveryMode(model.deliveryMode)) {
+      throw new Error(`Request ${model.id} has an invalid stored value`);
+    }
+
+    return {
+      id: model.id,
+      trackingCode: model.trackingCode,
+      status: model.status,
+      deliveryMode: model.deliveryMode,
+      originChannel: model.originChannel,
+      reason: model.reason,
+      requirementDescription: model.requirementDescription,
+      desiredDate: model.desiredDate,
+      committedDate: model.committedDate,
+      registeredAt: model.registeredAt,
+      rejectionReason: model.rejectionReason,
+      requester: {
+        firstName: model.requester.firstName,
+        middleName: model.requester.middleName,
+        lastName: model.requester.lastName,
+        secondLastName: model.requester.secondLastName,
+        email: model.requester.email,
+        phone: model.requester.phone,
+        requesterType: model.requester.requesterType,
+        institution: model.requester.institution,
+        documentType: model.requester.documentType,
+        documentNumber: model.requester.documentNumber,
+      },
+      materials: model.items.map(({ material, itemStatus }) => ({
+        id: material.id,
+        catalogCode: material.catalogCode,
+        title: material.title,
+        materialType: material.materialType,
+        author: material.author,
+        collection: material.collection,
+        status: material.status,
+        location: {
+          depot: material.depot,
+          shelf: material.shelf,
+          box: material.box,
+        },
+        itemStatus,
+      })),
     };
   }
 

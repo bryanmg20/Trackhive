@@ -166,7 +166,8 @@ export function NewRequestPage() {
             {trackingCode ? (
               <p className={styles.success} role="status">
                 Solicitud recibida. Código de seguimiento:{' '}
-                <strong>{trackingCode}</strong>
+                <strong>{trackingCode}</strong>.{' '}
+                <Link to={ROUTES.myRequests}>Ver mis solicitudes</Link>
               </p>
             ) : null}
 

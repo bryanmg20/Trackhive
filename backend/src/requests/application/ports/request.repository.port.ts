@@ -46,6 +46,12 @@ export interface RequestListCriteria {
   limit: number;
 }
 
+/** «Mis solicitudes» (HU-11): only the status filter, the order and the page. */
+export type MyRequestListCriteria = Pick<
+  RequestListCriteria,
+  'status' | 'sort' | 'order' | 'page' | 'limit'
+>;
+
 export interface RequestListItem {
   id: string;
   trackingCode: string;
@@ -68,6 +74,43 @@ export interface RequestListResult {
   total: number;
 }
 
+export interface RequestDetail {
+  id: string;
+  trackingCode: string;
+  status: RequestStatus;
+  deliveryMode: DeliveryMode;
+  originChannel: string;
+  reason: string | null;
+  requirementDescription: string;
+  desiredDate: Date;
+  committedDate: Date | null;
+  registeredAt: Date;
+  rejectionReason: string | null;
+  requester: {
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+    email: string | null;
+    phone: string | null;
+    requesterType: string;
+    institution: string | null;
+    documentType: string | null;
+    documentNumber: string | null;
+  };
+  materials: {
+    id: string;
+    catalogCode: string;
+    title: string;
+    materialType: string;
+    author: string | null;
+    collection: string;
+    status: string;
+    location: { depot: string; shelf: string; box: string };
+    itemStatus: string;
+  }[];
+}
+
 export interface RequestRepository {
   create(
     input: CreateRequestInput & { createdById: string },
@@ -80,4 +123,14 @@ export interface RequestRepository {
   findRequesterByEmail(email: string): Promise<RequesterProfile | null>;
 
   list(criteria: RequestListCriteria): Promise<RequestListResult>;
+
+  findById(id: string): Promise<RequestDetail | null>;
+  /**
+   * Only the requests whose requester is linked to this user account: the
+   * ones the user radicated and the ones the staff registered for them.
+   */
+  listByRequesterUser(
+    userId: string,
+    criteria: MyRequestListCriteria,
+  ): Promise<RequestListResult>;
 }

@@ -414,5 +414,132 @@ describe('PrismaRequestRepository', () => {
         },
       });
     });
+
+    describe('listByRequesterUser (HU-11)', () => {
+      it("only counts and pages the requests of the user's requester", async () => {
+        const prisma = buildListPrisma();
+
+        const result = await new PrismaRequestRepository(
+          prisma as unknown as PrismaService,
+        ).listByRequesterUser('user-1', baseCriteria);
+
+        const where = { AND: [{ requester: { userId: 'user-1' } }, {}] };
+        expect(prisma.requestModel.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where,
+            orderBy: [{ registeredAt: 'desc' }, { id: 'asc' }],
+            skip: 20,
+            take: 10,
+          }),
+        );
+        expect(prisma.requestModel.count).toHaveBeenCalledWith({ where });
+        expect(result.total).toBe(1);
+        expect(result.items[0]).toMatchObject({
+          trackingCode: 'SOL-2026-00001',
+          status: 'RECIBIDA',
+        });
+      });
+
+      it('keeps the user condition when filtering by status', async () => {
+        const prisma = buildListPrisma();
+
+        await new PrismaRequestRepository(
+          prisma as unknown as PrismaService,
+        ).listByRequesterUser('user-1', {
+          ...baseCriteria,
+          status: 'AGENDADA',
+        });
+
+        expect(prisma.requestModel.count).toHaveBeenCalledWith({
+          where: {
+            AND: [
+              { requester: { userId: 'user-1' } },
+              { AND: [{ status: 'AGENDADA' }] },
+            ],
+          },
+        });
+      });
+    });
+  });
+
+  describe('findById (HU-13)', () => {
+    const model = {
+      id: 'request-1',
+      trackingCode: 'SOL-2026-00001',
+      status: 'AGENDADA',
+      deliveryMode: 'PRESENCIAL',
+      originChannel: 'WEB',
+      reason: 'Investigación',
+      requirementDescription: 'Actas',
+      desiredDate: new Date('2026-12-01T00:00:00.000Z'),
+      committedDate: null,
+      registeredAt: new Date('2026-11-10T15:00:00.000Z'),
+      rejectionReason: null,
+      requester: {
+        firstName: 'Juan',
+        middleName: null,
+        lastName: 'Pérez',
+        secondLastName: null,
+        email: 'juan@mail.com',
+        phone: null,
+        requesterType: 'INVESTIGADOR',
+        institution: null,
+        documentType: null,
+        documentNumber: null,
+      },
+      items: [
+        {
+          itemStatus: 'LOCALIZADO',
+          material: {
+            id: 'material-1',
+            catalogCode: 'TH-DOC-0001',
+            title: 'Acta',
+            materialType: 'DOCUMENTO',
+            author: null,
+            collection: 'Actas del Cabildo',
+            status: 'DISPONIBLE',
+            depot: 'D-01',
+            shelf: 'E-01',
+            box: 'C-001',
+          },
+        },
+      ],
+    };
+
+    const repositoryWith = (found: unknown) => {
+      const findUnique = jest.fn().mockResolvedValue(found);
+      const repository = new PrismaRequestRepository({
+        requestModel: { findUnique },
+      } as unknown as PrismaService);
+      return { repository, findUnique };
+    };
+
+    it('loads the request with its requester and materials', async () => {
+      const { repository, findUnique } = repositoryWith(model);
+
+      const detail = await repository.findById('request-1');
+
+      expect(findUnique).toHaveBeenCalledWith({
+        where: { id: 'request-1' },
+        include: { requester: true, items: { include: { material: true } } },
+      });
+      expect(detail).toMatchObject({
+        trackingCode: 'SOL-2026-00001',
+        requester: { firstName: 'Juan', email: 'juan@mail.com' },
+        materials: [
+          {
+            catalogCode: 'TH-DOC-0001',
+            location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
+            itemStatus: 'LOCALIZADO',
+          },
+        ],
+      });
+    });
+
+    it('returns null when the request does not exist', async () => {
+      const { repository } = repositoryWith(null);
+
+      expect(await repository.findById('missing')).toBeNull();
+    });
   });
 });

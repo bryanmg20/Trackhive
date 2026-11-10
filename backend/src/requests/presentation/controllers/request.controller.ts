@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -8,6 +16,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -17,11 +26,16 @@ import type { AuthenticatedUser } from '../../../auth/presentation/guards/authen
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
 import { CreateRequestOnBehalfDto } from '../../application/dto/create-request-on-behalf.dto';
 import { CreateRequestDto } from '../../application/dto/create-request.dto';
+import { ListMyRequestsQueryDto } from '../../application/dto/list-my-requests-query.dto';
 import { ListRequestsQueryDto } from '../../application/dto/list-requests-query.dto';
+import { PaginatedMyRequestsResponseDto } from '../../application/dto/my-request-list-response.dto';
+import { RequestDetailResponseDto } from '../../application/dto/request-detail-response.dto';
 import { PaginatedRequestsResponseDto } from '../../application/dto/request-list-response.dto';
 import { CreateRequestResponseDto } from '../../application/dto/create-request-response.dto';
 import { CreateRequestOnBehalfUseCase } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from '../../application/use-cases/create-request.use-case';
+import { GetRequestDetailUseCase } from '../../application/use-cases/get-request-detail.use-case';
+import { ListMyRequestsUseCase } from '../../application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from '../../application/use-cases/list-requests.use-case';
 
 @ApiTags('Requests')
@@ -32,6 +46,8 @@ export class RequestController {
     private readonly createRequestUseCase: CreateRequestUseCase,
     private readonly createRequestOnBehalfUseCase: CreateRequestOnBehalfUseCase,
     private readonly listRequestsUseCase: ListRequestsUseCase,
+    private readonly getRequestDetailUseCase: GetRequestDetailUseCase,
+    private readonly listMyRequestsUseCase: ListMyRequestsUseCase,
   ) {}
 
   @Get()
@@ -67,6 +83,85 @@ export class RequestController {
     @Query() query: ListRequestsQueryDto,
   ): Promise<PaginatedRequestsResponseDto> {
     return this.listRequestsUseCase.execute(query);
+  }
+
+  // Must stay above @Get(':id'): Express matches routes in declaration order,
+  // so below it "mine" would reach the detail endpoint as an id (HU-11)
+  @Get('mine')
+  @Roles('PUBLICO')
+  @ApiOperation({
+    summary: 'Lista mis solicitudes',
+    description:
+      'Devuelve solo las solicitudes del usuario público que inicia sesión ' +
+      '(las que radicó y las que el personal registró a su nombre), ' +
+      'paginadas, con filtro por estado y ordenamiento por fecha de ' +
+      'radicación o fecha deseada. Solo para PUBLICO.',
+  })
+  @ApiOkResponse({
+    description: 'Página de mis solicitudes',
+    type: PaginatedMyRequestsResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Parámetros de búsqueda inválidos o no permitidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo un usuario público puede consultar sus solicitudes',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  listMine(
+    @Query() query: ListMyRequestsQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PaginatedMyRequestsResponseDto> {
+    return this.listMyRequestsUseCase.execute(query, user.id);
+  }
+
+  @Get(':id')
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Detalle de una solicitud',
+    description:
+      'Devuelve la solicitud completa: datos del solicitante, material ' +
+      'pedido con su ubicación, motivo, fecha deseada y estado actual. ' +
+      'Solo para PERSONAL y ADMIN.',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
+  @ApiOkResponse({
+    description: 'Detalle de la solicitud',
+    type: RequestDetailResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El identificador no es un UUID',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden ver una solicitud',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La solicitud no existe',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  detail(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<RequestDetailResponseDto> {
+    return this.getRequestDetailUseCase.execute(id);
   }
 
   @Post()
