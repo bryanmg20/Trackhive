@@ -20,8 +20,9 @@ const ACCESS_DENIED_MESSAGE =
 
 const HOME_BY_ROLE: Record<UserRole, string> = {
   PUBLICO: ROUTES.materials,
-  PERSONAL: ROUTES.requests,
-  ADMIN: ROUTES.requests,
+  // Until the request list (HU-12) exists, the staff starts at the material list
+  PERSONAL: ROUTES.staffMaterials,
+  ADMIN: ROUTES.staffMaterials,
 };
 
 interface LoginLocationState {
@@ -99,7 +100,9 @@ export function LoginPage() {
       <header className={styles.header}>
         <p className={styles.eyebrow}>Acceso</p>
         <h1 className={styles.title}>Inicie sesión</h1>
-        <p className={styles.lede}>Use el correo y la contraseña de su cuenta.</p>
+        <p className={styles.lede}>
+          Use el correo y la contraseña de su cuenta.
+        </p>
       </header>
 
       {registeredEmail && !formError ? (
