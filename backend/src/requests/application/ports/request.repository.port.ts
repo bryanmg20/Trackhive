@@ -2,6 +2,7 @@ import type { NotificationDraft } from '../../../notifications/domain/notificati
 import type { AppointmentStatus } from '../../domain/appointment-status';
 import type { DeliveryMode } from '../../domain/delivery-mode';
 import type { Request } from '../../domain/entities/request.entity';
+import type { MaterialAvailability } from '../../domain/material-availability';
 import type { RequestStatus } from '../../domain/request-status';
 import type { StatusChange } from '../../domain/status-change';
 import type { CreateRequestInput } from '../use-cases/create-request.use-case';
@@ -267,6 +268,16 @@ export interface RequestRepository {
   ): Promise<RequestNotificationContext | null>;
 
   /**
+   * Every material of the request with its status and, if any, the tracking
+   * code of another request whose appointment takes it on `date` (UTC
+   * midnight), to check the double bookings before scheduling (HU-20).
+   */
+  findMaterialAvailability(
+    requestId: string,
+    date: Date,
+  ): Promise<MaterialAvailability[]>;
+
+  /**
    * Saves the new status and inserts its row in status_history in one
    * transaction (D-08). In the same transaction it queues `notification`,
    * the email to the requester, in the outbox (HU-23, D-10); null when the
@@ -283,7 +294,10 @@ export interface RequestRepository {
    * Schedules an appointment (HU-18) in one transaction: saves the change to
    * AGENDADA with its row in status_history and its email, like
    * saveStatusChange, and creates the appointment for `date` with the
-   * requester and every material of the request.
+   * requester and every material of the request. Throws
+   * MaterialUnavailableError when the database refuses to book a material
+   * that someone else booked for that day in the meantime (HU-20, D-09), and
+   * then nothing is saved or queued.
    */
   saveAppointment(
     change: StatusChange,

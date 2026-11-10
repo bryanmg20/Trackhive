@@ -50,6 +50,8 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   REJECTION_REASON_REQUIRED: HttpStatus.BAD_REQUEST,
   INVALID_STATUS_TRANSITION: HttpStatus.CONFLICT,
   REQUEST_STATUS_CONFLICT: HttpStatus.CONFLICT,
+  // HU-20: a material is already booked that day or cannot be consulted
+  MATERIAL_UNAVAILABLE: HttpStatus.CONFLICT,
   USER_NOT_FOUND: HttpStatus.NOT_FOUND,
   INVALID_DESIRED_DATE: HttpStatus.BAD_REQUEST,
   INVALID_APPOINTMENT_DATE: HttpStatus.BAD_REQUEST,

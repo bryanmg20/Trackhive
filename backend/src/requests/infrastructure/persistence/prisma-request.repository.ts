@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { isMaterialStatus } from '../../../materials/domain/material-status';
 import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
@@ -25,7 +26,12 @@ import type {
 import { isAppointmentStatus } from '../../domain/appointment-status';
 import { isDeliveryMode } from '../../domain/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
+import { MaterialUnavailableError } from '../../domain/errors/material-unavailable.error';
 import { isRequestStatus } from '../../domain/request-status';
+import {
+  BOOKING_APPOINTMENT_STATUSES,
+  type MaterialAvailability,
+} from '../../domain/material-availability';
 import type { StatusChange } from '../../domain/status-change';
 import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
@@ -383,6 +389,53 @@ export class PrismaRequestRepository implements RequestRepository {
     };
   }
 
+  async findMaterialAvailability(
+    requestId: string,
+    date: Date,
+  ): Promise<MaterialAvailability[]> {
+    const items = await this.prisma.requestItemModel.findMany({
+      where: { requestId },
+      orderBy: { material: { catalogCode: 'asc' } },
+      select: {
+        material: {
+          select: {
+            id: true,
+            catalogCode: true,
+            title: true,
+            status: true,
+            appointments: {
+              where: {
+                appointmentDate: date,
+                appointmentStatus: { in: [...BOOKING_APPOINTMENT_STATUSES] },
+                appointment: { requestId: { not: requestId } },
+              },
+              take: 1,
+              orderBy: { appointment: { createdAt: 'asc' } },
+              select: {
+                appointment: {
+                  select: { request: { select: { trackingCode: true } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return items.map(({ material }) => {
+      if (!isMaterialStatus(material.status)) {
+        throw new Error(`Material ${material.id} has an invalid stored status`);
+      }
+      return {
+        catalogCode: material.catalogCode,
+        title: material.title,
+        status: material.status,
+        bookedBy:
+          material.appointments[0]?.appointment.request.trackingCode ?? null,
+      };
+    });
+  }
+
   async saveStatusChange(
     change: StatusChange,
     notification: NotificationDraft | null,
@@ -413,66 +466,78 @@ export class PrismaRequestRepository implements RequestRepository {
   ): Promise<SavedAppointment> {
     // The change to AGENDADA, its history row, its email and the appointment
     // are saved together or not at all
-    return this.prisma.$transaction(async (tx) => {
-      const statusChange = await this.applyStatusChange(
-        tx,
-        change,
-        notification,
-      );
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const statusChange = await this.applyStatusChange(
+          tx,
+          change,
+          notification,
+        );
 
-      const request = await tx.requestModel.findUniqueOrThrow({
-        where: { id: change.requestId },
-        select: {
-          requesterId: true,
-          items: { select: { materialId: true } },
-        },
-      });
-
-      const appointment = await tx.appointmentModel.create({
-        data: {
-          id: randomUUID(),
-          requestId: change.requestId,
-          requesterId: request.requesterId,
-          scheduledById: change.changedBy,
-          appointmentDate: date,
-          status: 'PROGRAMADA',
-          // Every material of the request (HU-18)
-          materials: {
-            create: request.items.map(({ materialId }) => ({ materialId })),
+        const request = await tx.requestModel.findUniqueOrThrow({
+          where: { id: change.requestId },
+          select: {
+            requesterId: true,
+            items: { select: { materialId: true } },
           },
-        },
-        select: {
-          id: true,
-          appointmentDate: true,
-          requester: {
-            select: {
-              id: true,
-              firstName: true,
-              middleName: true,
-              lastName: true,
-              secondLastName: true,
+        });
+
+        const appointment = await tx.appointmentModel.create({
+          data: {
+            id: randomUUID(),
+            requestId: change.requestId,
+            requesterId: request.requesterId,
+            scheduledById: change.changedBy,
+            appointmentDate: date,
+            status: 'PROGRAMADA',
+            // Every material of the request (HU-18)
+            materials: {
+              create: request.items.map(({ materialId }) => ({ materialId })),
             },
           },
-          materials: {
-            select: {
-              material: {
-                select: { id: true, catalogCode: true, title: true },
+          select: {
+            id: true,
+            appointmentDate: true,
+            requester: {
+              select: {
+                id: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                secondLastName: true,
               },
             },
-            orderBy: { material: { catalogCode: 'asc' } },
+            materials: {
+              select: {
+                material: {
+                  select: { id: true, catalogCode: true, title: true },
+                },
+              },
+              orderBy: { material: { catalogCode: 'asc' } },
+            },
           },
-        },
-      });
+        });
 
-      return {
-        id: appointment.id,
-        date: appointment.appointmentDate,
-        status: 'PROGRAMADA',
-        requester: appointment.requester,
-        materials: appointment.materials.map(({ material }) => material),
-        statusChange,
-      };
-    });
+        return {
+          id: appointment.id,
+          date: appointment.appointmentDate,
+          status: 'PROGRAMADA',
+          requester: appointment.requester,
+          materials: appointment.materials.map(({ material }) => material),
+          statusChange,
+        };
+      });
+    } catch (error) {
+      // The partial unique index (material_id, appointment_date) protects
+      // against two staff members booking the same material at the same time (D-09)
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw MaterialUnavailableError.concurrentBooking();
+      }
+      throw error;
+    }
   }
 
   /**

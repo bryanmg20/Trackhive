@@ -92,6 +92,8 @@ describe('Status change emails (e2e)', () => {
         new Request({ id: REQUEST_ID, status, deliveryMode: 'PRESENCIAL' }),
       ),
     ),
+    // HU-20: every material is free on the day of the appointment
+    findMaterialAvailability: jest.fn(() => Promise.resolve([])),
     findNotificationContext: jest.fn(() => Promise.resolve(CONTEXT)),
     saveStatusChange: jest.fn(
       (change: StatusChange, email: NotificationDraft | null) =>

@@ -1,7 +1,9 @@
+import { Prisma } from '@prisma/client';
 import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { RequesterInput } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { Request } from '../../domain/entities/request.entity';
+import { MaterialUnavailableError } from '../../domain/errors/material-unavailable.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import type { StatusChange } from '../../domain/status-change';
 import { PrismaRequestRepository } from './prisma-request.repository';
@@ -1102,6 +1104,126 @@ describe('PrismaRequestRepository', () => {
       expect(tx.statusHistoryModel.create).not.toHaveBeenCalled();
       expect(tx.appointmentModel.create).not.toHaveBeenCalled();
       expect(tx.notificationModel.create).not.toHaveBeenCalled();
+    });
+
+    it('translates a P2002 race on appointment_materials to MaterialUnavailableError (HU-20, D-09)', async () => {
+      const { tx, repository } = buildTransaction();
+      tx.appointmentModel.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on appointment_materials_material_day_key',
+          { code: 'P2002', clientVersion: '6.19.3' },
+        ),
+      );
+
+      await expect(
+        repository.saveAppointment(CHANGE, DATE, null),
+      ).rejects.toThrow(MaterialUnavailableError);
+    });
+
+    it('rethrows any non-P2002 error from the transaction', async () => {
+      const { tx, repository } = buildTransaction();
+      tx.appointmentModel.create.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        repository.saveAppointment(CHANGE, DATE, null),
+      ).rejects.toThrow('db down');
+    });
+  });
+
+  describe('findMaterialAvailability (HU-20)', () => {
+    const DATE = new Date('2026-11-20T00:00:00.000Z');
+
+    it('loads the materials of the request and the other request that books each one that day', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        {
+          material: {
+            id: 'material-1',
+            catalogCode: 'AHB-001',
+            title: 'Actas de 1890',
+            status: 'DISPONIBLE',
+            appointments: [
+              {
+                appointment: {
+                  request: { trackingCode: 'SOL-2026-00012' },
+                },
+              },
+            ],
+          },
+        },
+        {
+          material: {
+            id: 'material-2',
+            catalogCode: 'AHB-002',
+            title: 'El Heraldo, 1935',
+            status: 'EN_RESTAURACION',
+            appointments: [],
+          },
+        },
+      ]);
+      const repository = new PrismaRequestRepository({
+        requestItemModel: { findMany },
+      } as unknown as PrismaService);
+
+      const availability = await repository.findMaterialAvailability(
+        'request-1',
+        DATE,
+      );
+
+      expect(availability).toEqual([
+        {
+          catalogCode: 'AHB-001',
+          title: 'Actas de 1890',
+          status: 'DISPONIBLE',
+          bookedBy: 'SOL-2026-00012',
+        },
+        {
+          catalogCode: 'AHB-002',
+          title: 'El Heraldo, 1935',
+          status: 'EN_RESTAURACION',
+          bookedBy: null,
+        },
+      ]);
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { requestId: 'request-1' },
+          orderBy: { material: { catalogCode: 'asc' } },
+          select: {
+            material: {
+              select: expect.objectContaining({
+                appointments: expect.objectContaining({
+                  where: {
+                    appointmentDate: DATE,
+                    appointmentStatus: { in: ['PROGRAMADA', 'CUMPLIDA'] },
+                    appointment: { requestId: { not: 'request-1' } },
+                  },
+                }) as unknown,
+              }) as unknown,
+            },
+          },
+        }),
+      );
+    });
+
+    it('fails loudly when the stored material status is not valid', async () => {
+      const repository = new PrismaRequestRepository({
+        requestItemModel: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              material: {
+                id: 'material-1',
+                catalogCode: 'AHB-001',
+                title: 'Actas de 1890',
+                status: 'ROTO',
+                appointments: [],
+              },
+            },
+          ]),
+        },
+      } as unknown as PrismaService);
+
+      await expect(
+        repository.findMaterialAvailability('request-1', DATE),
+      ).rejects.toThrow('invalid stored status');
     });
   });
 

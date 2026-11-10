@@ -44,13 +44,8 @@ classDiagram
     }
     class Cita {
         <<AggregateRoot>>
-        +FranjaHoraria franja
+        +DiaCita dia
         +EstadoCita estado
-    }
-    class ReservaMaterial {
-        <<Entity>>
-        +FranjaHoraria periodo
-        +bool activa
     }
     class Notificacion {
         <<AggregateRoot>>
@@ -70,8 +65,7 @@ classDiagram
     ItemSolicitud "0..*" --> "1" Material : pide
     Solicitud "1" *-- "1..*" CambioEstado : historial
     Solicitud "1" <-- "0..*" Cita : agenda
-    Cita "1" *-- "0..*" ReservaMaterial : reservas
-    ReservaMaterial "0..*" --> "1" Material : bloquea
+    Cita "0..*" --> "1..*" Material : reserva por día
     Usuario "1" <-- "0..*" Solicitud : registra / atiende
     Usuario "1" <-- "0..*" CambioEstado : ejecuta
     Usuario "0..1" <-- "0..1" Solicitante : cuenta
@@ -85,7 +79,7 @@ Notación: `<<AggregateRoot>>` es la raíz de un agregado (se guarda completa) y
 | **Solicitud** | Pedido de consulta, búsqueda o copia, identificado por un radicado. Contiene sus **ítems** (materiales pedidos y el resultado de buscarlos) y su **historial** de cambios de estado. | `requests`, `request_items`, `status_history` |
 | **Solicitante** | Persona que pide. Puede no tener cuenta, si la solicitud la registró el personal. | `requesters` |
 | **Material** | Pieza del acervo (documento, expediente, periódico, fotografía…) con ubicación física y estado de conservación. | `materials` |
-| **Cita** | Franja para consultar el material en la sala. Contiene las **reservas** de cada material físico. | `appointments`, `material_reservations` |
+| **Cita** | Día completo para consultar el material en la sala durante el horario de atención (HU-18). Reserva cada material de la solicitud para esa fecha (HU-20). | `appointments`, `appointment_materials` |
 | **Usuario** | Cuenta con rol `ADMIN`, `PERSONAL` o `PUBLICO`. | `users`, `refresh_tokens` |
 | **Notificación** | Correo que recibe el solicitante en cada cambio de estado. | `notifications` |
 | *(configuración)* | Horario de atención y cupos de la sala. | `service_hours` |
@@ -93,7 +87,7 @@ Notación: `<<AggregateRoot>>` es la raíz de un agregado (se guarda completa) y
 | Objeto de valor | Regla |
 |---|---|
 | `CodigoRadicado` | Formato `SOL-AAAA-NNNNN`. Lo genera el sistema y no cambia. |
-| `FranjaHoraria` | `fin > inicio`. Dos franjas chocan si `a.inicio < b.fin` y `b.inicio < a.fin`. |
+| `DiaCita` | Fecha de calendario (`YYYY-MM-DD`), sin hora, de lunes a sábado (el CLENA no atiende los domingos). Incluye el horario de atención del día (lunes a viernes 8:00–17:00, sábados 9:00–13:00). |
 | `Ubicacion` | Depósito, estantería y caja. |
 | `DocumentoIdentidad` | Tipo (CC, CE, TI, PAS, NIT) más número. Único por persona. |
 | `NombrePersona` | Primer nombre y primer apellido obligatorios; segundo nombre y segundo apellido opcionales. Máximo 40 caracteres cada uno. Igual en `Usuario` y `Solicitante`. |
@@ -148,23 +142,23 @@ stateDiagram-v2
 - Cualquier otra transición se rechaza (HTTP 409). `CERRADA` y `RECHAZADA` son estados finales.
 - Cada transición deja un **cambio de estado inmutable** (quién, cuándo y comentario) y genera una **notificación** al solicitante.
 
-### 1.4 Sin dobles reservas de material
+### 1.4 Sin dobles reservas de material por día
 
-Un material físico **no puede tener dos reservas activas con franjas que se solapen**. Se controla en tres niveles:
+Las citas son **por día completo, sin hora** (HU-18), así que un material físico **no puede tener más de una cita activa (`PROGRAMADA` o `CUMPLIDA`) en la misma fecha** (HU-20, D-09). Se controla en tres niveles:
 
-1. **Dominio:** `FranjaHoraria.seSolapaCon()` define qué es un choque.
-2. **Caso de uso `AgendarCita`:** antes de guardar, revisa las reservas existentes. Si hay choque, lanza `MaterialNoDisponible` (HTTP 409).
-3. **Base de datos:** `EXCLUDE USING gist (material_id WITH =, period WITH &&) WHERE (active)` frena las peticiones simultáneas.
+1. **Dominio:** `findMaterialConflicts()` (`requests/domain/material-availability.ts`) detecta si algún material de la solicitud ya está reservado ese día por otra solicitud o si su estado impide agendarlo.
+2. **Caso de uso `ScheduleAppointmentUseCase`:** antes de guardar, consulta la disponibilidad del día y lanza `MaterialUnavailableError` (`MATERIAL_UNAVAILABLE`, HTTP 409) indicando cada conflicto concreto (código, título y motivo o radicado que lo tiene reservado).
+3. **Base de datos:** `appointment_materials` copia la fecha y el estado de su cita mediante una FK compuesta con `ON UPDATE CASCADE`, y el índice único parcial `CREATE UNIQUE INDEX appointment_materials_material_day_key ON appointment_materials (material_id, appointment_date) WHERE appointment_status IN ('PROGRAMADA', 'CUMPLIDA')` frena las peticiones simultáneas.
 
 Además:
 
-- Solo se reserva el material de acceso físico.
-- No se reserva material restringido ni en estado `CRITICO`.
-- Cancelar la cita o registrar una inasistencia libera las reservas.
+- Solo se agendan solicitudes con entrega `PRESENCIAL`.
+- No se agenda material en estado `EN_RESTAURACION` ni `NO_CONSULTABLE`. El estado `EN_USO` no bloquea, porque solo aplica al día en que el material está en sala (HU-72).
+- Cancelar la cita (`CANCELADA`) o registrar una inasistencia (`NO_ASISTIO`, al volver la solicitud a `DISPONIBLE`) libera el día del material automáticamente gracias a `ON UPDATE CASCADE`.
 
 ### 1.5 Otras reglas
 
-- Las citas deben caer dentro del horario de atención y no pueden superar los cupos de la sala.
+- Las citas solo se agendan de lunes a sábado (los domingos no hay atención). El límite de citas por día según la capacidad de la sala se cubre en HU-20.1 (#74, Sprint 2).
 - Los datos de una solicitud solo se pueden editar mientras está en `RECIBIDA`.
 - Una solicitud está **vencida** si pasó su fecha compromiso y no está atendida, cerrada ni rechazada.
 - El usuario público solo ve sus propias solicitudes.
@@ -275,7 +269,7 @@ erDiagram
         timestamptz created_at
     }
     APPOINTMENTS {
-        uuid id PK
+        uuid id PK "UK con appointment_date y status"
         uuid request_id FK "IDX"
         uuid requester_id FK "IDX"
         uuid scheduled_by_id FK "IDX"
@@ -287,15 +281,9 @@ erDiagram
     }
     APPOINTMENT_MATERIALS {
         uuid appointment_id PK, FK
-        uuid material_id PK, FK "IDX"
-    }
-    MATERIAL_RESERVATIONS {
-        uuid id PK
-        uuid appointment_id FK "IDX"
-        uuid material_id FK "IDX GiST con period"
-        tstzrange period "EXCLUDE sin solapes"
-        boolean active
-        timestamptz created_at
+        uuid material_id PK, FK "IDX, UK parcial con appointment_date"
+        date appointment_date FK "UK parcial activa (HU-20)"
+        varchar(12) appointment_status FK "ON UPDATE CASCADE"
     }
     USERS {
         uuid id PK
@@ -325,8 +313,7 @@ erDiagram
         smallint weekday PK
         time opens_at
         time closes_at
-        smallint concurrent_slots
-        smallint appointment_duration_min
+        smallint daily_capacity
         boolean active
     }
     REQUESTERS ||--o{ REQUESTS : "realiza"
@@ -336,11 +323,9 @@ erDiagram
     STATUS_HISTORY |o--o| NOTIFICATIONS : "dispara"
     REQUESTS ||--o{ NOTIFICATIONS : "genera"
     REQUESTS ||--o{ APPOINTMENTS : "se agenda en"
-    APPOINTMENTS ||--o{ MATERIAL_RESERVATIONS : "bloquea"
-    APPOINTMENTS ||--|{ APPOINTMENT_MATERIALS : "incluye"
+    APPOINTMENTS ||--|{ APPOINTMENT_MATERIALS : "reserva por día"
     APPOINTMENT_MATERIALS }o--|| MATERIALS : "material"
     APPOINTMENTS }o--|| REQUESTERS : "para"
-    MATERIAL_RESERVATIONS }o--|| MATERIALS : "reserva"
     REQUESTS }o--|| USERS : "registrada por"
     REQUESTS }o--o| USERS : "atendida por"
     STATUS_HISTORY }o--|| USERS : "ejecutado por"
@@ -354,7 +339,7 @@ Decisiones principales:
 
 - Las enumeraciones son `varchar` con `CHECK`. Las PK son `uuid`, salvo el historial, que usa `bigint`.
 - `status_history` solo admite `INSERT` (un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`). Es la auditoría y la base del reporte de tiempos de atención.
-- `material_reservations.period` tiene una restricción `EXCLUDE USING gist`, así que la base de datos impide las dobles reservas.
+- `appointment_materials` tiene un índice único parcial sobre `(material_id, appointment_date) WHERE appointment_status IN ('PROGRAMADA', 'CUMPLIDA')` (D-09), así que la base de datos impide las dobles reservas del mismo material en un mismo día.
 - Ninguna FK borra en cascada. Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
 
 ## 3. Descripción de tablas
@@ -487,7 +472,7 @@ Creada en HU-18 (migración `20261112100000_create_appointments`). La cita es **
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| id | uuid | PK | |
+| id | uuid | PK, UK con appointment_date y status | La UK compuesta permite que `appointment_materials` sincronice fecha y estado con `ON UPDATE CASCADE` (HU-20) |
 | request_id | uuid | FK → requests, IDX | Solo una cita `PROGRAMADA` a la vez: agendar exige que la solicitud esté en `DISPONIBLE` (bloqueo optimista) |
 | requester_id | uuid | FK → requesters, IDX | Solicitante de la cita |
 | scheduled_by_id | uuid | FK → users, IDX | Quién la agendó |
@@ -497,22 +482,14 @@ Creada en HU-18 (migración `20261112100000_create_appointments`). La cita es **
 
 ### appointment_materials
 
-Creada en HU-18. Todos los materiales de la solicitud, copiados al agendar la cita.
+Creada en HU-18 y ampliada en HU-20 (migración `20261114000000_reserve_material_by_day`). Todos los materiales de la solicitud, reservados para el día de la cita. Copia `appointment_date` y `appointment_status` desde `appointments` mediante una FK compuesta con `ON UPDATE CASCADE`, de modo que el índice único parcial sobre `(material_id, appointment_date) WHERE appointment_status IN ('PROGRAMADA', 'CUMPLIDA')` impide las dobles reservas por día (D-09) y libera el material cuando la cita pasa a `CANCELADA` o `NO_ASISTIO`.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| appointment_id | uuid | PK con material_id, FK → appointments | |
-| material_id | uuid | FK → materials, IDX | Base para el control de dobles reservas por día (HU-20) |
-
-### material_reservations
-
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| id | uuid | PK | |
-| appointment_id | uuid | FK → appointments, IDX | |
-| material_id | uuid | FK → materials | |
-| period | tstzrange | EXCLUDE gist con material_id | Franja de la cita. **Impide las dobles reservas** |
-| active | boolean | DEFAULT true | `false` al cancelar la cita o si el solicitante no asiste |
+| appointment_id | uuid | PK con material_id, FK compuesta → appointments | |
+| material_id | uuid | PK con appointment_id, FK → materials, IDX, UK parcial con appointment_date | Impide reservar el mismo material dos veces el mismo día (HU-20) |
+| appointment_date | date | FK compuesta → appointments, UK parcial con material_id | Día reservado; mantenido por `ON UPDATE CASCADE` |
+| appointment_status | varchar(12) | FK compuesta → appointments | Estado de la cita; mantenido por `ON UPDATE CASCADE`. Solo `PROGRAMADA` y `CUMPLIDA` ocupan el día |
 
 ### notifications
 
@@ -536,12 +513,13 @@ Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla 
 
 ### service_hours
 
+Prevista para HU-20.1 (#74, Sprint 2).
+
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | weekday | smallint | PK, CHECK 1–7 | 1 = lunes |
 | opens_at, closes_at | time | CHECK closes_at > opens_at | |
-| concurrent_slots | smallint | CHECK > 0 | Citas a la misma hora |
-| appointment_duration_min | smallint | DEFAULT 60 | |
+| daily_capacity | smallint | CHECK > 0 | Límite de citas por día según la capacidad de la sala (HU-20.1) |
 | active | boolean | DEFAULT true | |
 
 ## 4. Índices
@@ -563,8 +541,8 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
 | status_history | (request_id, changed_at), user_id | Línea de tiempo y tiempos de atención |
 | appointments | appointment_date | Calendario por rango de fechas |
 | appointments | request_id, requester_id, scheduled_by_id | Citas de una solicitud, de un solicitante o de quien agendó |
-| appointment_materials | material_id | Citas de un material (dobles reservas, HU-20) |
-| material_reservations | GiST (material_id, period), appointment_id | Disponibilidad del material y liberar reservas |
+| appointment_materials | material_id | Citas de un material |
+| appointment_materials | (material_id, appointment_date) (UK parcial `WHERE appointment_status IN ('PROGRAMADA', 'CUMPLIDA')`) | Impedir dobles reservas de un material el mismo día (HU-20, D-09) |
 | notifications | (delivery_status, scheduled_at), request_id | Proceso de envío de correos |
 
 ## 5. Migraciones y datos semilla
@@ -572,9 +550,9 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
 - **Migraciones:**
   - Van en `backend/prisma/migrations/` (Prisma Migrate). En desarrollo se crean con `pnpm db:migrate:dev` y fuera de local se aplican con `pnpm db:migrate`.
   - `prisma db push` no se usa fuera del entorno local. Una migración que ya está en `main` no se edita: se crea otra.
-  - Lo que el esquema de Prisma no expresa (`CHECK`, `EXCLUDE`, índices trigram) se agrega a mano en el SQL, creando la migración con `--create-only`.
+  - Lo que el esquema de Prisma no expresa (`CHECK`, índices únicos parciales, índices trigram) se agrega a mano en el SQL, creando la migración con `--create-only`.
   - El contenedor del backend corre `pnpm db:migrate` al arrancar.
-  - Orden: extensiones → users y refresh_tokens → requesters → materials → requests y request_items → status_history → appointments y material_reservations → notifications → service_hours → vistas de reportes.
+  - Orden: extensiones → users y refresh_tokens → requesters → materials → requests y request_items → status_history → appointments y appointment_materials → notifications → service_hours → vistas de reportes.
 - **Semillas:**
   - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
   - Contenido actual: 1 admin, 2 funcionarios y 4 usuarios públicos.

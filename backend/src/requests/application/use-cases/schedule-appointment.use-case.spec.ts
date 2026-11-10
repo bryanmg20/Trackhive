@@ -3,8 +3,10 @@ import type { DeliveryMode } from '../../domain/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
 import { InvalidAppointmentDateError } from '../../domain/errors/invalid-appointment-date.error';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
+import { MaterialUnavailableError } from '../../domain/errors/material-unavailable.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
+import type { MaterialAvailability } from '../../domain/material-availability';
 import type { RequestStatus } from '../../domain/request-status';
 import type { StatusChange } from '../../domain/status-change';
 import type {
@@ -54,6 +56,10 @@ const savedFrom = (change: StatusChange, date: Date): SavedAppointment => ({
 
 describe('ScheduleAppointmentUseCase', () => {
   let findEntityById: jest.Mock<Promise<Request | null>, [string]>;
+  let findMaterialAvailability: jest.Mock<
+    Promise<MaterialAvailability[]>,
+    [string, Date]
+  >;
   let saveAppointment: jest.Mock<
     Promise<SavedAppointment>,
     [StatusChange, Date, NotificationDraft | null]
@@ -74,6 +80,25 @@ describe('ScheduleAppointmentUseCase', () => {
     findEntityById = jest.fn<Promise<Request | null>, [string]>(() =>
       Promise.resolve(buildRequest('DISPONIBLE')),
     );
+    findMaterialAvailability = jest.fn<
+      Promise<MaterialAvailability[]>,
+      [string, Date]
+    >(() =>
+      Promise.resolve([
+        {
+          catalogCode: 'AHB-001',
+          title: 'Actas de 1890',
+          status: 'DISPONIBLE',
+          bookedBy: null,
+        },
+        {
+          catalogCode: 'AHB-002',
+          title: 'El Heraldo, 1935',
+          status: 'DISPONIBLE',
+          bookedBy: null,
+        },
+      ]),
+    );
     saveAppointment = jest.fn<
       Promise<SavedAppointment>,
       [StatusChange, Date, NotificationDraft | null]
@@ -87,6 +112,7 @@ describe('ScheduleAppointmentUseCase', () => {
       findById: jest.fn(),
       listByRequesterUser: jest.fn(),
       findEntityById,
+      findMaterialAvailability,
       findNotificationContext: jest.fn(() => Promise.resolve(CONTEXT)),
       saveStatusChange: jest.fn(),
       saveAppointment,
@@ -222,5 +248,106 @@ describe('ScheduleAppointmentUseCase', () => {
     saveAppointment.mockRejectedValue(new RequestStatusConflictError());
 
     await expect(schedule()).rejects.toThrow(RequestStatusConflictError);
+  });
+
+  describe('material availability (HU-20)', () => {
+    it('rejects a double booking on the same day with the conflicting material and request, and saves nothing', async () => {
+      findMaterialAvailability.mockResolvedValue([
+        {
+          catalogCode: 'AHB-001',
+          title: 'Actas de 1890',
+          status: 'DISPONIBLE',
+          bookedBy: 'SOL-2026-00012',
+        },
+        {
+          catalogCode: 'AHB-002',
+          title: 'El Heraldo, 1935',
+          status: 'DISPONIBLE',
+          bookedBy: null,
+        },
+      ]);
+
+      await expect(schedule('2026-11-20')).rejects.toThrow(
+        new RegExp(
+          'No se puede agendar la cita del viernes 20/11/2026: ' +
+            'AHB-001 · Actas de 1890 ya tiene una cita ese día \\(solicitud SOL-2026-00012\\)\\.',
+        ),
+      );
+      expect(findMaterialAvailability).toHaveBeenCalledWith(
+        'request-1',
+        new Date('2026-11-20T00:00:00.000Z'),
+      );
+      expect(saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['EN_RESTAURACION', 'está en restauración'],
+      ['NO_CONSULTABLE', 'no es consultable'],
+    ] as const)(
+      'rejects a material in %s with a clear reason and saves nothing',
+      async (status, reasonText) => {
+        findMaterialAvailability.mockResolvedValue([
+          {
+            catalogCode: 'AHB-002',
+            title: 'El Heraldo, 1935',
+            status,
+            bookedBy: null,
+          },
+        ]);
+
+        await expect(schedule('2026-11-20')).rejects.toThrow(
+          `No se puede agendar la cita del viernes 20/11/2026: AHB-002 · El Heraldo, 1935 ${reasonText}.`,
+        );
+        expect(saveAppointment).not.toHaveBeenCalled();
+      },
+    );
+
+    it('lets a material EN_USO be scheduled: it only applies to its day in the room (HU-72)', async () => {
+      findMaterialAvailability.mockResolvedValue([
+        {
+          catalogCode: 'AHB-001',
+          title: 'Actas de 1890',
+          status: 'EN_USO',
+          bookedBy: null,
+        },
+      ]);
+
+      await expect(schedule('2026-11-20')).resolves.toMatchObject({
+        status: 'AGENDADA',
+      });
+      expect(saveAppointment).toHaveBeenCalledTimes(1);
+    });
+
+    it('lists every conflict in one message when more than one material fails', async () => {
+      findMaterialAvailability.mockResolvedValue([
+        {
+          catalogCode: 'AHB-001',
+          title: 'Actas de 1890',
+          status: 'DISPONIBLE',
+          bookedBy: 'SOL-2026-00012',
+        },
+        {
+          catalogCode: 'AHB-002',
+          title: 'El Heraldo, 1935',
+          status: 'EN_RESTAURACION',
+          bookedBy: null,
+        },
+      ]);
+
+      await expect(schedule('2026-11-20')).rejects.toThrow(
+        'No se puede agendar la cita del viernes 20/11/2026: ' +
+          'AHB-001 · Actas de 1890 ya tiene una cita ese día (solicitud SOL-2026-00012); ' +
+          'AHB-002 · El Heraldo, 1935 está en restauración.',
+      );
+      expect(saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it('lets the concurrent booking error of the repository through (D-09)', async () => {
+      saveAppointment.mockRejectedValue(
+        MaterialUnavailableError.concurrentBooking(),
+      );
+
+      await expect(schedule()).rejects.toThrow(MaterialUnavailableError);
+    });
   });
 });

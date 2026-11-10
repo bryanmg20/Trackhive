@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { toAppointmentDay } from '../../domain/appointment-date';
+import { MaterialUnavailableError } from '../../domain/errors/material-unavailable.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
+import { findMaterialConflicts } from '../../domain/material-availability';
 import { ScheduleAppointmentResponseDto } from '../dto/schedule-appointment-response.dto';
 import { buildStatusChangeEmail } from '../notifications/status-change-email';
 import type { RequestRepository } from '../ports/request.repository.port';
@@ -29,8 +31,10 @@ const fullName = (person: PersonName): string =>
 /**
  * «Agendar cita de consulta» (HU-18). The appointment is a whole day, without
  * a time, for the requester and every material of the request. The entity
- * only lets a presential DISPONIBLE request reach AGENDADA (HU-14). The email
- * to the requester is queued in the same transaction (HU-23).
+ * only lets a presential DISPONIBLE request reach AGENDADA (HU-14). A
+ * material cannot be booked twice on the same day, nor scheduled while in
+ * restoration or not consultable (HU-20). The email to the requester is
+ * queued in the same transaction (HU-23).
  */
 @Injectable()
 export class ScheduleAppointmentUseCase {
@@ -53,6 +57,15 @@ export class ScheduleAppointmentUseCase {
 
     // Throws InvalidStatusTransitionError (409) before anything is saved
     const change = request.scheduleAppointment(input.userId);
+
+    // HU-20: no material booked that day by another request, nor in
+    // restoration or not consultable. EN_USO does not block (HU-72)
+    const conflicts = findMaterialConflicts(
+      await this.repository.findMaterialAvailability(request.id, day.date),
+    );
+    if (conflicts.length > 0) {
+      throw MaterialUnavailableError.forConflicts(conflicts, day.date);
+    }
 
     // HU-23: the requester learns the day and the service hours by email
     const context = await this.repository.findNotificationContext(request.id);

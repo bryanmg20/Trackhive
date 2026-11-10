@@ -12,6 +12,7 @@ import { UserNotFoundError } from '../../users/domain/errors/user-not-found.erro
 import { InvalidEmailError } from '../../users/domain/errors/invalid-email.error';
 import { InvalidRequestStatusError } from '../../requests/domain/errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../../requests/domain/errors/invalid-status-transition.error';
+import { MaterialUnavailableError } from '../../requests/domain/errors/material-unavailable.error';
 import { RejectionReasonRequiredError } from '../../requests/domain/errors/rejection-reason-required.error';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
@@ -177,6 +178,33 @@ describe('AllExceptionsFilter', () => {
       statusCode: HttpStatus.CONFLICT,
       code: 'INVALID_STATUS_TRANSITION',
       message: 'No se puede pasar una solicitud de Recibida a Atendida',
+      path: '/api/v1/users',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps an unavailable material to 409 Conflict (HU-20)', () => {
+    run(
+      MaterialUnavailableError.forConflicts(
+        [
+          {
+            reason: 'BOOKED',
+            catalogCode: 'AHB-001',
+            title: 'Actas de 1890',
+            trackingCode: 'SOL-2026-00012',
+          },
+        ],
+        new Date('2026-11-20T00:00:00.000Z'),
+      ),
+    );
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(payload()).toMatchObject({
+      statusCode: HttpStatus.CONFLICT,
+      code: 'MATERIAL_UNAVAILABLE',
+      message:
+        'No se puede agendar la cita del viernes 20/11/2026: ' +
+        'AHB-001 · Actas de 1890 ya tiene una cita ese día (solicitud SOL-2026-00012).',
       path: '/api/v1/users',
     });
     expect(logSpy).not.toHaveBeenCalled();

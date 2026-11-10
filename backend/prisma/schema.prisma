@@ -223,6 +223,8 @@ model AppointmentModel {
   scheduledBy     UserModel                  @relation(fields: [scheduledById], references: [id], onDelete: Restrict)
   materials       AppointmentMaterialModel[]
 
+  // Composite key for appointment_materials FK with ON UPDATE CASCADE (HU-20)
+  @@unique([id, appointmentDate, status], map: "appointments_id_date_status_key")
   // Calendar by date range (§4 of docs/modelo-datos.md)
   @@index([appointmentDate])
   @@index([requestId])
@@ -231,12 +233,17 @@ model AppointmentModel {
   @@map("appointments")
 }
 
-// Every material of the request, booked for the day of its appointment (HU-18)
+// Every material of the request, booked for the day of its appointment (HU-18).
+// Copies the day and the status of its appointment via a composite FK with
+// ON UPDATE CASCADE so a partial unique index in the migration forbids
+// double booking on (material_id, appointment_date) (HU-20, D-09).
 model AppointmentMaterialModel {
-  appointmentId String           @map("appointment_id") @db.Uuid
-  materialId    String           @map("material_id") @db.Uuid
-  appointment   AppointmentModel @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
-  material      MaterialModel    @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  appointmentId     String           @map("appointment_id") @db.Uuid
+  materialId        String           @map("material_id") @db.Uuid
+  appointmentDate   DateTime         @map("appointment_date") @db.Date
+  appointmentStatus String           @map("appointment_status") @db.VarChar(12)
+  appointment       AppointmentModel @relation(fields: [appointmentId, appointmentDate, appointmentStatus], references: [id, appointmentDate, status], onDelete: Restrict, onUpdate: Cascade)
+  material          MaterialModel    @relation(fields: [materialId], references: [id], onDelete: Restrict)
 
   @@id([appointmentId, materialId])
   @@index([materialId])

@@ -58,6 +58,8 @@ describe('Request registration (e2e)', () => {
     findById: jest.fn(),
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findEntityById: jest.fn(),
+    // HU-20: by default every material is free on the day of the appointment
+    findMaterialAvailability: jest.fn().mockResolvedValue([]),
     // HU-23: who receives the email of a status change and what it lists
     findNotificationContext: jest.fn().mockResolvedValue({
       trackingCode: 'SOL-2026-00042',
@@ -875,6 +877,8 @@ describe('Request registration (e2e)', () => {
     beforeEach(() => {
       repository.findEntityById.mockReset();
       repository.findEntityById.mockResolvedValue(entity('DISPONIBLE'));
+      repository.findMaterialAvailability.mockReset();
+      repository.findMaterialAvailability.mockResolvedValue([]);
       repository.saveAppointment.mockReset();
       repository.saveAppointment.mockImplementation(
         (change: StatusChange, date: Date): Promise<SavedAppointment> =>
@@ -1046,6 +1050,31 @@ describe('Request registration (e2e)', () => {
         .expect(409);
 
       expect((response.body as ErrorBody).code).toBe('REQUEST_STATUS_CONFLICT');
+    });
+
+    it('answers 409 MATERIAL_UNAVAILABLE when a material is already booked that day or cannot be consulted (HU-20)', async () => {
+      repository.findMaterialAvailability.mockResolvedValue([
+        {
+          catalogCode: 'AHB-001',
+          title: 'Actas de 1890',
+          status: 'DISPONIBLE',
+          bookedBy: 'SOL-2026-00012',
+        },
+      ]);
+
+      const response = await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: FRIDAY })
+        .expect(409);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        code: 'MATERIAL_UNAVAILABLE',
+        message:
+          'No se puede agendar la cita del viernes 20/11/2026: ' +
+          'AHB-001 · Actas de 1890 ya tiene una cita ese día (solicitud SOL-2026-00012).',
+      });
+      expect(repository.saveAppointment).not.toHaveBeenCalled();
     });
 
     it('answers 404 when the request does not exist', async () => {

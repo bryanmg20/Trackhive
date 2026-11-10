@@ -78,6 +78,7 @@ describe('ChangeRequestStatusUseCase', () => {
       findById: jest.fn(),
       listByRequesterUser: jest.fn(),
       findEntityById,
+      findMaterialAvailability: jest.fn(),
       findNotificationContext,
       saveStatusChange,
       saveAppointment: jest.fn(),
