@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
@@ -40,7 +40,11 @@ const TRANSITION_HINTS: Partial<Record<RequestStatus, string>> = {
   // From DISPONIBLE it is only offered for a digital delivery
   ATENDIDA: 'Se entregó la copia digital.',
   CERRADA: 'La solicitud termina y no admite más cambios.',
+  RECHAZADA: 'No se atenderá. Debe escribir el motivo, que verá el solicitante.',
 };
+
+const REASON_REQUIRED_MESSAGE =
+  'Escriba el motivo del rechazo: el solicitante lo verá en «Mis solicitudes».';
 
 function describeTransition(
   from: RequestStatus,
@@ -80,7 +84,8 @@ function toSaveError(caught: unknown): SaveError {
       sessionExpired: false,
     };
   }
-  // 409 brings a clear message from the backend (invalid transition or conflict)
+  // 409 (invalid transition or conflict) and 400 (rejection without a reason)
+  // bring a clear message from the backend
   return { message: caught.message, sessionExpired: false };
 }
 
@@ -93,6 +98,9 @@ function Confirmation({ change }: { change: StatusChange }) {
       <strong>{REQUEST_STATUS_LABELS[change.newStatus]}</strong> el{' '}
       {CHANGED_DATE_FORMAT.format(changedAt)} a las{' '}
       {CHANGED_TIME_FORMAT.format(changedAt)}, por {change.changedBy.name}.
+      {change.newStatus === 'RECHAZADA' && change.comment
+        ? ` Motivo: «${change.comment}».`
+        : null}
     </p>
   );
 }
@@ -105,6 +113,7 @@ interface ChangeRequestStatusFormProps {
 /**
  * «Cambiar estado» action of the detail screen (HU-15). It offers only the
  * transitions the backend state machine allows from the current status.
+ * Rejecting (HU-16) turns the comment into the required reason.
  */
 export function ChangeRequestStatusForm({
   request,
@@ -114,17 +123,30 @@ export function ChangeRequestStatusForm({
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<SaveError | null>(null);
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const [lastChange, setLastChange] = useState<StatusChange | null>(null);
+  const commentRef = useRef<HTMLTextAreaElement>(null);
 
-  // Rejecting needs a reason: HU-16 adds RECHAZADA to this same action
-  const options = request.allowedTransitions.filter(
-    (status) => status !== 'RECHAZADA',
-  );
+  const options = request.allowedTransitions;
+  // When rejecting, the comment is the reason the requester reads (HU-16)
+  const rejecting = selected === 'RECHAZADA';
+
+  function choose(status: RequestStatus) {
+    setSelected(status);
+    setReasonError(null);
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected) {
       setError({ message: 'Elija el nuevo estado.', sessionExpired: false });
+      return;
+    }
+    // The backend also refuses it; checking here avoids a useless request
+    if (rejecting && !comment.trim()) {
+      setError(null);
+      setReasonError(REASON_REQUIRED_MESSAGE);
+      commentRef.current?.focus();
       return;
     }
     setSaving(true);
@@ -181,7 +203,7 @@ export function ChangeRequestStatusForm({
                     name="new-status"
                     value={status}
                     checked={selected === status}
-                    onChange={() => setSelected(status)}
+                    onChange={() => choose(status)}
                     aria-describedby={hint ? `${inputId}-hint` : undefined}
                   />
                   <label htmlFor={inputId}>{label}</label>
@@ -196,14 +218,46 @@ export function ChangeRequestStatusForm({
           </fieldset>
 
           <div className={styles.field}>
-            <label htmlFor="status-comment">Comentario (opcional)</label>
+            <label htmlFor="status-comment">
+              {rejecting
+                ? 'Motivo del rechazo (obligatorio)'
+                : 'Comentario (opcional)'}
+            </label>
+            {rejecting ? (
+              <span id="status-comment-hint" className={styles.fieldHint}>
+                El solicitante lo verá en «Mis solicitudes».
+              </span>
+            ) : null}
             <textarea
+              ref={commentRef}
               id="status-comment"
               rows={3}
               maxLength={MAX_STATUS_COMMENT_LENGTH}
               value={comment}
-              onChange={(event) => setComment(event.target.value)}
+              aria-required={rejecting}
+              aria-invalid={reasonError ? true : undefined}
+              aria-describedby={
+                [
+                  rejecting ? 'status-comment-hint' : '',
+                  reasonError ? 'status-comment-error' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
+              onChange={(event) => {
+                setComment(event.target.value);
+                setReasonError(null);
+              }}
             />
+            {reasonError ? (
+              <p
+                id="status-comment-error"
+                className={styles.fieldError}
+                role="alert"
+              >
+                {reasonError}
+              </p>
+            ) : null}
           </div>
 
           {error ? (
