@@ -81,8 +81,8 @@ describe('SiteNav', () => {
         screen.getByRole('link', { name: 'Material' }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('link', { name: 'Registrar solicitud' }),
-      ).toBeInTheDocument();
+        screen.queryByRole('link', { name: 'Registrar solicitud' }),
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Buscar material' }),
       ).not.toBeInTheDocument();
