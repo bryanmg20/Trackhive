@@ -1,11 +1,21 @@
-import { DesiredDateError } from '../../domain/errors/desired-date-invalid.error';
-import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
 import {
   addBusinessDays,
-  CreateRequestUseCase,
   isAttendedDate,
   todayInBogota,
-} from './create-request.use-case';
+} from '../../domain/desired-date';
+import { DesiredDateError } from '../../domain/errors/desired-date-invalid.error';
+import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
+import { CreateRequestUseCase } from './create-request.use-case';
+
+const buildRepository = () => ({
+  create: jest.fn().mockResolvedValue({
+    id: 'request-1',
+    trackingCode: 'SOL-2026-00001',
+    status: 'RECIBIDA',
+  }),
+  createOnBehalf: jest.fn(),
+  findRequesterByEmail: jest.fn(),
+});
 
 describe('CreateRequestUseCase', () => {
   afterEach(() => {
@@ -23,13 +33,7 @@ describe('CreateRequestUseCase', () => {
   });
 
   it('allows a Saturday after the ten-business-day minimum', async () => {
-    const repository = {
-      create: jest.fn().mockResolvedValue({
-        id: 'request-1',
-        trackingCode: 'SOL-2026-00001',
-        status: 'RECIBIDA',
-      }),
-    };
+    const repository = buildRepository();
     const useCase = new CreateRequestUseCase(repository);
     const desiredDate = addBusinessDays(todayInBogota(), 10);
     desiredDate.setUTCDate(desiredDate.getUTCDate() + 1);
@@ -55,13 +59,7 @@ describe('CreateRequestUseCase', () => {
 
     expect(todayInBogota().toISOString().slice(0, 10)).toBe('2026-11-09');
 
-    const repository = {
-      create: jest.fn().mockResolvedValue({
-        id: 'request-1',
-        trackingCode: 'SOL-2026-00001',
-        status: 'RECIBIDA',
-      }),
-    };
+    const repository = buildRepository();
     const useCase = new CreateRequestUseCase(repository);
 
     await useCase.execute(
@@ -78,9 +76,7 @@ describe('CreateRequestUseCase', () => {
   });
 
   it('rejects a date earlier than ten business days', async () => {
-    const repository = {
-      create: jest.fn(),
-    };
+    const repository = buildRepository();
     const useCase = new CreateRequestUseCase(repository);
     const tomorrow = addBusinessDays(todayInBogota(), 1);
 
@@ -99,9 +95,7 @@ describe('CreateRequestUseCase', () => {
   });
 
   it('uses a dedicated error when there are no selected materials', async () => {
-    const useCase = new CreateRequestUseCase({
-      create: jest.fn(),
-    });
+    const useCase = new CreateRequestUseCase(buildRepository());
     const desiredDate = addBusinessDays(todayInBogota(), 10);
 
     await expect(
