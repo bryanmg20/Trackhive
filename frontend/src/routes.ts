@@ -6,4 +6,9 @@ export const ROUTES = {
   materials: '/materiales',
   staffMaterials: '/personal/materiales',
   requests: '/solicitudes',
+  requestDetail: '/solicitudes/:id',
 } as const;
+
+export function requestDetailPath(id: string): string {
+  return `/solicitudes/${encodeURIComponent(id)}`;
+}
