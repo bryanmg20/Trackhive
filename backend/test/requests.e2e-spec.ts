@@ -7,11 +7,15 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { PrismaService } from '../src/prisma/prisma.service';
+import type { SavedStatusChange } from '../src/requests/application/ports/request.repository.port';
 import { REQUEST_REPOSITORY } from '../src/requests/application/tokens';
 import {
   addBusinessDays,
   todayInBogota,
 } from '../src/requests/domain/desired-date';
+import { Request } from '../src/requests/domain/entities/request.entity';
+import { RequestStatusConflictError } from '../src/requests/domain/errors/request-status-conflict.error';
+import type { StatusChange } from '../src/requests/domain/status-change';
 import type { UserRole } from '../src/users/domain/user-role';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
@@ -45,6 +49,8 @@ describe('Request registration (e2e)', () => {
     list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findById: jest.fn(),
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+    findEntityById: jest.fn(),
+    saveStatusChange: jest.fn(),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
@@ -441,6 +447,243 @@ describe('Request registration (e2e)', () => {
         .expect(404);
 
       expect((response.body as ErrorBody).code).toBe('REQUEST_NOT_FOUND');
+    });
+
+    it('includes the valid next statuses for the change status action (HU-15)', async () => {
+      const response = await request(server)
+        .get(detailPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(200);
+
+      expect(
+        (response.body as { allowedTransitions: string[] }).allowedTransitions,
+      ).toEqual(['EN_BUSQUEDA', 'RECHAZADA']);
+    });
+  });
+
+  describe('PATCH /requests/:id/status (change status, HU-15)', () => {
+    const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const statusPath = (id: string) => `${REQUESTS_PATH}/${id}/status`;
+
+    interface ChangeStatusBody {
+      id: string;
+      status: string;
+      allowedTransitions: string[];
+      statusChange: {
+        previousStatus: string;
+        newStatus: string;
+        changedAt: string;
+        changedBy: { id: string; name: string };
+        comment: string | null;
+      };
+    }
+
+    const entity = (status: Request['status']) =>
+      new Request({ id: REQUEST_ID, status, deliveryMode: 'PRESENCIAL' });
+
+    beforeEach(() => {
+      repository.findEntityById.mockReset();
+      repository.findEntityById.mockResolvedValue(entity('AGENDADA'));
+      repository.saveStatusChange.mockReset();
+      repository.saveStatusChange.mockImplementation(
+        (change: StatusChange): Promise<SavedStatusChange> =>
+          Promise.resolve({
+            previousStatus: change.previousStatus,
+            newStatus: change.newStatus,
+            changedAt: change.changedAt,
+            comment: change.comment,
+            changedBy: {
+              id: change.changedBy,
+              firstName: 'Ana',
+              middleName: null,
+              lastName: 'Gómez',
+              secondLastName: null,
+            },
+          }),
+      );
+    });
+
+    const savedChange = () =>
+      (repository.saveStatusChange.mock.calls[0] as [StatusChange])[0];
+
+    it('rejects a request without an access token with 401', async () => {
+      await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .send({ status: 'ATENDIDA' })
+        .expect(401);
+      expect(repository.saveStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('rejects a PUBLICO user with 403 and changes nothing', async () => {
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(403);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
+      expect(repository.findEntityById).not.toHaveBeenCalled();
+      expect(repository.saveStatusChange).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s change the status and saves date, time, responsible and comment',
+      async (role) => {
+        const before = Date.now();
+
+        const response = await request(server)
+          .patch(statusPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken(role, 'staff-7')}`)
+          .send({ status: 'ATENDIDA', comment: '  Consultó las actas  ' })
+          .expect(200);
+
+        expect(repository.findEntityById).toHaveBeenCalledWith(REQUEST_ID);
+        expect(savedChange()).toMatchObject({
+          requestId: REQUEST_ID,
+          previousStatus: 'AGENDADA',
+          newStatus: 'ATENDIDA',
+          // The responsible is the user of the token
+          changedBy: 'staff-7',
+          comment: 'Consultó las actas',
+        });
+        expect(savedChange().changedAt.getTime()).toBeGreaterThanOrEqual(
+          before,
+        );
+
+        const body = response.body as ChangeStatusBody;
+        expect(body).toMatchObject({
+          id: REQUEST_ID,
+          status: 'ATENDIDA',
+          allowedTransitions: ['CERRADA'],
+          statusChange: {
+            previousStatus: 'AGENDADA',
+            newStatus: 'ATENDIDA',
+            changedBy: { id: 'staff-7', name: 'Ana Gómez' },
+            comment: 'Consultó las actas',
+          },
+        });
+        expect(new Date(body.statusChange.changedAt).getTime()).toBe(
+          savedChange().changedAt.getTime(),
+        );
+      },
+    );
+
+    it('accepts a change without a comment', async () => {
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(200);
+
+      expect(savedChange().comment).toBeNull();
+      expect((response.body as ChangeStatusBody).statusChange.comment).toBe(
+        null,
+      );
+    });
+
+    it('moves a scheduled request back to DISPONIBLE when the requester did not attend', async () => {
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'DISPONIBLE', comment: 'No asistió a la cita' })
+        .expect(200);
+
+      expect(response.body as ChangeStatusBody).toMatchObject({
+        status: 'DISPONIBLE',
+        allowedTransitions: ['AGENDADA', 'CERRADA'],
+        statusChange: { previousStatus: 'AGENDADA', newStatus: 'DISPONIBLE' },
+      });
+    });
+
+    it('rejects an invalid transition with 409 and a clear error, and saves nothing', async () => {
+      repository.findEntityById.mockResolvedValue(entity('RECIBIDA'));
+
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(409);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 409,
+        code: 'INVALID_STATUS_TRANSITION',
+        message: 'No se puede pasar una solicitud de Recibida a Atendida',
+      });
+      expect(repository.saveStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('rejects any change of a closed request with 409', async () => {
+      repository.findEntityById.mockResolvedValue(entity('CERRADA'));
+
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'DISPONIBLE' })
+        .expect(409);
+
+      expect((response.body as ErrorBody).code).toBe(
+        'INVALID_STATUS_TRANSITION',
+      );
+    });
+
+    it('answers 409 REQUEST_STATUS_CONFLICT when someone else changed it first', async () => {
+      repository.saveStatusChange.mockRejectedValue(
+        new RequestStatusConflictError(),
+      );
+
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(409);
+
+      expect((response.body as ErrorBody).code).toBe('REQUEST_STATUS_CONFLICT');
+    });
+
+    it('answers 404 when the request does not exist', async () => {
+      repository.findEntityById.mockResolvedValue(null);
+
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REQUEST_NOT_FOUND');
+      expect(repository.saveStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('rejects an id that is not a UUID with 400', async () => {
+      await request(server)
+        .patch(statusPath('no-es-uuid'))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(400);
+      expect(repository.findEntityById).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {},
+      { status: 'ROTA' },
+      { status: 'RECIBIDA' },
+      // Rejecting needs a reason: HU-16
+      { status: 'RECHAZADA', comment: 'Material no localizado' },
+      { status: 'ATENDIDA', comment: 'a'.repeat(501) },
+      // The responsible always comes from the token
+      { status: 'ATENDIDA', changedBy: 'otro-usuario' },
+    ])('rejects the body %j with 400 and changes nothing', async (body) => {
+      const response = await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send(body)
+        .expect(400);
+
+      expect((response.body as ErrorBody).code).toBe('VALIDATION_ERROR');
+      expect(repository.findEntityById).not.toHaveBeenCalled();
+      expect(repository.saveStatusChange).not.toHaveBeenCalled();
     });
   });
 

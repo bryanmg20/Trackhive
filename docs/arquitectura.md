@@ -39,7 +39,7 @@ flowchart TB
 | D-05 | Entidades de persistencia separadas de las de dominio, con mapeadores | Propuesta |
 | D-06 | Prisma como ORM | Ratificada |
 | D-07 | La máquina de estados vive en la entidad `Solicitud` | Implementada |
-| D-08 | Historial de estados en tabla propia, solo de inserción | Propuesta |
+| D-08 | Historial de estados en tabla propia, solo de inserción | Implementada |
 | D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
 | D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Parcial (sin tabla de salida) |
 | D-11 | JWT (access y refresh) con rotación y contraseñas con argon2 | Implementada |
@@ -116,6 +116,7 @@ flowchart TB
 - **Alternativas:** guardar solo el estado actual; guardar las fechas de cada estado como columnas de `requests`.
 - **Justificación:** el requisito de reportes (tiempos de atención) solo es calculable si se conoce cuándo ocurrió cada transición. Además da trazabilidad: se puede responder quién cambió qué y cuándo, algo valioso para un archivo patrimonial.
 - **Consecuencias:** la inserción del historial y la actualización de la solicitud ocurren en una misma transacción, coordinada desde el repositorio.
+- **Implementación (HU-15):** `PATCH /api/v1/requests/:id/status` (`@Roles('PERSONAL', 'ADMIN')`) llama a `ChangeRequestStatusUseCase`. La entidad `Request.changeStatus()` aplica la transición con los mismos métodos de D-07 y devuelve un `StatusChange` inmutable (estado anterior, nuevo, responsable, fecha y comentario opcional). `PrismaRequestRepository.saveStatusChange()` actualiza la solicitud solo si sigue en el estado anterior (bloqueo optimista; si otra persona la cambió primero responde 409 `REQUEST_STATUS_CONFLICT`), incrementa `version`, llena `attended_at` o `closed_at` cuando corresponde e inserta la fila de `status_history`, todo en una transacción. Un trigger de la migración rechaza `UPDATE`, `DELETE` y `TRUNCATE` sobre la tabla. El rechazo con motivo pasa por `reject()` y se expone en HU-16; el historial se muestra en HU-17.
 
 ### D-09. Choques de agenda con restricción de exclusión en PostgreSQL
 

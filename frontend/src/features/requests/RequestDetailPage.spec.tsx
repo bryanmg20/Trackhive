@@ -20,6 +20,7 @@ function detail(overrides: Record<string, unknown> = {}) {
     id: REQUEST_ID,
     trackingCode: 'SOL-2026-00001',
     status: 'AGENDADA',
+    allowedTransitions: ['DISPONIBLE', 'ATENDIDA'],
     deliveryMode: 'PRESENCIAL',
     originChannel: 'WEB',
     reason: 'Consulta para un trabajo de investigación',
@@ -242,5 +243,279 @@ describe('RequestDetailPage', () => {
     );
 
     expect(await screen.findByRole('table')).toBeInTheDocument();
+  });
+
+  describe('change status (HU-15)', () => {
+    const STATUS_PATH = `/api/v1/requests/${REQUEST_ID}/status`;
+
+    function changed(overrides: Record<string, unknown> = {}) {
+      return {
+        id: REQUEST_ID,
+        status: 'ATENDIDA',
+        allowedTransitions: ['CERRADA'],
+        statusChange: {
+          previousStatus: 'AGENDADA',
+          newStatus: 'ATENDIDA',
+          // 10:30 a. m. in Bogotá
+          changedAt: '2026-11-10T15:30:00.000Z',
+          changedBy: { id: 'staff-1', name: 'Ana Gómez' },
+          comment: null,
+        },
+        ...overrides,
+      };
+    }
+
+    // GET answers the detail; PATCH answers `patchResponse`
+    function mockApi(
+      detailBody: Record<string, unknown>,
+      patchResponse: unknown = ok(changed()),
+    ) {
+      fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === 'PATCH' ? patchResponse : ok(detailBody),
+        ),
+      );
+    }
+
+    function patchCalls() {
+      return fetchMock.mock.calls.filter(
+        ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
+      ) as [string, RequestInit][];
+    }
+
+    async function setup(detailBody = detail(), patchResponse?: unknown) {
+      mockApi(detailBody, patchResponse);
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
+      const user = userEvent.setup();
+      renderAt(`/solicitudes/${REQUEST_ID}`, 'PERSONAL');
+      const section = await screen.findByRole('region', {
+        name: 'Cambiar estado',
+      });
+      return { user, section };
+    }
+
+    it('offers only the valid transitions of a scheduled request: attended or not', async () => {
+      const { section } = await setup();
+
+      const options = within(section).getAllByRole('radio');
+      expect(options).toHaveLength(2);
+      expect(
+        within(section).getByRole('radio', { name: 'El solicitante asistió' }),
+      ).toHaveAccessibleDescription('Pasa a Atendida.');
+      expect(
+        within(section).getByRole('radio', {
+          name: 'El solicitante no asistió',
+        }),
+      ).toHaveAccessibleDescription('Vuelve a Disponible para agendar de nuevo.');
+    });
+
+    it('does not offer Rechazada: rejecting needs a reason (HU-16)', async () => {
+      const { section } = await setup(
+        detail({
+          status: 'RECIBIDA',
+          committedDate: null,
+          allowedTransitions: ['EN_BUSQUEDA', 'RECHAZADA'],
+        }),
+      );
+
+      const options = within(section).getAllByRole('radio');
+      expect(options).toHaveLength(1);
+      expect(options[0]).toHaveAccessibleName('En búsqueda');
+      expect(
+        within(section).queryByRole('radio', { name: 'Rechazada' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each(['CERRADA', 'RECHAZADA'])(
+      'shows no action for a request in the final status %s',
+      async (status) => {
+        const { section } = await setup(
+          detail({
+            status,
+            committedDate: null,
+            allowedTransitions: [],
+            rejectionReason:
+              status === 'RECHAZADA' ? 'Material no localizado' : null,
+          }),
+        );
+
+        expect(section).toHaveTextContent(
+          'es un estado final y no admite más cambios',
+        );
+        expect(within(section).queryByRole('radio')).not.toBeInTheDocument();
+        expect(
+          within(section).queryByRole('button', { name: 'Guardar cambio' }),
+        ).not.toBeInTheDocument();
+      },
+    );
+
+    it('marks that the requester attended and shows when, who and the new status', async () => {
+      const { user, section } = await setup(
+        detail(),
+        ok(
+          changed({
+            statusChange: {
+              ...changed().statusChange,
+              comment: 'Consultó las actas',
+            },
+          }),
+        ),
+      );
+
+      await user.click(
+        within(section).getByRole('radio', { name: 'El solicitante asistió' }),
+      );
+      await user.type(
+        within(section).getByLabelText('Comentario (opcional)'),
+        'Consultó las actas',
+      );
+      await user.click(
+        within(section).getByRole('button', { name: 'Guardar cambio' }),
+      );
+
+      const confirmation = await within(section).findByRole('status');
+      expect(confirmation).toHaveTextContent(
+        /pasó de Agendada a Atendida el 10\/11\/2026 a las 10:30.*por Ana Gómez/,
+      );
+
+      const [[url, init]] = patchCalls();
+      expect(url).toBe(STATUS_PATH);
+      expect(JSON.parse(init.body as string)).toEqual({
+        status: 'ATENDIDA',
+        comment: 'Consultó las actas',
+      });
+
+      // The badge and the next transitions follow the new status
+      const heading = screen.getByRole('heading', { name: 'SOL-2026-00001' });
+      expect(heading.parentElement).toHaveTextContent('Atendida');
+      expect(
+        within(section).getByRole('radio', { name: 'Cerrada' }),
+      ).not.toBeChecked();
+      expect(within(section).getByLabelText('Comentario (opcional)')).toHaveValue(
+        '',
+      );
+    });
+
+    it('marks that the requester did not attend: the request goes back to Disponible', async () => {
+      const { user, section } = await setup(
+        detail(),
+        ok(
+          changed({
+            status: 'DISPONIBLE',
+            allowedTransitions: ['AGENDADA', 'CERRADA'],
+            statusChange: {
+              ...changed().statusChange,
+              newStatus: 'DISPONIBLE',
+            },
+          }),
+        ),
+      );
+
+      await user.click(
+        within(section).getByRole('radio', {
+          name: 'El solicitante no asistió',
+        }),
+      );
+      await user.click(
+        within(section).getByRole('button', { name: 'Guardar cambio' }),
+      );
+
+      expect(await within(section).findByRole('status')).toHaveTextContent(
+        'pasó de Agendada a Disponible',
+      );
+      // Without a comment, none is sent
+      expect(JSON.parse(patchCalls()[0][1].body as string)).toEqual({
+        status: 'DISPONIBLE',
+      });
+      expect(
+        within(section).getByRole('radio', { name: 'Agendada' }),
+      ).toBeInTheDocument();
+    });
+
+    it('asks to choose the new status before saving', async () => {
+      const { user, section } = await setup();
+
+      await user.click(
+        within(section).getByRole('button', { name: 'Guardar cambio' }),
+      );
+
+      expect(within(section).getByRole('alert')).toHaveTextContent(
+        'Elija el nuevo estado.',
+      );
+      expect(patchCalls()).toHaveLength(0);
+    });
+
+    it('shows the backend error of an invalid transition and keeps the status', async () => {
+      const { user, section } = await setup(detail(), {
+        ok: false,
+        status: 409,
+        json: async () => ({
+          code: 'INVALID_STATUS_TRANSITION',
+          message: 'No se puede pasar una solicitud de Agendada a Atendida',
+        }),
+      });
+
+      await user.click(
+        within(section).getByRole('radio', { name: 'El solicitante asistió' }),
+      );
+      await user.click(
+        within(section).getByRole('button', { name: 'Guardar cambio' }),
+      );
+
+      expect(await within(section).findByRole('alert')).toHaveTextContent(
+        'No se puede pasar una solicitud de Agendada a Atendida',
+      );
+      const heading = screen.getByRole('heading', { name: 'SOL-2026-00001' });
+      expect(heading.parentElement).toHaveTextContent('Agendada');
+      expect(within(section).queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('explains a 403 without showing the raw error', async () => {
+      const { user, section } = await setup(detail(), {
+        ok: false,
+        status: 403,
+        json: async () => ({ code: 'FORBIDDEN', message: 'Forbidden resource' }),
+      });
+
+      await user.click(
+        within(section).getByRole('radio', { name: 'El solicitante asistió' }),
+      );
+      await user.click(
+        within(section).getByRole('button', { name: 'Guardar cambio' }),
+      );
+
+      expect(await within(section).findByRole('alert')).toHaveTextContent(
+        'No tiene permiso para cambiar el estado de la solicitud.',
+      );
+    });
+
+    it('can be used with the keyboard only', async () => {
+      const { user, section } = await setup();
+
+      within(section)
+        .getByRole('radio', { name: 'El solicitante asistió' })
+        .focus();
+      await user.keyboard(' ');
+      expect(
+        within(section).getByRole('radio', { name: 'El solicitante asistió' }),
+      ).toBeChecked();
+
+      await user.tab();
+      expect(within(section).getByLabelText('Comentario (opcional)')).toHaveFocus();
+      await user.keyboard('Asistió');
+      await user.tab();
+      expect(
+        within(section).getByRole('button', { name: 'Guardar cambio' }),
+      ).toHaveFocus();
+      await user.keyboard('{Enter}');
+
+      expect(await within(section).findByRole('status')).toBeInTheDocument();
+      expect(JSON.parse(patchCalls()[0][1].body as string)).toEqual({
+        status: 'ATENDIDA',
+        comment: 'Asistió',
+      });
+    });
   });
 });

@@ -23,6 +23,8 @@ export interface RequestDetail {
   id: string;
   trackingCode: string;
   status: RequestStatus;
+  // Valid next statuses, computed by the backend state machine (HU-14)
+  allowedTransitions: RequestStatus[];
   deliveryMode: 'PRESENCIAL' | 'DIGITAL';
   originChannel: string;
   reason: string | null;

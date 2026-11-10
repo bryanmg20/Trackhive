@@ -10,6 +10,7 @@ import type {
   RequestListResult,
   RequesterProfile,
   RequestRepository,
+  SavedStatusChange,
 } from '../../application/ports/request.repository.port';
 import type { CreateRequestInput } from '../../application/use-cases/create-request.use-case';
 import type {
@@ -17,8 +18,11 @@ import type {
   RequesterInput,
 } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { isDeliveryMode } from '../../domain/delivery-mode';
+import { Request } from '../../domain/entities/request.entity';
 import { isRequestStatus } from '../../domain/request-status';
+import type { StatusChange } from '../../domain/status-change';
 import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
+import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import { RequesterEmailMismatchError } from '../../domain/errors/requester-email-mismatch.error';
 import { RequesterNameRequiredError } from '../../domain/errors/requester-name-required.error';
 import { RequesterUserNotFoundError } from '../../domain/errors/requester-user-not-found.error';
@@ -228,6 +232,85 @@ export class PrismaRequestRepository implements RequestRepository {
         itemStatus,
       })),
     };
+  }
+
+  async findEntityById(id: string): Promise<Request | null> {
+    const model = await this.prisma.requestModel.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        deliveryMode: true,
+        rejectionReason: true,
+      },
+    });
+    if (!model) {
+      return null;
+    }
+    if (!isRequestStatus(model.status) || !isDeliveryMode(model.deliveryMode)) {
+      throw new Error(`Request ${model.id} has an invalid stored value`);
+    }
+    return new Request({
+      id: model.id,
+      status: model.status,
+      deliveryMode: model.deliveryMode,
+      rejectionReason: model.rejectionReason,
+    });
+  }
+
+  async saveStatusChange(change: StatusChange): Promise<SavedStatusChange> {
+    // The new status and its history row are saved together or not at all (D-08)
+    return this.prisma.$transaction(async (tx) => {
+      // Optimistic lock: update only if the request is still in the status the
+      // transition was validated against. If another person changed it in the
+      // meantime, nothing is written and the history stays consistent.
+      const { count } = await tx.requestModel.updateMany({
+        where: { id: change.requestId, status: change.previousStatus },
+        data: {
+          status: change.newStatus,
+          version: { increment: 1 },
+          ...(change.newStatus === 'ATENDIDA' && {
+            attendedAt: change.changedAt,
+          }),
+          ...(change.newStatus === 'CERRADA' && {
+            closedAt: change.changedAt,
+          }),
+        },
+      });
+      if (count === 0) {
+        throw new RequestStatusConflictError();
+      }
+
+      const row = await tx.statusHistoryModel.create({
+        data: {
+          requestId: change.requestId,
+          previousStatus: change.previousStatus,
+          newStatus: change.newStatus,
+          userId: change.changedBy,
+          comment: change.comment,
+          changedAt: change.changedAt,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              secondLastName: true,
+            },
+          },
+        },
+      });
+
+      return {
+        previousStatus: change.previousStatus,
+        newStatus: change.newStatus,
+        changedAt: row.changedAt,
+        comment: row.comment,
+        changedBy: row.user,
+      };
+    });
   }
 
   private buildListWhere(

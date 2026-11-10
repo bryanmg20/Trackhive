@@ -2,7 +2,12 @@ import { DeliveryMode } from '../delivery-mode';
 import { InvalidRequestStatusError } from '../errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../errors/rejection-reason-required.error';
-import { REQUEST_STATUSES, RequestStatus } from '../request-status';
+import {
+  CHANGEABLE_STATUSES,
+  ChangeableStatus,
+  REQUEST_STATUSES,
+  RequestStatus,
+} from '../request-status';
 import { Request } from './request.entity';
 
 const buildRequest = (
@@ -163,6 +168,146 @@ describe('Request', () => {
       expect(() => request.schedule()).toThrow(InvalidStatusTransitionError);
       expect(request.status).toBe('DISPONIBLE');
     });
+  });
+
+  describe('changeStatus (HU-15)', () => {
+    const NOW = new Date('2026-11-10T15:30:00.000Z');
+
+    // The changeable statuses are all the targets except RECHAZADA (needs a reason)
+    const CHANGEABLE_VALID = VALID_TRANSITIONS.filter(
+      (
+        transition,
+      ): transition is [RequestStatus, ChangeableStatus, DeliveryMode] =>
+        transition[1] !== 'RECHAZADA',
+    );
+    const CHANGEABLE_INVALID = INVALID_TRANSITIONS.filter(
+      (transition): transition is [RequestStatus, ChangeableStatus] =>
+        transition[1] !== 'RECHAZADA',
+    );
+
+    it('offers every target status except RECIBIDA and RECHAZADA', () => {
+      expect(CHANGEABLE_STATUSES).toEqual([
+        'EN_BUSQUEDA',
+        'DISPONIBLE',
+        'AGENDADA',
+        'ATENDIDA',
+        'CERRADA',
+      ]);
+    });
+
+    it.each(CHANGEABLE_VALID)(
+      'allows %s -> %s (%s) and records who, when and the comment',
+      (from, to, deliveryMode) => {
+        const request = buildRequest(from, deliveryMode);
+
+        const change = request.changeStatus(to, 'staff-1', 'Revisado', NOW);
+
+        expect(request.status).toBe(to);
+        expect(change).toEqual({
+          requestId: '1',
+          previousStatus: from,
+          newStatus: to,
+          changedBy: 'staff-1',
+          changedAt: NOW,
+          comment: 'Revisado',
+        });
+      },
+    );
+
+    it.each(CHANGEABLE_INVALID)(
+      'rejects %s -> %s with 409 and keeps the status',
+      (from, to) => {
+        for (const deliveryMode of ['PRESENCIAL', 'DIGITAL'] as const) {
+          const request = buildRequest(from, deliveryMode);
+
+          expect(() => request.changeStatus(to, 'staff-1')).toThrow(
+            InvalidStatusTransitionError,
+          );
+          expect(request.status).toBe(from);
+        }
+      },
+    );
+
+    it('moves a scheduled request to ATENDIDA when the requester attended', () => {
+      const request = buildRequest('AGENDADA');
+
+      request.changeStatus('ATENDIDA', 'staff-1');
+
+      expect(request.status).toBe('ATENDIDA');
+      expect(request.allowedTransitions).toEqual(['CERRADA']);
+    });
+
+    it('moves a scheduled request back to DISPONIBLE when the requester did not attend', () => {
+      const request = buildRequest('AGENDADA');
+
+      request.changeStatus('DISPONIBLE', 'staff-1', 'No asistió a la cita');
+
+      expect(request.status).toBe('DISPONIBLE');
+      // It can be scheduled again
+      expect(request.allowedTransitions).toContain('AGENDADA');
+    });
+
+    it('gives a clear error when RECIBIDA tries to go to ATENDIDA', () => {
+      expect(() =>
+        buildRequest('RECIBIDA', 'DIGITAL').changeStatus('ATENDIDA', 'staff-1'),
+      ).toThrow('No se puede pasar una solicitud de Recibida a Atendida');
+    });
+
+    it.each([undefined, null, '', '   '])(
+      'stores no comment when it is %j',
+      (comment) => {
+        const change = buildRequest('RECIBIDA').changeStatus(
+          'EN_BUSQUEDA',
+          'staff-1',
+          comment,
+        );
+
+        expect(change.comment).toBeNull();
+      },
+    );
+
+    it('trims the comment', () => {
+      const change = buildRequest('RECIBIDA').changeStatus(
+        'EN_BUSQUEDA',
+        'staff-1',
+        '  Se asignó a Ana  ',
+      );
+
+      expect(change.comment).toBe('Se asignó a Ana');
+    });
+
+    it('uses the current date and time when none is given', () => {
+      const before = Date.now();
+
+      const change = buildRequest('RECIBIDA').changeStatus(
+        'EN_BUSQUEDA',
+        'staff-1',
+      );
+
+      expect(change.changedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(change.changedAt.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('returns a record that cannot be modified', () => {
+      const change = buildRequest('RECIBIDA').changeStatus(
+        'EN_BUSQUEDA',
+        'staff-1',
+      );
+
+      expect(Object.isFrozen(change)).toBe(true);
+    });
+
+    it.each(['RECHAZADA', 'RECIBIDA', 'ROTA'])(
+      'does not accept %s as a target and keeps the status',
+      (target) => {
+        const request = buildRequest('RECIBIDA');
+
+        expect(() =>
+          request.changeStatus(target as ChangeableStatus, 'staff-1'),
+        ).toThrow(InvalidRequestStatusError);
+        expect(request.status).toBe('RECIBIDA');
+      },
+    );
   });
 
   describe('allowedTransitions', () => {

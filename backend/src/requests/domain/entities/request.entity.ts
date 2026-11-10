@@ -3,10 +3,13 @@ import { InvalidRequestStatusError } from '../errors/invalid-request-status.erro
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../errors/rejection-reason-required.error';
 import {
+  ChangeableStatus,
+  isChangeableStatus,
   isRequestStatus,
   REQUEST_STATUSES,
   RequestStatus,
 } from '../request-status';
+import type { StatusChange } from '../status-change';
 
 // Business rule: the only status changes allowed (docs/modelo-datos.md, section 1.3)
 const ALLOWED_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
@@ -82,6 +85,52 @@ export class Request {
     }
     this.currentRejectionReason = trimmedReason;
     this.currentStatus = 'RECHAZADA';
+  }
+
+  /**
+   * The «cambiar estado» action of the staff (HU-15). It goes through the
+   * same action methods, so the transition rules of HU-14 apply, and returns
+   * the record of who changed the status, when and why. Blank comment = none.
+   * From AGENDADA, ATENDIDA means the requester attended and DISPONIBLE that
+   * they did not.
+   */
+  changeStatus(
+    next: ChangeableStatus,
+    changedBy: string,
+    comment?: string | null,
+    now: Date = new Date(),
+  ): StatusChange {
+    if (!isChangeableStatus(next)) {
+      throw new InvalidRequestStatusError();
+    }
+    const previousStatus = this.currentStatus;
+
+    switch (next) {
+      case 'EN_BUSQUEDA':
+        this.startSearch();
+        break;
+      case 'DISPONIBLE':
+        this.markAvailable();
+        break;
+      case 'AGENDADA':
+        this.schedule();
+        break;
+      case 'ATENDIDA':
+        this.attend();
+        break;
+      case 'CERRADA':
+        this.close();
+        break;
+    }
+
+    return Object.freeze({
+      requestId: this.id,
+      previousStatus,
+      newStatus: this.currentStatus,
+      changedBy,
+      changedAt: now,
+      comment: comment?.trim() || null,
+    });
   }
 
   private canTransitionTo(next: RequestStatus): boolean {

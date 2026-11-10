@@ -80,6 +80,16 @@ export class RequestDetailResponseDto {
   @ApiProperty({ enum: REQUEST_STATUSES })
   status: RequestStatus;
 
+  @ApiProperty({
+    description:
+      'Estados a los que puede pasar desde el estado actual, según la ' +
+      'máquina de estados del dominio (HU-14). Vacío en un estado final.',
+    enum: REQUEST_STATUSES,
+    isArray: true,
+    example: ['EN_BUSQUEDA', 'RECHAZADA'],
+  })
+  allowedTransitions: RequestStatus[];
+
   @ApiProperty({ enum: DELIVERY_MODES })
   deliveryMode: DeliveryMode;
 

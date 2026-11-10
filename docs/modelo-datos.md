@@ -346,7 +346,7 @@ erDiagram
 Decisiones principales:
 
 - Las enumeraciones son `varchar` con `CHECK`. Las PK son `uuid`, salvo el historial, que usa `bigint`.
-- `status_history` solo admite `INSERT`. Es la auditoría y la base del reporte de tiempos de atención.
+- `status_history` solo admite `INSERT` (un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`). Es la auditoría y la base del reporte de tiempos de atención.
 - `material_reservations.period` tiene una restricción `EXCLUDE USING gist`, así que la base de datos impide las dobles reservas.
 - Ninguna FK borra en cascada. Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
 
@@ -461,11 +461,13 @@ Campos según HU-06, HU-07 y HU-20.
 
 ### status_history
 
+Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila por cada cambio de estado; el personal la genera desde la acción «Cambiar estado» del detalle de la solicitud.
+
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | bigint | PK (identity) | |
 | request_id | uuid | FK → requests, IDX con changed_at | |
-| previous_status | varchar(12) | NULL | `NULL` en la creación |
+| previous_status | varchar(12) | NULL, CHECK | `NULL` en la creación. Distinto de `new_status` (CHECK) |
 | new_status | varchar(12) | CHECK | |
 | user_id | uuid | FK → users, IDX | Quién hizo el cambio |
 | comment | text | NULL | Obligatorio al rechazar |
