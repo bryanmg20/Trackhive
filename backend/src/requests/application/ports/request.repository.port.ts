@@ -68,6 +68,43 @@ export interface RequestListResult {
   total: number;
 }
 
+export interface RequestDetail {
+  id: string;
+  trackingCode: string;
+  status: RequestStatus;
+  deliveryMode: DeliveryMode;
+  originChannel: string;
+  reason: string | null;
+  requirementDescription: string;
+  desiredDate: Date;
+  committedDate: Date | null;
+  registeredAt: Date;
+  rejectionReason: string | null;
+  requester: {
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+    email: string | null;
+    phone: string | null;
+    requesterType: string;
+    institution: string | null;
+    documentType: string | null;
+    documentNumber: string | null;
+  };
+  materials: {
+    id: string;
+    catalogCode: string;
+    title: string;
+    materialType: string;
+    author: string | null;
+    collection: string;
+    status: string;
+    location: { depot: string; shelf: string; box: string };
+    itemStatus: string;
+  }[];
+}
+
 export interface RequestRepository {
   create(
     input: CreateRequestInput & { createdById: string },
@@ -80,4 +117,6 @@ export interface RequestRepository {
   findRequesterByEmail(email: string): Promise<RequesterProfile | null>;
 
   list(criteria: RequestListCriteria): Promise<RequestListResult>;
+
+  findById(id: string): Promise<RequestDetail | null>;
 }
