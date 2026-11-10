@@ -1,6 +1,7 @@
 import { CreateUserUseCase } from './create-user.use-case';
 import { User } from '../../domain/entities/user.entity';
 import { EmailAlreadyExistsError } from '../../domain/errors/email-already-exists.error';
+import { PrivacyConsentRequiredError } from '../../domain/errors/privacy-consent-required.error';
 import { IUserRepository } from '../../domain/repositories/user.repository';
 import type { PasswordHasher } from '../ports/password-hasher.port';
 
@@ -28,6 +29,11 @@ class InMemoryUserRepository implements IUserRepository {
   }
 }
 
+const consent = {
+  acceptedPrivacy: true,
+  privacyPolicyVersion: '1.0',
+};
+
 describe('CreateUserUseCase', () => {
   let repository: InMemoryUserRepository;
   let hasher: PasswordHasher;
@@ -49,6 +55,7 @@ describe('CreateUserUseCase', () => {
       secondLastName: ' Gómez ',
       email: '  ANA@MAIL.COM ',
       password: 'secreto123',
+      ...consent,
     });
 
     expect(hash).toHaveBeenCalledWith('secreto123');
@@ -67,6 +74,8 @@ describe('CreateUserUseCase', () => {
     expect(saved?.passwordHash).toBe('hashed:secreto123');
     expect(saved?.passwordHash).not.toBe('secreto123');
     expect(saved?.role).toBe('PUBLICO');
+    expect(saved?.privacyPolicyAcceptedAt).toBeInstanceOf(Date);
+    expect(saved?.privacyPolicyVersion).toBe('1.0');
   });
 
   it('creates an account with only the required name fields', async () => {
@@ -75,6 +84,7 @@ describe('CreateUserUseCase', () => {
       lastName: 'Pérez',
       email: 'ana@mail.com',
       password: 'secreto123',
+      ...consent,
     });
 
     expect(response).toMatchObject({
@@ -91,6 +101,7 @@ describe('CreateUserUseCase', () => {
       lastName: 'Pérez',
       email: 'ana@mail.com',
       password: 'secreto123',
+      ...consent,
     };
 
     await useCase.execute(input);
@@ -99,5 +110,35 @@ describe('CreateUserUseCase', () => {
       useCase.execute({ ...input, email: 'ANA@MAIL.COM' }),
     ).rejects.toThrow(EmailAlreadyExistsError);
     expect(hash).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a registration without the privacy consent', async () => {
+    await expect(
+      useCase.execute({
+        firstName: 'Ana',
+        lastName: 'Pérez',
+        email: 'ana@mail.com',
+        password: 'secreto123',
+        ...consent,
+        acceptedPrivacy: false,
+      }),
+    ).rejects.toThrow(PrivacyConsentRequiredError);
+
+    expect(hash).not.toHaveBeenCalled();
+  });
+
+  it('rejects a registration that accepts an outdated notice version', async () => {
+    await expect(
+      useCase.execute({
+        firstName: 'Ana',
+        lastName: 'Pérez',
+        email: 'ana@mail.com',
+        password: 'secreto123',
+        ...consent,
+        privacyPolicyVersion: '0.9',
+      }),
+    ).rejects.toThrow(PrivacyConsentRequiredError);
+
+    expect(hash).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { User, UserProps } from './user.entity';
 import { InvalidEmailError } from '../errors/invalid-email.error';
 import { InvalidNameError } from '../errors/invalid-name.error';
 import { InvalidPasswordHashError } from '../errors/invalid-password-hash.error';
+import { InvalidPrivacyConsentError } from '../errors/invalid-privacy-consent.error';
 import { InvalidRoleError } from '../errors/invalid-role.error';
 import { UserRole } from '../user-role';
 
@@ -119,5 +120,35 @@ describe('User', () => {
     expect(() => new User({ ...validProps(), passwordHash: '   ' })).toThrow(
       InvalidPasswordHashError,
     );
+  });
+
+  it('stores the privacy consent date and version together', () => {
+    const acceptedAt = new Date('2026-11-10T12:00:00Z');
+    const user = new User({
+      ...validProps(),
+      privacyPolicyAcceptedAt: acceptedAt,
+      privacyPolicyVersion: ' 1.0 ',
+    });
+
+    expect(user.privacyPolicyAcceptedAt).toEqual(acceptedAt);
+    expect(user.privacyPolicyVersion).toBe('1.0');
+  });
+
+  it('rejects a consent record with only the date or only the version', () => {
+    expect(
+      () =>
+        new User({
+          ...validProps(),
+          privacyPolicyAcceptedAt: new Date(),
+        }),
+    ).toThrow(InvalidPrivacyConsentError);
+
+    expect(
+      () =>
+        new User({
+          ...validProps(),
+          privacyPolicyVersion: '1.0',
+        }),
+    ).toThrow(InvalidPrivacyConsentError);
   });
 });

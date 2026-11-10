@@ -190,7 +190,7 @@ flowchart TB
 
 ### D-19. Cumplimiento de la Ley 1581: consentimiento y anonimización *(validar con el CLENA)*
 
-- **Decisión:** se recogen solo los datos mínimos necesarios; el formulario público exige aceptar el aviso de privacidad, y cada aceptación se guarda con fecha y versión del texto en la tabla `consentimientos`. La eliminación de cuenta anonimiza los datos personales del solicitante (nombre, correo, teléfono) y conserva las solicitudes y el historial sin datos personales, para no romper los reportes.
+- **Decisión:** se recogen solo los datos mínimos necesarios; el formulario público exige aceptar el aviso de privacidad, y cada aceptación se guarda con fecha y versión del texto en la propia tabla del titular (`users` para la cuenta y `requesters` para el solicitante). La eliminación de cuenta anonimiza los datos personales del solicitante (nombre, correo, teléfono) y conserva las solicitudes y el historial sin datos personales, para no romper los reportes.
 - **Alternativas:** borrado físico en cascada.
 - **Justificación:** el borrado en cascada destruiría el historial y los indicadores de atención, y sería incompatible con la trazabilidad de un archivo. La anonimización cumple con la supresión del dato personal sin perder la información agregada.
 - **Consecuencias:** el equipo debe confirmar con el CLENA si existen obligaciones de conservación que exijan otro tratamiento. No se usan datos reales sin autorización escrita; las semillas son ficticias.

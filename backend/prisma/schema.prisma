@@ -9,25 +9,29 @@ generator client {
 }
 
 model UserModel {
-  id                    String              @id @db.Uuid
+  id                      String              @id @db.Uuid
   // Same four name fields as RequesterModel (issue #96)
-  firstName             String              @map("first_name") @db.VarChar(40)
-  middleName            String?             @map("middle_name") @db.VarChar(40)
-  lastName              String              @map("last_name") @db.VarChar(40)
-  secondLastName        String?             @map("second_last_name") @db.VarChar(40)
-  email                 String              @unique @db.VarChar(160)
-  passwordHash          String              @map("password_hash") @db.VarChar(255)
+  firstName               String              @map("first_name") @db.VarChar(40)
+  middleName              String?             @map("middle_name") @db.VarChar(40)
+  lastName                String              @map("last_name") @db.VarChar(40)
+  secondLastName          String?             @map("second_last_name") @db.VarChar(40)
+  email                   String              @unique @db.VarChar(160)
+  passwordHash            String              @map("password_hash") @db.VarChar(255)
   // Allowed values (CHECK in the migration): ADMIN, PERSONAL, PUBLICO
-  role                  String              @db.VarChar(10)
-  active                Boolean             @default(true)
-  lastLoginAt           DateTime?           @map("last_login_at") @db.Timestamptz
-  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt             DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  refreshTokens         RefreshTokenModel[]
-  requester             RequesterModel?
-  createdRequests       RequestModel[]      @relation("RequestCreatedBy")
-  assignedRequests      RequestModel[]      @relation("RequestAssignee")
-  materialStatusChanges MaterialModel[]     @relation("MaterialStatusChangedBy")
+  role                    String              @db.VarChar(10)
+  active                  Boolean             @default(true)
+  // Consent of public registrations (Ley 1581). NULL on seeded accounts.
+  // Both columns are set together (CHECK in the migration).
+  privacyPolicyAcceptedAt DateTime?           @map("privacy_policy_accepted_at") @db.Timestamptz
+  privacyPolicyVersion    String?             @map("privacy_policy_version") @db.VarChar(10)
+  lastLoginAt             DateTime?           @map("last_login_at") @db.Timestamptz
+  createdAt               DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  refreshTokens           RefreshTokenModel[]
+  requester               RequesterModel?
+  createdRequests         RequestModel[]      @relation("RequestCreatedBy")
+  assignedRequests        RequestModel[]      @relation("RequestAssignee")
+  materialStatusChanges   MaterialModel[]     @relation("MaterialStatusChangedBy")
 
   @@map("users")
 }

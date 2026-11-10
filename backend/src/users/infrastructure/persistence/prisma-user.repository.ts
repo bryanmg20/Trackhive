@@ -26,6 +26,8 @@ export class PrismaUserRepository implements IUserRepository {
           passwordHash: data.passwordHash,
           role: data.role,
           active: data.active,
+          privacyPolicyAcceptedAt: data.privacyPolicyAcceptedAt,
+          privacyPolicyVersion: data.privacyPolicyVersion,
         },
         create: data,
       });

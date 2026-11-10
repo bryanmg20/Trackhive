@@ -1,9 +1,10 @@
 /**
  * Versión vigente del aviso de privacidad.
  *
- * Cuando cambie el texto hay que subir la versión y las pruebas que la
- * verifican. El backend todavía no persiste el consentimiento; cuando lo haga,
- * esta versión será la que se envíe o registre junto con la aceptación.
+ * Cuando cambie el texto hay que subir esta versión, la constante equivalente
+ * del backend (`CURRENT_PRIVACY_POLICY_VERSION`) y las pruebas que la
+ * verifican. Esta versión se envía junto con la aceptación y el backend la
+ * guarda con la fecha del registro.
  */
 export const PRIVACY_POLICY_VERSION = '1.0';
 

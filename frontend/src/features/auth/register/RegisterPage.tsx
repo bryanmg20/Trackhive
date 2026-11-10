@@ -10,6 +10,7 @@ import {
 import { AuthLayout } from '../components/AuthLayout';
 import { TextField } from '../components/TextField';
 import { PrivacyConsent } from './PrivacyConsent';
+import { PRIVACY_POLICY_VERSION } from './privacy-policy';
 import {
   registerSchema,
   type RegisterFormValues,
@@ -113,6 +114,8 @@ export function RegisterPage({
         secondLastName: values.secondLastName || undefined,
         email: values.email,
         password: values.password,
+        acceptedPrivacy: values.acceptedPrivacy,
+        privacyPolicyVersion: PRIVACY_POLICY_VERSION,
       });
       setRegisteredEmail(values.email);
     } catch (error) {

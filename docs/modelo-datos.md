@@ -303,6 +303,8 @@ erDiagram
         varchar(255) password_hash
         varchar(10) role
         boolean active
+        timestamptz privacy_policy_accepted_at
+        varchar(10) privacy_policy_version
         timestamptz last_login_at
         timestamptz created_at
         timestamptz updated_at
@@ -365,6 +367,8 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | password_hash | varchar(255) | | Hash argon2 |
 | role | varchar(10) | CHECK | `ADMIN`, `PERSONAL`, `PUBLICO` |
 | active | boolean | DEFAULT true | `false` = cuenta desactivada o eliminada |
+| privacy_policy_accepted_at | timestamptz | NULL, CHECK con la versión | Fecha en que la persona aceptó el aviso; se llena en los registros públicos |
+| privacy_policy_version | varchar(10) | NULL, CHECK con la fecha | Versión del aviso aceptado (Ley 1581) |
 | last_login_at | timestamptz | NULL | |
 
 ### refresh_tokens
