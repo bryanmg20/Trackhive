@@ -45,6 +45,7 @@ describe('ListRequestsUseCase', () => {
       createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn(),
       list,
+      findById: jest.fn(),
     });
   });
 
