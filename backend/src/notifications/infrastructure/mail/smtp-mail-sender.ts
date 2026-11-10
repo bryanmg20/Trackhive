@@ -31,11 +31,13 @@ export class SmtpMailSender implements MailSender {
         ...message,
       });
     } catch (error) {
-      // The recipient is personal data, so it stays out of the logs (D-23)
-      this.logger.error(
-        `Could not send email: ${error instanceof Error ? error.message : String(error)}`,
+      // The recipient is personal data, so it stays out of the logs (D-23).
+      // Some SMTP answers repeat it, such as «550 <ana@...>: user unknown»
+      const detail = withoutEmails(
+        error instanceof Error ? error.message : String(error),
       );
-      throw new MailDeliveryFailedError();
+      this.logger.error(`Could not send email: ${detail}`);
+      throw new MailDeliveryFailedError(detail);
     }
   }
 
@@ -60,4 +62,8 @@ export class SmtpMailSender implements MailSender {
     }
     return this.transporter;
   }
+}
+
+function withoutEmails(text: string): string {
+  return text.replace(/[^\s<>()[\]",;:@]+@[^\s<>()[\]",;:@]+/g, '[correo]');
 }
