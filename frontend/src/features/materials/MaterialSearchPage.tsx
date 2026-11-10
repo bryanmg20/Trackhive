@@ -144,6 +144,14 @@ export function MaterialSearchPage() {
           Trackhive<span className={styles.wordmarkDot}>.</span>
         </p>
         <p className={styles.topbarTag}>CLENA · Archivo</p>
+        {role === 'PUBLICO' ? (
+          <nav className={styles.nav} aria-label="Secciones">
+            <Link to={ROUTES.materials} aria-current="page">
+              Buscar material
+            </Link>
+            <Link to={ROUTES.myRequests}>Mis solicitudes</Link>
+          </nav>
+        ) : null}
       </header>
 
       <main className={styles.main}>
