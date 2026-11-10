@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { readSessionRole } from '../auth/session';
+import type { UserRole } from '../auth/session';
 import { SiteNav } from '../navigation/SiteNav';
 import type { SelectedMaterial } from '../requests/selected-materials';
-import {
-  buildNewRequestPath,
-  buildStaffNewRequestPath,
-} from '../requests/selected-materials';
+import { buildNewRequestPath } from '../requests/selected-materials';
 import {
   MATERIAL_STATUS_LABELS,
   MATERIAL_TYPE_LABELS,
@@ -42,12 +40,18 @@ const SORT_LABELS: Record<MaterialSortField, string> = {
 };
 
 export function MaterialSearchPage() {
-  const navigate = useNavigate();
   const role = readSessionRole();
-  const isStaff = role === 'PERSONAL' || role === 'ADMIN';
-  // Any signed-in role picks materials here: the public user requests them for
-  // themselves, the staff registers the request on behalf of a visitor (HU-93).
-  const canSelect = role === 'PUBLICO' || isStaff;
+  // The staff searches and picks material in its own screen (#109)
+  if (role === 'PERSONAL' || role === 'ADMIN') {
+    return <Navigate replace to={ROUTES.staffMaterials} />;
+  }
+  return <PublicMaterialSearch role={role} />;
+}
+
+function PublicMaterialSearch({ role }: { role: UserRole | null }) {
+  const navigate = useNavigate();
+  // The public user picks the materials to request for themselves
+  const canSelect = role === 'PUBLICO';
 
   const [text, setText] = useState('');
   const [collection, setCollection] = useState('');
@@ -122,10 +126,7 @@ export function MaterialSearchPage() {
   }
 
   function requestSelected() {
-    const path = isStaff
-      ? buildStaffNewRequestPath(selected.map((item) => item.id))
-      : buildNewRequestPath(selected.map((item) => item.id));
-    navigate(path, {
+    navigate(buildNewRequestPath(selected.map((item) => item.id)), {
       state: { materials: selected },
     });
   }
@@ -395,7 +396,7 @@ export function MaterialSearchPage() {
               onClick={requestSelected}
               disabled={selected.length === 0}
             >
-              {isStaff ? 'Registrar solicitud' : 'Solicitar'}
+              Solicitar
             </button>
           </div>
         </div>

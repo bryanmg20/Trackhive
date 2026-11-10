@@ -2,7 +2,7 @@
 
 Interfaz web de Trackhive (React + TypeScript + Vite). Cubre el registro de
 investigadores (HU-47), el inicio de sesión, el buscador de material (HU-7.1),
-la gestión del estado del material (HU-08), el registro de solicitudes del
+la pantalla de material del personal (HU-08 y #109), el registro de solicitudes del
 personal a nombre de un visitante (HU-93), el listado de solicitudes del
 personal (HU-12), el detalle de una solicitud con la acción de cambiar su
 estado (HU-13 y HU-15) y «Mis solicitudes» del usuario público (HU-11).
@@ -28,10 +28,10 @@ pnpm build    # tsc -b && vite build
 | -------------------------------- | ---------------------------------------------------------- | ---------------- |
 | `/registro`                      | Registro de investigadores                                 | Público          |
 | `/login`                         | Inicio de sesión                                           | Público          |
-| `/materiales`                    | Buscador de material (HU-7.1)                              | Autenticado      |
+| `/materiales`                    | Buscador de material (HU-7.1); el personal va a `/personal/materiales` | `PUBLICO`        |
 | `/solicitudes/nueva`             | Solicitud del usuario público (HU-10)                      | `PUBLICO`        |
 | `/mis-solicitudes`               | Mis solicitudes: estado de cada una (HU-11)                | `PUBLICO`        |
-| `/personal/materiales`           | Estado del material (HU-08)                                | `PERSONAL`/`ADMIN` |
+| `/personal/materiales`           | Material del personal: estado (HU-08) y elegir para registrar solicitud (#109) | `PERSONAL`/`ADMIN` |
 | `/personal/solicitudes/nueva`    | Registrar solicitud a nombre de un visitante (HU-93)       | `PERSONAL`/`ADMIN` |
 | `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
 | `/solicitudes/:id`               | Detalle de una solicitud, cambio de estado y agendar cita (HU-13, HU-15, HU-18) | `PERSONAL`/`ADMIN` |
@@ -90,8 +90,10 @@ La pantalla `/personal/solicitudes/nueva` usa los dos endpoints de HU-10:
 Si el solicitante existe, se envía `{ email, userId? }` y sus datos no se
 vuelven a pedir. Si no existe, se envían `email`, `firstName` y `lastName`
 obligatorios, más los datos opcionales de contacto. Los materiales solo se
-eligen en `/materiales`, que envía `?materiales=<id1>,<id2>` y los conserva en
-el estado de navegación. La regla de anticipación de la fecha deseada no se
+eligen en `/personal/materiales`, que envía `?materiales=<id1>,<id2>` y los
+conserva en el estado de navegación. El personal ya no usa `/materiales`: si lo
+abre, se redirige a `/personal/materiales`, y el menú del personal no muestra
+«Buscar material». La regla de anticipación de la fecha deseada no se
 duplica en React: el mensaje de `INVALID_DESIRED_DATE` se muestra junto al
 campo de fecha tal como lo devuelve el backend.
 
@@ -167,7 +169,7 @@ deja el estado como estaba.
 - **HU-48 no disponible:** `/login` es un marcador temporal; al registrarse se
   redirige allí con un aviso y el correo registrado.
 - **HU-93 integrado:** la pantalla de mostrador permite buscar al solicitante,
-  elegir materiales en el buscador de HU-7.1, registrar la solicitud y mostrar
+  elegir materiales en `/personal/materiales` (#109), registrar la solicitud y mostrar
   el comprobante con el código de seguimiento. No modifica el backend.
 
 ## Pruebas
@@ -200,8 +202,14 @@ visible y precargada, el error de domingo, la fecha vacía y que la tarjeta no
 aparece fuera de Disponible presencial; `api/schedule-appointment.spec.ts` cubre
 la petición `POST`.
 
+`StaffMaterialsPage.spec.tsx` cubre, además del cambio de estado (HU-08), que
+el personal marque materiales y llegue a
+`/personal/solicitudes/nueva?materiales=<id1>,<id2>` con ellos cargados (#109).
+`MaterialSearchPage.spec.tsx` cubre que `PERSONAL` y `ADMIN` se redirigen a
+`/personal/materiales`.
+
 `StaffNewRequestPage.spec.tsx` cubre la búsqueda de solicitante encontrado y
-nuevo, los cuerpos enviados en cada caso, el error de fecha del backend junto al
+nuevo, los enlaces para elegir o cambiar material hacia `/personal/materiales`, los cuerpos enviados en cada caso, el error de fecha del backend junto al
 campo, los detalles por campo anidado (`requester.firstName`), el código de
 seguimiento y la sesión vencida. `StaffRoute.spec.tsx` y
 `MaterialSearchPage.spec.tsx` cubren la protección por rol y la navegación del

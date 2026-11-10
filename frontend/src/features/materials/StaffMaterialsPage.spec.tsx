@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffRoute } from '../auth/components/StaffRoute';
 import { StaffMaterialsPage } from './StaffMaterialsPage';
@@ -39,6 +39,17 @@ function listResponse(items: unknown[]) {
   };
 }
 
+function RequestDestination() {
+  const location = useLocation();
+  const state = location.state as { materials?: { title: string }[] } | null;
+  return (
+    <>
+      <p>Destino: {location.pathname + location.search}</p>
+      <p>Cargados: {state?.materials?.map((item) => item.title).join(', ')}</p>
+    </>
+  );
+}
+
 function renderPage(role?: string) {
   if (role) {
     sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
@@ -48,6 +59,10 @@ function renderPage(role?: string) {
       <Routes>
         <Route element={<StaffRoute />}>
           <Route path="/personal/materiales" element={<StaffMaterialsPage />} />
+          <Route
+            path="/personal/solicitudes/nueva"
+            element={<RequestDestination />}
+          />
         </Route>
         <Route path="/materiales" element={<p>Pantalla de búsqueda</p>} />
         <Route path="/login" element={<p>Pantalla de login</p>} />
@@ -76,6 +91,40 @@ describe('StaffMaterialsPage', () => {
       expect(
         screen.getByRole('button', { name: /cambiar estado de acta 1/i }),
       ).toBeInTheDocument();
+    },
+  );
+
+  it.each(['PERSONAL', 'ADMIN'])(
+    'lets %s pick materials and register a request with them',
+    async (role) => {
+      const user = userEvent.setup();
+      const second = material({
+        id: '00000000-0000-4000-8000-000000000002',
+        catalogCode: 'TH-DOC-0002',
+        title: 'Acta 2',
+      });
+      fetchMock.mockResolvedValue(listResponse([material(), second]));
+      renderPage(role);
+
+      const register = screen.getByRole('button', {
+        name: 'Registrar solicitud',
+      });
+      expect(register).toBeDisabled();
+      await user.click(
+        await screen.findByRole('checkbox', { name: 'Seleccionar Acta 1' }),
+      );
+      await user.click(
+        screen.getByRole('checkbox', { name: 'Seleccionar Acta 2' }),
+      );
+      expect(screen.getByText('2 materiales seleccionados')).toBeInTheDocument();
+      await user.click(register);
+
+      expect(
+        screen.getByText(
+          `Destino: /personal/solicitudes/nueva?materiales=${MATERIAL_ID},${second.id}`,
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Cargados: Acta 1, Acta 2')).toBeInTheDocument();
     },
   );
 
