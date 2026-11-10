@@ -507,9 +507,6 @@ export function StaffNewRequestPage() {
             <Link className={styles.backLink} to={ROUTES.staffMaterials}>
               ‹ Volver al estado del material
             </Link>
-            <Link className={styles.backLink} to={ROUTES.materials}>
-              Materiales del archivo
-            </Link>
           </p>
         </section>
 
@@ -564,7 +561,7 @@ export function StaffNewRequestPage() {
               >
                 Registrar otra solicitud
               </button>
-              <Link className={styles.secondaryLink} to={ROUTES.materials}>
+              <Link className={styles.secondaryLink} to={ROUTES.staffMaterials}>
                 Buscar otro material
               </Link>
             </div>
@@ -867,7 +864,7 @@ export function StaffNewRequestPage() {
                       ? '1'
                       : selectedMaterials.length}
                   </h3>
-                  <Link className={styles.backLink} to={ROUTES.materials}>
+                  <Link className={styles.backLink} to={ROUTES.staffMaterials}>
                     {selectedMaterials.length > 0
                       ? 'Cambiar materiales'
                       : 'Elegir en el buscador'}

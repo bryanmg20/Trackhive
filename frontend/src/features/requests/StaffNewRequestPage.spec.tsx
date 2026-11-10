@@ -112,7 +112,7 @@ describe('StaffNewRequestPage', () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cambiar materiales' })).toHaveAttribute(
       'href',
-      '/materiales',
+      '/personal/materiales',
     );
   });
 
@@ -280,6 +280,9 @@ describe('StaffNewRequestPage', () => {
       screen.getByRole('heading', { name: 'Solicitud registrada' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Ana María Pérez Gómez')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Buscar otro material' }),
+    ).toHaveAttribute('href', '/personal/materiales');
   });
 
   it('asks to sign in again when the session expires', async () => {

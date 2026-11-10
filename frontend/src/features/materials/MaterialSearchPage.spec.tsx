@@ -54,8 +54,8 @@ function renderPage(role: string) {
         <Route path="/materiales" element={<MaterialSearchPage />} />
         <Route path="/solicitudes/nueva" element={<RequestDestination />} />
         <Route
-          path="/personal/solicitudes/nueva"
-          element={<RequestDestination />}
+          path="/personal/materiales"
+          element={<p>Pantalla de material del personal</p>}
         />
         <Route path="/login" element={<p>Pantalla de login</p>} />
       </Routes>
@@ -181,30 +181,17 @@ describe('MaterialSearchPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('lets staff select materials and goes to the on-behalf screen', async () => {
-    const user = userEvent.setup();
-    fetchMock.mockResolvedValue(page([material(1), material(2)]));
-    renderPage('PERSONAL');
+  it.each(['PERSONAL', 'ADMIN'])(
+    'sends %s to the staff material screen and loads nothing',
+    (role) => {
+      renderPage(role);
 
-    expect(
-      screen.getByRole('button', { name: 'Registrar solicitud' }),
-    ).toBeDisabled();
-    await user.click(
-      await screen.findByRole('checkbox', { name: 'Seleccionar Acta 1' }),
-    );
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Seleccionar Acta 2' }),
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Registrar solicitud' }),
-    );
-
-    expect(
-      screen.getByText(
-        `Destino: /personal/solicitudes/nueva?materiales=${material(1).id},${material(2).id}`,
-      ),
-    ).toBeInTheDocument();
-  });
+      expect(
+        screen.getByText('Pantalla de material del personal'),
+      ).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 
   it('links to login when the session is not valid', async () => {
     fetchMock.mockResolvedValue({
@@ -228,15 +215,5 @@ describe('MaterialSearchPage', () => {
     expect(
       screen.getByRole('link', { name: 'Mis solicitudes' }),
     ).toHaveAttribute('href', '/mis-solicitudes');
-  });
-
-  it('does not show «Mis solicitudes» to the staff', async () => {
-    fetchMock.mockResolvedValue(page([material(1)]));
-    renderPage('PERSONAL');
-    await screen.findByRole('table');
-
-    expect(
-      screen.queryByRole('link', { name: 'Mis solicitudes' }),
-    ).not.toBeInTheDocument();
   });
 });

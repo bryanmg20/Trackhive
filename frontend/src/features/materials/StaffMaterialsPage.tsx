@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { SiteNav } from '../navigation/SiteNav';
+import type { SelectedMaterial } from '../requests/selected-materials';
+import { buildStaffNewRequestPath } from '../requests/selected-materials';
 import {
   changeMaterialStatus,
   MAX_STATUS_REASON_LENGTH,
@@ -51,8 +53,12 @@ function toApiError(caught: unknown): MaterialsApiError {
     : new MaterialsApiError(NETWORK_ERROR_MESSAGE, 0);
 }
 
-/** Staff screen (HU-08): list the material and change its availability status. */
+/**
+ * Staff screen: list the material, change its availability status (HU-08) and
+ * pick materials to register a request on behalf of a visitor (#109).
+ */
 export function StaffMaterialsPage() {
+  const navigate = useNavigate();
   const [text, setText] = useState('');
   const [collection, setCollection] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -68,6 +74,7 @@ export function StaffMaterialsPage() {
   const [savedStatuses, setSavedStatuses] = useState<
     Record<string, MaterialStatus>
   >({});
+  const [selected, setSelected] = useState<SelectedMaterial[]>([]);
 
   const [editing, setEditing] = useState<Material | null>(null);
   const [newStatus, setNewStatus] = useState<MaterialStatus>('DISPONIBLE');
@@ -123,6 +130,20 @@ export function StaffMaterialsPage() {
 
   function goToPage(page: number) {
     setParams((current) => ({ ...current, page }));
+  }
+
+  function toggle(material: SelectedMaterial) {
+    setSelected((current) =>
+      current.some((item) => item.id === material.id)
+        ? current.filter((item) => item.id !== material.id)
+        : [...current, material],
+    );
+  }
+
+  function requestSelected() {
+    navigate(buildStaffNewRequestPath(selected.map((item) => item.id)), {
+      state: { materials: selected },
+    });
   }
 
   function startEditing(material: Material) {
@@ -444,6 +465,9 @@ export function StaffMaterialsPage() {
                 <table className={searchStyles.table}>
                   <thead>
                     <tr>
+                      <th scope="col" className={searchStyles.checkCell}>
+                        <span className="sr-only">Seleccionar</span>
+                      </th>
                       <th scope="col">Título</th>
                       <th scope="col">Tipo</th>
                       <th scope="col">Estado</th>
@@ -458,6 +482,22 @@ export function StaffMaterialsPage() {
                         savedStatuses[material.id] ?? material.status;
                       return (
                         <tr key={material.id}>
+                          <td className={searchStyles.checkCell}>
+                            <input
+                              type="checkbox"
+                              aria-label={`Seleccionar ${material.title}`}
+                              checked={selected.some(
+                                (item) => item.id === material.id,
+                              )}
+                              onChange={() =>
+                                toggle({
+                                  id: material.id,
+                                  title: material.title,
+                                  catalogCode: material.catalogCode,
+                                })
+                              }
+                            />
+                          </td>
                           <td className={searchStyles.titleCell}>
                             <strong>{material.title}</strong>
                             <span className={searchStyles.code}>
@@ -519,6 +559,24 @@ export function StaffMaterialsPage() {
           </section>
         </div>
       </main>
+
+      <div className={searchStyles.requestBar}>
+        <div className={searchStyles.requestBarInner}>
+          <p aria-live="polite">
+            {selected.length === 1
+              ? '1 material seleccionado'
+              : `${selected.length} materiales seleccionados`}
+          </p>
+          <button
+            className={searchStyles.primary}
+            type="button"
+            onClick={requestSelected}
+            disabled={selected.length === 0}
+          >
+            Registrar solicitud
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
