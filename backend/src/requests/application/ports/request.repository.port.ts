@@ -1,3 +1,4 @@
+import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import type { DeliveryMode } from '../../domain/delivery-mode';
 import type { Request } from '../../domain/entities/request.entity';
 import type { RequestStatus } from '../../domain/request-status';
@@ -130,6 +131,18 @@ export interface SavedStatusChange {
   };
 }
 
+/** What the email of a status change needs to know of the request (HU-23). */
+export interface RequestNotificationContext {
+  trackingCode: string;
+  requester: {
+    firstName: string;
+    lastName: string;
+    // NULL when the requester only left a phone: there is nobody to email
+    email: string | null;
+  };
+  materials: { catalogCode: string; title: string }[];
+}
+
 /** An appointment as it was saved (HU-18), with the names to show. */
 export interface SavedAppointment {
   id: string;
@@ -173,18 +186,33 @@ export interface RequestRepository {
   /** The request as a domain entity, to apply its transition rules (HU-15). */
   findEntityById(id: string): Promise<Request | null>;
 
+  /** Tracking code, requester and materials for the status email (HU-23). */
+  findNotificationContext(
+    id: string,
+  ): Promise<RequestNotificationContext | null>;
+
   /**
    * Saves the new status and inserts its row in status_history in one
-   * transaction (D-08). Throws RequestStatusConflictError when the request
-   * is no longer in `previousStatus` because someone else changed it first.
+   * transaction (D-08). In the same transaction it queues `notification`,
+   * the email to the requester, in the outbox (HU-23, D-10); null when the
+   * requester has no email. Throws RequestStatusConflictError when the
+   * request is no longer in `previousStatus` because someone else changed it
+   * first, and then nothing is saved or queued.
    */
-  saveStatusChange(change: StatusChange): Promise<SavedStatusChange>;
+  saveStatusChange(
+    change: StatusChange,
+    notification: NotificationDraft | null,
+  ): Promise<SavedStatusChange>;
 
   /**
    * Schedules an appointment (HU-18) in one transaction: saves the change to
-   * AGENDADA with its row in status_history, like saveStatusChange, and
-   * creates the appointment for `date` with the requester and every material
-   * of the request.
+   * AGENDADA with its row in status_history and its email, like
+   * saveStatusChange, and creates the appointment for `date` with the
+   * requester and every material of the request.
    */
-  saveAppointment(change: StatusChange, date: Date): Promise<SavedAppointment>;
+  saveAppointment(
+    change: StatusChange,
+    date: Date,
+    notification: NotificationDraft | null,
+  ): Promise<SavedAppointment>;
 }

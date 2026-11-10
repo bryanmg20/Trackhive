@@ -1,3 +1,5 @@
+import { Logger } from '@nestjs/common';
+import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import { DeliveryMode } from '../../domain/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
@@ -7,10 +9,21 @@ import { RequestStatusConflictError } from '../../domain/errors/request-status-c
 import { RequestStatus } from '../../domain/request-status';
 import type { StatusChange } from '../../domain/status-change';
 import type {
+  RequestNotificationContext,
   RequestRepository,
   SavedStatusChange,
 } from '../ports/request.repository.port';
 import { ChangeRequestStatusUseCase } from './change-request-status.use-case';
+
+const CONTEXT: RequestNotificationContext = {
+  trackingCode: 'SOL-2026-00042',
+  requester: {
+    firstName: 'Juan',
+    lastName: 'Pérez',
+    email: 'juan@example.com',
+  },
+  materials: [{ catalogCode: 'AHB-001', title: 'Actas de 1890' }],
+};
 
 const buildRequest = (
   status: RequestStatus,
@@ -34,16 +47,28 @@ const savedFrom = (change: StatusChange): SavedStatusChange => ({
 
 describe('ChangeRequestStatusUseCase', () => {
   let findEntityById: jest.Mock<Promise<Request | null>, [string]>;
-  let saveStatusChange: jest.Mock<Promise<SavedStatusChange>, [StatusChange]>;
+  let findNotificationContext: jest.Mock<
+    Promise<RequestNotificationContext | null>,
+    [string]
+  >;
+  let saveStatusChange: jest.Mock<
+    Promise<SavedStatusChange>,
+    [StatusChange, NotificationDraft | null]
+  >;
   let useCase: ChangeRequestStatusUseCase;
 
   beforeEach(() => {
     findEntityById = jest.fn<Promise<Request | null>, [string]>(() =>
       Promise.resolve(buildRequest('AGENDADA')),
     );
-    saveStatusChange = jest.fn<Promise<SavedStatusChange>, [StatusChange]>(
-      (change) => Promise.resolve(savedFrom(change)),
-    );
+    findNotificationContext = jest.fn<
+      Promise<RequestNotificationContext | null>,
+      [string]
+    >(() => Promise.resolve(CONTEXT));
+    saveStatusChange = jest.fn<
+      Promise<SavedStatusChange>,
+      [StatusChange, NotificationDraft | null]
+    >((change) => Promise.resolve(savedFrom(change)));
     const repository: RequestRepository = {
       create: jest.fn(),
       createOnBehalf: jest.fn(),
@@ -52,10 +77,98 @@ describe('ChangeRequestStatusUseCase', () => {
       findById: jest.fn(),
       listByRequesterUser: jest.fn(),
       findEntityById,
+      findNotificationContext,
       saveStatusChange,
       saveAppointment: jest.fn(),
     };
     useCase = new ChangeRequestStatusUseCase(repository);
+  });
+
+  // The email queued with the change (HU-23)
+  const queuedEmail = () => saveStatusChange.mock.calls[0][1];
+
+  describe('emailing the requester (HU-23)', () => {
+    it('queues the email with the new status and the material in the same save', async () => {
+      await useCase.execute({
+        requestId: 'request-1',
+        status: 'ATENDIDA',
+        userId: 'staff-1',
+      });
+
+      expect(findNotificationContext).toHaveBeenCalledWith('request-1');
+      expect(saveStatusChange).toHaveBeenCalledTimes(1);
+      expect(queuedEmail()).toMatchObject({
+        recipientEmail: 'juan@example.com',
+        template: 'CAMBIO_ESTADO',
+        subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
+      });
+      expect(queuedEmail()?.text).toContain('Nuevo estado: Atendida');
+      expect(queuedEmail()?.text).toContain('AHB-001 · Actas de 1890');
+    });
+
+    it('includes the reason when the request is rejected', async () => {
+      findEntityById.mockResolvedValue(buildRequest('RECIBIDA'));
+
+      await useCase.execute({
+        requestId: 'request-1',
+        status: 'RECHAZADA',
+        comment: '  El material está restringido  ',
+        userId: 'staff-1',
+      });
+
+      expect(queuedEmail()?.text).toContain(
+        'Motivo del rechazo: El material está restringido',
+      );
+    });
+
+    it('does not show an ordinary comment, which can be an internal note', async () => {
+      await useCase.execute({
+        requestId: 'request-1',
+        status: 'DISPONIBLE',
+        comment: 'Nota interna del personal',
+        userId: 'staff-1',
+      });
+
+      expect(queuedEmail()?.text).not.toContain('Nota interna');
+    });
+
+    it('saves the change without an email when the requester has none, and logs it', async () => {
+      findNotificationContext.mockResolvedValue({
+        ...CONTEXT,
+        requester: { ...CONTEXT.requester, email: null },
+      });
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+      const result = await useCase.execute({
+        requestId: 'request-1',
+        status: 'ATENDIDA',
+        userId: 'staff-1',
+      });
+
+      expect(result.status).toBe('ATENDIDA');
+      expect(saveStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({ newStatus: 'ATENDIDA' }),
+        null,
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('SOL-2026-00042 has no requester email'),
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('queues nothing when the transition is not valid', async () => {
+      findEntityById.mockResolvedValue(buildRequest('RECIBIDA'));
+
+      await expect(
+        useCase.execute({
+          requestId: 'request-1',
+          status: 'ATENDIDA',
+          userId: 'staff-1',
+        }),
+      ).rejects.toThrow(InvalidStatusTransitionError);
+      expect(findNotificationContext).not.toHaveBeenCalled();
+      expect(saveStatusChange).not.toHaveBeenCalled();
+    });
   });
 
   it('saves the date and time, the responsible and the comment of the change', async () => {

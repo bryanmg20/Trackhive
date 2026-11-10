@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
   CreatedRequest,
@@ -8,6 +9,7 @@ import type {
   RequestDetail,
   RequestListCriteria,
   RequestListResult,
+  RequestNotificationContext,
   RequesterProfile,
   RequestRepository,
   SavedAppointment,
@@ -260,10 +262,40 @@ export class PrismaRequestRepository implements RequestRepository {
     });
   }
 
-  async saveStatusChange(change: StatusChange): Promise<SavedStatusChange> {
-    // The new status and its history row are saved together or not at all (D-08)
+  async findNotificationContext(
+    id: string,
+  ): Promise<RequestNotificationContext | null> {
+    const model = await this.prisma.requestModel.findUnique({
+      where: { id },
+      select: {
+        trackingCode: true,
+        requester: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+        items: {
+          select: { material: { select: { catalogCode: true, title: true } } },
+          orderBy: { material: { catalogCode: 'asc' } },
+        },
+      },
+    });
+    if (!model) {
+      return null;
+    }
+    return {
+      trackingCode: model.trackingCode,
+      requester: model.requester,
+      materials: model.items.map(({ material }) => material),
+    };
+  }
+
+  async saveStatusChange(
+    change: StatusChange,
+    notification: NotificationDraft | null,
+  ): Promise<SavedStatusChange> {
+    // The new status, its history row and its email are saved together or
+    // not at all (D-08, D-10)
     return this.prisma.$transaction(async (tx) => {
-      const saved = await this.applyStatusChange(tx, change);
+      const saved = await this.applyStatusChange(tx, change, notification);
 
       // Leaving AGENDADA settles its appointment, so the request can be
       // scheduled again: ATENDIDA = the requester attended, DISPONIBLE = not
@@ -282,11 +314,16 @@ export class PrismaRequestRepository implements RequestRepository {
   async saveAppointment(
     change: StatusChange,
     date: Date,
+    notification: NotificationDraft | null,
   ): Promise<SavedAppointment> {
-    // The change to AGENDADA, its history row and the appointment are saved
-    // together or not at all
+    // The change to AGENDADA, its history row, its email and the appointment
+    // are saved together or not at all
     return this.prisma.$transaction(async (tx) => {
-      const statusChange = await this.applyStatusChange(tx, change);
+      const statusChange = await this.applyStatusChange(
+        tx,
+        change,
+        notification,
+      );
 
       const request = await tx.requestModel.findUniqueOrThrow({
         where: { id: change.requestId },
@@ -344,12 +381,14 @@ export class PrismaRequestRepository implements RequestRepository {
   }
 
   /**
-   * Saves the new status and inserts its row in status_history inside the
-   * transaction `tx` (D-08).
+   * Saves the new status, inserts its row in status_history (D-08) and
+   * queues its email in the outbox (HU-23, D-10) inside the transaction `tx`.
+   * Every status change goes through here.
    */
   private async applyStatusChange(
     tx: Prisma.TransactionClient,
     change: StatusChange,
+    notification: NotificationDraft | null,
   ): Promise<SavedStatusChange> {
     // Optimistic lock: update only if the request is still in the status the
     // transition was validated against. If another person changed it in the
@@ -396,6 +435,25 @@ export class PrismaRequestRepository implements RequestRepository {
         },
       },
     });
+
+    // Only queued: a job sends it, so a mail server failure can neither
+    // slow down nor undo the change (D-10)
+    if (notification) {
+      await tx.notificationModel.create({
+        data: {
+          id: randomUUID(),
+          requestId: change.requestId,
+          statusHistoryId: row.id,
+          recipientEmail: notification.recipientEmail,
+          template: notification.template,
+          subject: notification.subject,
+          body: notification.text,
+          htmlBody: notification.html,
+          deliveryStatus: 'PENDIENTE',
+          scheduledAt: change.changedAt,
+        },
+      });
+    }
 
     return {
       previousStatus: change.previousStatus,

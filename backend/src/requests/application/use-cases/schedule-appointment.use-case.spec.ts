@@ -1,3 +1,4 @@
+import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import type { DeliveryMode } from '../../domain/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
 import { InvalidAppointmentDateError } from '../../domain/errors/invalid-appointment-date.error';
@@ -7,6 +8,7 @@ import { RequestStatusConflictError } from '../../domain/errors/request-status-c
 import type { RequestStatus } from '../../domain/request-status';
 import type { StatusChange } from '../../domain/status-change';
 import type {
+  RequestNotificationContext,
   RequestRepository,
   SavedAppointment,
 } from '../ports/request.repository.port';
@@ -54,17 +56,28 @@ describe('ScheduleAppointmentUseCase', () => {
   let findEntityById: jest.Mock<Promise<Request | null>, [string]>;
   let saveAppointment: jest.Mock<
     Promise<SavedAppointment>,
-    [StatusChange, Date]
+    [StatusChange, Date, NotificationDraft | null]
   >;
   let useCase: ScheduleAppointmentUseCase;
+
+  const CONTEXT: RequestNotificationContext = {
+    trackingCode: 'SOL-2026-00042',
+    requester: {
+      firstName: 'Juan',
+      lastName: 'Pérez',
+      email: 'juan@example.com',
+    },
+    materials: MATERIALS,
+  };
 
   beforeEach(() => {
     findEntityById = jest.fn<Promise<Request | null>, [string]>(() =>
       Promise.resolve(buildRequest('DISPONIBLE')),
     );
-    saveAppointment = jest.fn<Promise<SavedAppointment>, [StatusChange, Date]>(
-      (change, date) => Promise.resolve(savedFrom(change, date)),
-    );
+    saveAppointment = jest.fn<
+      Promise<SavedAppointment>,
+      [StatusChange, Date, NotificationDraft | null]
+    >((change, date) => Promise.resolve(savedFrom(change, date)));
     const repository: RequestRepository = {
       create: jest.fn(),
       createOnBehalf: jest.fn(),
@@ -73,6 +86,7 @@ describe('ScheduleAppointmentUseCase', () => {
       findById: jest.fn(),
       listByRequesterUser: jest.fn(),
       findEntityById,
+      findNotificationContext: jest.fn(() => Promise.resolve(CONTEXT)),
       saveStatusChange: jest.fn(),
       saveAppointment,
     };
@@ -81,6 +95,44 @@ describe('ScheduleAppointmentUseCase', () => {
 
   const schedule = (date = '2026-11-20') =>
     useCase.execute({ requestId: 'request-1', date, userId: 'staff-1' });
+
+  describe('emailing the requester (HU-23)', () => {
+    const queuedEmail = () => saveAppointment.mock.calls[0][2];
+
+    it('queues the email with AGENDADA, the day, the service hours and the material', async () => {
+      await schedule();
+
+      expect(queuedEmail()).toMatchObject({
+        recipientEmail: 'juan@example.com',
+        template: 'CAMBIO_ESTADO',
+        subject: 'Su solicitud SOL-2026-00042 pasó a «Agendada»',
+      });
+      const text = queuedEmail()?.text ?? '';
+      expect(text).toContain('Nuevo estado: Agendada');
+      expect(text).toContain(
+        'Fecha de la cita: viernes, 20 de noviembre de 2026',
+      );
+      expect(text).toContain('Horario de atención: de 8:00 a 17:00');
+      expect(text).toContain('AHB-001 · Actas de 1890');
+      expect(text).toContain('AHB-002 · El Heraldo, 1935');
+    });
+
+    it('gives the Saturday service hours in the email of a Saturday', async () => {
+      await schedule('2026-11-21');
+
+      expect(queuedEmail()?.text).toContain(
+        'Fecha de la cita: sábado, 21 de noviembre de 2026',
+      );
+      expect(queuedEmail()?.text).toContain('de 9:00 a 13:00');
+    });
+
+    it('queues nothing when the day is a Sunday', async () => {
+      await expect(schedule('2026-11-22')).rejects.toThrow(
+        InvalidAppointmentDateError,
+      );
+      expect(saveAppointment).not.toHaveBeenCalled();
+    });
+  });
 
   it('saves the change to AGENDADA with who scheduled it and the day', async () => {
     await schedule();
