@@ -1,0 +1,17 @@
+/* Rejection reason under the status badge (HU-16) */
+.reason {
+  max-width: 28rem;
+  margin: 0.4rem 0 0;
+  color: var(--ink);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.reasonLabel {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

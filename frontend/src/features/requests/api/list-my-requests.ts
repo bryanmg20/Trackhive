@@ -12,7 +12,10 @@ import type {
 export type MyRequestItem = Omit<
   RequestListItem,
   'requesterName' | 'requesterEmail'
->;
+> & {
+  // Why the staff rejected it; only for RECHAZADA (HU-16)
+  rejectionReason: string | null;
+};
 
 export interface MyRequestPage {
   items: MyRequestItem[];
