@@ -20,6 +20,7 @@ describe('CreateRequestOnBehalfUseCase', () => {
     findRequesterByEmail: jest.fn(),
     list: jest.fn(),
     findById: jest.fn(),
+    listByRequesterUser: jest.fn(),
   };
   const useCase = new CreateRequestOnBehalfUseCase(repository);
 

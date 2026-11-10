@@ -61,6 +61,7 @@ describe('GetRequestDetailUseCase', () => {
       findRequesterByEmail: jest.fn(),
       list: jest.fn(),
       findById,
+      listByRequesterUser: jest.fn(),
     };
     useCase = new GetRequestDetailUseCase(repository);
   });

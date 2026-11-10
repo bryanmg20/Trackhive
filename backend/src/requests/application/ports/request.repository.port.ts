@@ -46,6 +46,12 @@ export interface RequestListCriteria {
   limit: number;
 }
 
+/** «Mis solicitudes» (HU-11): only the status filter, the order and the page. */
+export type MyRequestListCriteria = Pick<
+  RequestListCriteria,
+  'status' | 'sort' | 'order' | 'page' | 'limit'
+>;
+
 export interface RequestListItem {
   id: string;
   trackingCode: string;
@@ -119,4 +125,12 @@ export interface RequestRepository {
   list(criteria: RequestListCriteria): Promise<RequestListResult>;
 
   findById(id: string): Promise<RequestDetail | null>;
+  /**
+   * Only the requests whose requester is linked to this user account: the
+   * ones the user radicated and the ones the staff registered for them.
+   */
+  listByRequesterUser(
+    userId: string,
+    criteria: MyRequestListCriteria,
+  ): Promise<RequestListResult>;
 }
