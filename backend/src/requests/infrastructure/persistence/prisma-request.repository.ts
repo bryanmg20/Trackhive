@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
   CreatedRequest,
+  MyRequestListCriteria,
   RequestDetail,
   RequestListCriteria,
   RequestListResult,
@@ -105,8 +106,25 @@ export class PrismaRequestRepository implements RequestRepository {
   }
 
   async list(criteria: RequestListCriteria): Promise<RequestListResult> {
-    const where = this.buildListWhere(criteria);
+    return this.findPage(this.buildListWhere(criteria), criteria);
+  }
 
+  async listByRequesterUser(
+    userId: string,
+    criteria: MyRequestListCriteria,
+  ): Promise<RequestListResult> {
+    // Filter by the account linked to the requester, never by the email: a
+    // visitor's requester can share an email without being this user (HU-11)
+    return this.findPage(
+      { AND: [{ requester: { userId } }, this.buildListWhere(criteria)] },
+      criteria,
+    );
+  }
+
+  private async findPage(
+    where: Prisma.RequestModelWhereInput,
+    criteria: Pick<RequestListCriteria, 'sort' | 'order' | 'page' | 'limit'>,
+  ): Promise<RequestListResult> {
     // Same filter for the page and the total, in one transaction
     const [models, total] = await this.prisma.$transaction([
       this.prisma.requestModel.findMany({

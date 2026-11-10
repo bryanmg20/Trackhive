@@ -87,6 +87,9 @@ describe('NewRequestPage', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'SOL-2026-00001',
     );
+    expect(
+      screen.getByRole('link', { name: 'Ver mis solicitudes' }),
+    ).toHaveAttribute('href', '/mis-solicitudes');
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/api/v1/requests');
     expect(JSON.parse(init.body as string)).toMatchObject({

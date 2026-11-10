@@ -17,6 +17,7 @@ const buildRepository = () => ({
   findRequesterByEmail: jest.fn(),
   list: jest.fn(),
   findById: jest.fn(),
+  listByRequesterUser: jest.fn(),
 });
 
 describe('CreateRequestUseCase', () => {

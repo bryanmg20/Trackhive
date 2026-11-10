@@ -2,8 +2,9 @@
 
 Interfaz web de Trackhive (React + TypeScript + Vite). Cubre el registro de
 investigadores (HU-47), el inicio de sesión, el buscador de material (HU-7.1),
-la gestión del estado del material (HU-08) y el registro de solicitudes del
-personal a nombre de un visitante (HU-93).
+la gestión del estado del material (HU-08), el registro de solicitudes del
+personal a nombre de un visitante (HU-93), el listado de solicitudes del
+personal (HU-12) y «Mis solicitudes» del usuario público (HU-11).
 
 ## Requisitos
 
@@ -28,11 +29,14 @@ pnpm build    # tsc -b && vite build
 | `/login`                         | Inicio de sesión                                           | Público          |
 | `/materiales`                    | Buscador de material (HU-7.1)                              | Autenticado      |
 | `/solicitudes/nueva`             | Solicitud del usuario público (HU-10)                      | `PUBLICO`        |
+| `/mis-solicitudes`               | Mis solicitudes: estado de cada una (HU-11)                | `PUBLICO`        |
 | `/personal/materiales`           | Estado del material (HU-08)                                | `PERSONAL`/`ADMIN` |
 | `/personal/solicitudes/nueva`    | Registrar solicitud a nombre de un visitante (HU-93)       | `PERSONAL`/`ADMIN` |
-| `/solicitudes`                   | Marcador de posición de solicitudes                        | Público          |
+| `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
 
-Las rutas de personal viven dentro de `StaffRoute`; si el rol no es `PERSONAL`
+Las rutas del usuario público viven dentro de `ProtectedRoute`; cualquier otro
+rol o una sesión vencida redirige a `/login`. Las rutas de personal viven dentro
+de `StaffRoute`; si el rol no es `PERSONAL`
 ni `ADMIN`, redirigen a `/materiales` o a `/login`. Cualquier otra ruta redirige
 a `/registro`.
 
@@ -89,6 +93,23 @@ el estado de navegación. La regla de anticipación de la fecha deseada no se
 duplica en React: el mensaje de `INVALID_DESIRED_DATE` se muestra junto al
 campo de fecha tal como lo devuelve el backend.
 
+### Mis solicitudes (HU-11)
+
+La pantalla `/mis-solicitudes` consume `GET /api/v1/requests/mine`
+(`@Roles('PUBLICO')`; el personal y el administrador reciben `403`). El backend
+toma al usuario del access token, así que la URL no lleva ningún identificador:
+solo acepta `status`, `sort` (`registeredAt` o `desiredDate`), `order`, `page` y
+`limit`. Cualquier otro parámetro, como los filtros del personal, responde
+`400`. Cada solicitud trae `trackingCode`, `registeredAt`, `status`,
+`desiredDate`, `deliveryMode` y `materials`, sin el nombre ni el correo del
+solicitante.
+
+La pantalla muestra el código de seguimiento, la fecha de radicación (en hora
+de Bogotá), el material, la fecha deseada y el estado; filtra por estado,
+ordena y pagina de 10 en 10. Se llega desde «Mis solicitudes» en la barra del
+buscador `/materiales` (solo para `PUBLICO`) y desde el enlace «Ver mis
+solicitudes» al radicar una solicitud.
+
 ## Estado y alcance
 
 - **HU-01 integrado:** el `POST /api/v1/users` acepta `firstName`,
@@ -116,6 +137,11 @@ contraseñas que no coinciden, aviso de privacidad obligatorio con versión
 visible, detalles `400`, correo duplicado `409`, fallo de red, confirmación con
 navegación manual y redirección automática. La API se simula con
 `vi.stubGlobal('fetch', ...)`.
+
+`MyRequestsPage.spec.tsx` cubre las columnas pedidas por HU-11, la fecha de
+radicación en hora de Bogotá, la URL de `/requests/mine`, la redirección de
+`PERSONAL`, `ADMIN` y visitantes a `/login`, el filtro por estado, el orden, la
+paginación, los dos mensajes de lista vacía, la sesión vencida y el fallo de red.
 
 `StaffNewRequestPage.spec.tsx` cubre la búsqueda de solicitante encontrado y
 nuevo, los cuerpos enviados en cada caso, el error de fecha del backend junto al
