@@ -32,4 +32,7 @@ export interface MaterialSearchResult {
 
 export interface IMaterialRepository {
   search(criteria: MaterialSearchCriteria): Promise<MaterialSearchResult>;
+  findById(id: string): Promise<Material | null>;
+  /** Saves the status and the data of the last status change (HU-08) */
+  saveStatusChange(material: Material): Promise<void>;
 }

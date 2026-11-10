@@ -22,6 +22,10 @@ export interface MaterialProps {
   publisher: string | null;
   location: MaterialLocation;
   status: MaterialStatus;
+  // Last status change (HU-08); null while it was never changed
+  statusChangedAt?: Date | null;
+  statusChangedBy?: string | null;
+  statusChangeReason?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +41,9 @@ export class Material {
   public readonly publisher: string | null;
   public readonly location: MaterialLocation;
   public readonly status: MaterialStatus;
+  public readonly statusChangedAt: Date | null;
+  public readonly statusChangedBy: string | null;
+  public readonly statusChangeReason: string | null;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
@@ -58,7 +65,30 @@ export class Material {
     this.publisher = props.publisher;
     this.location = props.location;
     this.status = props.status;
+    this.statusChangedAt = props.statusChangedAt ?? null;
+    this.statusChangedBy = props.statusChangedBy ?? null;
+    this.statusChangeReason = props.statusChangeReason ?? null;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+  }
+
+  /** Returns a copy with the new status and who changed it, when and why (HU-08). */
+  changeStatus(
+    status: MaterialStatus,
+    changedBy: string,
+    reason: string | null,
+    now: Date = new Date(),
+  ): Material {
+    if (!isMaterialStatus(status)) {
+      throw new InvalidMaterialStatusError();
+    }
+    return new Material({
+      ...this,
+      status,
+      statusChangedAt: now,
+      statusChangedBy: changedBy,
+      statusChangeReason: reason,
+      updatedAt: now,
+    });
   }
 }
