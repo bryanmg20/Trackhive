@@ -242,6 +242,9 @@ erDiagram
         varchar(40) shelf
         varchar(40) box
         varchar(20) status
+        timestamptz status_changed_at
+        uuid status_changed_by FK
+        varchar(500) status_change_reason
         timestamptz created_at
         timestamptz updated_at
     }
@@ -335,6 +338,7 @@ erDiagram
     APPOINTMENTS }o--|| USERS : "agendada por"
     REQUESTERS |o--o| USERS : "tiene cuenta"
     USERS ||--o{ REFRESH_TOKENS : "posee"
+    USERS |o--o{ MATERIALS : "cambia el estado de"
 ```
 
 Decisiones principales:
@@ -410,6 +414,9 @@ Campos según HU-06, HU-07 y HU-20.
 | publisher | varchar(150) | NULL | Empresa editora; solo periódicos |
 | depot, shelf, box | varchar(40) | | Ubicación física. Nunca se muestra al rol `PUBLICO` |
 | status | varchar(20) | CHECK | `DISPONIBLE`, `EN_USO`, `EN_RESTAURACION`, `NO_CONSULTABLE` |
+| status_changed_at | timestamptz | NULL | Fecha del último cambio de estado (HU-08). Vacío si nunca se cambió |
+| status_changed_by | uuid | FK → users, NULL | Responsable del último cambio de estado (HU-08) |
+| status_change_reason | varchar(500) | NULL | Motivo opcional del último cambio de estado (HU-08) |
 | created_at, updated_at | timestamptz | | |
 
 ### requests
