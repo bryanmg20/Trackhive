@@ -32,6 +32,7 @@ model UserModel {
   createdRequests         RequestModel[]      @relation("RequestCreatedBy")
   assignedRequests        RequestModel[]      @relation("RequestAssignee")
   materialStatusChanges   MaterialModel[]     @relation("MaterialStatusChangedBy")
+  requestStatusChanges    StatusHistoryModel[]
 
   @@map("users")
 }
@@ -145,6 +146,7 @@ model RequestModel {
   createdBy              UserModel          @relation("RequestCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   assignee               UserModel?         @relation("RequestAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
   items                  RequestItemModel[]
+  statusHistory          StatusHistoryModel[]
 
   @@index([requesterId])
   @@index([createdById])
@@ -167,4 +169,27 @@ model RequestItemModel {
   @@unique([requestId, materialId])
   @@index([materialId])
   @@map("request_items")
+}
+
+// One row per status change of a request (HU-15, D-08). Insert-only: a trigger
+// in the migration rejects UPDATE and DELETE, because it is the audit trail
+model StatusHistoryModel {
+  id                 BigInt       @id @default(autoincrement())
+  requestId          String       @map("request_id") @db.Uuid
+  // NULL only for the row that records the creation of the request
+  // Allowed values of both columns (CHECK in the migration): RECIBIDA … RECHAZADA
+  previousStatus     String?      @map("previous_status") @db.VarChar(12)
+  newStatus          String       @map("new_status") @db.VarChar(12)
+  // Who made the change
+  userId             String       @map("user_id") @db.Uuid
+  comment            String?
+  visibleToRequester Boolean      @default(true) @map("visible_to_requester")
+  changedAt          DateTime     @default(now()) @map("changed_at") @db.Timestamptz
+  request            RequestModel @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  user               UserModel    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // Timeline of a request and attention times (§4 of docs/modelo-datos.md)
+  @@index([requestId, changedAt])
+  @@index([userId])
+  @@map("status_history")
 }
