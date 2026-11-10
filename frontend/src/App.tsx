@@ -11,6 +11,7 @@ import { NewRequestPage } from './features/requests/NewRequestPage';
 import { StaffNewRequestPage } from './features/requests/StaffNewRequestPage';
 import { MaterialSearchPage } from './features/materials/MaterialSearchPage';
 import { StaffMaterialsPage } from './features/materials/StaffMaterialsPage';
+import { AppointmentsCalendarPage } from './features/requests/AppointmentsCalendarPage';
 import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestsListPage } from './features/requests/RequestsListPage';
 import { ROUTES } from './routes';
@@ -36,6 +37,10 @@ function App() {
         <Route path={ROUTES.staffMaterials} element={<StaffMaterialsPage />} />
         <Route path={ROUTES.requests} element={<RequestsListPage />} />
         <Route path={ROUTES.requestDetail} element={<RequestDetailPage />} />
+        <Route
+          path={ROUTES.calendar}
+          element={<AppointmentsCalendarPage />}
+        />
         <Route
           path={ROUTES.staffNewRequest}
           element={<StaffNewRequestPage />}

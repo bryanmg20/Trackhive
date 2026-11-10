@@ -48,6 +48,9 @@ describe('SiteNav', () => {
       screen.queryByRole('link', { name: 'Solicitudes' }),
     ).not.toBeInTheDocument();
     expect(
+      screen.queryByRole('link', { name: 'Calendario' }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByRole('link', { name: 'Material' }),
     ).not.toBeInTheDocument();
     expect(
@@ -70,6 +73,9 @@ describe('SiteNav', () => {
 
       expect(
         screen.getByRole('link', { name: 'Solicitudes' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Calendario' }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole('link', { name: 'Material' }),

@@ -35,6 +35,11 @@ export const SECTIONS: readonly Section[] = [
     roles: STAFF_ROLES,
   },
   {
+    to: ROUTES.calendar,
+    label: 'Calendario',
+    roles: STAFF_ROLES,
+  },
+  {
     to: ROUTES.staffMaterials,
     label: 'Material',
     roles: STAFF_ROLES,
