@@ -6,7 +6,8 @@ import { ROUTES } from '../../../routes';
 import { LoginApiError, loginUser } from '../api/login-user';
 import { AuthLayout } from '../components/AuthLayout';
 import { TextField } from '../components/TextField';
-import { readRoleFromToken, saveSession, type UserRole } from '../session';
+import { HOME_BY_ROLE } from '../role-home';
+import { readRoleFromToken, saveSession } from '../session';
 import { loginSchema, type LoginFormValues } from './login-schema';
 import styles from './LoginPage.module.css';
 
@@ -17,12 +18,6 @@ const GENERIC_ERROR_MESSAGE =
   'No pudimos iniciar su sesión. Inténtelo de nuevo.';
 const ACCESS_DENIED_MESSAGE =
   'Esta funcionalidad está disponible solo para cuentas públicas.';
-
-const HOME_BY_ROLE: Record<UserRole, string> = {
-  PUBLICO: ROUTES.materials,
-  PERSONAL: ROUTES.requests,
-  ADMIN: ROUTES.requests,
-};
 
 interface LoginLocationState {
   registeredEmail?: string;

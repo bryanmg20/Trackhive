@@ -1,4 +1,5 @@
-import { readAccessToken } from '../../auth/session';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
+import { apiUrl } from '../../auth/api/api-base-url';
 
 export interface CreateRequestInput {
   materialIds: string[];
@@ -28,10 +29,9 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 export async function createRequest(input: CreateRequestInput): Promise<CreateRequestResponse> {
-  const response = await fetch('/api/v1/requests', {
+  const response = await authenticatedFetch(apiUrl('/api/v1/requests'), {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${readAccessToken() ?? ''}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },

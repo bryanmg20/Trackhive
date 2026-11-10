@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
-import { readAccessToken, readRoleFromToken } from '../auth/session';
+import { readSessionRole } from '../auth/session';
+import { SiteNav } from '../navigation/SiteNav';
 import type { SelectedMaterial } from '../requests/selected-materials';
 import {
   buildNewRequestPath,
@@ -42,8 +43,7 @@ const SORT_LABELS: Record<MaterialSortField, string> = {
 
 export function MaterialSearchPage() {
   const navigate = useNavigate();
-  const token = readAccessToken();
-  const role = token ? readRoleFromToken(token) : null;
+  const role = readSessionRole();
   const isStaff = role === 'PERSONAL' || role === 'ADMIN';
   // Any signed-in role picks materials here: the public user requests them for
   // themselves, the staff registers the request on behalf of a visitor (HU-93).
@@ -144,14 +144,7 @@ export function MaterialSearchPage() {
           Trackhive<span className={styles.wordmarkDot}>.</span>
         </p>
         <p className={styles.topbarTag}>CLENA · Archivo</p>
-        {role === 'PUBLICO' ? (
-          <nav className={styles.nav} aria-label="Secciones">
-            <Link to={ROUTES.materials} aria-current="page">
-              Buscar material
-            </Link>
-            <Link to={ROUTES.myRequests}>Mis solicitudes</Link>
-          </nav>
-        ) : null}
+        <SiteNav />
       </header>
 
       <main className={styles.main}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
+import { SiteNav } from '../navigation/SiteNav';
 import { listMyRequests } from './api/list-my-requests';
 import type { ListMyRequestsParams, MyRequestPage } from './api/list-my-requests';
 import {
@@ -113,12 +114,7 @@ export function MyRequestsPage() {
           Trackhive<span className={searchStyles.wordmarkDot}>.</span>
         </p>
         <p className={searchStyles.topbarTag}>CLENA · Archivo</p>
-        <nav className={searchStyles.nav} aria-label="Secciones">
-          <Link to={ROUTES.materials}>Buscar material</Link>
-          <Link to={ROUTES.myRequests} aria-current="page">
-            Mis solicitudes
-          </Link>
-        </nav>
+        <SiteNav />
       </header>
 
       <main className={searchStyles.main}>

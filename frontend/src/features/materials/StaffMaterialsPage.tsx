@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
+import { SiteNav } from '../navigation/SiteNav';
 import {
   changeMaterialStatus,
   MAX_STATUS_REASON_LENGTH,
@@ -184,14 +185,7 @@ export function StaffMaterialsPage() {
           Trackhive<span className={searchStyles.wordmarkDot}>.</span>
         </p>
         <p className={searchStyles.topbarTag}>CLENA · Personal</p>
-        <nav className={styles.nav} aria-label="Secciones del personal">
-          <Link to={ROUTES.requests} aria-current={undefined}>
-            Solicitudes
-          </Link>
-          <Link to={ROUTES.staffMaterials} aria-current={'page'}>
-            Material
-          </Link>
-        </nav>
+        <SiteNav />
       </header>
 
       <main className={searchStyles.main}>

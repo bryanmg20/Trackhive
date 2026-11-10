@@ -1,4 +1,5 @@
-import { readAccessToken } from '../../auth/session';
+import { apiUrl } from '../../auth/api/api-base-url';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
 import { readErrorMessage, RequestsApiError } from './list-requests';
 import type {
   RequestListItem,
@@ -40,12 +41,14 @@ export async function listMyRequests(
   });
   if (params.status) query.set('status', params.status);
 
-  const response = await fetch(`/api/v1/requests/mine?${query}`, {
-    headers: {
-      Authorization: `Bearer ${readAccessToken() ?? ''}`,
-      Accept: 'application/json',
+  const response = await authenticatedFetch(
+    apiUrl(`/api/v1/requests/mine?${query}`),
+    {
+      headers: {
+        Accept: 'application/json',
+      },
     },
-  });
+  );
   if (!response.ok) {
     throw new RequestsApiError(
       await readErrorMessage(response),

@@ -1,4 +1,5 @@
-import { readAccessToken } from '../../auth/session';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
+import { apiUrl } from '../../auth/api/api-base-url';
 import { MaterialsApiError } from './search-materials';
 import type { Material, MaterialStatus } from './search-materials';
 
@@ -31,12 +32,11 @@ async function readErrorMessage(response: Response): Promise<string> {
 export async function changeMaterialStatus(
   params: ChangeMaterialStatusParams,
 ): Promise<Material> {
-  const response = await fetch(
-    `/api/v1/materials/${encodeURIComponent(params.materialId)}/status`,
+  const response = await authenticatedFetch(
+    apiUrl(`/api/v1/materials/${encodeURIComponent(params.materialId)}/status`),
     {
       method: 'PATCH',
       headers: {
-        Authorization: `Bearer ${readAccessToken() ?? ''}`,
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },

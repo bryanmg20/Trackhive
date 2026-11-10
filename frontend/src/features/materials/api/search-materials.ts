@@ -1,4 +1,5 @@
-import { readAccessToken } from '../../auth/session';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
+import { apiUrl } from '../../auth/api/api-base-url';
 
 export const MATERIAL_TYPES = [
   'DOCUMENTO',
@@ -110,9 +111,8 @@ export async function searchMaterials(
   if (params.collection) query.set('collection', params.collection);
   if (params.status) query.set('status', params.status);
 
-  const response = await fetch(`/api/v1/materials?${query}`, {
+  const response = await authenticatedFetch(apiUrl(`/api/v1/materials?${query}`), {
     headers: {
-      Authorization: `Bearer ${readAccessToken() ?? ''}`,
       Accept: 'application/json',
     },
   });

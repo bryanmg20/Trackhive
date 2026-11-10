@@ -1,11 +1,10 @@
-import { readAccessToken } from '../../auth/session';
+import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
+import { apiUrl } from '../../auth/api/api-base-url';
 import {
   RequestApiError,
   networkRequestApiError,
   readRequestApiError,
 } from './request-api-error';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
 export type DeliveryMode = 'PRESENCIAL' | 'DIGITAL';
 
@@ -55,10 +54,9 @@ export async function createRequestOnBehalf(
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/v1/requests/on-behalf`, {
+    response = await authenticatedFetch(apiUrl('/api/v1/requests/on-behalf'), {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${readAccessToken() ?? ''}`,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
