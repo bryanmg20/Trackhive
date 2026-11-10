@@ -1,6 +1,6 @@
 name: Tablero - In Progress
 
-# Al crear una rama feat/<issue>-..., fix/<issue>-... o docs/<issue>-...,
+# Al crear una rama <tipo>/<issue>-... (feat, fix, docs, refactor, test, chore o ci),
 # mueve el issue <issue> a "In Progress" en el tablero de GitHub Projects.
 on:
   create:
@@ -26,7 +26,7 @@ jobs:
           REPO_OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
         run: |
-          if [[ ! "$BRANCH" =~ ^(feat|fix|docs)/([0-9]+)- ]]; then
+          if [[ ! "$BRANCH" =~ ^(feat|fix|docs|refactor|test|chore|ci)/([0-9]+)- ]]; then
             echo "La rama '$BRANCH' no tiene número de issue; no se cambia nada."
             exit 0
           fi
