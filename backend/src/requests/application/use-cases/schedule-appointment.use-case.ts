@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { toAppointmentDay } from '../../domain/appointment-date';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { ScheduleAppointmentResponseDto } from '../dto/schedule-appointment-response.dto';
+import { buildStatusChangeEmail } from '../notifications/status-change-email';
 import type { RequestRepository } from '../ports/request.repository.port';
 import { REQUEST_REPOSITORY } from '../tokens';
 
@@ -28,10 +29,13 @@ const fullName = (person: PersonName): string =>
 /**
  * «Agendar cita de consulta» (HU-18). The appointment is a whole day, without
  * a time, for the requester and every material of the request. The entity
- * only lets a presential DISPONIBLE request reach AGENDADA (HU-14).
+ * only lets a presential DISPONIBLE request reach AGENDADA (HU-14). The email
+ * to the requester is queued in the same transaction (HU-23).
  */
 @Injectable()
 export class ScheduleAppointmentUseCase {
+  private readonly logger = new Logger(ScheduleAppointmentUseCase.name);
+
   constructor(
     @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
   ) {}
@@ -49,7 +53,27 @@ export class ScheduleAppointmentUseCase {
 
     // Throws InvalidStatusTransitionError (409) before anything is saved
     const change = request.scheduleAppointment(input.userId);
-    const saved = await this.repository.saveAppointment(change, day.date);
+
+    // HU-23: the requester learns the day and the service hours by email
+    const context = await this.repository.findNotificationContext(request.id);
+    const notification = context
+      ? buildStatusChangeEmail(context, {
+          newStatus: change.newStatus,
+          appointment: { date: day.date, serviceHours: day.serviceHours },
+        })
+      : null;
+    if (!notification) {
+      this.logger.warn(
+        `Request ${context?.trackingCode ?? request.id} has no requester ` +
+          'email: its appointment is saved without an email',
+      );
+    }
+
+    const saved = await this.repository.saveAppointment(
+      change,
+      day.date,
+      notification,
+    );
 
     const { statusChange } = saved;
     return {

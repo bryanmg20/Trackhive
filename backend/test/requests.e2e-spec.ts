@@ -6,6 +6,8 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
+import { NOTIFICATION_REPOSITORY } from '../src/notifications/application/tokens';
+import type { NotificationDraft } from '../src/notifications/domain/notification-draft';
 import { PrismaService } from '../src/prisma/prisma.service';
 import type {
   SavedAppointment,
@@ -20,6 +22,7 @@ import { Request } from '../src/requests/domain/entities/request.entity';
 import { RequestStatusConflictError } from '../src/requests/domain/errors/request-status-conflict.error';
 import type { StatusChange } from '../src/requests/domain/status-change';
 import type { UserRole } from '../src/users/domain/user-role';
+import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
 const ACCESS_SECRET = 'e2e-access-secret';
@@ -53,6 +56,16 @@ describe('Request registration (e2e)', () => {
     findById: jest.fn(),
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findEntityById: jest.fn(),
+    // HU-23: who receives the email of a status change and what it lists
+    findNotificationContext: jest.fn().mockResolvedValue({
+      trackingCode: 'SOL-2026-00042',
+      requester: {
+        firstName: 'Juan',
+        lastName: 'Pérez',
+        email: 'juan@ejemplo.com',
+      },
+      materials: [{ catalogCode: 'AHB-001', title: 'Actas de 1890' }],
+    }),
     saveStatusChange: jest.fn(),
     saveAppointment: jest.fn(),
     findRequesterByEmail: jest.fn().mockResolvedValue({
@@ -109,6 +122,9 @@ describe('Request registration (e2e)', () => {
       // The startup purge of expired tokens (HU-3.1) needs a repository
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
+      // The job of the outbox (HU-23) runs every 10 s; without a database
+      .overrideProvider(NOTIFICATION_REPOSITORY)
+      .useValue(new InMemoryNotificationRepository())
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();
@@ -510,6 +526,46 @@ describe('Request registration (e2e)', () => {
 
     const savedChange = () =>
       (repository.saveStatusChange.mock.calls[0] as [StatusChange])[0];
+    // HU-23: the email queued in the same save as the change
+    const queuedEmail = () =>
+      (
+        repository.saveStatusChange.mock.calls[0] as [
+          StatusChange,
+          NotificationDraft | null,
+        ]
+      )[1];
+
+    it('queues the email to the requester with the new status and the material (HU-23)', async () => {
+      await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(200);
+
+      expect(repository.findNotificationContext).toHaveBeenCalledWith(
+        REQUEST_ID,
+      );
+      expect(queuedEmail()).toMatchObject({
+        recipientEmail: 'juan@ejemplo.com',
+        template: 'CAMBIO_ESTADO',
+        subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
+      });
+      expect(queuedEmail()?.text).toContain('Nuevo estado: Atendida');
+      expect(queuedEmail()?.text).toContain('AHB-001 · Actas de 1890');
+    });
+
+    it('queues no email when the change is not valid (HU-23)', async () => {
+      repository.findEntityById.mockResolvedValue(entity('RECIBIDA'));
+
+      await request(server)
+        .patch(statusPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ status: 'ATENDIDA' })
+        .expect(409);
+
+      expect(repository.findNotificationContext).not.toHaveBeenCalled();
+      expect(repository.saveStatusChange).not.toHaveBeenCalled();
+    });
 
     it('rejects a request without an access token with 401', async () => {
       await request(server)
@@ -720,6 +776,10 @@ describe('Request registration (e2e)', () => {
             rejectionReason: REASON,
             statusChange: { newStatus: 'RECHAZADA', comment: REASON },
           });
+          // HU-23: the requester learns the reason by email
+          expect(queuedEmail()?.text).toContain(
+            `Motivo del rechazo: ${REASON}`,
+          );
         },
       );
 
@@ -892,13 +952,19 @@ describe('Request registration (e2e)', () => {
           },
           statusChange: { previousStatus: 'DISPONIBLE', newStatus: 'AGENDADA' },
         });
-        const [change, date] = repository.saveAppointment.mock.calls[0] as [
-          StatusChange,
-          Date,
-        ];
+        const [change, date, email] = repository.saveAppointment.mock
+          .calls[0] as [StatusChange, Date, NotificationDraft | null];
         // The responsible comes from the token
         expect(change.changedBy).toBe('staff-1');
         expect(date).toEqual(new Date(`${FRIDAY}T00:00:00.000Z`));
+        // HU-23: the requester learns the day of the appointment by email
+        expect(email).toMatchObject({
+          recipientEmail: 'juan@ejemplo.com',
+          subject: 'Su solicitud SOL-2026-00042 pasó a «Agendada»',
+        });
+        expect(email?.text).toContain(
+          'Fecha de la cita: viernes, 20 de noviembre de 2026',
+        );
       },
     );
 

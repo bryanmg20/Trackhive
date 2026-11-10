@@ -91,6 +91,28 @@ describe('SmtpMailSender', () => {
     );
   });
 
+  it('keeps what the server answered in the error, without email addresses (HU-23)', async () => {
+    sendMail.mockRejectedValueOnce(
+      new Error(
+        "Can't send mail - all recipients were rejected: 550 5.1.1 " +
+          '<juan.perez@example.com>: Recipient address rejected',
+      ),
+    );
+
+    const error: unknown = await buildSender(MAILPIT_CONFIG)
+      .send(MESSAGE)
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(MailDeliveryFailedError);
+    const { detail } = error as MailDeliveryFailedError;
+    expect(detail).toContain(
+      '550 5.1.1 <[correo]>: Recipient address rejected',
+    );
+    expect(detail).not.toContain('juan.perez@example.com');
+    const [logged] = errorSpy.mock.calls[0] as [string];
+    expect(logged).not.toContain('juan.perez@example.com');
+  });
+
   it('fails without sending when a required variable is missing', async () => {
     await expect(
       buildSender({ SMTP_PORT: '1025', SMTP_FROM: 'x@example.com' }).send(

@@ -1,1 +1,2 @@
 export const MAIL_SENDER = Symbol('MAIL_SENDER');
+export const NOTIFICATION_REPOSITORY = Symbol('NOTIFICATION_REPOSITORY');

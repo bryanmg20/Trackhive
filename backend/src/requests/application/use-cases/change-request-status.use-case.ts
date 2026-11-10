@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import type { ChangeableStatus } from '../../domain/request-status';
 import { ChangeRequestStatusResponseDto } from '../dto/change-request-status-response.dto';
+import { buildStatusChangeEmail } from '../notifications/status-change-email';
 import type { RequestRepository } from '../ports/request.repository.port';
 import { REQUEST_REPOSITORY } from '../tokens';
 
@@ -16,10 +17,13 @@ export interface ChangeRequestStatusInput {
 /**
  * «Cambiar estado de una solicitud» (HU-15). The entity decides whether the
  * transition is valid (HU-14); the repository saves the new status and its
- * row in status_history together, with the date, time and responsible.
+ * row in status_history together, with the date, time and responsible, and
+ * queues the email to the requester in the same transaction (HU-23).
  */
 @Injectable()
 export class ChangeRequestStatusUseCase {
+  private readonly logger = new Logger(ChangeRequestStatusUseCase.name);
+
   constructor(
     @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
   ) {}
@@ -39,7 +43,23 @@ export class ChangeRequestStatusUseCase {
       input.userId,
       input.comment,
     );
-    const saved = await this.repository.saveStatusChange(change);
+
+    // HU-23: the new status and, if rejected, the reason the requester reads
+    const context = await this.repository.findNotificationContext(request.id);
+    const notification = context
+      ? buildStatusChangeEmail(context, {
+          newStatus: change.newStatus,
+          rejectionReason: change.rejectionReason,
+        })
+      : null;
+    if (!notification) {
+      this.logger.warn(
+        `Request ${context?.trackingCode ?? request.id} has no requester ` +
+          'email: its status change is saved without an email',
+      );
+    }
+
+    const saved = await this.repository.saveStatusChange(change, notification);
 
     const { changedBy } = saved;
     return {
