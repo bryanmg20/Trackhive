@@ -2,6 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { User } from '../../domain/entities/user.entity';
 import { EmailAlreadyExistsError } from '../../domain/errors/email-already-exists.error';
+import { PrivacyConsentRequiredError } from '../../domain/errors/privacy-consent-required.error';
+import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/privacy-policy';
 import type { IUserRepository } from '../../domain/repositories/user.repository';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UserResponseMapper } from '../mappers/user-response.mapper';
@@ -15,6 +17,8 @@ export interface CreateUserInput {
   secondLastName?: string | null;
   email: string;
   password: string;
+  acceptedPrivacy: boolean;
+  privacyPolicyVersion: string;
 }
 
 @Injectable()
@@ -25,6 +29,13 @@ export class CreateUserUseCase {
   ) {}
 
   async execute(input: CreateUserInput): Promise<UserResponseDto> {
+    if (
+      !input.acceptedPrivacy ||
+      input.privacyPolicyVersion?.trim() !== CURRENT_PRIVACY_POLICY_VERSION
+    ) {
+      throw new PrivacyConsentRequiredError();
+    }
+
     const email = input.email.trim().toLowerCase();
     const existing = await this.userRepo.findByEmail(email);
     if (existing) {
@@ -43,6 +54,9 @@ export class CreateUserUseCase {
       // Public registration can only create public accounts
       role: 'PUBLICO',
       active: true,
+      // The server stamps the acceptance time; it never trusts a client clock
+      privacyPolicyAcceptedAt: new Date(),
+      privacyPolicyVersion: CURRENT_PRIVACY_POLICY_VERSION,
     });
 
     await this.userRepo.save(user);

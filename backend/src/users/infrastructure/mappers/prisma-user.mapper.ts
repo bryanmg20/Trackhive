@@ -18,6 +18,8 @@ export class PrismaUserMapper {
       passwordHash: model.passwordHash,
       role: model.role,
       active: model.active,
+      privacyPolicyAcceptedAt: model.privacyPolicyAcceptedAt,
+      privacyPolicyVersion: model.privacyPolicyVersion,
     });
   }
 
@@ -32,6 +34,8 @@ export class PrismaUserMapper {
       passwordHash: entity.passwordHash,
       role: entity.role,
       active: entity.active,
+      privacyPolicyAcceptedAt: entity.privacyPolicyAcceptedAt,
+      privacyPolicyVersion: entity.privacyPolicyVersion,
     };
   }
 }
