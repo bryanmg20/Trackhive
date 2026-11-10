@@ -461,7 +461,7 @@ type SeedRequest = {
   desiredDate: string;
   registeredAt: string;
   materialCodes: string[];
-  // Only for RECHAZADA; the column holds at most 25 characters
+  // Only for RECHAZADA; the column holds at most 500 characters (HU-16)
   rejectionReason?: string;
 };
 

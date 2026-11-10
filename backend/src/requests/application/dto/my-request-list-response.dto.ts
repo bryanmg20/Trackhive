@@ -11,7 +11,16 @@ import {
 export class MyRequestListItemDto extends OmitType(RequestListItemDto, [
   'requesterName',
   'requesterEmail',
-] as const) {}
+] as const) {
+  @ApiProperty({
+    description:
+      'Motivo del rechazo que escribió el personal; solo si está rechazada (HU-16)',
+    nullable: true,
+    type: String,
+    example: null,
+  })
+  rejectionReason: string | null;
+}
 
 export class PaginatedMyRequestsResponseDto extends OmitType(
   PaginatedRequestsResponseDto,

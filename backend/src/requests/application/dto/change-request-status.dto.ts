@@ -18,8 +18,8 @@ export class ChangeRequestStatusDto {
     description:
       'Nuevo estado. Solo se aceptan las transiciones válidas desde el ' +
       'estado actual (HU-14). Desde AGENDADA, ATENDIDA significa que el ' +
-      'solicitante asistió y DISPONIBLE que no asistió. El rechazo, que ' +
-      'exige motivo, se cubre en HU-16.',
+      'solicitante asistió y DISPONIBLE que no asistió. RECHAZADA exige ' +
+      'el comentario, que es el motivo del rechazo (HU-16).',
     enum: CHANGEABLE_STATUSES,
     example: 'ATENDIDA',
   })
@@ -29,7 +29,10 @@ export class ChangeRequestStatusDto {
   status: ChangeableStatus;
 
   @ApiPropertyOptional({
-    description: 'Comentario del cambio (opcional)',
+    description:
+      'Comentario del cambio. Opcional, salvo al rechazar: con RECHAZADA es ' +
+      'el motivo que verá el solicitante y, si falta o está en blanco, la ' +
+      'API responde 400 REJECTION_REASON_REQUIRED (HU-16).',
     example: 'El investigador consultó las actas en la sala',
     maxLength: MAX_STATUS_COMMENT_LENGTH,
   })

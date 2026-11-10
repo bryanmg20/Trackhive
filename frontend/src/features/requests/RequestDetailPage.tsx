@@ -107,6 +107,8 @@ export function RequestDetailPage() {
               ...current.request,
               status: result.status,
               allowedTransitions: result.allowedTransitions,
+              // Shows the «Motivo del rechazo» field right after rejecting (HU-16)
+              rejectionReason: result.rejectionReason,
             },
           }
         : current,

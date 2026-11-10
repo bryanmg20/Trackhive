@@ -213,7 +213,7 @@ erDiagram
         date committed_date
         varchar(5) priority
         varchar(12) status "IDX con committed_date"
-        varchar(25) rejection_reason
+        varchar(500) rejection_reason
         text notes
         timestamptz registered_at "IDX"
         timestamptz attended_at
@@ -442,7 +442,7 @@ Campos según HU-06, HU-07 y HU-20.
 | committed_date | date | NULL, IDX con status | La fija el personal |
 | priority | varchar(5) | CHECK, DEFAULT 'MEDIA' | `BAJA`, `MEDIA`, `ALTA` |
 | status | varchar(12) | CHECK, IDX con committed_date | `RECIBIDA` … `RECHAZADA` (ver §1.3) |
-| rejection_reason | varchar(25) | NULL, CHECK | Obligatorio solo si `status = 'RECHAZADA'` |
+| rejection_reason | varchar(500) | NULL, CHECK | Motivo del rechazo, en texto libre; lo ve el solicitante en «Mis solicitudes». Obligatorio y no vacío solo si `status = 'RECHAZADA'` (HU-16, migración `20261112000000_widen_rejection_reason`) |
 | notes | text | NULL | Notas internas |
 | registered_at | timestamptz | IDX | Fecha de radicación |
 | attended_at, closed_at | timestamptz | NULL | |

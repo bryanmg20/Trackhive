@@ -61,6 +61,8 @@ export interface RequestListItem {
   deliveryMode: DeliveryMode;
   desiredDate: Date;
   registeredAt: Date;
+  // Only for RECHAZADA (HU-16)
+  rejectionReason: string | null;
   requester: {
     firstName: string;
     middleName: string | null;
