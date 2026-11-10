@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { escapeHtml } from '../../../common/html/escape-html';
 import { USER_REPOSITORY } from '../../../users/application/tokens';
 import { UserNotFoundError } from '../../../users/domain/errors/user-not-found.error';
 import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
@@ -45,14 +46,4 @@ export class SendTestEmailUseCase {
 
     return { sentTo: user.email };
   }
-}
-
-/** The name is user input: it must not be able to inject HTML into the email. */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

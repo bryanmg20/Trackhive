@@ -183,8 +183,11 @@ export class RequestController {
       'máquina de estados (HU-14) y guarda en el historial el estado ' +
       'anterior, el nuevo, la fecha y hora, el responsable (el usuario del ' +
       'token) y un comentario opcional. Desde AGENDADA, ATENDIDA indica que ' +
-      'el solicitante asistió y DISPONIBLE que no asistió. El rechazo con ' +
-      'motivo se cubre en HU-16.',
+      'el solicitante asistió y DISPONIBLE que no asistió. Para RECHAZADA el ' +
+      'comentario es el motivo y es obligatorio (HU-16). El solicitante ' +
+      'recibe un correo con el nuevo estado, el material y, si se rechaza, ' +
+      'el motivo; se envía en segundo plano, así que un fallo del servidor ' +
+      'de correo no cambia la respuesta (HU-23).',
   })
   @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
   @ApiOkResponse({
@@ -242,7 +245,8 @@ export class RequestController {
       'puede consultar el material durante todo el horario de atención de ' +
       'ese día (lunes a viernes 8:00-17:00, sábados 9:00-13:00). Los ' +
       'domingos no se atiende. La solicitud pasa a AGENDADA y el cambio ' +
-      'queda en el historial con el responsable (el usuario del token).',
+      'queda en el historial con el responsable (el usuario del token). El ' +
+      'solicitante recibe un correo con el día y el horario de la cita (HU-23).',
   })
   @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
   @ApiCreatedResponse({

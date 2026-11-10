@@ -1,3 +1,4 @@
+import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { RequesterInput } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { Request } from '../../domain/entities/request.entity';
@@ -601,6 +602,55 @@ describe('PrismaRequestRepository', () => {
     });
   });
 
+  describe('findNotificationContext (HU-23)', () => {
+    it('loads the tracking code, the requester and the materials in catalog order', async () => {
+      const findUnique = jest.fn().mockResolvedValue({
+        trackingCode: 'SOL-2026-00042',
+        requester: {
+          firstName: 'Juan',
+          lastName: 'Pérez',
+          email: 'juan@example.com',
+        },
+        items: [
+          { material: { catalogCode: 'AHB-001', title: 'Actas de 1890' } },
+        ],
+      });
+      const repository = new PrismaRequestRepository({
+        requestModel: { findUnique },
+      } as unknown as PrismaService);
+
+      const context = await repository.findNotificationContext('request-1');
+
+      expect(context).toEqual({
+        trackingCode: 'SOL-2026-00042',
+        requester: {
+          firstName: 'Juan',
+          lastName: 'Pérez',
+          email: 'juan@example.com',
+        },
+        materials: [{ catalogCode: 'AHB-001', title: 'Actas de 1890' }],
+      });
+      expect(findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'request-1' },
+          select: expect.objectContaining({
+            items: expect.objectContaining({
+              orderBy: { material: { catalogCode: 'asc' } },
+            }) as unknown,
+          }) as unknown,
+        }),
+      );
+    });
+
+    it('returns null when the request does not exist', async () => {
+      const repository = new PrismaRequestRepository({
+        requestModel: { findUnique: jest.fn().mockResolvedValue(null) },
+      } as unknown as PrismaService);
+
+      expect(await repository.findNotificationContext('missing')).toBeNull();
+    });
+  });
+
   describe('saveStatusChange (HU-15)', () => {
     const CHANGED_AT = new Date('2026-11-10T15:30:00.000Z');
     const STAFF = {
@@ -640,6 +690,9 @@ describe('PrismaRequestRepository', () => {
         appointmentModel: {
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
+        notificationModel: {
+          create: jest.fn().mockResolvedValue({}),
+        },
       };
       const prisma = {
         $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
@@ -652,10 +705,73 @@ describe('PrismaRequestRepository', () => {
       return { tx, prisma, repository };
     };
 
+    describe('queuing the email to the requester (HU-23)', () => {
+      const EMAIL: NotificationDraft = {
+        recipientEmail: 'juan@example.com',
+        template: 'CAMBIO_ESTADO',
+        subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
+        text: 'Nuevo estado: Atendida',
+        html: '<p>Nuevo estado: <strong>Atendida</strong></p>',
+      };
+
+      it('queues it PENDIENTE in the same transaction, linked to its history row', async () => {
+        const { prisma, tx, repository } = buildTransaction();
+
+        await repository.saveStatusChange(buildChange(), EMAIL);
+
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(tx.notificationModel.create).toHaveBeenCalledWith({
+          data: {
+            id: expect.any(String) as string,
+            requestId: 'request-1',
+            // The id of the status_history row created just before
+            statusHistoryId: BigInt(1),
+            recipientEmail: 'juan@example.com',
+            template: 'CAMBIO_ESTADO',
+            subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
+            body: 'Nuevo estado: Atendida',
+            htmlBody: '<p>Nuevo estado: <strong>Atendida</strong></p>',
+            deliveryStatus: 'PENDIENTE',
+            // Ready to send as soon as the job runs
+            scheduledAt: CHANGED_AT,
+          },
+        });
+      });
+
+      it('queues nothing when the requester has no email', async () => {
+        const { tx, repository } = buildTransaction();
+
+        await repository.saveStatusChange(buildChange(), null);
+
+        expect(tx.statusHistoryModel.create).toHaveBeenCalledTimes(1);
+        expect(tx.notificationModel.create).not.toHaveBeenCalled();
+      });
+
+      it('queues nothing when someone else changed the status first', async () => {
+        const { tx, repository } = buildTransaction(0);
+
+        await expect(
+          repository.saveStatusChange(buildChange(), EMAIL),
+        ).rejects.toThrow(RequestStatusConflictError);
+        expect(tx.notificationModel.create).not.toHaveBeenCalled();
+      });
+
+      it('lets a failure to queue it undo the whole change', async () => {
+        const { tx, repository } = buildTransaction();
+        tx.notificationModel.create.mockRejectedValue(new Error('db down'));
+
+        // The rejection makes Prisma roll back the transaction: no status
+        // change is left without its email
+        await expect(
+          repository.saveStatusChange(buildChange(), EMAIL),
+        ).rejects.toThrow('db down');
+      });
+    });
+
     it('saves the status and the history row in one transaction', async () => {
       const { prisma, tx, repository } = buildTransaction();
 
-      await repository.saveStatusChange(buildChange());
+      await repository.saveStatusChange(buildChange(), null);
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(tx.requestModel.updateMany).toHaveBeenCalledTimes(1);
@@ -665,7 +781,7 @@ describe('PrismaRequestRepository', () => {
     it('only updates the request if it is still in the previous status', async () => {
       const { tx, repository } = buildTransaction();
 
-      await repository.saveStatusChange(buildChange());
+      await repository.saveStatusChange(buildChange(), null);
 
       expect(tx.requestModel.updateMany).toHaveBeenCalledWith({
         where: { id: 'request-1', status: 'AGENDADA' },
@@ -680,7 +796,7 @@ describe('PrismaRequestRepository', () => {
     it('stores the previous and new status, date, responsible and comment', async () => {
       const { tx, repository } = buildTransaction();
 
-      await repository.saveStatusChange(buildChange());
+      await repository.saveStatusChange(buildChange(), null);
 
       expect(tx.statusHistoryModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -701,6 +817,7 @@ describe('PrismaRequestRepository', () => {
 
       await repository.saveStatusChange(
         buildChange({ previousStatus: 'ATENDIDA', newStatus: 'CERRADA' }),
+        null,
       );
 
       expect(tx.requestModel.updateMany).toHaveBeenCalledWith(
@@ -724,6 +841,7 @@ describe('PrismaRequestRepository', () => {
           comment: 'El material está restringido',
           rejectionReason: 'El material está restringido',
         }),
+        null,
       );
 
       expect(tx.requestModel.updateMany).toHaveBeenCalledWith({
@@ -750,6 +868,7 @@ describe('PrismaRequestRepository', () => {
 
       await repository.saveStatusChange(
         buildChange({ newStatus: 'DISPONIBLE', comment: null }),
+        null,
       );
 
       expect(tx.requestModel.updateMany).toHaveBeenCalledWith(
@@ -762,7 +881,7 @@ describe('PrismaRequestRepository', () => {
     it('returns the saved row with the name of the responsible', async () => {
       const { repository } = buildTransaction();
 
-      const saved = await repository.saveStatusChange(buildChange());
+      const saved = await repository.saveStatusChange(buildChange(), null);
 
       expect(saved).toEqual({
         previousStatus: 'AGENDADA',
@@ -776,9 +895,9 @@ describe('PrismaRequestRepository', () => {
     it('throws RequestStatusConflictError and writes no history when someone changed it first', async () => {
       const { tx, repository } = buildTransaction(0);
 
-      await expect(repository.saveStatusChange(buildChange())).rejects.toThrow(
-        RequestStatusConflictError,
-      );
+      await expect(
+        repository.saveStatusChange(buildChange(), null),
+      ).rejects.toThrow(RequestStatusConflictError);
       expect(tx.statusHistoryModel.create).not.toHaveBeenCalled();
     });
 
@@ -791,7 +910,7 @@ describe('PrismaRequestRepository', () => {
       async (newStatus, appointmentStatus) => {
         const { tx, repository } = buildTransaction();
 
-        await repository.saveStatusChange(buildChange({ newStatus }));
+        await repository.saveStatusChange(buildChange({ newStatus }), null);
 
         expect(tx.appointmentModel.updateMany).toHaveBeenCalledWith({
           where: { requestId: 'request-1', status: 'PROGRAMADA' },
@@ -805,6 +924,7 @@ describe('PrismaRequestRepository', () => {
 
       await repository.saveStatusChange(
         buildChange({ previousStatus: 'ATENDIDA', newStatus: 'CERRADA' }),
+        null,
       );
 
       expect(tx.appointmentModel.updateMany).not.toHaveBeenCalled();
@@ -867,6 +987,9 @@ describe('PrismaRequestRepository', () => {
             materials: MATERIALS.map((material) => ({ material })),
           }),
         },
+        notificationModel: {
+          create: jest.fn().mockResolvedValue({}),
+        },
       };
       const prisma = {
         $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
@@ -879,10 +1002,34 @@ describe('PrismaRequestRepository', () => {
       return { tx, prisma, repository };
     };
 
+    it('queues the email of the appointment in the same transaction (HU-23)', async () => {
+      const { prisma, tx, repository } = buildTransaction();
+
+      await repository.saveAppointment(CHANGE, DATE, {
+        recipientEmail: 'juan@example.com',
+        template: 'CAMBIO_ESTADO',
+        subject: 'Su solicitud SOL-2026-00042 pasó a «Agendada»',
+        text: 'Fecha de la cita: viernes, 20 de noviembre de 2026',
+        html: '<p>Fecha de la cita</p>',
+      });
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(tx.notificationModel.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          requestId: 'request-1',
+          statusHistoryId: BigInt(1),
+          recipientEmail: 'juan@example.com',
+          body: 'Fecha de la cita: viernes, 20 de noviembre de 2026',
+          deliveryStatus: 'PENDIENTE',
+        }) as unknown,
+      });
+      expect(tx.appointmentModel.create).toHaveBeenCalledTimes(1);
+    });
+
     it('saves AGENDADA, its history row and the appointment in one transaction', async () => {
       const { prisma, tx, repository } = buildTransaction();
 
-      await repository.saveAppointment(CHANGE, DATE);
+      await repository.saveAppointment(CHANGE, DATE, null);
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(tx.requestModel.updateMany).toHaveBeenCalledWith({
@@ -903,7 +1050,7 @@ describe('PrismaRequestRepository', () => {
     it('creates the appointment for the day with the requester and every material', async () => {
       const { tx, repository } = buildTransaction();
 
-      await repository.saveAppointment(CHANGE, DATE);
+      await repository.saveAppointment(CHANGE, DATE, null);
 
       expect(tx.appointmentModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -928,7 +1075,7 @@ describe('PrismaRequestRepository', () => {
     it('returns the saved appointment with names and materials', async () => {
       const { repository } = buildTransaction();
 
-      const saved = await repository.saveAppointment(CHANGE, DATE);
+      const saved = await repository.saveAppointment(CHANGE, DATE, null);
 
       expect(saved).toEqual({
         id: 'appointment-1',
@@ -949,11 +1096,12 @@ describe('PrismaRequestRepository', () => {
     it('creates no appointment when someone changed the status first', async () => {
       const { tx, repository } = buildTransaction(0);
 
-      await expect(repository.saveAppointment(CHANGE, DATE)).rejects.toThrow(
-        RequestStatusConflictError,
-      );
+      await expect(
+        repository.saveAppointment(CHANGE, DATE, null),
+      ).rejects.toThrow(RequestStatusConflictError);
       expect(tx.statusHistoryModel.create).not.toHaveBeenCalled();
       expect(tx.appointmentModel.create).not.toHaveBeenCalled();
+      expect(tx.notificationModel.create).not.toHaveBeenCalled();
     });
   });
 });

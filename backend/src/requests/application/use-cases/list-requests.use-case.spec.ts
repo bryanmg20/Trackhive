@@ -49,6 +49,7 @@ describe('ListRequestsUseCase', () => {
       findById: jest.fn(),
       listByRequesterUser: jest.fn(),
       findEntityById: jest.fn(),
+      findNotificationContext: jest.fn(),
       saveStatusChange: jest.fn(),
       saveAppointment: jest.fn(),
     });

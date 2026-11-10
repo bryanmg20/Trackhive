@@ -153,6 +153,7 @@ model RequestModel {
   items                  RequestItemModel[]
   statusHistory          StatusHistoryModel[]
   appointments           AppointmentModel[]
+  notifications          NotificationModel[]
 
   @@index([requesterId])
   @@index([createdById])
@@ -180,19 +181,21 @@ model RequestItemModel {
 // One row per status change of a request (HU-15, D-08). Insert-only: a trigger
 // in the migration rejects UPDATE and DELETE, because it is the audit trail
 model StatusHistoryModel {
-  id                 BigInt       @id @default(autoincrement())
-  requestId          String       @map("request_id") @db.Uuid
+  id                 BigInt             @id @default(autoincrement())
+  requestId          String             @map("request_id") @db.Uuid
   // NULL only for the row that records the creation of the request
   // Allowed values of both columns (CHECK in the migration): RECIBIDA … RECHAZADA
-  previousStatus     String?      @map("previous_status") @db.VarChar(12)
-  newStatus          String       @map("new_status") @db.VarChar(12)
+  previousStatus     String?            @map("previous_status") @db.VarChar(12)
+  newStatus          String             @map("new_status") @db.VarChar(12)
   // Who made the change
-  userId             String       @map("user_id") @db.Uuid
+  userId             String             @map("user_id") @db.Uuid
   comment            String?
-  visibleToRequester Boolean      @default(true) @map("visible_to_requester")
-  changedAt          DateTime     @default(now()) @map("changed_at") @db.Timestamptz
-  request            RequestModel @relation(fields: [requestId], references: [id], onDelete: Restrict)
-  user               UserModel    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  visibleToRequester Boolean            @default(true) @map("visible_to_requester")
+  changedAt          DateTime           @default(now()) @map("changed_at") @db.Timestamptz
+  request            RequestModel       @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  user               UserModel          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // The email this change sent to the requester (HU-23)
+  notification       NotificationModel?
 
   // Timeline of a request and attention times (§4 of docs/modelo-datos.md)
   @@index([requestId, changedAt])
@@ -238,4 +241,37 @@ model AppointmentMaterialModel {
   @@id([appointmentId, materialId])
   @@index([materialId])
   @@map("appointment_materials")
+}
+
+// Outbox of the emails to the requester (HU-23, D-10). The status change
+// inserts the row in its own transaction; a scheduled job sends it, so an
+// SMTP failure never undoes the change and the email is retried
+model NotificationModel {
+  id              String              @id @db.Uuid
+  requestId       String              @map("request_id") @db.Uuid
+  // The status change that triggered it
+  statusHistoryId BigInt?             @unique @map("status_history_id")
+  recipientEmail  String              @map("recipient_email") @db.VarChar(160)
+  // Allowed values (CHECK in the migration): CAMBIO_ESTADO
+  template        String              @db.VarChar(25)
+  subject         String              @db.VarChar(200)
+  // Plain text version, always sent
+  body            String
+  htmlBody        String?             @map("html_body")
+  // Allowed values (CHECK in the migration): PENDIENTE, ENVIADA, FALLIDA
+  deliveryStatus  String              @default("PENDIENTE") @map("delivery_status") @db.VarChar(10)
+  // Sending attempts made so far
+  attempts        Int                 @default(0) @db.SmallInt
+  lastError       String?             @map("last_error")
+  // When the job may (re)try it
+  scheduledAt     DateTime            @map("scheduled_at") @db.Timestamptz
+  sentAt          DateTime?           @map("sent_at") @db.Timestamptz
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  request         RequestModel        @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  statusHistory   StatusHistoryModel? @relation(fields: [statusHistoryId], references: [id], onDelete: Restrict)
+
+  // The job looks for the pending ones whose time has come (§4)
+  @@index([deliveryStatus, scheduledAt])
+  @@index([requestId])
+  @@map("notifications")
 }

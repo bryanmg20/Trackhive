@@ -266,6 +266,7 @@ erDiagram
         varchar(25) template
         varchar(200) subject
         text body
+        text html_body
         varchar(10) delivery_status "IDX con scheduled_at"
         smallint attempts
         text last_error
@@ -515,18 +516,23 @@ Creada en HU-18. Todos los materiales de la solicitud, copiados al agendar la ci
 
 ### notifications
 
+Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla de salida de D-10. Cada cambio de estado inserta aquí el correo al solicitante en la misma transacción, y un proceso programado lo envía cada 10 segundos. Si el envío falla, el cambio de estado se conserva y el correo se reintenta. Solo tiene `created_at`.
+
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
 | request_id | uuid | FK → requests, IDX | |
 | status_history_id | bigint | FK → status_history, UK, NULL | Cambio que la disparó |
-| recipient_email | varchar(160) | | |
-| template, subject, body | varchar / text | | Contenido del correo |
+| recipient_email | varchar(160) | CHECK no vacío | Correo del solicitante en el momento del cambio |
+| template | varchar(25) | CHECK | `CAMBIO_ESTADO` (HU-24 agrega una plantilla por estado) |
+| subject | varchar(200) | | Asunto, con el radicado y el nuevo estado |
+| body | text | | Texto plano: nuevo estado, material y, si aplica, fecha de la cita o motivo del rechazo |
+| html_body | text | NULL | El mismo contenido en HTML |
 | delivery_status | varchar(10) | CHECK, IDX con scheduled_at | `PENDIENTE`, `ENVIADA`, `FALLIDA` |
-| attempts | smallint | DEFAULT 0 | Reintentos |
-| last_error | text | NULL | |
-| scheduled_at | timestamptz | | |
-| sent_at | timestamptz | NULL | |
+| attempts | smallint | DEFAULT 0, CHECK ≥ 0 | Intentos de envío. Al quinto fallo pasa a `FALLIDA` |
+| last_error | text | NULL | Último error del servidor de correo, sin direcciones de correo |
+| scheduled_at | timestamptz | | Cuándo se puede enviar o reintentar: 1, 5, 15 y 60 minutos después de cada fallo |
+| sent_at | timestamptz | NULL, CHECK | Solo, y siempre, si `delivery_status = 'ENVIADA'` |
 
 ### service_hours
 
