@@ -7,7 +7,10 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { PrismaService } from '../src/prisma/prisma.service';
-import type { SavedStatusChange } from '../src/requests/application/ports/request.repository.port';
+import type {
+  SavedAppointment,
+  SavedStatusChange,
+} from '../src/requests/application/ports/request.repository.port';
 import { REQUEST_REPOSITORY } from '../src/requests/application/tokens';
 import {
   addBusinessDays,
@@ -51,6 +54,7 @@ describe('Request registration (e2e)', () => {
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findEntityById: jest.fn(),
     saveStatusChange: jest.fn(),
+    saveAppointment: jest.fn(),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
@@ -671,6 +675,8 @@ describe('Request registration (e2e)', () => {
       { status: 'RECIBIDA' },
       // Rejecting needs a reason: HU-16
       { status: 'RECHAZADA', comment: 'Material no localizado' },
+      // Only reached by scheduling an appointment: HU-18
+      { status: 'AGENDADA' },
       { status: 'ATENDIDA', comment: 'a'.repeat(501) },
       // The responsible always comes from the token
       { status: 'ATENDIDA', changedBy: 'otro-usuario' },
@@ -685,6 +691,227 @@ describe('Request registration (e2e)', () => {
       expect(repository.findEntityById).not.toHaveBeenCalled();
       expect(repository.saveStatusChange).not.toHaveBeenCalled();
     });
+  });
+
+  describe('POST /requests/:id/appointments (schedule, HU-18)', () => {
+    const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const appointmentsPath = (id: string) =>
+      `${REQUESTS_PATH}/${id}/appointments`;
+    // 2026-11-20 is a Friday, 2026-11-21 a Saturday and 2026-11-22 a Sunday
+    const FRIDAY = '2026-11-20';
+
+    interface ScheduleBody {
+      id: string;
+      status: string;
+      allowedTransitions: string[];
+      appointment: {
+        date: string;
+        serviceHours: { opensAt: string; closesAt: string };
+        status: string;
+        requester: { id: string; name: string };
+        materials: { id: string; catalogCode: string; title: string }[];
+      };
+      statusChange: { previousStatus: string; newStatus: string };
+    }
+
+    const entity = (
+      status: Request['status'],
+      deliveryMode: Request['deliveryMode'] = 'PRESENCIAL',
+    ) => new Request({ id: REQUEST_ID, status, deliveryMode });
+
+    beforeEach(() => {
+      repository.findEntityById.mockReset();
+      repository.findEntityById.mockResolvedValue(entity('DISPONIBLE'));
+      repository.saveAppointment.mockReset();
+      repository.saveAppointment.mockImplementation(
+        (change: StatusChange, date: Date): Promise<SavedAppointment> =>
+          Promise.resolve({
+            id: 'appointment-1',
+            date,
+            status: 'PROGRAMADA',
+            requester: {
+              id: 'requester-1',
+              firstName: 'Juan',
+              middleName: null,
+              lastName: 'Pérez',
+              secondLastName: null,
+            },
+            materials: [
+              { id: 'material-1', catalogCode: 'AHB-001', title: 'Actas' },
+            ],
+            statusChange: {
+              previousStatus: change.previousStatus,
+              newStatus: change.newStatus,
+              changedAt: change.changedAt,
+              comment: change.comment,
+              changedBy: {
+                id: change.changedBy,
+                firstName: 'Ana',
+                middleName: null,
+                lastName: 'Gómez',
+                secondLastName: null,
+              },
+            },
+          }),
+      );
+    });
+
+    it('rejects a request without an access token with 401', async () => {
+      await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .send({ date: FRIDAY })
+        .expect(401);
+      expect(repository.saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it('rejects a PUBLICO user with 403 and schedules nothing', async () => {
+      const response = await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({ date: FRIDAY })
+        .expect(403);
+
+      expect((response.body as ErrorBody).code).toBe('FORBIDDEN');
+      expect(repository.findEntityById).not.toHaveBeenCalled();
+      expect(repository.saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s schedule a DISPONIBLE request: it becomes AGENDADA',
+      async (role) => {
+        const response = await request(server)
+          .post(appointmentsPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken(role, 'staff-1')}`)
+          .send({ date: FRIDAY })
+          .expect(201);
+
+        const body = response.body as ScheduleBody;
+        expect(body).toMatchObject({
+          id: REQUEST_ID,
+          status: 'AGENDADA',
+          allowedTransitions: ['DISPONIBLE', 'ATENDIDA'],
+          appointment: {
+            date: FRIDAY,
+            serviceHours: { opensAt: '08:00', closesAt: '17:00' },
+            status: 'PROGRAMADA',
+            requester: { id: 'requester-1', name: 'Juan Pérez' },
+            materials: [
+              { id: 'material-1', catalogCode: 'AHB-001', title: 'Actas' },
+            ],
+          },
+          statusChange: { previousStatus: 'DISPONIBLE', newStatus: 'AGENDADA' },
+        });
+        const [change, date] = repository.saveAppointment.mock.calls[0] as [
+          StatusChange,
+          Date,
+        ];
+        // The responsible comes from the token
+        expect(change.changedBy).toBe('staff-1');
+        expect(date).toEqual(new Date(`${FRIDAY}T00:00:00.000Z`));
+      },
+    );
+
+    it('gives the Saturday service hours (9:00-13:00)', async () => {
+      const response = await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: '2026-11-21' })
+        .expect(201);
+
+      expect((response.body as ScheduleBody).appointment.serviceHours).toEqual({
+        opensAt: '09:00',
+        closesAt: '13:00',
+      });
+    });
+
+    it('rejects a Sunday with 400 because the CLENA does not attend', async () => {
+      const response = await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: '2026-11-22' })
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        code: 'INVALID_APPOINTMENT_DATE',
+        message:
+          'El CLENA no atiende los domingos. Elija una fecha de lunes a sábado.',
+      });
+      expect(repository.saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it.each<Request['status']>([
+      'RECIBIDA',
+      'EN_BUSQUEDA',
+      'AGENDADA',
+      'CERRADA',
+    ])(
+      'rejects a request in %s with 409 and schedules nothing',
+      async (status) => {
+        repository.findEntityById.mockResolvedValue(entity(status));
+
+        const response = await request(server)
+          .post(appointmentsPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+          .send({ date: FRIDAY })
+          .expect(409);
+
+        expect((response.body as ErrorBody).code).toBe(
+          'INVALID_STATUS_TRANSITION',
+        );
+        expect(repository.saveAppointment).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects a request with a digital delivery with 409', async () => {
+      repository.findEntityById.mockResolvedValue(
+        entity('DISPONIBLE', 'DIGITAL'),
+      );
+
+      await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: FRIDAY })
+        .expect(409);
+      expect(repository.saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it('answers 409 REQUEST_STATUS_CONFLICT when someone else changed it first', async () => {
+      repository.saveAppointment.mockRejectedValue(
+        new RequestStatusConflictError(),
+      );
+
+      const response = await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: FRIDAY })
+        .expect(409);
+
+      expect((response.body as ErrorBody).code).toBe('REQUEST_STATUS_CONFLICT');
+    });
+
+    it('answers 404 when the request does not exist', async () => {
+      repository.findEntityById.mockResolvedValue(null);
+
+      const response = await request(server)
+        .post(appointmentsPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: FRIDAY })
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REQUEST_NOT_FOUND');
+    });
+
+    it.each([{}, { date: '20/11/2026' }, { date: FRIDAY, startAt: '08:00' }])(
+      'rejects the body %j with 400 and schedules nothing',
+      async (body) => {
+        await request(server)
+          .post(appointmentsPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+          .send(body)
+          .expect(400);
+        expect(repository.saveAppointment).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('GET /requests/mine (my requests, HU-11)', () => {

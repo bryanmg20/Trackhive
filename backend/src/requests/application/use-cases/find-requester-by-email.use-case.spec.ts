@@ -28,6 +28,7 @@ describe('FindRequesterByEmailUseCase', () => {
       listByRequesterUser: jest.fn(),
       findEntityById: jest.fn(),
       saveStatusChange: jest.fn(),
+      saveAppointment: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 
@@ -53,6 +54,7 @@ describe('FindRequesterByEmailUseCase', () => {
       listByRequesterUser: jest.fn(),
       findEntityById: jest.fn(),
       saveStatusChange: jest.fn(),
+      saveAppointment: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 

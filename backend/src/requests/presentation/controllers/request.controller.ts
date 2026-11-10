@@ -34,9 +34,12 @@ import { ListMyRequestsQueryDto } from '../../application/dto/list-my-requests-q
 import { ListRequestsQueryDto } from '../../application/dto/list-requests-query.dto';
 import { PaginatedMyRequestsResponseDto } from '../../application/dto/my-request-list-response.dto';
 import { RequestDetailResponseDto } from '../../application/dto/request-detail-response.dto';
+import { ScheduleAppointmentResponseDto } from '../../application/dto/schedule-appointment-response.dto';
+import { ScheduleAppointmentDto } from '../../application/dto/schedule-appointment.dto';
 import { PaginatedRequestsResponseDto } from '../../application/dto/request-list-response.dto';
 import { CreateRequestResponseDto } from '../../application/dto/create-request-response.dto';
 import { ChangeRequestStatusUseCase } from '../../application/use-cases/change-request-status.use-case';
+import { ScheduleAppointmentUseCase } from '../../application/use-cases/schedule-appointment.use-case';
 import { CreateRequestOnBehalfUseCase } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from '../../application/use-cases/create-request.use-case';
 import { GetRequestDetailUseCase } from '../../application/use-cases/get-request-detail.use-case';
@@ -54,6 +57,7 @@ export class RequestController {
     private readonly getRequestDetailUseCase: GetRequestDetailUseCase,
     private readonly listMyRequestsUseCase: ListMyRequestsUseCase,
     private readonly changeRequestStatusUseCase: ChangeRequestStatusUseCase,
+    private readonly scheduleAppointmentUseCase: ScheduleAppointmentUseCase,
   ) {}
 
   @Get()
@@ -223,6 +227,65 @@ export class RequestController {
       requestId: id,
       status: body.status,
       comment: body.comment,
+      userId: user.id,
+    });
+  }
+
+  @Post(':id/appointments')
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Agenda la cita de consulta de una solicitud',
+    description:
+      'Solo para PERSONAL y ADMIN. La solicitud debe estar DISPONIBLE y con ' +
+      'entrega presencial. La cita es por día, sin hora: registra la fecha, ' +
+      'el solicitante y todos los materiales de la solicitud, y la persona ' +
+      'puede consultar el material durante todo el horario de atención de ' +
+      'ese día (lunes a viernes 8:00-17:00, sábados 9:00-13:00). Los ' +
+      'domingos no se atiende. La solicitud pasa a AGENDADA y el cambio ' +
+      'queda en el historial con el responsable (el usuario del token).',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
+  @ApiCreatedResponse({
+    description: 'Cita agendada y solicitud en AGENDADA',
+    type: ScheduleAppointmentResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Identificador o fecha inválidos, o la fecha cae en domingo ' +
+      '(INVALID_APPOINTMENT_DATE)',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden agendar una cita',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La solicitud no existe',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'La solicitud no está DISPONIBLE o su entrega es digital ' +
+      '(INVALID_STATUS_TRANSITION), u otra persona cambió el estado primero ' +
+      '(REQUEST_STATUS_CONFLICT)',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  scheduleAppointment(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ScheduleAppointmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ScheduleAppointmentResponseDto> {
+    return this.scheduleAppointmentUseCase.execute({
+      requestId: id,
+      date: body.date,
       userId: user.id,
     });
   }

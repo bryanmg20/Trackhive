@@ -19,7 +19,8 @@ export class ChangeRequestStatusDto {
       'Nuevo estado. Solo se aceptan las transiciones válidas desde el ' +
       'estado actual (HU-14). Desde AGENDADA, ATENDIDA significa que el ' +
       'solicitante asistió y DISPONIBLE que no asistió. El rechazo, que ' +
-      'exige motivo, se cubre en HU-16.',
+      'exige motivo, se cubre en HU-16. AGENDADA no se acepta: solo se ' +
+      'alcanza agendando una cita (HU-18).',
     enum: CHANGEABLE_STATUSES,
     example: 'ATENDIDA',
   })
