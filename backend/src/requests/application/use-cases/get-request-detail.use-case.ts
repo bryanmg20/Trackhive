@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { Request } from '../../domain/entities/request.entity';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { RequestDetailResponseDto } from '../dto/request-detail-response.dto';
 import type { RequestRepository } from '../ports/request.repository.port';
@@ -19,11 +20,21 @@ export class GetRequestDetailUseCase {
       throw new RequestNotFoundError();
     }
 
+    // The screen offers only these transitions (HU-15): the rule stays in the
+    // entity instead of being repeated in React
+    const { allowedTransitions } = new Request({
+      id: detail.id,
+      status: detail.status,
+      deliveryMode: detail.deliveryMode,
+      rejectionReason: detail.rejectionReason,
+    });
+
     const { requester } = detail;
     return {
       id: detail.id,
       trackingCode: detail.trackingCode,
       status: detail.status,
+      allowedTransitions,
       deliveryMode: detail.deliveryMode,
       originChannel: detail.originChannel,
       reason: detail.reason,

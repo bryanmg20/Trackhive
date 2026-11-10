@@ -4,12 +4,14 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
@@ -24,6 +26,8 @@ import { CurrentUser } from '../../../auth/presentation/decorators/current-user.
 import { Roles } from '../../../auth/presentation/decorators/roles.decorator';
 import type { AuthenticatedUser } from '../../../auth/presentation/guards/authenticated-user';
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
+import { ChangeRequestStatusResponseDto } from '../../application/dto/change-request-status-response.dto';
+import { ChangeRequestStatusDto } from '../../application/dto/change-request-status.dto';
 import { CreateRequestOnBehalfDto } from '../../application/dto/create-request-on-behalf.dto';
 import { CreateRequestDto } from '../../application/dto/create-request.dto';
 import { ListMyRequestsQueryDto } from '../../application/dto/list-my-requests-query.dto';
@@ -32,6 +36,7 @@ import { PaginatedMyRequestsResponseDto } from '../../application/dto/my-request
 import { RequestDetailResponseDto } from '../../application/dto/request-detail-response.dto';
 import { PaginatedRequestsResponseDto } from '../../application/dto/request-list-response.dto';
 import { CreateRequestResponseDto } from '../../application/dto/create-request-response.dto';
+import { ChangeRequestStatusUseCase } from '../../application/use-cases/change-request-status.use-case';
 import { CreateRequestOnBehalfUseCase } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from '../../application/use-cases/create-request.use-case';
 import { GetRequestDetailUseCase } from '../../application/use-cases/get-request-detail.use-case';
@@ -48,6 +53,7 @@ export class RequestController {
     private readonly listRequestsUseCase: ListRequestsUseCase,
     private readonly getRequestDetailUseCase: GetRequestDetailUseCase,
     private readonly listMyRequestsUseCase: ListMyRequestsUseCase,
+    private readonly changeRequestStatusUseCase: ChangeRequestStatusUseCase,
   ) {}
 
   @Get()
@@ -162,6 +168,63 @@ export class RequestController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<RequestDetailResponseDto> {
     return this.getRequestDetailUseCase.execute(id);
+  }
+
+  @Patch(':id/status')
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Cambia el estado de una solicitud',
+    description:
+      'Solo para PERSONAL y ADMIN. Aplica una transición válida de la ' +
+      'máquina de estados (HU-14) y guarda en el historial el estado ' +
+      'anterior, el nuevo, la fecha y hora, el responsable (el usuario del ' +
+      'token) y un comentario opcional. Desde AGENDADA, ATENDIDA indica que ' +
+      'el solicitante asistió y DISPONIBLE que no asistió. El rechazo con ' +
+      'motivo se cubre en HU-16.',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
+  @ApiOkResponse({
+    description: 'Nuevo estado y registro guardado en el historial',
+    type: ChangeRequestStatusResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Identificador, estado o comentario inválidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden cambiar el estado',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La solicitud no existe',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'La transición no está permitida desde el estado actual ' +
+      '(INVALID_STATUS_TRANSITION) u otra persona cambió el estado primero ' +
+      '(REQUEST_STATUS_CONFLICT)',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  changeStatus(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ChangeRequestStatusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ChangeRequestStatusResponseDto> {
+    return this.changeRequestStatusUseCase.execute({
+      requestId: id,
+      status: body.status,
+      comment: body.comment,
+      userId: user.id,
+    });
   }
 
   @Post()

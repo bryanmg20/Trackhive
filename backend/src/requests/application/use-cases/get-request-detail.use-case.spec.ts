@@ -62,6 +62,8 @@ describe('GetRequestDetailUseCase', () => {
       list: jest.fn(),
       findById,
       listByRequesterUser: jest.fn(),
+      findEntityById: jest.fn(),
+      saveStatusChange: jest.fn(),
     };
     useCase = new GetRequestDetailUseCase(repository);
   });
@@ -121,6 +123,23 @@ describe('GetRequestDetailUseCase', () => {
     expect(result.status).toBe('RECHAZADA');
     expect(result.rejectionReason).toBe('Material no localizado');
   });
+
+  it.each<[RequestDetail['status'], RequestDetail['deliveryMode'], string[]]>([
+    ['RECIBIDA', 'PRESENCIAL', ['EN_BUSQUEDA', 'RECHAZADA']],
+    ['DISPONIBLE', 'PRESENCIAL', ['AGENDADA', 'CERRADA']],
+    ['DISPONIBLE', 'DIGITAL', ['ATENDIDA', 'CERRADA']],
+    ['AGENDADA', 'PRESENCIAL', ['DISPONIBLE', 'ATENDIDA']],
+    ['CERRADA', 'PRESENCIAL', []],
+  ])(
+    'lists the valid next statuses of a %s (%s) request (HU-15)',
+    async (status, deliveryMode, expected) => {
+      findById.mockResolvedValue(buildDetail({ status, deliveryMode }));
+
+      const result = await useCase.execute('request-1');
+
+      expect(result.allowedTransitions).toEqual(expected);
+    },
+  );
 
   it('throws RequestNotFoundError when the request does not exist', async () => {
     findById.mockResolvedValue(null);

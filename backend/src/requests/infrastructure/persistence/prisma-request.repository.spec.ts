@@ -1,5 +1,8 @@
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { RequesterInput } from '../../application/use-cases/create-request-on-behalf.use-case';
+import { Request } from '../../domain/entities/request.entity';
+import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
+import type { StatusChange } from '../../domain/status-change';
 import { PrismaRequestRepository } from './prisma-request.repository';
 
 const MATERIAL_ID = 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc';
@@ -540,6 +543,188 @@ describe('PrismaRequestRepository', () => {
       const { repository } = repositoryWith(null);
 
       expect(await repository.findById('missing')).toBeNull();
+    });
+  });
+
+  describe('findEntityById (HU-15)', () => {
+    const repositoryWith = (found: unknown) =>
+      new PrismaRequestRepository({
+        requestModel: { findUnique: jest.fn().mockResolvedValue(found) },
+      } as unknown as PrismaService);
+
+    it('returns the domain entity with its status and delivery mode', async () => {
+      const request = await repositoryWith({
+        id: 'request-1',
+        status: 'AGENDADA',
+        deliveryMode: 'PRESENCIAL',
+        rejectionReason: null,
+      }).findEntityById('request-1');
+
+      expect(request).toBeInstanceOf(Request);
+      expect(request?.status).toBe('AGENDADA');
+      expect(request?.allowedTransitions).toEqual(['DISPONIBLE', 'ATENDIDA']);
+    });
+
+    it('returns null when the request does not exist', async () => {
+      expect(await repositoryWith(null).findEntityById('missing')).toBeNull();
+    });
+
+    it('fails loudly when the stored status is not valid', async () => {
+      await expect(
+        repositoryWith({
+          id: 'request-1',
+          status: 'ROTA',
+          deliveryMode: 'PRESENCIAL',
+          rejectionReason: null,
+        }).findEntityById('request-1'),
+      ).rejects.toThrow('invalid stored value');
+    });
+  });
+
+  describe('saveStatusChange (HU-15)', () => {
+    const CHANGED_AT = new Date('2026-11-10T15:30:00.000Z');
+    const STAFF = {
+      id: 'staff-1',
+      firstName: 'Ana',
+      middleName: null,
+      lastName: 'Gómez',
+      secondLastName: null,
+    };
+
+    const buildChange = (
+      overrides: Partial<StatusChange> = {},
+    ): StatusChange => ({
+      requestId: 'request-1',
+      previousStatus: 'AGENDADA',
+      newStatus: 'ATENDIDA',
+      changedBy: 'staff-1',
+      changedAt: CHANGED_AT,
+      comment: 'Asistió a la cita',
+      ...overrides,
+    });
+
+    // Simulated interactive transaction: the callback receives the client `tx`
+    const buildTransaction = (updatedRows = 1) => {
+      const tx = {
+        requestModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: updatedRows }),
+        },
+        statusHistoryModel: {
+          create: jest
+            .fn()
+            .mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+              Promise.resolve({ id: BigInt(1), ...data, user: STAFF }),
+            ),
+        },
+      };
+      const prisma = {
+        $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+          callback(tx),
+        ),
+      };
+      const repository = new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      );
+      return { tx, prisma, repository };
+    };
+
+    it('saves the status and the history row in one transaction', async () => {
+      const { prisma, tx, repository } = buildTransaction();
+
+      await repository.saveStatusChange(buildChange());
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(tx.requestModel.updateMany).toHaveBeenCalledTimes(1);
+      expect(tx.statusHistoryModel.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('only updates the request if it is still in the previous status', async () => {
+      const { tx, repository } = buildTransaction();
+
+      await repository.saveStatusChange(buildChange());
+
+      expect(tx.requestModel.updateMany).toHaveBeenCalledWith({
+        where: { id: 'request-1', status: 'AGENDADA' },
+        data: {
+          status: 'ATENDIDA',
+          version: { increment: 1 },
+          attendedAt: CHANGED_AT,
+        },
+      });
+    });
+
+    it('stores the previous and new status, date, responsible and comment', async () => {
+      const { tx, repository } = buildTransaction();
+
+      await repository.saveStatusChange(buildChange());
+
+      expect(tx.statusHistoryModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            requestId: 'request-1',
+            previousStatus: 'AGENDADA',
+            newStatus: 'ATENDIDA',
+            userId: 'staff-1',
+            comment: 'Asistió a la cita',
+            changedAt: CHANGED_AT,
+          },
+        }),
+      );
+    });
+
+    it('sets the closing date when the request is closed', async () => {
+      const { tx, repository } = buildTransaction();
+
+      await repository.saveStatusChange(
+        buildChange({ previousStatus: 'ATENDIDA', newStatus: 'CERRADA' }),
+      );
+
+      expect(tx.requestModel.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            status: 'CERRADA',
+            version: { increment: 1 },
+            closedAt: CHANGED_AT,
+          },
+        }),
+      );
+    });
+
+    it('sets no attention or closing date when the requester did not attend', async () => {
+      const { tx, repository } = buildTransaction();
+
+      await repository.saveStatusChange(
+        buildChange({ newStatus: 'DISPONIBLE', comment: null }),
+      );
+
+      expect(tx.requestModel.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { status: 'DISPONIBLE', version: { increment: 1 } },
+        }),
+      );
+    });
+
+    it('returns the saved row with the name of the responsible', async () => {
+      const { repository } = buildTransaction();
+
+      const saved = await repository.saveStatusChange(buildChange());
+
+      expect(saved).toEqual({
+        previousStatus: 'AGENDADA',
+        newStatus: 'ATENDIDA',
+        changedAt: CHANGED_AT,
+        comment: 'Asistió a la cita',
+        changedBy: STAFF,
+      });
+    });
+
+    it('throws RequestStatusConflictError and writes no history when someone changed it first', async () => {
+      const { tx, repository } = buildTransaction(0);
+
+      await expect(repository.saveStatusChange(buildChange())).rejects.toThrow(
+        RequestStatusConflictError,
+      );
+      expect(tx.statusHistoryModel.create).not.toHaveBeenCalled();
     });
   });
 });

@@ -47,6 +47,8 @@ describe('ListRequestsUseCase', () => {
       list,
       findById: jest.fn(),
       listByRequesterUser: jest.fn(),
+      findEntityById: jest.fn(),
+      saveStatusChange: jest.fn(),
     });
   });
 

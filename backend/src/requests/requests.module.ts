@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { REQUEST_REPOSITORY } from './application/tokens';
+import { ChangeRequestStatusUseCase } from './application/use-cases/change-request-status.use-case';
 import { CreateRequestOnBehalfUseCase } from './application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from './application/use-cases/create-request.use-case';
 import { FindRequesterByEmailUseCase } from './application/use-cases/find-requester-by-email.use-case';
@@ -20,6 +21,7 @@ import { RequesterController } from './presentation/controllers/requester.contro
     ListRequestsUseCase,
     GetRequestDetailUseCase,
     ListMyRequestsUseCase,
+    ChangeRequestStatusUseCase,
   ],
 })
 export class RequestsModule {}

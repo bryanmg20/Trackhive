@@ -1,5 +1,7 @@
 import type { DeliveryMode } from '../../domain/delivery-mode';
+import type { Request } from '../../domain/entities/request.entity';
 import type { RequestStatus } from '../../domain/request-status';
+import type { StatusChange } from '../../domain/status-change';
 import type { CreateRequestInput } from '../use-cases/create-request.use-case';
 import type { CreateRequestOnBehalfInput } from '../use-cases/create-request-on-behalf.use-case';
 
@@ -111,6 +113,21 @@ export interface RequestDetail {
   }[];
 }
 
+/** A row of status_history as it was saved, with the name of who made it. */
+export interface SavedStatusChange {
+  previousStatus: RequestStatus;
+  newStatus: RequestStatus;
+  changedAt: Date;
+  comment: string | null;
+  changedBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  };
+}
+
 export interface RequestRepository {
   create(
     input: CreateRequestInput & { createdById: string },
@@ -133,4 +150,14 @@ export interface RequestRepository {
     userId: string,
     criteria: MyRequestListCriteria,
   ): Promise<RequestListResult>;
+
+  /** The request as a domain entity, to apply its transition rules (HU-15). */
+  findEntityById(id: string): Promise<Request | null>;
+
+  /**
+   * Saves the new status and inserts its row in status_history in one
+   * transaction (D-08). Throws RequestStatusConflictError when the request
+   * is no longer in `previousStatus` because someone else changed it first.
+   */
+  saveStatusChange(change: StatusChange): Promise<SavedStatusChange>;
 }

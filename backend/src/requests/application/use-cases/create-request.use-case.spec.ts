@@ -18,6 +18,8 @@ const buildRepository = () => ({
   list: jest.fn(),
   findById: jest.fn(),
   listByRequesterUser: jest.fn(),
+  findEntityById: jest.fn(),
+  saveStatusChange: jest.fn(),
 });
 
 describe('CreateRequestUseCase', () => {
