@@ -244,8 +244,10 @@ export class RequestController {
       'el solicitante y todos los materiales de la solicitud, y la persona ' +
       'puede consultar el material durante todo el horario de atención de ' +
       'ese día (lunes a viernes 8:00-17:00, sábados 9:00-13:00). Los ' +
-      'domingos no se atiende. La solicitud pasa a AGENDADA y el cambio ' +
-      'queda en el historial con el responsable (el usuario del token). El ' +
+      'domingos no se atiende. No se agenda un material que ya tiene cita ' +
+      'ese día ni uno en restauración o no consultable; el estado en uso no ' +
+      'bloquea (HU-20). La solicitud pasa a AGENDADA y el cambio queda en ' +
+      'el historial con el responsable (el usuario del token). El ' +
       'solicitante recibe un correo con el día y el horario de la cita (HU-23).',
   })
   @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
@@ -275,7 +277,9 @@ export class RequestController {
     description:
       'La solicitud no está DISPONIBLE o su entrega es digital ' +
       '(INVALID_STATUS_TRANSITION), u otra persona cambió el estado primero ' +
-      '(REQUEST_STATUS_CONFLICT)',
+      '(REQUEST_STATUS_CONFLICT), o un material de la solicitud ya tiene ' +
+      'cita ese día (MATERIAL_ALREADY_BOOKED) o está en restauración o no ' +
+      'consultable (MATERIAL_NOT_AVAILABLE) (HU-20)',
     type: ErrorResponseDto,
   })
   @ApiInternalServerErrorResponse({

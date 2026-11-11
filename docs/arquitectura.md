@@ -40,7 +40,7 @@ flowchart TB
 | D-06 | Prisma como ORM | Ratificada |
 | D-07 | La máquina de estados vive en la entidad `Solicitud` | Implementada |
 | D-08 | Historial de estados en tabla propia, solo de inserción | Implementada |
-| D-09 | Choques de agenda controlados con restricción de exclusión en PostgreSQL | Propuesta |
+| D-09 | Sin dobles reservas: un material por día, con índice único en PostgreSQL | Implementada |
 | D-10 | Notificaciones por puerto, con tabla de salida y reintentos | Implementada |
 | D-11 | JWT (access y refresh) con rotación y contraseñas con argon2 | Implementada |
 | D-12 | Autorización por roles con guards globales; propiedad de datos en casos de uso | Implementada |
@@ -100,7 +100,7 @@ flowchart TB
 
 - **Decisión:** Prisma con migraciones en SQL versionadas (Prisma Migrate).
 - **Alternativas:** TypeORM.
-- **Justificación:** es el ORM con el que ya se construyó el módulo base, ofrece buena ayuda de tipos y genera las migraciones a partir de `schema.prisma`. Su esquema no expresa `CHECK`, la restricción de exclusión de la agenda (D-09) ni los índices `pg_trgm` (D-16), pero esas reglas se agregan a mano en el SQL de la migración, creada con `prisma migrate dev --create-only`.
+- **Justificación:** es el ORM con el que ya se construyó el módulo base, ofrece buena ayuda de tipos y genera las migraciones a partir de `schema.prisma`. Su esquema no expresa `CHECK` ni los índices `pg_trgm` (D-16), pero esas reglas se agregan a mano en el SQL de la migración, creada con `prisma migrate dev --create-only`. El índice único de la agenda (D-09) sí queda declarado en `schema.prisma`.
 - **Consecuencias:** Prisma no tiene `synchronize`; su equivalente es `prisma db push`, que no se usa fuera del desarrollo local (requisito del curso). Fuera de local las migraciones se aplican con `prisma migrate deploy`. Hay que revisar las migraciones generadas antes de fusionarlas. La decisión es reversible porque el ORM queda confinado a infraestructura.
 
 ### D-07. La máquina de estados vive en la entidad `Solicitud`
@@ -120,12 +120,12 @@ flowchart TB
 - **Rechazo con motivo (HU-16):** el mismo endpoint acepta `RECHAZADA`. `changeStatus()` llama a `reject()`, así que el comentario pasa a ser el motivo y es obligatorio: sin él responde 400 `REJECTION_REASON_REQUIRED` y no se guarda nada. El motivo queda en `requests.rejection_reason` (ampliada a `varchar(500)`, con un CHECK que exige que no esté vacío) y como comentario de la fila de `status_history`. `GET /api/v1/requests/mine` lo devuelve para que el solicitante lo vea en «Mis solicitudes».
 - **Implementación (HU-18):** `AGENDADA` ya no se acepta en `PATCH /status`: solo se alcanza con `POST /api/v1/requests/:id/appointments` (`@Roles('PERSONAL', 'ADMIN')`), que llama a `ScheduleAppointmentUseCase`. `Request.scheduleAppointment()` pasa por `schedule()` (solo `DISPONIBLE` y presencial) y devuelve el `StatusChange`. `PrismaRequestRepository.saveAppointment()` guarda, en una transacción, el cambio de estado con el mismo bloqueo optimista, su fila de `status_history` y la cita del día con el solicitante y todos los materiales de la solicitud. La fecha se valida en `toAppointmentDay()`: un domingo responde 400 `INVALID_APPOINTMENT_DATE`. Al salir de `AGENDADA` por «asistió» o «no asistió», `saveStatusChange()` marca la cita `CUMPLIDA` o `NO_ASISTIO`.
 
-### D-09. Choques de agenda con restricción de exclusión en PostgreSQL
+### D-09. Sin dobles reservas de material por día
 
-- **Decisión:** la tabla `appointments` lleva una restricción `EXCLUDE USING gist (material_id WITH =, tstzrange(start_at, end_at) WITH &&) WHERE (status <> 'CANCELADA')`, con la extensión `btree_gist`. Además, el caso de uso `AgendarCita` consulta la disponibilidad antes de insertar para devolver un mensaje claro; si la base rechaza la inserción por una carrera, el repositorio lo traduce a `ChoqueDeAgendaError`.
-- **Alternativas:** solo verificar en el código antes de insertar; bloqueos explícitos a nivel de fila.
-- **Justificación:** la verificación en código sola es vulnerable a condiciones de carrera (dos funcionarios agendando el mismo material a la vez). La restricción de la base de datos garantiza la integridad sin importar cuántas instancias de la API corran.
-- **Consecuencias:** la regla vive en una migración SQL y en el dominio (que expresa el concepto), y debe documentarse en `docs/modelo-datos.md`. La combinación de verificación previa y restricción es deliberada: la primera da buena experiencia y la segunda da seguridad.
+- **Decisión:** la reserva es por día completo, material y fecha, sin franjas horarias. Mientras la cita está `PROGRAMADA`, `appointment_materials` copia el día en `booked_date`; al cumplirse, registrar inasistencia o cancelarse pasa a `NULL` y el día queda libre. El índice único `(material_id, booked_date)` impide reservar el mismo material dos veces el mismo día — un `NULL` nunca choca, así que solo la cita activa retiene el día. Además, el caso de uso `AgendarCita` consulta la disponibilidad antes de insertar: si un material ya tiene cita ese día responde 409 `MATERIAL_ALREADY_BOOKED` nombrando el material, la fecha y el radicado que lo tiene, y si está en restauración o no consultable responde 409 `MATERIAL_NOT_AVAILABLE`; el estado `EN_USO` no bloquea, porque solo aplica al día en que el material está en sala (HU-72). Si la base rechaza la inserción por una carrera (dos funcionarios agendando a la vez), el repositorio traduce la violación del índice a `MaterialAlreadyBookedError`.
+- **Alternativas:** solo verificar en el código antes de insertar; franjas horarias con `tstzrange` y una restricción `EXCLUDE` (descartadas: la cita ya no tiene hora, es un día completo, y la igualdad basta sin la extensión `btree_gist`); bloqueos explícitos a nivel de fila.
+- **Justificación:** la verificación en código sola es vulnerable a condiciones de carrera. El índice único garantiza la integridad sin importar cuántas instancias de la API corran, y al ser por día no necesita rangos ni extensiones de PostgreSQL. La combinación de verificación previa y restricción es deliberada: la primera da un mensaje claro y la segunda da seguridad.
+- **Consecuencias:** la regla vive en una migración SQL y en el dominio (que expresa el concepto), y está documentada en `docs/modelo-datos.md`. `booked_date` se desnormaliza de la cita y se libera en la misma transacción del cambio de estado que saca la solicitud de `AGENDADA` (implementación de HU-20).
 
 ### D-10. Notificaciones por puerto, con tabla de salida y reintentos
 
@@ -210,7 +210,7 @@ flowchart TB
 
 - **Decisión:** las pruebas unitarias del dominio y de los casos de uso usan repositorios fake en memoria. Las pruebas e2e de la API se ejecutan contra un PostgreSQL real (servicio en GitHub Actions y en docker-compose), con migraciones aplicadas.
 - **Alternativas:** mocks de librería en todas partes; SQLite en memoria para e2e.
-- **Justificación:** los fakes aprovechan que los casos de uso dependen solo de interfaces y mantienen las pruebas rápidas y legibles. Las e2e necesitan PostgreSQL real porque la restricción de exclusión (D-09) y `pg_trgm` (D-16) no existen en SQLite.
+- **Justificación:** los fakes aprovechan que los casos de uso dependen solo de interfaces y mantienen las pruebas rápidas y legibles. Las e2e necesitan PostgreSQL real para aplicar las mismas migraciones de producción: el índice único de la agenda (D-09) y `pg_trgm` (D-16), que SQLite no soporta.
 - **Consecuencias:** el CI es algo más lento, y la cobertura mínima de 70 % se mide sobre las capas de dominio y aplicación.
 
 ### D-22. Docker, docker-compose y GitHub Actions

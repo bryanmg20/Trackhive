@@ -235,10 +235,16 @@ model AppointmentModel {
 model AppointmentMaterialModel {
   appointmentId String           @map("appointment_id") @db.Uuid
   materialId    String           @map("material_id") @db.Uuid
+  // The day this material is booked for, while the appointment is
+  // PROGRAMADA. NULL once it is CUMPLIDA, NO_ASISTIO or CANCELADA, which
+  // frees the day: with material_id it rejects booking the same material
+  // twice the same day (HU-20, D-09), and a NULL never collides
+  bookedDate    DateTime?       @map("booked_date") @db.Date
   appointment   AppointmentModel @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
   material      MaterialModel    @relation(fields: [materialId], references: [id], onDelete: Restrict)
 
   @@id([appointmentId, materialId])
+  @@unique([materialId, bookedDate], map: "appointment_materials_material_day_uniq")
   @@index([materialId])
   @@map("appointment_materials")
 }

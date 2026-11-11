@@ -1,6 +1,8 @@
 import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import type { DeliveryMode } from '../../domain/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
+import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
+import { MaterialNotAvailableError } from '../../domain/errors/material-not-available.error';
 import { InvalidAppointmentDateError } from '../../domain/errors/invalid-appointment-date.error';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
@@ -11,6 +13,7 @@ import type {
   RequestNotificationContext,
   RequestRepository,
   SavedAppointment,
+  SchedulingConflicts,
 } from '../ports/request.repository.port';
 import { ScheduleAppointmentUseCase } from './schedule-appointment.use-case';
 
@@ -23,6 +26,15 @@ const MATERIALS = [
   { id: 'material-1', catalogCode: 'AHB-001', title: 'Actas de 1890' },
   { id: 'material-2', catalogCode: 'AHB-002', title: 'El Heraldo, 1935' },
 ];
+
+// What findSchedulingConflicts answers when nothing blocks the scheduling
+const SCHEDULABLE: SchedulingConflicts = {
+  materials: MATERIALS.map((material) => ({
+    ...material,
+    status: 'DISPONIBLE',
+  })),
+  bookedMaterials: [],
+};
 
 // Echoes what it receives, like the database would
 const savedFrom = (change: StatusChange, date: Date): SavedAppointment => ({
@@ -54,6 +66,10 @@ const savedFrom = (change: StatusChange, date: Date): SavedAppointment => ({
 
 describe('ScheduleAppointmentUseCase', () => {
   let findEntityById: jest.Mock<Promise<Request | null>, [string]>;
+  let findSchedulingConflicts: jest.Mock<
+    Promise<SchedulingConflicts>,
+    [string, Date]
+  >;
   let saveAppointment: jest.Mock<
     Promise<SavedAppointment>,
     [StatusChange, Date, NotificationDraft | null]
@@ -74,6 +90,10 @@ describe('ScheduleAppointmentUseCase', () => {
     findEntityById = jest.fn<Promise<Request | null>, [string]>(() =>
       Promise.resolve(buildRequest('DISPONIBLE')),
     );
+    findSchedulingConflicts = jest.fn<
+      Promise<SchedulingConflicts>,
+      [string, Date]
+    >(() => Promise.resolve(SCHEDULABLE));
     saveAppointment = jest.fn<
       Promise<SavedAppointment>,
       [StatusChange, Date, NotificationDraft | null]
@@ -88,6 +108,7 @@ describe('ScheduleAppointmentUseCase', () => {
       listByRequesterUser: jest.fn(),
       findEntityById,
       findNotificationContext: jest.fn(() => Promise.resolve(CONTEXT)),
+      findSchedulingConflicts,
       saveStatusChange: jest.fn(),
       saveAppointment,
     };
@@ -132,6 +153,70 @@ describe('ScheduleAppointmentUseCase', () => {
         InvalidAppointmentDateError,
       );
       expect(saveAppointment).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('availability of the material (HU-20)', () => {
+    it('rejects a material that already has a cita that day and saves nothing', async () => {
+      findSchedulingConflicts.mockResolvedValue({
+        ...SCHEDULABLE,
+        bookedMaterials: [
+          {
+            materialId: 'material-1',
+            catalogCode: 'AHB-001',
+            title: 'Actas de 1890',
+            date: new Date('2026-11-20T00:00:00.000Z'),
+            trackingCode: 'SOL-2026-00042',
+          },
+        ],
+      });
+
+      await expect(schedule()).rejects.toThrow(MaterialAlreadyBookedError);
+      await expect(schedule()).rejects.toThrow(
+        'El material «Actas de 1890» (AHB-001) ya tiene cita el viernes, ' +
+          '20 de noviembre de 2026 (solicitud SOL-2026-00042).',
+      );
+      expect(saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it.each<[string, string]>([
+      ['EN_RESTAURACION', 'está en restauración'],
+      ['NO_CONSULTABLE', 'no es consultable'],
+    ])(
+      'rejects a material that is %s and saves nothing',
+      async (status, phrase) => {
+        findSchedulingConflicts.mockResolvedValue({
+          ...SCHEDULABLE,
+          materials: [
+            {
+              id: 'material-1',
+              catalogCode: 'AHB-001',
+              title: 'Actas de 1890',
+              status,
+            },
+          ],
+        });
+
+        await expect(schedule()).rejects.toThrow(MaterialNotAvailableError);
+        await expect(schedule()).rejects.toThrow(
+          `El material «Actas de 1890» (AHB-001) ${phrase} y no se puede agendar.`,
+        );
+        expect(saveAppointment).not.toHaveBeenCalled();
+      },
+    );
+
+    it('schedules a material that is EN_USO: it only applies to the day in the room (HU-72)', async () => {
+      findSchedulingConflicts.mockResolvedValue({
+        ...SCHEDULABLE,
+        materials: MATERIALS.map((material) => ({
+          ...material,
+          status: 'EN_USO',
+        })),
+      });
+
+      await schedule();
+
+      expect(saveAppointment).toHaveBeenCalledTimes(1);
     });
   });
 
