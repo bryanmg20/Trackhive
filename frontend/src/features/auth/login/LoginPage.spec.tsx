@@ -231,6 +231,27 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps a visible label on every field and follows DOM order with Tab', async () => {
+    const user = userEvent.setup();
+    renderLoginPage();
+
+    expect(screen.getByText('Correo electrónico')).toBeVisible();
+    expect(screen.getByText('Contraseña')).toBeVisible();
+
+    await user.tab();
+    expect(screen.getByLabelText('Correo electrónico')).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole('button', { name: 'Mostrar contraseña' }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(screen.getByLabelText('Contraseña')).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole('button', { name: 'Iniciar sesión' }),
+    ).toHaveFocus();
+  });
+
   it('shows a connection error when the server cannot be reached', async () => {
     const user = userEvent.setup();
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));

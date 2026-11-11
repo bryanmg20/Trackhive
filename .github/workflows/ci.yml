@@ -45,6 +45,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - name: Lint (incluye reglas de accesibilidad)
+        run: pnpm lint
       - run: pnpm test
       - run: pnpm build

@@ -25,11 +25,6 @@ export const SECTIONS: readonly Section[] = [
     roles: ['PUBLICO'],
   },
   {
-    to: ROUTES.newRequest,
-    label: 'Nueva solicitud',
-    roles: ['PUBLICO'],
-  },
-  {
     to: ROUTES.requests,
     label: 'Solicitudes',
     roles: STAFF_ROLES,

@@ -39,11 +39,11 @@ describe('SiteNav', () => {
       screen.getByRole('link', { name: 'Buscar material' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Nueva solicitud' }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole('link', { name: 'Mis solicitudes' }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Nueva solicitud' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'Solicitudes' }),
     ).not.toBeInTheDocument();
@@ -60,6 +60,22 @@ describe('SiteNav', () => {
       screen.getByRole('button', { name: 'Cerrar sesión' }),
     ).toBeInTheDocument();
   });
+
+  it.each(['PUBLICO', 'PERSONAL', 'ADMIN'])(
+    'never offers the new request option to %s',
+    (role) => {
+      sessionStorage.setItem(
+        'trackhive.accessToken',
+        tokenWithRole(role),
+      );
+
+      renderNav();
+
+      expect(
+        screen.queryByRole('link', { name: 'Nueva solicitud' }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it.each(['PERSONAL', 'ADMIN'])(
     'shows the staff sections to %s',
