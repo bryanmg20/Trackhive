@@ -161,6 +161,31 @@ export interface SavedAppointment {
   statusChange: SavedStatusChange;
 }
 
+/** A material of the request, as the scheduling checks read it (HU-20). */
+export interface SchedulableMaterial {
+  id: string;
+  catalogCode: string;
+  title: string;
+  // DISPONIBLE, EN_USO, EN_RESTAURACION or NO_CONSULTABLE
+  status: string;
+}
+
+/** A PROGRAMADA appointment that already holds a material on a day (HU-20). */
+export interface MaterialDayBooking {
+  materialId: string;
+  catalogCode: string;
+  title: string;
+  // UTC midnight of the day
+  date: Date;
+  trackingCode: string;
+}
+
+/** What «Agendar cita» checks before saving anything (HU-20). */
+export interface SchedulingConflicts {
+  materials: SchedulableMaterial[];
+  bookedMaterials: MaterialDayBooking[];
+}
+
 export const APPOINTMENT_SORT_FIELDS = [
   'appointmentDate',
   'createdAt',
@@ -265,6 +290,17 @@ export interface RequestRepository {
   findNotificationContext(
     id: string,
   ): Promise<RequestNotificationContext | null>;
+
+  /**
+   * The materials of the request and the PROGRAMADA appointments that
+   * already hold any of them on `date` (HU-20). The use case blocks the
+   * materials that are EN_RESTAURACION or NO_CONSULTABLE and the days
+   * already taken before anything is saved.
+   */
+  findSchedulingConflicts(
+    requestId: string,
+    date: Date,
+  ): Promise<SchedulingConflicts>;
 
   /**
    * Saves the new status and inserts its row in status_history in one

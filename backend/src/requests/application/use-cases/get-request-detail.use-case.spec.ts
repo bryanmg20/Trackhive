@@ -65,6 +65,7 @@ describe('GetRequestDetailUseCase', () => {
       listByRequesterUser: jest.fn(),
       findEntityById: jest.fn(),
       findNotificationContext: jest.fn(),
+      findSchedulingConflicts: jest.fn(),
       saveStatusChange: jest.fn(),
       saveAppointment: jest.fn(),
     };

@@ -108,6 +108,10 @@ describe('Status change emails (e2e)', () => {
           statusChange: saveChange(change, email),
         }),
     ),
+    findSchedulingConflicts: jest.fn().mockResolvedValue({
+      materials: [],
+      bookedMaterials: [],
+    }),
   };
 
   const changeStatus = (body: object) =>

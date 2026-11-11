@@ -832,6 +832,41 @@ describe('RequestDetailPage', () => {
       expect(heading.parentElement).toHaveTextContent('Disponible');
     });
 
+    it('shows the double-booking conflict and creates no appointment (HU-20)', async () => {
+      const message =
+        'El material «Acta de fundación de la villa» (TH-DOC-0001) ya tiene ' +
+        'cita el viernes, 20 de noviembre de 2026 (solicitud SOL-2026-00002).';
+      const { user } = await setup(available(), {
+        ok: false,
+        status: 409,
+        json: async () => ({
+          code: 'MATERIAL_ALREADY_BOOKED',
+          message,
+        }),
+      });
+      const section = screen.getByRole('region', { name: 'Agendar cita' });
+
+      await user.clear(within(section).getByLabelText('Fecha de la cita'));
+      await user.type(
+        within(section).getByLabelText('Fecha de la cita'),
+        '2026-11-20',
+      );
+      await user.click(
+        within(section).getByRole('button', { name: 'Agendar cita' }),
+      );
+
+      expect(await within(section).findByRole('alert')).toHaveTextContent(
+        message,
+      );
+      // The appointment was not scheduled: no confirmation and still Disponible
+      expect(within(section).queryByRole('status')).not.toBeInTheDocument();
+      const heading = screen.getByRole('heading', { name: 'SOL-2026-00001' });
+      expect(heading.parentElement).toHaveTextContent('Disponible');
+      expect(
+        within(section).getByRole('button', { name: 'Agendar cita' }),
+      ).toBeInTheDocument();
+    });
+
     it('shows the date the requester asked for and starts on it', async () => {
       const { user } = await setup();
       const section = screen.getByRole('region', { name: 'Agendar cita' });

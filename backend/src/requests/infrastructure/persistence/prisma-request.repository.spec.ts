@@ -1,7 +1,9 @@
+import { Prisma } from '@prisma/client';
 import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { RequesterInput } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { Request } from '../../domain/entities/request.entity';
+import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import type { StatusChange } from '../../domain/status-change';
 import { PrismaRequestRepository } from './prisma-request.repository';
@@ -690,6 +692,9 @@ describe('PrismaRequestRepository', () => {
         appointmentModel: {
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
+        appointmentMaterialModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        },
         notificationModel: {
           create: jest.fn().mockResolvedValue({}),
         },
@@ -916,6 +921,17 @@ describe('PrismaRequestRepository', () => {
           where: { requestId: 'request-1', status: 'PROGRAMADA' },
           data: { status: appointmentStatus },
         });
+        // The day of its materials is free again (HU-20)
+        expect(tx.appointmentMaterialModel.updateMany).toHaveBeenCalledWith({
+          where: {
+            appointment: {
+              requestId: 'request-1',
+              status: { not: 'PROGRAMADA' },
+            },
+            bookedDate: { not: null },
+          },
+          data: { bookedDate: null },
+        });
       },
     );
 
@@ -928,6 +944,7 @@ describe('PrismaRequestRepository', () => {
       );
 
       expect(tx.appointmentModel.updateMany).not.toHaveBeenCalled();
+      expect(tx.appointmentMaterialModel.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -969,7 +986,13 @@ describe('PrismaRequestRepository', () => {
           updateMany: jest.fn().mockResolvedValue({ count: updatedRows }),
           findUniqueOrThrow: jest.fn().mockResolvedValue({
             requesterId: 'requester-1',
-            items: [{ materialId: 'material-1' }, { materialId: 'material-2' }],
+            items: MATERIALS.map((material) => ({
+              materialId: material.id,
+              material: {
+                catalogCode: material.catalogCode,
+                title: material.title,
+              },
+            })),
           }),
         },
         statusHistoryModel: {
@@ -995,6 +1018,23 @@ describe('PrismaRequestRepository', () => {
         $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
           callback(tx),
         ),
+        // What findSchedulingConflicts reads when the race is asked again
+        requestModel: {
+          findUnique: jest.fn().mockResolvedValue({
+            items: MATERIALS.map((material) => ({
+              material: { ...material, status: 'DISPONIBLE' },
+            })),
+          }),
+        },
+        appointmentModel: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              appointmentDate: DATE,
+              request: { trackingCode: 'SOL-2026-00042' },
+              materials: [{ material: MATERIALS[0] }],
+            },
+          ]),
+        },
       };
       const repository = new PrismaRequestRepository(
         prisma as unknown as PrismaService,
@@ -1063,8 +1103,8 @@ describe('PrismaRequestRepository', () => {
             status: 'PROGRAMADA',
             materials: {
               create: [
-                { materialId: 'material-1' },
-                { materialId: 'material-2' },
+                { materialId: 'material-1', bookedDate: DATE },
+                { materialId: 'material-2', bookedDate: DATE },
               ],
             },
           },
@@ -1102,6 +1142,47 @@ describe('PrismaRequestRepository', () => {
       expect(tx.statusHistoryModel.create).not.toHaveBeenCalled();
       expect(tx.appointmentModel.create).not.toHaveBeenCalled();
       expect(tx.notificationModel.create).not.toHaveBeenCalled();
+    });
+
+    it('answers the race on the day with the concrete conflict (HU-20)', async () => {
+      const { prisma, tx, repository } = buildTransaction();
+      // The unique index of (material_id, booked_date) rejected the insert:
+      // another staff member booked the same material the same day first
+      tx.appointmentModel.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`material_id`,`booked_date`)',
+          { code: 'P2002', clientVersion: '6.19.3' },
+        ),
+      );
+
+      await expect(
+        repository.saveAppointment(CHANGE, DATE, null),
+      ).rejects.toThrow(MaterialAlreadyBookedError);
+      expect(prisma.appointmentModel.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ status: 'PROGRAMADA' }) as unknown,
+        }) as unknown,
+      );
+      await expect(
+        repository.saveAppointment(CHANGE, DATE, null),
+      ).rejects.toThrow(
+        'El material «Actas de 1890» (AHB-001) ya tiene cita el viernes, ' +
+          '20 de noviembre de 2026 (solicitud SOL-2026-00042).',
+      );
+    });
+
+    it('lets other database failures through', async () => {
+      const { tx, repository } = buildTransaction();
+      tx.appointmentModel.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Foreign key failed', {
+          code: 'P2003',
+          clientVersion: '6.19.3',
+        }),
+      );
+
+      await expect(
+        repository.saveAppointment(CHANGE, DATE, null),
+      ).rejects.toThrow(Prisma.PrismaClientKnownRequestError);
     });
   });
 
