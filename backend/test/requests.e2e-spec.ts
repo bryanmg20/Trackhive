@@ -70,6 +70,10 @@ describe('Request registration (e2e)', () => {
     }),
     saveStatusChange: jest.fn(),
     saveAppointment: jest.fn(),
+    findSchedulingConflicts: jest.fn().mockResolvedValue({
+      materials: [],
+      bookedMaterials: [],
+    }),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
