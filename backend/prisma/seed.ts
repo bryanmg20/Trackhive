@@ -807,7 +807,13 @@ async function main() {
           status: seedAppointment.status,
           notes: seedAppointment.notes,
           materials: {
-            create: request.items.map(({ materialId }) => ({ materialId })),
+            // Only a PROGRAMADA appointment holds the day of its materials
+            // (HU-20); the seed matches what the API writes
+            create: request.items.map(({ materialId }) => ({
+              materialId,
+              bookedDate:
+                seedAppointment.status === 'PROGRAMADA' ? appointmentDate : null,
+            })),
           },
         },
       });
