@@ -26,6 +26,7 @@ describe('CreateRequestOnBehalfUseCase', () => {
     findNotificationContext: jest.fn(),
     saveStatusChange: jest.fn(),
     saveAppointment: jest.fn(),
+    findSchedulingConflicts: jest.fn(),
   };
   const useCase = new CreateRequestOnBehalfUseCase(repository);
 

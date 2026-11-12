@@ -55,6 +55,7 @@ describe('ListMyRequestsUseCase', () => {
       findNotificationContext: jest.fn(),
       saveStatusChange: jest.fn(),
       saveAppointment: jest.fn(),
+      findSchedulingConflicts: jest.fn(),
     });
   });
 
