@@ -2,8 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
-import { AuthLayout } from '../auth/components/AuthLayout';
-import { SiteNav } from '../navigation/SiteNav';
+import { AppLayout } from '../layout/AppLayout';
 import { createRequest } from './api/create-request';
 import { readMaterialIds } from './selected-materials';
 import type { SelectedMaterial } from './selected-materials';
@@ -62,9 +61,8 @@ export function NewRequestPage() {
   }
 
   return (
-    <AuthLayout spineLabel="SOLICITUD · CONSULTA">
-      <SiteNav className={styles.siteNav} />
-      <main className={styles.page}>
+    <AppLayout>
+      <div className={styles.page}>
         <header className={styles.header}>
           <p className={styles.eyebrow}>Consulta documental</p>
           <h1 className={styles.title}>Radicar solicitud</h1>
@@ -182,7 +180,7 @@ export function NewRequestPage() {
             </button>
           </form>
         ) : null}
-      </main>
-    </AuthLayout>
+      </div>
+    </AppLayout>
   );
 }

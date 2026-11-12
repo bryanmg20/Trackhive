@@ -20,6 +20,8 @@ pnpm dev      # Vite en http://localhost:5173
 pnpm lint     # ESLint
 pnpm test     # Vitest + Testing Library
 pnpm build    # tsc -b && vite build
+pnpm exec playwright install chromium  # una sola vez, para las pruebas e2e
+pnpm test:e2e # Playwright: cada ruta de ROUTES a 360 px
 ```
 
 ## Rutas
@@ -185,6 +187,24 @@ deja el estado como estaba.
 - `pnpm lint` incluye `eslint-plugin-jsx-a11y`. El CI ejecuta ese lint en cada
   PR del frontend, y cada pantalla nueva debe conservar etiquetas y operación
   con teclado (Definition of Done).
+
+## Diseño responsive (HU-29)
+
+- `src/features/layout/AppLayout.tsx` es el contenedor compartido de las
+  pantallas con sesión: marca, menú (`SiteNav`), encabezado y el contenedor del
+  contenido. Las pantallas nuevas deben usarlo en vez de crear su propio
+  `shell`/`topbar`/`main`. El registro, el inicio de sesión y las pantallas sin
+  menú conservan `AuthLayout`, que también es un layout compartido.
+- Los breakpoints se declaran una sola vez en `src/styles/global.css`:
+  `--bp-mobile: 480px` y `--bp-tablet: 900px`. Los CSS Modules solo pueden usar
+  esos anchos en sus `@media`; `src/styles/breakpoints.spec.ts` falla si aparece
+  otro valor.
+- `e2e/responsive.spec.ts` abre cada ruta de `ROUTES` a 360 px, simula las
+  llamadas a `/api/v1/**` y falla si `scrollWidth` supera el ancho del viewport.
+  También redimensiona la ventana y comprueba que los enlaces del menú no se
+  corten. El CI ejecuta `pnpm test:e2e` en cada PR.
+- **Definition of Done:** toda pantalla nueva debe ser usable a 360 px sin
+  desplazamiento horizontal y pasar la prueba e2e de `ROUTES`.
 
 ## Pruebas
 

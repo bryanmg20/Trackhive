@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { requestDetailPath, ROUTES } from '../../routes';
+import { AppLayout } from '../layout/AppLayout';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
-import { SiteNav } from '../navigation/SiteNav';
 import {
   listRequests,
   REQUEST_STATUS_LABELS,
@@ -153,297 +153,287 @@ export function RequestsListPage() {
     : 1;
 
   return (
-    <div className={searchStyles.shell}>
-      <header className={searchStyles.topbar}>
-        <p className={searchStyles.wordmark}>
-          Trackhive<span className={searchStyles.wordmarkDot}>.</span>
+    <AppLayout>
+      <section className={searchStyles.hero} aria-labelledby="requests-title">
+        <p className={searchStyles.eyebrow}>Gestión del archivo</p>
+        <h1 id="requests-title" className={searchStyles.title}>
+          Solicitudes
+        </h1>
+        <form
+          id={FORM_ID}
+          className={searchStyles.searchBar}
+          onSubmit={search}
+          role="search"
+        >
+          <label htmlFor="request-requester" className="sr-only">
+            Solicitante
+          </label>
+          <input
+            id="request-requester"
+            type="search"
+            maxLength={100}
+            value={requester}
+            onChange={(event) => setRequester(event.target.value)}
+            placeholder="Solicitante: nombre, correo o documento"
+          />
+          <button className={searchStyles.primary} type="submit">
+            Buscar
+          </button>
+        </form>
+        <p className={styles.shortcutRow}>
+          <Link className={styles.shortcut} to={ROUTES.staffNewRequest}>
+            Registrar solicitud de visitante ›
+          </Link>
         </p>
-        <p className={searchStyles.topbarTag}>CLENA · Personal</p>
-        <SiteNav />
-      </header>
+      </section>
 
-      <main className={searchStyles.main}>
-        <section className={searchStyles.hero} aria-labelledby="requests-title">
-          <p className={searchStyles.eyebrow}>Gestión del archivo</p>
-          <h1 id="requests-title" className={searchStyles.title}>
-            Solicitudes
-          </h1>
-          <form
-            id={FORM_ID}
-            className={searchStyles.searchBar}
-            onSubmit={search}
-            role="search"
+      <div className={searchStyles.layout}>
+        <aside className={searchStyles.sidebar} aria-label="Filtros">
+          <button
+            type="button"
+            className={searchStyles.filtersToggle}
+            aria-expanded={filtersOpen}
+            aria-controls="request-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
           >
-            <label htmlFor="request-requester" className="sr-only">
-              Solicitante
-            </label>
-            <input
-              id="request-requester"
-              type="search"
-              maxLength={100}
-              value={requester}
-              onChange={(event) => setRequester(event.target.value)}
-              placeholder="Solicitante: nombre, correo o documento"
-            />
-            <button className={searchStyles.primary} type="submit">
-              Buscar
-            </button>
-          </form>
-          <p className={styles.shortcutRow}>
-            <Link className={styles.shortcut} to={ROUTES.staffNewRequest}>
-              Registrar solicitud de visitante ›
-            </Link>
-          </p>
-        </section>
+            Filtros {filtersOpen ? '▴' : '▾'}
+          </button>
 
-        <div className={searchStyles.layout}>
-          <aside className={searchStyles.sidebar} aria-label="Filtros">
-            <button
-              type="button"
-              className={searchStyles.filtersToggle}
-              aria-expanded={filtersOpen}
-              aria-controls="request-filters"
-              onClick={() => setFiltersOpen((open) => !open)}
-            >
-              Filtros {filtersOpen ? '▴' : '▾'}
-            </button>
-
-            <div
-              id="request-filters"
-              className={searchStyles.filters}
-              data-open={filtersOpen}
-            >
-              <fieldset className={searchStyles.group}>
-                <legend>Estado</legend>
-                <label className={searchStyles.option}>
+          <div
+            id="request-filters"
+            className={searchStyles.filters}
+            data-open={filtersOpen}
+          >
+            <fieldset className={searchStyles.group}>
+              <legend>Estado</legend>
+              <label className={searchStyles.option}>
+                <input
+                  type="radio"
+                  name="request-status"
+                  checked={!params.status}
+                  onChange={() => changeStatus('')}
+                />
+                Todos
+              </label>
+              {REQUEST_STATUSES.map((value) => (
+                <label key={value} className={searchStyles.option}>
                   <input
                     type="radio"
                     name="request-status"
-                    checked={!params.status}
-                    onChange={() => changeStatus('')}
+                    checked={params.status === value}
+                    onChange={() => changeStatus(value)}
                   />
-                  Todos
+                  {REQUEST_STATUS_LABELS[value]}
                 </label>
-                {REQUEST_STATUSES.map((value) => (
-                  <label key={value} className={searchStyles.option}>
-                    <input
-                      type="radio"
-                      name="request-status"
-                      checked={params.status === value}
-                      onChange={() => changeStatus(value)}
-                    />
-                    {REQUEST_STATUS_LABELS[value]}
-                  </label>
-                ))}
-              </fieldset>
+              ))}
+            </fieldset>
 
-              <div className={searchStyles.group}>
-                <label htmlFor="request-material">Material</label>
-                <input
-                  id="request-material"
-                  form={FORM_ID}
-                  maxLength={100}
-                  value={material}
-                  onChange={(event) => setMaterial(event.target.value)}
-                  placeholder="Título o código"
-                />
-                <p className={searchStyles.hint}>
-                  Pulse Enter o «Buscar» para aplicar.
+            <div className={searchStyles.group}>
+              <label htmlFor="request-material">Material</label>
+              <input
+                id="request-material"
+                form={FORM_ID}
+                maxLength={100}
+                value={material}
+                onChange={(event) => setMaterial(event.target.value)}
+                placeholder="Título o código"
+              />
+              <p className={searchStyles.hint}>
+                Pulse Enter o «Buscar» para aplicar.
+              </p>
+            </div>
+
+            <div className={`${searchStyles.group} ${styles.dates}`}>
+              <label htmlFor="request-desired-from">
+                Fecha deseada desde
+              </label>
+              <input
+                id="request-desired-from"
+                form={FORM_ID}
+                type="date"
+                value={desiredFrom}
+                max={desiredTo || undefined}
+                onChange={(event) =>
+                  changeDate('desiredFrom', event.target.value)
+                }
+              />
+              <label htmlFor="request-desired-to">Fecha deseada hasta</label>
+              <input
+                id="request-desired-to"
+                form={FORM_ID}
+                type="date"
+                value={desiredTo}
+                min={desiredFrom || undefined}
+                onChange={(event) =>
+                  changeDate('desiredTo', event.target.value)
+                }
+              />
+            </div>
+
+            {hasFilters ? (
+              <button
+                type="button"
+                className={styles.clearButton}
+                onClick={clearFilters}
+              >
+                Quitar filtros
+              </button>
+            ) : null}
+          </div>
+        </aside>
+
+        <section
+          className={searchStyles.results}
+          aria-labelledby="requests-results"
+        >
+          <div className={searchStyles.resultsHeader}>
+            <h2 id="requests-results" className={searchStyles.sectionTitle}>
+              {result ? `${result.total} solicitudes` : 'Solicitudes'}
+            </h2>
+            <div className={searchStyles.sortRow}>
+              <label htmlFor="request-sort">Ordenar por</label>
+              <select
+                id="request-sort"
+                value={params.sort}
+                onChange={(event) =>
+                  changeSort(event.target.value as RequestSortField)
+                }
+              >
+                {Object.entries(SORT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="request-order" className="sr-only">
+                Dirección
+              </label>
+              <select
+                id="request-order"
+                value={params.order}
+                onChange={(event) =>
+                  changeOrder(event.target.value as SortOrder)
+                }
+              >
+                <option value="desc">Más recientes primero</option>
+                <option value="asc">Más antiguas primero</option>
+              </select>
+            </div>
+          </div>
+
+          <div aria-live="polite" aria-busy={isLoading}>
+            {isLoading ? (
+              <p className={searchStyles.muted}>Cargando…</p>
+            ) : null}
+
+            {error ? (
+              <div className={searchStyles.error} role="alert">
+                <p>
+                  {error.status === 401
+                    ? 'Su sesión no es válida o venció.'
+                    : error.message}
+                </p>
+                {error.status === 401 ? (
+                  <Link to={ROUTES.login}>Iniciar sesión</Link>
+                ) : null}
+              </div>
+            ) : null}
+
+            {result && result.items.length === 0 ? (
+              <div className={searchStyles.empty}>
+                <p className={searchStyles.emptyTitle}>
+                  No encontramos solicitudes con esos filtros.
+                </p>
+                <p className={searchStyles.muted}>
+                  Pruebe con otros filtros o quite alguno.
                 </p>
               </div>
+            ) : null}
+          </div>
 
-              <div className={`${searchStyles.group} ${styles.dates}`}>
-                <label htmlFor="request-desired-from">
-                  Fecha deseada desde
-                </label>
-                <input
-                  id="request-desired-from"
-                  form={FORM_ID}
-                  type="date"
-                  value={desiredFrom}
-                  max={desiredTo || undefined}
-                  onChange={(event) =>
-                    changeDate('desiredFrom', event.target.value)
-                  }
-                />
-                <label htmlFor="request-desired-to">Fecha deseada hasta</label>
-                <input
-                  id="request-desired-to"
-                  form={FORM_ID}
-                  type="date"
-                  value={desiredTo}
-                  min={desiredFrom || undefined}
-                  onChange={(event) =>
-                    changeDate('desiredTo', event.target.value)
-                  }
-                />
-              </div>
+          {result && result.items.length > 0 ? (
+            <>
+              <table className={searchStyles.table}>
+                <thead>
+                  <tr>
+                    <th scope="col">Solicitud</th>
+                    <th scope="col">Solicitante</th>
+                    <th scope="col">Material</th>
+                    <th scope="col">Fecha deseada</th>
+                    <th scope="col">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className={searchStyles.titleCell}>
+                        <Link
+                          className={styles.detailLink}
+                          to={requestDetailPath(item.id)}
+                        >
+                          <strong>{item.trackingCode}</strong>
+                        </Link>
+                        <span className={searchStyles.code}>
+                          Radicada {formatDate(item.registeredAt)}
+                        </span>
+                      </td>
+                      <td data-label="Solicitante">
+                        {item.requesterName}
+                        {item.requesterEmail ? (
+                          <span className={searchStyles.code}>
+                            {item.requesterEmail}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td data-label="Material">
+                        <ul className={styles.materials}>
+                          {item.materials.map((material) => (
+                            <li key={material.id}>{material.title}</li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td data-label="Fecha deseada">
+                        {formatDate(item.desiredDate)}
+                      </td>
+                      <td data-label="Estado">
+                        <span
+                          className={styles.badge}
+                          data-status={item.status}
+                        >
+                          {REQUEST_STATUS_LABELS[item.status]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-              {hasFilters ? (
+              <nav
+                className={searchStyles.pagination}
+                aria-label="Paginación"
+              >
                 <button
                   type="button"
-                  className={styles.clearButton}
-                  onClick={clearFilters}
+                  onClick={() => goToPage(params.page - 1)}
+                  disabled={params.page <= 1}
                 >
-                  Quitar filtros
+                  ‹ Anterior
                 </button>
-              ) : null}
-            </div>
-          </aside>
-
-          <section
-            className={searchStyles.results}
-            aria-labelledby="requests-results"
-          >
-            <div className={searchStyles.resultsHeader}>
-              <h2 id="requests-results" className={searchStyles.sectionTitle}>
-                {result ? `${result.total} solicitudes` : 'Solicitudes'}
-              </h2>
-              <div className={searchStyles.sortRow}>
-                <label htmlFor="request-sort">Ordenar por</label>
-                <select
-                  id="request-sort"
-                  value={params.sort}
-                  onChange={(event) =>
-                    changeSort(event.target.value as RequestSortField)
-                  }
+                <span>
+                  Página {params.page} de {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => goToPage(params.page + 1)}
+                  disabled={params.page >= totalPages}
                 >
-                  {Object.entries(SORT_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <label htmlFor="request-order" className="sr-only">
-                  Dirección
-                </label>
-                <select
-                  id="request-order"
-                  value={params.order}
-                  onChange={(event) =>
-                    changeOrder(event.target.value as SortOrder)
-                  }
-                >
-                  <option value="desc">Más recientes primero</option>
-                  <option value="asc">Más antiguas primero</option>
-                </select>
-              </div>
-            </div>
-
-            <div aria-live="polite" aria-busy={isLoading}>
-              {isLoading ? (
-                <p className={searchStyles.muted}>Cargando…</p>
-              ) : null}
-
-              {error ? (
-                <div className={searchStyles.error} role="alert">
-                  <p>
-                    {error.status === 401
-                      ? 'Su sesión no es válida o venció.'
-                      : error.message}
-                  </p>
-                  {error.status === 401 ? (
-                    <Link to={ROUTES.login}>Iniciar sesión</Link>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {result && result.items.length === 0 ? (
-                <div className={searchStyles.empty}>
-                  <p className={searchStyles.emptyTitle}>
-                    No encontramos solicitudes con esos filtros.
-                  </p>
-                  <p className={searchStyles.muted}>
-                    Pruebe con otros filtros o quite alguno.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-
-            {result && result.items.length > 0 ? (
-              <>
-                <table className={searchStyles.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Solicitud</th>
-                      <th scope="col">Solicitante</th>
-                      <th scope="col">Material</th>
-                      <th scope="col">Fecha deseada</th>
-                      <th scope="col">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.items.map((item) => (
-                      <tr key={item.id}>
-                        <td className={searchStyles.titleCell}>
-                          <Link
-                            className={styles.detailLink}
-                            to={requestDetailPath(item.id)}
-                          >
-                            <strong>{item.trackingCode}</strong>
-                          </Link>
-                          <span className={searchStyles.code}>
-                            Radicada {formatDate(item.registeredAt)}
-                          </span>
-                        </td>
-                        <td data-label="Solicitante">
-                          {item.requesterName}
-                          {item.requesterEmail ? (
-                            <span className={searchStyles.code}>
-                              {item.requesterEmail}
-                            </span>
-                          ) : null}
-                        </td>
-                        <td data-label="Material">
-                          <ul className={styles.materials}>
-                            {item.materials.map((material) => (
-                              <li key={material.id}>{material.title}</li>
-                            ))}
-                          </ul>
-                        </td>
-                        <td data-label="Fecha deseada">
-                          {formatDate(item.desiredDate)}
-                        </td>
-                        <td data-label="Estado">
-                          <span
-                            className={styles.badge}
-                            data-status={item.status}
-                          >
-                            {REQUEST_STATUS_LABELS[item.status]}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <nav
-                  className={searchStyles.pagination}
-                  aria-label="Paginación"
-                >
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page - 1)}
-                    disabled={params.page <= 1}
-                  >
-                    ‹ Anterior
-                  </button>
-                  <span>
-                    Página {params.page} de {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page + 1)}
-                    disabled={params.page >= totalPages}
-                  >
-                    Siguiente ›
-                  </button>
-                </nav>
-              </>
-            ) : null}
-          </section>
-        </div>
-      </main>
-    </div>
+                  Siguiente ›
+                </button>
+              </nav>
+            </>
+          ) : null}
+        </section>
+      </div>
+    </AppLayout>
   );
 }

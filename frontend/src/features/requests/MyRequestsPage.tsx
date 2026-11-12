@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
+import { AppLayout } from '../layout/AppLayout';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
-import { SiteNav } from '../navigation/SiteNav';
 import { listMyRequests } from './api/list-my-requests';
 import type { ListMyRequestsParams, MyRequestPage } from './api/list-my-requests';
 import {
@@ -109,249 +109,239 @@ export function MyRequestsPage() {
     : 1;
 
   return (
-    <div className={searchStyles.shell}>
-      <header className={searchStyles.topbar}>
-        <p className={searchStyles.wordmark}>
-          Trackhive<span className={searchStyles.wordmarkDot}>.</span>
+    <AppLayout>
+      <section
+        className={searchStyles.hero}
+        aria-labelledby="my-requests-title"
+      >
+        <p className={searchStyles.eyebrow}>Consulta documental</p>
+        <h1 id="my-requests-title" className={searchStyles.title}>
+          Mis solicitudes
+        </h1>
+        <p className={searchStyles.muted}>
+          Consulte en qué estado está cada solicitud que ha radicado.
         </p>
-        <p className={searchStyles.topbarTag}>CLENA · Archivo</p>
-        <SiteNav />
-      </header>
+        <p className={listStyles.shortcutRow}>
+          <Link className={listStyles.shortcut} to={ROUTES.materials}>
+            Buscar material para una nueva solicitud ›
+          </Link>
+        </p>
+      </section>
 
-      <main className={searchStyles.main}>
-        <section
-          className={searchStyles.hero}
-          aria-labelledby="my-requests-title"
-        >
-          <p className={searchStyles.eyebrow}>Consulta documental</p>
-          <h1 id="my-requests-title" className={searchStyles.title}>
-            Mis solicitudes
-          </h1>
-          <p className={searchStyles.muted}>
-            Consulte en qué estado está cada solicitud que ha radicado.
-          </p>
-          <p className={listStyles.shortcutRow}>
-            <Link className={listStyles.shortcut} to={ROUTES.materials}>
-              Buscar material para una nueva solicitud ›
-            </Link>
-          </p>
-        </section>
+      <div className={searchStyles.layout}>
+        <aside className={searchStyles.sidebar} aria-label="Filtros">
+          <button
+            type="button"
+            className={searchStyles.filtersToggle}
+            aria-expanded={filtersOpen}
+            aria-controls="my-request-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            Filtros {filtersOpen ? '▴' : '▾'}
+          </button>
 
-        <div className={searchStyles.layout}>
-          <aside className={searchStyles.sidebar} aria-label="Filtros">
-            <button
-              type="button"
-              className={searchStyles.filtersToggle}
-              aria-expanded={filtersOpen}
-              aria-controls="my-request-filters"
-              onClick={() => setFiltersOpen((open) => !open)}
-            >
-              Filtros {filtersOpen ? '▴' : '▾'}
-            </button>
-
-            <div
-              id="my-request-filters"
-              className={searchStyles.filters}
-              data-open={filtersOpen}
-            >
-              <fieldset className={searchStyles.group}>
-                <legend>Estado</legend>
-                <label className={searchStyles.option}>
+          <div
+            id="my-request-filters"
+            className={searchStyles.filters}
+            data-open={filtersOpen}
+          >
+            <fieldset className={searchStyles.group}>
+              <legend>Estado</legend>
+              <label className={searchStyles.option}>
+                <input
+                  type="radio"
+                  name="my-request-status"
+                  checked={!params.status}
+                  onChange={() => changeStatus('')}
+                />
+                Todos
+              </label>
+              {REQUEST_STATUSES.map((value) => (
+                <label key={value} className={searchStyles.option}>
                   <input
                     type="radio"
                     name="my-request-status"
-                    checked={!params.status}
-                    onChange={() => changeStatus('')}
+                    checked={params.status === value}
+                    onChange={() => changeStatus(value)}
                   />
-                  Todos
+                  {REQUEST_STATUS_LABELS[value]}
                 </label>
-                {REQUEST_STATUSES.map((value) => (
-                  <label key={value} className={searchStyles.option}>
-                    <input
-                      type="radio"
-                      name="my-request-status"
-                      checked={params.status === value}
-                      onChange={() => changeStatus(value)}
-                    />
-                    {REQUEST_STATUS_LABELS[value]}
-                  </label>
-                ))}
-              </fieldset>
-            </div>
-          </aside>
+              ))}
+            </fieldset>
+          </div>
+        </aside>
 
-          <section
-            className={searchStyles.results}
-            aria-labelledby="my-requests-results"
-          >
-            <div className={searchStyles.resultsHeader}>
-              <h2
-                id="my-requests-results"
-                className={searchStyles.sectionTitle}
+        <section
+          className={searchStyles.results}
+          aria-labelledby="my-requests-results"
+        >
+          <div className={searchStyles.resultsHeader}>
+            <h2
+              id="my-requests-results"
+              className={searchStyles.sectionTitle}
+            >
+              {result
+                ? `${result.total} ${result.total === 1 ? 'solicitud' : 'solicitudes'}`
+                : 'Solicitudes'}
+            </h2>
+            <div className={searchStyles.sortRow}>
+              <label htmlFor="my-request-sort">Ordenar por</label>
+              <select
+                id="my-request-sort"
+                value={params.sort}
+                onChange={(event) =>
+                  changeSort(event.target.value as RequestSortField)
+                }
               >
-                {result
-                  ? `${result.total} ${result.total === 1 ? 'solicitud' : 'solicitudes'}`
-                  : 'Solicitudes'}
-              </h2>
-              <div className={searchStyles.sortRow}>
-                <label htmlFor="my-request-sort">Ordenar por</label>
-                <select
-                  id="my-request-sort"
-                  value={params.sort}
-                  onChange={(event) =>
-                    changeSort(event.target.value as RequestSortField)
-                  }
-                >
-                  {Object.entries(SORT_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <label htmlFor="my-request-order" className="sr-only">
-                  Dirección
-                </label>
-                <select
-                  id="my-request-order"
-                  value={params.order}
-                  onChange={(event) =>
-                    changeOrder(event.target.value as SortOrder)
-                  }
-                >
-                  <option value="desc">Más recientes primero</option>
-                  <option value="asc">Más antiguas primero</option>
-                </select>
-              </div>
+                {Object.entries(SORT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="my-request-order" className="sr-only">
+                Dirección
+              </label>
+              <select
+                id="my-request-order"
+                value={params.order}
+                onChange={(event) =>
+                  changeOrder(event.target.value as SortOrder)
+                }
+              >
+                <option value="desc">Más recientes primero</option>
+                <option value="asc">Más antiguas primero</option>
+              </select>
             </div>
+          </div>
 
-            <div aria-live="polite" aria-busy={isLoading}>
-              {isLoading ? (
-                <p className={searchStyles.muted}>Cargando…</p>
-              ) : null}
-
-              {error ? (
-                <div className={searchStyles.error} role="alert">
-                  <p>
-                    {error.status === 401
-                      ? 'Su sesión no es válida o venció.'
-                      : error.message}
-                  </p>
-                  {error.status === 401 ? (
-                    <Link to={ROUTES.login}>Iniciar sesión</Link>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {result && result.items.length === 0 ? (
-                <div className={searchStyles.empty}>
-                  {params.status ? (
-                    <>
-                      <p className={searchStyles.emptyTitle}>
-                        No tiene solicitudes en estado «
-                        {REQUEST_STATUS_LABELS[params.status]}».
-                      </p>
-                      <p className={searchStyles.muted}>
-                        Elija otro estado o vea todas sus solicitudes.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className={searchStyles.emptyTitle}>
-                        Aún no ha radicado solicitudes.
-                      </p>
-                      <p className={searchStyles.muted}>
-                        Busque material en el archivo y pulse «Solicitar».{' '}
-                        <Link to={ROUTES.materials}>Ir al buscador</Link>
-                      </p>
-                    </>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            {result && result.items.length > 0 ? (
-              <>
-                <table className={searchStyles.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Código de seguimiento</th>
-                      <th scope="col">Fecha de radicación</th>
-                      <th scope="col">Material</th>
-                      <th scope="col">Fecha deseada</th>
-                      <th scope="col">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.items.map((item) => (
-                      <tr key={item.id}>
-                        <td className={searchStyles.titleCell}>
-                          <strong>{item.trackingCode}</strong>
-                        </td>
-                        <td data-label="Fecha de radicación">
-                          {REGISTERED_AT_FORMAT.format(
-                            new Date(item.registeredAt),
-                          )}
-                        </td>
-                        <td data-label="Material">
-                          <ul className={listStyles.materials}>
-                            {item.materials.map((material) => (
-                              <li key={material.id}>{material.title}</li>
-                            ))}
-                          </ul>
-                        </td>
-                        <td data-label="Fecha deseada">
-                          {formatDate(item.desiredDate)}
-                        </td>
-                        <td data-label="Estado">
-                          <span
-                            className={listStyles.badge}
-                            data-status={item.status}
-                          >
-                            {REQUEST_STATUS_LABELS[item.status]}
-                          </span>
-                          {/* The requester sees why it was rejected (HU-16) */}
-                          {item.status === 'RECHAZADA' &&
-                          item.rejectionReason ? (
-                            <p className={styles.reason}>
-                              <span className={styles.reasonLabel}>
-                                Motivo del rechazo:
-                              </span>{' '}
-                              {item.rejectionReason}
-                            </p>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <nav
-                  className={searchStyles.pagination}
-                  aria-label="Paginación"
-                >
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page - 1)}
-                    disabled={params.page <= 1}
-                  >
-                    ‹ Anterior
-                  </button>
-                  <span>
-                    Página {params.page} de {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page + 1)}
-                    disabled={params.page >= totalPages}
-                  >
-                    Siguiente ›
-                  </button>
-                </nav>
-              </>
+          <div aria-live="polite" aria-busy={isLoading}>
+            {isLoading ? (
+              <p className={searchStyles.muted}>Cargando…</p>
             ) : null}
-          </section>
-        </div>
-      </main>
-    </div>
+
+            {error ? (
+              <div className={searchStyles.error} role="alert">
+                <p>
+                  {error.status === 401
+                    ? 'Su sesión no es válida o venció.'
+                    : error.message}
+                </p>
+                {error.status === 401 ? (
+                  <Link to={ROUTES.login}>Iniciar sesión</Link>
+                ) : null}
+              </div>
+            ) : null}
+
+            {result && result.items.length === 0 ? (
+              <div className={searchStyles.empty}>
+                {params.status ? (
+                  <>
+                    <p className={searchStyles.emptyTitle}>
+                      No tiene solicitudes en estado «
+                      {REQUEST_STATUS_LABELS[params.status]}».
+                    </p>
+                    <p className={searchStyles.muted}>
+                      Elija otro estado o vea todas sus solicitudes.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className={searchStyles.emptyTitle}>
+                      Aún no ha radicado solicitudes.
+                    </p>
+                    <p className={searchStyles.muted}>
+                      Busque material en el archivo y pulse «Solicitar».{' '}
+                      <Link to={ROUTES.materials}>Ir al buscador</Link>
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {result && result.items.length > 0 ? (
+            <>
+              <table className={searchStyles.table}>
+                <thead>
+                  <tr>
+                    <th scope="col">Código de seguimiento</th>
+                    <th scope="col">Fecha de radicación</th>
+                    <th scope="col">Material</th>
+                    <th scope="col">Fecha deseada</th>
+                    <th scope="col">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className={searchStyles.titleCell}>
+                        <strong>{item.trackingCode}</strong>
+                      </td>
+                      <td data-label="Fecha de radicación">
+                        {REGISTERED_AT_FORMAT.format(
+                          new Date(item.registeredAt),
+                        )}
+                      </td>
+                      <td data-label="Material">
+                        <ul className={listStyles.materials}>
+                          {item.materials.map((material) => (
+                            <li key={material.id}>{material.title}</li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td data-label="Fecha deseada">
+                        {formatDate(item.desiredDate)}
+                      </td>
+                      <td data-label="Estado">
+                        <span
+                          className={listStyles.badge}
+                          data-status={item.status}
+                        >
+                          {REQUEST_STATUS_LABELS[item.status]}
+                        </span>
+                        {/* The requester sees why it was rejected (HU-16) */}
+                        {item.status === 'RECHAZADA' &&
+                        item.rejectionReason ? (
+                          <p className={styles.reason}>
+                            <span className={styles.reasonLabel}>
+                              Motivo del rechazo:
+                            </span>{' '}
+                            {item.rejectionReason}
+                          </p>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <nav
+                className={searchStyles.pagination}
+                aria-label="Paginación"
+              >
+                <button
+                  type="button"
+                  onClick={() => goToPage(params.page - 1)}
+                  disabled={params.page <= 1}
+                >
+                  ‹ Anterior
+                </button>
+                <span>
+                  Página {params.page} de {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => goToPage(params.page + 1)}
+                  disabled={params.page >= totalPages}
+                >
+                  Siguiente ›
+                </button>
+              </nav>
+            </>
+          ) : null}
+        </section>
+      </div>
+    </AppLayout>
   );
 }

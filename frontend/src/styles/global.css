@@ -30,6 +30,14 @@
   --font-body: 'Archivo Variable', 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'IBM Plex Mono', Consolas, monospace;
 
+  /* Breakpoints (single source of truth, HU-29).
+     CSS Modules must use only these widths in their @media queries:
+       - mobile: up to 480 px (360 px phones must work without sideways scroll)
+       - tablet: up to 900 px (sidebars fold and tables become cards)
+     The automated test in src/styles/breakpoints.spec.ts enforces it. */
+  --bp-mobile: 480px;
+  --bp-tablet: 900px;
+
   font-family: var(--font-body);
   /* 100% respects the text size configured by the user (WCAG 1.4.4) */
   font-size: 100%;
@@ -62,6 +70,15 @@ body {
 
 #root {
   min-height: 100svh;
+}
+
+/* Media never forces a horizontal scrollbar on a narrow phone. */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 button,
