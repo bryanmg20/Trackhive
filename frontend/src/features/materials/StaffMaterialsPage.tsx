@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
-import { SiteNav } from '../navigation/SiteNav';
+import { AppLayout } from '../layout/AppLayout';
 import type { SelectedMaterial } from '../requests/selected-materials';
 import { buildStaffNewRequestPath } from '../requests/selected-materials';
 import {
@@ -199,384 +199,376 @@ export function StaffMaterialsPage() {
     ? Math.max(1, Math.ceil(result.total / result.limit))
     : 1;
 
-  return (
-    <div className={searchStyles.shell}>
-      <header className={searchStyles.topbar}>
-        <p className={searchStyles.wordmark}>
-          Trackhive<span className={searchStyles.wordmarkDot}>.</span>
+  const requestBar = (
+    <div className={searchStyles.requestBar}>
+      <div className={searchStyles.requestBarInner}>
+        <p aria-live="polite">
+          {selected.length === 1
+            ? '1 material seleccionado'
+            : `${selected.length} materiales seleccionados`}
         </p>
-        <p className={searchStyles.topbarTag}>CLENA · Personal</p>
-        <SiteNav />
-      </header>
+        <button
+          className={searchStyles.primary}
+          type="button"
+          onClick={requestSelected}
+          disabled={selected.length === 0}
+        >
+          Registrar solicitud
+        </button>
+      </div>
+    </div>
+  );
 
-      <main className={searchStyles.main}>
-        <section className={searchStyles.hero} aria-labelledby="staff-title">
-          <p className={searchStyles.eyebrow}>Gestión del archivo</p>
-          <h1 id="staff-title" className={searchStyles.title}>
-            Estado del material
-          </h1>
-          <form
-            id={FORM_ID}
-            className={searchStyles.searchBar}
-            onSubmit={search}
-            role="search"
+  return (
+    <AppLayout footer={requestBar}>
+      <section className={searchStyles.hero} aria-labelledby="staff-title">
+        <p className={searchStyles.eyebrow}>Gestión del archivo</p>
+        <h1 id="staff-title" className={searchStyles.title}>
+          Estado del material
+        </h1>
+        <form
+          id={FORM_ID}
+          className={searchStyles.searchBar}
+          onSubmit={search}
+          role="search"
+        >
+          <label htmlFor="staff-material-text" className="sr-only">
+            Buscar
+          </label>
+          <input
+            id="staff-material-text"
+            type="search"
+            maxLength={100}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="Título, autor o código"
+          />
+          <button className={searchStyles.primary} type="submit">
+            Buscar
+          </button>
+        </form>
+      </section>
+
+      <div className={searchStyles.layout}>
+        <aside className={searchStyles.sidebar} aria-label="Filtros">
+          <button
+            type="button"
+            className={searchStyles.filtersToggle}
+            aria-expanded={filtersOpen}
+            aria-controls="staff-material-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
           >
-            <label htmlFor="staff-material-text" className="sr-only">
-              Buscar
-            </label>
-            <input
-              id="staff-material-text"
-              type="search"
-              maxLength={100}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="Título, autor o código"
-            />
-            <button className={searchStyles.primary} type="submit">
-              Buscar
-            </button>
-          </form>
-        </section>
+            Filtros {filtersOpen ? '▴' : '▾'}
+          </button>
 
-        <div className={searchStyles.layout}>
-          <aside className={searchStyles.sidebar} aria-label="Filtros">
-            <button
-              type="button"
-              className={searchStyles.filtersToggle}
-              aria-expanded={filtersOpen}
-              aria-controls="staff-material-filters"
-              onClick={() => setFiltersOpen((open) => !open)}
-            >
-              Filtros {filtersOpen ? '▴' : '▾'}
-            </button>
-
-            <div
-              id="staff-material-filters"
-              className={searchStyles.filters}
-              data-open={filtersOpen}
-            >
-              <fieldset className={searchStyles.group}>
-                <legend>Tipo</legend>
-                <label className={searchStyles.option}>
+          <div
+            id="staff-material-filters"
+            className={searchStyles.filters}
+            data-open={filtersOpen}
+          >
+            <fieldset className={searchStyles.group}>
+              <legend>Tipo</legend>
+              <label className={searchStyles.option}>
+                <input
+                  type="radio"
+                  name="staff-material-type"
+                  checked={!params.type}
+                  onChange={() => changeType('')}
+                />
+                Todos
+              </label>
+              {MATERIAL_TYPES.map((value) => (
+                <label key={value} className={searchStyles.option}>
                   <input
                     type="radio"
                     name="staff-material-type"
-                    checked={!params.type}
-                    onChange={() => changeType('')}
+                    checked={params.type === value}
+                    onChange={() => changeType(value)}
                   />
-                  Todos
+                  {MATERIAL_TYPE_LABELS[value]}
                 </label>
-                {MATERIAL_TYPES.map((value) => (
-                  <label key={value} className={searchStyles.option}>
-                    <input
-                      type="radio"
-                      name="staff-material-type"
-                      checked={params.type === value}
-                      onChange={() => changeType(value)}
-                    />
-                    {MATERIAL_TYPE_LABELS[value]}
-                  </label>
-                ))}
-              </fieldset>
+              ))}
+            </fieldset>
 
-              <fieldset className={searchStyles.group}>
-                <legend>Estado</legend>
-                <label className={searchStyles.option}>
+            <fieldset className={searchStyles.group}>
+              <legend>Estado</legend>
+              <label className={searchStyles.option}>
+                <input
+                  type="radio"
+                  name="staff-material-status"
+                  checked={!params.status}
+                  onChange={() => changeStatusFilter('')}
+                />
+                Todos
+              </label>
+              {MATERIAL_STATUSES.map((value) => (
+                <label key={value} className={searchStyles.option}>
                   <input
                     type="radio"
                     name="staff-material-status"
-                    checked={!params.status}
-                    onChange={() => changeStatusFilter('')}
+                    checked={params.status === value}
+                    onChange={() => changeStatusFilter(value)}
                   />
-                  Todos
+                  {MATERIAL_STATUS_LABELS[value]}
                 </label>
-                {MATERIAL_STATUSES.map((value) => (
-                  <label key={value} className={searchStyles.option}>
-                    <input
-                      type="radio"
-                      name="staff-material-status"
-                      checked={params.status === value}
-                      onChange={() => changeStatusFilter(value)}
-                    />
-                    {MATERIAL_STATUS_LABELS[value]}
-                  </label>
-                ))}
-              </fieldset>
+              ))}
+            </fieldset>
 
-              <div className={searchStyles.group}>
-                <label htmlFor="staff-material-collection">
-                  Colección o tema
-                </label>
-                <input
-                  id="staff-material-collection"
-                  form={FORM_ID}
-                  maxLength={120}
-                  value={collection}
-                  onChange={(event) => setCollection(event.target.value)}
-                  placeholder="Ej.: Actas del Cabildo"
-                />
-                <p className={searchStyles.hint}>
-                  Pulse Enter o «Buscar» para aplicar.
-                </p>
-              </div>
+            <div className={searchStyles.group}>
+              <label htmlFor="staff-material-collection">
+                Colección o tema
+              </label>
+              <input
+                id="staff-material-collection"
+                form={FORM_ID}
+                maxLength={120}
+                value={collection}
+                onChange={(event) => setCollection(event.target.value)}
+                placeholder="Ej.: Actas del Cabildo"
+              />
+              <p className={searchStyles.hint}>
+                Pulse Enter o «Buscar» para aplicar.
+              </p>
             </div>
-          </aside>
+          </div>
+        </aside>
 
-          <section
-            className={searchStyles.results}
-            aria-labelledby="staff-results"
-          >
-            <div className={searchStyles.resultsHeader}>
-              <h2 id="staff-results" className={searchStyles.sectionTitle}>
-                {result ? `${result.total} materiales` : 'Materiales'}
-              </h2>
-              <div className={searchStyles.sortRow}>
-                <label htmlFor="staff-material-sort">Ordenar por</label>
+        <section
+          className={searchStyles.results}
+          aria-labelledby="staff-results"
+        >
+          <div className={searchStyles.resultsHeader}>
+            <h2 id="staff-results" className={searchStyles.sectionTitle}>
+              {result ? `${result.total} materiales` : 'Materiales'}
+            </h2>
+            <div className={searchStyles.sortRow}>
+              <label htmlFor="staff-material-sort">Ordenar por</label>
+              <select
+                id="staff-material-sort"
+                value={params.sort}
+                onChange={(event) =>
+                  changeSort(event.target.value as MaterialSortField)
+                }
+              >
+                {Object.entries(SORT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="staff-material-order" className="sr-only">
+                Dirección
+              </label>
+              <select
+                id="staff-material-order"
+                value={params.order}
+                onChange={(event) =>
+                  changeOrder(event.target.value as SortOrder)
+                }
+              >
+                <option value="asc">Ascendente</option>
+                <option value="desc">Descendente</option>
+              </select>
+            </div>
+          </div>
+
+          {confirmation ? (
+            <p className={styles.confirmation} role="status">
+              {confirmation}
+            </p>
+          ) : null}
+
+          {editing ? (
+            <form
+              className={styles.editor}
+              onSubmit={(event) => void save(event)}
+              aria-labelledby="editor-title"
+            >
+              <h3 id="editor-title" className={styles.editorTitle}>
+                Cambiar estado de «{editing.title}»
+              </h3>
+              <p className={searchStyles.code}>{editing.catalogCode}</p>
+
+              <div className={styles.field}>
+                <label htmlFor="material-new-status">Estado</label>
                 <select
-                  id="staff-material-sort"
-                  value={params.sort}
+                  id="material-new-status"
+                  value={newStatus}
                   onChange={(event) =>
-                    changeSort(event.target.value as MaterialSortField)
+                    setNewStatus(event.target.value as MaterialStatus)
                   }
                 >
-                  {Object.entries(SORT_LABELS).map(([value, label]) => (
+                  {MATERIAL_STATUSES.map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {MATERIAL_STATUS_LABELS[value]}
                     </option>
                   ))}
                 </select>
-                <label htmlFor="staff-material-order" className="sr-only">
-                  Dirección
-                </label>
-                <select
-                  id="staff-material-order"
-                  value={params.order}
-                  onChange={(event) =>
-                    changeOrder(event.target.value as SortOrder)
-                  }
-                >
-                  <option value="asc">Ascendente</option>
-                  <option value="desc">Descendente</option>
-                </select>
               </div>
-            </div>
 
-            {confirmation ? (
-              <p className={styles.confirmation} role="status">
-                {confirmation}
-              </p>
-            ) : null}
+              <div className={styles.field}>
+                <label htmlFor="material-status-reason">
+                  Motivo (opcional)
+                </label>
+                <textarea
+                  id="material-status-reason"
+                  rows={3}
+                  maxLength={MAX_STATUS_REASON_LENGTH}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                />
+              </div>
 
-            {editing ? (
-              <form
-                className={styles.editor}
-                onSubmit={(event) => void save(event)}
-                aria-labelledby="editor-title"
-              >
-                <h3 id="editor-title" className={styles.editorTitle}>
-                  Cambiar estado de «{editing.title}»
-                </h3>
-                <p className={searchStyles.code}>{editing.catalogCode}</p>
-
-                <div className={styles.field}>
-                  <label htmlFor="material-new-status">Estado</label>
-                  <select
-                    id="material-new-status"
-                    value={newStatus}
-                    onChange={(event) =>
-                      setNewStatus(event.target.value as MaterialStatus)
-                    }
-                  >
-                    {MATERIAL_STATUSES.map((value) => (
-                      <option key={value} value={value}>
-                        {MATERIAL_STATUS_LABELS[value]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className={styles.field}>
-                  <label htmlFor="material-status-reason">
-                    Motivo (opcional)
-                  </label>
-                  <textarea
-                    id="material-status-reason"
-                    rows={3}
-                    maxLength={MAX_STATUS_REASON_LENGTH}
-                    value={reason}
-                    onChange={(event) => setReason(event.target.value)}
-                  />
-                </div>
-
-                {saveError ? (
-                  <p className={searchStyles.error} role="alert">
-                    {saveError}
-                  </p>
-                ) : null}
-
-                <div className={styles.actions}>
-                  <button
-                    className={searchStyles.primary}
-                    type="submit"
-                    disabled={saving}
-                  >
-                    {saving ? 'Guardando…' : 'Guardar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEditing}
-                    disabled={saving}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            <div aria-live="polite" aria-busy={isLoading}>
-              {isLoading ? (
-                <p className={searchStyles.muted}>Buscando…</p>
+              {saveError ? (
+                <p className={searchStyles.error} role="alert">
+                  {saveError}
+                </p>
               ) : null}
 
-              {error ? (
-                <div className={searchStyles.error} role="alert">
-                  <p>
-                    {error.status === 401
-                      ? 'Su sesión no es válida o venció.'
-                      : error.message}
-                  </p>
-                  {error.status === 401 ? (
-                    <Link to={ROUTES.login}>Iniciar sesión</Link>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {result && result.items.length === 0 ? (
-                <div className={searchStyles.empty}>
-                  <p className={searchStyles.emptyTitle}>
-                    No encontramos material con esa búsqueda.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-
-            {result && result.items.length > 0 ? (
-              <>
-                <table className={searchStyles.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col" className={searchStyles.checkCell}>
-                        <span className="sr-only">Seleccionar</span>
-                      </th>
-                      <th scope="col">Título</th>
-                      <th scope="col">Tipo</th>
-                      <th scope="col">Estado</th>
-                      <th scope="col">
-                        <span className="sr-only">Acciones</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.items.map((material) => {
-                      const status =
-                        savedStatuses[material.id] ?? material.status;
-                      return (
-                        <tr key={material.id}>
-                          <td className={searchStyles.checkCell}>
-                            <input
-                              type="checkbox"
-                              aria-label={`Seleccionar ${material.title}`}
-                              checked={selected.some(
-                                (item) => item.id === material.id,
-                              )}
-                              onChange={() =>
-                                toggle({
-                                  id: material.id,
-                                  title: material.title,
-                                  catalogCode: material.catalogCode,
-                                })
-                              }
-                            />
-                          </td>
-                          <td className={searchStyles.titleCell}>
-                            <strong>{material.title}</strong>
-                            <span className={searchStyles.code}>
-                              {material.catalogCode}
-                              {material.author ? ` · ${material.author}` : ''}
-                            </span>
-                          </td>
-                          <td data-label="Tipo">
-                            {MATERIAL_TYPE_LABELS[material.materialType]}
-                          </td>
-                          <td data-label="Estado">
-                            <span
-                              className={searchStyles.status}
-                              data-status={status}
-                            >
-                              {MATERIAL_STATUS_LABELS[status]}
-                            </span>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className={styles.changeButton}
-                              onClick={() => startEditing(material)}
-                              aria-label={`Cambiar estado de ${material.title}`}
-                            >
-                              Cambiar estado
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                <nav
-                  className={searchStyles.pagination}
-                  aria-label="Paginación"
+              <div className={styles.actions}>
+                <button
+                  className={searchStyles.primary}
+                  type="submit"
+                  disabled={saving}
                 >
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page - 1)}
-                    disabled={params.page <= 1}
-                  >
-                    ‹ Anterior
-                  </button>
-                  <span>
-                    Página {params.page} de {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page + 1)}
-                    disabled={params.page >= totalPages}
-                  >
-                    Siguiente ›
-                  </button>
-                </nav>
-              </>
-            ) : null}
-          </section>
-        </div>
-      </main>
+                  {saving ? 'Guardando…' : 'Guardar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEditing}
+                  disabled={saving}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : null}
 
-      <div className={searchStyles.requestBar}>
-        <div className={searchStyles.requestBarInner}>
-          <p aria-live="polite">
-            {selected.length === 1
-              ? '1 material seleccionado'
-              : `${selected.length} materiales seleccionados`}
-          </p>
-          <button
-            className={searchStyles.primary}
-            type="button"
-            onClick={requestSelected}
-            disabled={selected.length === 0}
-          >
-            Registrar solicitud
-          </button>
-        </div>
+          <div aria-live="polite" aria-busy={isLoading}>
+            {isLoading ? (
+              <p className={searchStyles.muted}>Buscando…</p>
+            ) : null}
+
+            {error ? (
+              <div className={searchStyles.error} role="alert">
+                <p>
+                  {error.status === 401
+                    ? 'Su sesión no es válida o venció.'
+                    : error.message}
+                </p>
+                {error.status === 401 ? (
+                  <Link to={ROUTES.login}>Iniciar sesión</Link>
+                ) : null}
+              </div>
+            ) : null}
+
+            {result && result.items.length === 0 ? (
+              <div className={searchStyles.empty}>
+                <p className={searchStyles.emptyTitle}>
+                  No encontramos material con esa búsqueda.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          {result && result.items.length > 0 ? (
+            <>
+              <table className={searchStyles.table}>
+                <thead>
+                  <tr>
+                    <th scope="col" className={searchStyles.checkCell}>
+                      <span className="sr-only">Seleccionar</span>
+                    </th>
+                    <th scope="col">Título</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">
+                      <span className="sr-only">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.items.map((material) => {
+                    const status =
+                      savedStatuses[material.id] ?? material.status;
+                    return (
+                      <tr key={material.id}>
+                        <td className={searchStyles.checkCell}>
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar ${material.title}`}
+                            checked={selected.some(
+                              (item) => item.id === material.id,
+                            )}
+                            onChange={() =>
+                              toggle({
+                                id: material.id,
+                                title: material.title,
+                                catalogCode: material.catalogCode,
+                              })
+                            }
+                          />
+                        </td>
+                        <td className={searchStyles.titleCell}>
+                          <strong>{material.title}</strong>
+                          <span className={searchStyles.code}>
+                            {material.catalogCode}
+                            {material.author ? ` · ${material.author}` : ''}
+                          </span>
+                        </td>
+                        <td data-label="Tipo">
+                          {MATERIAL_TYPE_LABELS[material.materialType]}
+                        </td>
+                        <td data-label="Estado">
+                          <span
+                            className={searchStyles.status}
+                            data-status={status}
+                          >
+                            {MATERIAL_STATUS_LABELS[status]}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.changeButton}
+                            onClick={() => startEditing(material)}
+                            aria-label={`Cambiar estado de ${material.title}`}
+                          >
+                            Cambiar estado
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              <nav
+                className={searchStyles.pagination}
+                aria-label="Paginación"
+              >
+                <button
+                  type="button"
+                  onClick={() => goToPage(params.page - 1)}
+                  disabled={params.page <= 1}
+                >
+                  ‹ Anterior
+                </button>
+                <span>
+                  Página {params.page} de {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => goToPage(params.page + 1)}
+                  disabled={params.page >= totalPages}
+                >
+                  Siguiente ›
+                </button>
+              </nav>
+            </>
+          ) : null}
+        </section>
       </div>
-    </div>
+    </AppLayout>
   );
 }

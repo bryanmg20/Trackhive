@@ -49,3 +49,7 @@ jobs:
         run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+      - name: Instalar navegador de Playwright
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Pruebas e2e de responsive (360 px)
+        run: pnpm test:e2e

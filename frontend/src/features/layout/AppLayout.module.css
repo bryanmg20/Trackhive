@@ -1,0 +1,74 @@
+/* Shared shell for signed-in screens. Mobile-first: everything can shrink
+   and wrap, so a 360 px phone never scrolls sideways. */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: var(--paper);
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 1rem clamp(1rem, 4vw, 2.5rem);
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.9rem;
+  min-width: 0;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.wordmarkDot {
+  color: var(--gold-deep);
+}
+
+.brandTag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.nav {
+  max-width: 100%;
+  margin-left: auto;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 4vw, 2.5rem) 2rem;
+}
+
+/* Mobile breakpoint (see styles/global.css). The menu gets its own line so
+   its links are never squeezed or cut. */
+@media (max-width: 480px) {
+  .brandTag {
+    display: none;
+  }
+
+  .nav {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}

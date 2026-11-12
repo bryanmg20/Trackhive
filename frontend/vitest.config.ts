@@ -7,5 +7,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
+    // Playwright specs live in e2e/ and run with their own runner.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
 });

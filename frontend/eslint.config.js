@@ -21,4 +21,14 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Playwright config and specs run in Node, not in the browser bundle.
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

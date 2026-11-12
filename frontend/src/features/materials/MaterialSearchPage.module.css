@@ -1,51 +1,5 @@
 /* Desktop first; below 900px the sidebar folds and the table becomes cards */
 
-.shell {
-  display: flex;
-  flex-direction: column;
-  min-height: 100svh;
-  background: var(--paper);
-}
-
-.topbar {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem clamp(1rem, 4vw, 2.5rem);
-  background: var(--gold);
-  color: var(--ink);
-}
-
-.wordmark {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  letter-spacing: -0.035em;
-  line-height: 1;
-}
-
-.wordmarkDot {
-  color: var(--gold-deep);
-}
-
-/* Sections of the public user: «Buscar material | Mis solicitudes» (HU-11) */
-.nav {
-  display: flex;
-  gap: 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-}
-
-.nav a {
-  color: var(--ink);
-}
-
-.nav a[aria-current='page'] {
-  font-weight: 700;
-  text-decoration: underline;
-}
-
-.topbarTag,
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 0.62rem;
@@ -56,14 +10,6 @@
 
 .eyebrow {
   color: var(--gold-text);
-}
-
-.main {
-  flex: 1;
-  width: 100%;
-  max-width: 76rem;
-  margin: 0 auto;
-  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 4vw, 2.5rem) 2rem;
 }
 
 .hero {
@@ -466,12 +412,8 @@
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .searchBar {
     flex-direction: column;
-  }
-
-  .topbarTag {
-    display: none;
   }
 }
