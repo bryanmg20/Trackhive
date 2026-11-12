@@ -31,6 +31,7 @@ describe('FindRequesterByEmailUseCase', () => {
       findNotificationContext: jest.fn(),
       saveStatusChange: jest.fn(),
       saveAppointment: jest.fn(),
+      findSchedulingConflicts: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 
@@ -59,6 +60,7 @@ describe('FindRequesterByEmailUseCase', () => {
       findNotificationContext: jest.fn(),
       saveStatusChange: jest.fn(),
       saveAppointment: jest.fn(),
+      findSchedulingConflicts: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 
