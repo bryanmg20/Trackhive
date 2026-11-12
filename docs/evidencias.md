@@ -1,3 +1,12 @@
+---
+title: "Evidencias"
+subtitle: "Trackhive · Grabaciones, material recibido y trazabilidad con GitHub"
+version: "1.0"
+date: "2026-11-12"
+team: "Equipo Trackhive"
+members: "Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez"
+---
+
 # Evidencias
 
 Los videos y archivos pesados **no se suben al repositorio**; se enlazan aquí.
@@ -6,11 +15,31 @@ Los videos y archivos pesados **no se suben al repositorio**; se enlazan aquí.
 
 | Fecha | Reunión / ceremonia | Sprint | Enlace a la grabación | Asistentes | Issues / PRs relacionados |
 |---|---|---|---|---|---|
-| 2026-10-28 | Reunión inicial con G6 | Inception | https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQAPT1bjPG6iS5qzZ-p361TjAdQxAtizY0W8F_lSoA6xnFk?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=GEebUB | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez, Alejandro Suarez, Leonardo Romerom, Angelo Foliaco y Santiago Hernandez | Backlog #1–#42 (creados el mismo día, 22:41); #43, #44, #45 con PR #52, #53, #54, #55 (28–30 oct); #46–#50 creados el 29 oct |
-| 2026-11-01 | Planning Meeting | Sprint 1 | https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQCLgimGSgZgQKnMHfuxC-5XAZvnr5xnOyg06BmRGS7fokw?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=uA4Ejf | Samuel Ricardo, Bryan Montoya, Alan Garcia y Alvaro Jimenez | #34 (PR #56, merge 1 nov 21:20); #39 (PR #57, merge 3 nov) |
-| 2026-11-10 | Review Sprint | Sprint 1 | https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQDLIWBA53e0Q7S9-GSQtJKMASQ0e6i5CyGhjkFx0o4xG50?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=5VMHMF | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez, Alejandro Suarez, Leonardo Romerom, Angelo Foliaco y Santiago Hernandez | 41 PRs (PR #58–#121) y 41 issues cerrados entre el 4 y el 10 de nov; cierre del Sprint 1. Detalle por día abajo |
+| 2026-10-28 | Reunión inicial con G6 | Inception | <https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQAPT1bjPG6iS5qzZ-p361TjAdQxAtizY0W8F_lSoA6xnFk?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=GEebUB> | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez, Alejandro Suarez, Leonardo Romero, Angelo Foliaco y Santiago Hernandez | Backlog #1–#42 (creados el mismo día, 22:41); #43, #44, #45 con PR #52, #53, #54, #55 (28–30 oct); #46–#50 creados el 29 oct |
+| 2026-11-01 | Planning Meeting | Sprint 1 | <https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQCLgimGSgZgQKnMHfuxC-5XAZvnr5xnOyg06BmRGS7fokw?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=uA4Ejf> | Samuel Ricardo, Bryan Montoya, Alan Garcia y Alvaro Jimenez | #34 (PR #56, merge 1 nov 21:20); #39 (PR #57, merge 3 nov) |
+| 2026-11-10 | Review Sprint | Sprint 1 | <https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQDLIWBA53e0Q7S9-GSQtJKMASQ0e6i5CyGhjkFx0o4xG50?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=5VMHMF> | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez, Alejandro Suarez, Leonardo Romero, Angelo Foliaco y Santiago Hernandez | 41 PRs (PR #58–#121) y 41 issues cerrados entre el 4 y el 10 de nov; cierre del Sprint 1. Detalle por día abajo |
 
-### Detalle de issues y PRs por reunión
+## Grabaciones de dailies (Sprint 1)
+
+| Fecha | Daily | Enlace | Asistentes |
+|---|---|---|---|
+| 2026-11-03 | Daily Scrum | Sin grabación; se registra en `docs/daily-scrum.md` | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez |
+| 2026-11-04 | Daily Scrum | <https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQDI7pqrEcYHRYknhNkzp58jAchJzvEFC3WD9fnfOlrMgYE?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=goBOwp> | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez |
+| 2026-11-07 | Daily Scrum | Sin grabación; se registra en `docs/daily-scrum.md` | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez |
+
+Total de grabaciones de Teams registradas: 4.
+
+## Coordinación por correo con G6
+
+La reunión de Inception se coordinó por correo electrónico con el equipo de Introducción (G6), con copia a `djromero@uninorte.edu.co`.
+
+| Elemento | Estado |
+|---|---|
+| Correo de coordinación a G6 | Enviado; el soporte (captura o `.eml`) queda pendiente de anexar |
+| Copia a `djromero@uninorte.edu.co` | Registrada en el envío |
+| Fecha del envío | Por confirmar en el anexo |
+
+## Detalle de issues y PRs por reunión
 
 Criterio de asignación: un issue o PR se asocia a la reunión cuya ventana (esa reunión hasta la siguiente) contiene su fecha de creación o de merge. Los números corresponden a `bryanmg20/Trackhive`.
 
@@ -44,5 +73,5 @@ Todo lo fusionado o cerrado después de esta reunión (11 y 12 de noviembre: #29
 
 | Fecha | Material (foto, video, documento) | Enlace | Recibido de |
 |---|---|---|---|
-| 2026-10-30 | informe proporcionado por los estudiantes de primer semestre tras su visita al clena | https://uninorte-my.sharepoint.com/:b:/g/personal/sdricardo_uninorte_edu_co/IQBM9byALHfTQ6kVF5vY8bkEASzBFEJ2XoA7RwOHic0m0yc?e=8WB0FS | Informe Final Equipo 6 CLENA |
-
+| 2026-10-30 | informe proporcionado por los estudiantes de primer semestre tras su visita al clena | <https://uninorte-my.sharepoint.com/:b:/g/personal/sdricardo_uninorte_edu_co/IQBM9byALHfTQ6kVF5vY8bkEASzBFEJ2XoA7RwOHic0m0yc?e=8WB0FS> | Informe Final Equipo 6 CLENA |
+| 2026-10-30 | Fotos de la visita al CLENA | <https://uninorte-my.sharepoint.com/:f:/g/personal/sdricardo_uninorte_edu_co/IgBH9k1CmqF_TZ6L9f6QoNotAdy_DkdXA04Yq9Cg1ZMhwck?e=yjdJf5> | Equipo G6 |
