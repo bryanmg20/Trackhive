@@ -276,7 +276,7 @@
   line-height: 1;
 }
 
-@media (max-width: 380px) {
+@media (max-width: 480px) {
   .notice {
     padding: 0.85rem;
   }

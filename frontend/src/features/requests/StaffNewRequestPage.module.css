@@ -566,7 +566,7 @@
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .hero {
     margin-bottom: 1.25rem;
   }

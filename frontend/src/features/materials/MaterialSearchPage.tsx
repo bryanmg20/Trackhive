@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { readSessionRole } from '../auth/session';
 import type { UserRole } from '../auth/session';
-import { SiteNav } from '../navigation/SiteNav';
+import { AppLayout } from '../layout/AppLayout';
 import type { SelectedMaterial } from '../requests/selected-materials';
 import { buildNewRequestPath } from '../requests/selected-materials';
 import {
@@ -138,269 +138,259 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
     ? Math.max(1, Math.ceil(result.total / result.limit))
     : 1;
 
-  return (
-    <div className={styles.shell}>
-      <header className={styles.topbar}>
-        <p className={styles.wordmark}>
-          Trackhive<span className={styles.wordmarkDot}>.</span>
+  const requestBar = canSelect ? (
+    <div className={styles.requestBar}>
+      <div className={styles.requestBarInner}>
+        <p aria-live="polite">
+          {selected.length === 1
+            ? '1 material seleccionado'
+            : `${selected.length} materiales seleccionados`}
         </p>
-        <p className={styles.topbarTag}>CLENA · Archivo</p>
-        <SiteNav />
-      </header>
+        <button
+          className={styles.primary}
+          type="button"
+          onClick={requestSelected}
+          disabled={selected.length === 0}
+        >
+          Solicitar
+        </button>
+      </div>
+    </div>
+  ) : null;
 
-      <main className={styles.main}>
-        <section className={styles.hero} aria-labelledby="page-title">
-          <p className={styles.eyebrow}>Consulta documental</p>
-          <h1 id="page-title" className={styles.title}>
-            Buscar material
-          </h1>
-          <form
-            id={FORM_ID}
-            className={styles.searchBar}
-            onSubmit={search}
-            role="search"
+  return (
+    <AppLayout footer={requestBar}>
+      <section className={styles.hero} aria-labelledby="page-title">
+        <p className={styles.eyebrow}>Consulta documental</p>
+        <h1 id="page-title" className={styles.title}>
+          Buscar material
+        </h1>
+        <form
+          id={FORM_ID}
+          className={styles.searchBar}
+          onSubmit={search}
+          role="search"
+        >
+          <label htmlFor="material-text" className="sr-only">
+            Buscar
+          </label>
+          <input
+            id="material-text"
+            type="search"
+            maxLength={100}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="Título, autor o código"
+          />
+          <button className={styles.primary} type="submit">
+            Buscar
+          </button>
+        </form>
+      </section>
+
+      <div className={styles.layout}>
+        <aside className={styles.sidebar} aria-label="Filtros">
+          <button
+            type="button"
+            className={styles.filtersToggle}
+            aria-expanded={filtersOpen}
+            aria-controls="material-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
           >
-            <label htmlFor="material-text" className="sr-only">
-              Buscar
-            </label>
-            <input
-              id="material-text"
-              type="search"
-              maxLength={100}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="Título, autor o código"
-            />
-            <button className={styles.primary} type="submit">
-              Buscar
-            </button>
-          </form>
-        </section>
+            Filtros {filtersOpen ? '▴' : '▾'}
+          </button>
 
-        <div className={styles.layout}>
-          <aside className={styles.sidebar} aria-label="Filtros">
-            <button
-              type="button"
-              className={styles.filtersToggle}
-              aria-expanded={filtersOpen}
-              aria-controls="material-filters"
-              onClick={() => setFiltersOpen((open) => !open)}
-            >
-              Filtros {filtersOpen ? '▴' : '▾'}
-            </button>
-
-            <div
-              id="material-filters"
-              className={styles.filters}
-              data-open={filtersOpen}
-            >
-              <fieldset className={styles.group}>
-                <legend>Tipo</legend>
-                <label className={styles.option}>
+          <div
+            id="material-filters"
+            className={styles.filters}
+            data-open={filtersOpen}
+          >
+            <fieldset className={styles.group}>
+              <legend>Tipo</legend>
+              <label className={styles.option}>
+                <input
+                  type="radio"
+                  name="material-type"
+                  checked={!params.type}
+                  onChange={() => changeType('')}
+                />
+                Todos
+              </label>
+              {MATERIAL_TYPES.map((value) => (
+                <label key={value} className={styles.option}>
                   <input
                     type="radio"
                     name="material-type"
-                    checked={!params.type}
-                    onChange={() => changeType('')}
+                    checked={params.type === value}
+                    onChange={() => changeType(value)}
                   />
-                  Todos
+                  {MATERIAL_TYPE_LABELS[value]}
                 </label>
-                {MATERIAL_TYPES.map((value) => (
-                  <label key={value} className={styles.option}>
-                    <input
-                      type="radio"
-                      name="material-type"
-                      checked={params.type === value}
-                      onChange={() => changeType(value)}
-                    />
-                    {MATERIAL_TYPE_LABELS[value]}
-                  </label>
-                ))}
-              </fieldset>
+              ))}
+            </fieldset>
 
-              <div className={styles.group}>
-                <label htmlFor="material-collection">Colección o tema</label>
-                <input
-                  id="material-collection"
-                  form={FORM_ID}
-                  maxLength={120}
-                  value={collection}
-                  onChange={(event) => setCollection(event.target.value)}
-                  placeholder="Ej.: Actas del Cabildo"
-                />
-                <p className={styles.hint}>Pulse Enter o «Buscar» para aplicar.</p>
-              </div>
+            <div className={styles.group}>
+              <label htmlFor="material-collection">Colección o tema</label>
+              <input
+                id="material-collection"
+                form={FORM_ID}
+                maxLength={120}
+                value={collection}
+                onChange={(event) => setCollection(event.target.value)}
+                placeholder="Ej.: Actas del Cabildo"
+              />
+              <p className={styles.hint}>Pulse Enter o «Buscar» para aplicar.</p>
             </div>
-          </aside>
-
-          <section className={styles.results} aria-labelledby="results-title">
-            <div className={styles.resultsHeader}>
-              <h2 id="results-title" className={styles.sectionTitle}>
-                {result ? `${result.total} resultados` : 'Resultados'}
-              </h2>
-              <div className={styles.sortRow}>
-                <label htmlFor="material-sort">Ordenar por</label>
-                <select
-                  id="material-sort"
-                  value={params.sort}
-                  onChange={(event) =>
-                    changeSort(event.target.value as MaterialSortField)
-                  }
-                >
-                  {Object.entries(SORT_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <label htmlFor="material-order" className="sr-only">
-                  Dirección
-                </label>
-                <select
-                  id="material-order"
-                  value={params.order}
-                  onChange={(event) =>
-                    changeOrder(event.target.value as SortOrder)
-                  }
-                >
-                  <option value="asc">Ascendente</option>
-                  <option value="desc">Descendente</option>
-                </select>
-              </div>
-            </div>
-
-            <div aria-live="polite" aria-busy={isLoading}>
-              {isLoading ? <p className={styles.muted}>Buscando…</p> : null}
-
-              {error ? (
-                <div className={styles.error} role="alert">
-                  <p>
-                    {error.status === 401
-                      ? 'Su sesión no es válida o venció.'
-                      : error.message}
-                  </p>
-                  {error.status === 401 ? (
-                    <Link to={ROUTES.login}>Iniciar sesión</Link>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {result && result.items.length === 0 ? (
-                <div className={styles.empty}>
-                  <p className={styles.emptyTitle}>
-                    No encontramos material con esa búsqueda.
-                  </p>
-                  <p className={styles.muted}>
-                    Pruebe con otras palabras o cambie los filtros de tipo y
-                    colección.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-
-            {result && result.items.length > 0 ? (
-              <>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      {canSelect ? (
-                        <th scope="col" className={styles.checkCell}>
-                          <span className="sr-only">Seleccionar</span>
-                        </th>
-                      ) : null}
-                      <th scope="col">Título</th>
-                      <th scope="col">Tipo</th>
-                      <th scope="col">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.items.map((material) => (
-                      <tr key={material.id}>
-                        {canSelect ? (
-                          <td className={styles.checkCell}>
-                            <input
-                              type="checkbox"
-                              aria-label={`Seleccionar ${material.title}`}
-                              checked={selected.some(
-                                (item) => item.id === material.id,
-                              )}
-                              onChange={() =>
-                                toggle({
-                                  id: material.id,
-                                  title: material.title,
-                                  catalogCode: material.catalogCode,
-                                })
-                              }
-                            />
-                          </td>
-                        ) : null}
-                        <td className={styles.titleCell}>
-                          <strong>{material.title}</strong>
-                          <span className={styles.code}>
-                            {material.catalogCode}
-                            {material.author ? ` · ${material.author}` : ''}
-                          </span>
-                        </td>
-                        <td data-label="Tipo">
-                          {MATERIAL_TYPE_LABELS[material.materialType]}
-                        </td>
-                        <td data-label="Estado">
-                          <span
-                            className={styles.status}
-                            data-status={material.status}
-                          >
-                            {MATERIAL_STATUS_LABELS[material.status]}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <nav className={styles.pagination} aria-label="Paginación">
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page - 1)}
-                    disabled={params.page <= 1}
-                  >
-                    ‹ Anterior
-                  </button>
-                  <span>
-                    Página {params.page} de {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => goToPage(params.page + 1)}
-                    disabled={params.page >= totalPages}
-                  >
-                    Siguiente ›
-                  </button>
-                </nav>
-              </>
-            ) : null}
-          </section>
-        </div>
-      </main>
-
-      {canSelect ? (
-        <div className={styles.requestBar}>
-          <div className={styles.requestBarInner}>
-            <p aria-live="polite">
-              {selected.length === 1
-                ? '1 material seleccionado'
-                : `${selected.length} materiales seleccionados`}
-            </p>
-            <button
-              className={styles.primary}
-              type="button"
-              onClick={requestSelected}
-              disabled={selected.length === 0}
-            >
-              Solicitar
-            </button>
           </div>
-        </div>
-      ) : null}
-    </div>
+        </aside>
+
+        <section className={styles.results} aria-labelledby="results-title">
+          <div className={styles.resultsHeader}>
+            <h2 id="results-title" className={styles.sectionTitle}>
+              {result ? `${result.total} resultados` : 'Resultados'}
+            </h2>
+            <div className={styles.sortRow}>
+              <label htmlFor="material-sort">Ordenar por</label>
+              <select
+                id="material-sort"
+                value={params.sort}
+                onChange={(event) =>
+                  changeSort(event.target.value as MaterialSortField)
+                }
+              >
+                {Object.entries(SORT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="material-order" className="sr-only">
+                Dirección
+              </label>
+              <select
+                id="material-order"
+                value={params.order}
+                onChange={(event) =>
+                  changeOrder(event.target.value as SortOrder)
+                }
+              >
+                <option value="asc">Ascendente</option>
+                <option value="desc">Descendente</option>
+              </select>
+            </div>
+          </div>
+
+          <div aria-live="polite" aria-busy={isLoading}>
+            {isLoading ? <p className={styles.muted}>Buscando…</p> : null}
+
+            {error ? (
+              <div className={styles.error} role="alert">
+                <p>
+                  {error.status === 401
+                    ? 'Su sesión no es válida o venció.'
+                    : error.message}
+                </p>
+                {error.status === 401 ? (
+                  <Link to={ROUTES.login}>Iniciar sesión</Link>
+                ) : null}
+              </div>
+            ) : null}
+
+            {result && result.items.length === 0 ? (
+              <div className={styles.empty}>
+                <p className={styles.emptyTitle}>
+                  No encontramos material con esa búsqueda.
+                </p>
+                <p className={styles.muted}>
+                  Pruebe con otras palabras o cambie los filtros de tipo y
+                  colección.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          {result && result.items.length > 0 ? (
+            <>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    {canSelect ? (
+                      <th scope="col" className={styles.checkCell}>
+                        <span className="sr-only">Seleccionar</span>
+                      </th>
+                    ) : null}
+                    <th scope="col">Título</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.items.map((material) => (
+                    <tr key={material.id}>
+                      {canSelect ? (
+                        <td className={styles.checkCell}>
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar ${material.title}`}
+                            checked={selected.some(
+                              (item) => item.id === material.id,
+                            )}
+                            onChange={() =>
+                              toggle({
+                                id: material.id,
+                                title: material.title,
+                                catalogCode: material.catalogCode,
+                              })
+                            }
+                          />
+                        </td>
+                      ) : null}
+                      <td className={styles.titleCell}>
+                        <strong>{material.title}</strong>
+                        <span className={styles.code}>
+                          {material.catalogCode}
+                          {material.author ? ` · ${material.author}` : ''}
+                        </span>
+                      </td>
+                      <td data-label="Tipo">
+                        {MATERIAL_TYPE_LABELS[material.materialType]}
+                      </td>
+                      <td data-label="Estado">
+                        <span
+                          className={styles.status}
+                          data-status={material.status}
+                        >
+                          {MATERIAL_STATUS_LABELS[material.status]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <nav className={styles.pagination} aria-label="Paginación">
+                <button
+                  type="button"
+                  onClick={() => goToPage(params.page - 1)}
+                  disabled={params.page <= 1}
+                >
+                  ‹ Anterior
+                </button>
+                <span>
+                  Página {params.page} de {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => goToPage(params.page + 1)}
+                  disabled={params.page >= totalPages}
+                >
+                  Siguiente ›
+                </button>
+              </nav>
+            </>
+          ) : null}
+        </section>
+      </div>
+    </AppLayout>
   );
 }

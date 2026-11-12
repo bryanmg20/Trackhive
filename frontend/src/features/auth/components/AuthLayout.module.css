@@ -173,7 +173,7 @@
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .page {
     grid-template-columns: 1fr;
   }
@@ -235,7 +235,7 @@
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 480px) {
   .content {
     padding: 0.75rem;
   }
