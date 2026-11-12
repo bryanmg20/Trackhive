@@ -69,6 +69,7 @@ describe('Versioned API (e2e)', () => {
   let app: INestApplication;
   let server: Server;
   let repository: InMemoryUserRepository;
+  const queryRaw = jest.fn().mockResolvedValue([{ 1: 1 }]);
 
   beforeAll(async () => {
     repository = new InMemoryUserRepository();
@@ -82,7 +83,7 @@ describe('Versioned API (e2e)', () => {
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
       .overrideProvider(PrismaService)
-      .useValue({ $queryRaw: jest.fn().mockResolvedValue([{ 1: 1 }]) })
+      .useValue({ $queryRaw: queryRaw })
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -387,4 +388,16 @@ describe('Versioned API (e2e)', () => {
       database: 'up',
     });
   });
+
+  it('reports the database as down when it takes longer than 3 s', async () => {
+    // A query that never answers, as with a hung database
+    queryRaw.mockReturnValueOnce(new Promise(() => {}));
+
+    const startedAt = Date.now();
+    await request(server).get('/api/v1/health').expect(200).expect({
+      status: 'degraded',
+      database: 'down',
+    });
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(2900);
+  }, 10_000);
 });
