@@ -11,7 +11,7 @@ import {
 } from '../request-status';
 import type { StatusChange } from '../status-change';
 
-// Business rule: the only status changes allowed (docs/modelo-datos.md, section 1.3)
+// Business rule: the only status changes allowed (docs/modelo-dominio.md, section 4)
 const ALLOWED_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
   RECIBIDA: ['EN_BUSQUEDA', 'RECHAZADA'],
   EN_BUSQUEDA: ['DISPONIBLE', 'RECHAZADA'],

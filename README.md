@@ -313,7 +313,8 @@ Trackhive/
 | Documento | Contenido |
 |---|---|
 | [`docs/arquitectura.md`](docs/arquitectura.md) / [`docs/arquitectura.pdf`](docs/arquitectura.pdf) | Arquitectura C4, estructura del código y decisiones técnicas. |
-| [`docs/modelo-datos.md`](docs/modelo-datos.md) | Modelo de dominio, diagrama entidad-relación, índices y datos personales. |
+| [`docs/modelo-dominio.md`](docs/modelo-dominio.md) / [`docs/modelo-dominio.pdf`](docs/modelo-dominio.pdf) | Diagrama de clases, estados de la solicitud, reglas de negocio, glosario y casos de uso. |
+| [`docs/modelo-datos.md`](docs/modelo-datos.md) / [`docs/modelo-datos.pdf`](docs/modelo-datos.pdf) | Diagrama entidad-relación, tablas, índices, migraciones y datos personales. |
 | [`docs/manual-operacion.md`](docs/manual-operacion.md) | Operación, variables de entorno, correos, respaldos y diagnóstico. |
 | [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía del personal del CLENA (en elaboración). |
 | [`docs/sprint-planning.md`](docs/sprint-planning.md), [`docs/daily-scrum.md`](docs/daily-scrum.md), [`docs/sprint-review.md`](docs/sprint-review.md), [`docs/sprint-retrospective.md`](docs/sprint-retrospective.md) | Ceremonias y evidencias Scrum. |

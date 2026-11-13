@@ -1,356 +1,55 @@
 # Modelo de datos
 
-## 1. Modelo de dominio
+> La versión entregable de este documento es `docs/modelo-datos.pdf`, con portada, índice y páginas numeradas. Las entidades, las reglas de negocio, el glosario y los casos de uso están en `docs/modelo-dominio.md`.
 
-Lenguaje común y reglas de negocio del módulo. Es la base de la capa de dominio del backend. Las secciones 2 a 6 describen cómo se guarda en PostgreSQL.
+## 1. Introducción
 
-### 1.1 Entidades y objetos de valor
+Este documento describe cómo se guarda en PostgreSQL 15 el modelo de dominio de Trackhive: el diagrama entidad-relación, cada tabla con sus columnas, los índices y por qué existen, las migraciones y los datos semilla, y los datos personales con su justificación (Ley 1581 de 2012).
 
-```mermaid
-classDiagram
-    direction TB
-
-    class Usuario {
-        <<AggregateRoot>>
-        +NombrePersona nombre
-        +Email email
-        +Rol rol
-    }
-    class Solicitante {
-        <<AggregateRoot>>
-        +DocumentoIdentidad documento
-        +NombrePersona nombre
-        +Email email
-        +Consentimiento consentimiento
-    }
-    class Solicitud {
-        <<AggregateRoot>>
-        +CodigoRadicado codigoRadicado
-        +EstadoSolicitud estado
-        +ModalidadEntrega modalidadEntrega
-        +Date fechaDeseada
-        +Date fechaCompromiso
-    }
-    class ItemSolicitud {
-        <<Entity>>
-        +EstadoItem estado
-        +TipoAcceso tipoAcceso
-    }
-    class CambioEstado {
-        <<Entity>>
-        +EstadoSolicitud estadoAnterior
-        +EstadoSolicitud estadoNuevo
-        +DateTime fecha
-    }
-    class Cita {
-        <<AggregateRoot>>
-        +Date fecha
-        +EstadoCita estado
-    }
-    class ReservaMaterial {
-        <<Entity>>
-        +Date dia
-    }
-    class Notificacion {
-        <<AggregateRoot>>
-        +Email destinatario
-        +EstadoEnvio estadoEnvio
-    }
-    class Material {
-        <<AggregateRoot>>
-        +string codigoReferencia
-        +string titulo
-        +Ubicacion ubicacion
-        +EstadoConservacion estadoConservacion
-    }
-
-    Solicitante "1" <-- "0..*" Solicitud : realiza
-    Solicitud "1" *-- "0..*" ItemSolicitud : items
-    ItemSolicitud "0..*" --> "1" Material : pide
-    Solicitud "1" *-- "1..*" CambioEstado : historial
-    Solicitud "1" <-- "0..*" Cita : agenda
-    Cita "1" *-- "0..*" ReservaMaterial : reservas
-    ReservaMaterial "0..*" --> "1" Material : bloquea
-    Usuario "1" <-- "0..*" Solicitud : registra / atiende
-    Usuario "1" <-- "0..*" CambioEstado : ejecuta
-    Usuario "0..1" <-- "0..1" Solicitante : cuenta
-    Solicitud "1" <-- "0..*" Notificacion : avisa
-```
-
-Notación: `<<AggregateRoot>>` es la raíz de un agregado (se guarda completa) y `<<Entity>>` es una parte interna. El rombo indica composición y la flecha, una referencia por id. Solo se muestran los atributos clave.
-
-| Entidad | Qué es | Tabla(s) |
-|---|---|---|
-| **Solicitud** | Pedido de consulta, búsqueda o copia, identificado por un radicado. Contiene sus **ítems** (materiales pedidos y el resultado de buscarlos) y su **historial** de cambios de estado. | `requests`, `request_items`, `status_history` |
-| **Solicitante** | Persona que pide. Puede no tener cuenta, si la solicitud la registró el personal. | `requesters` |
-| **Material** | Pieza del acervo (documento, expediente, periódico, fotografía…) con ubicación física y estado de conservación. | `materials` |
-| **Cita** | Día completo para consultar el material en la sala, sin hora. Contiene las **reservas** de cada material: una por material y día. | `appointments`, `appointment_materials` |
-| **Usuario** | Cuenta con rol `ADMIN`, `PERSONAL` o `PUBLICO`. | `users`, `refresh_tokens` |
-| **Notificación** | Correo que recibe el solicitante en cada cambio de estado. | `notifications` |
-| *(configuración)* | Horario de atención y cupos de la sala. | `service_hours` |
-
-| Objeto de valor | Regla |
-|---|---|
-| `CodigoRadicado` | Formato `SOL-AAAA-NNNNN`. Lo genera el sistema y no cambia. |
-| `FechaCita` | Día `AAAA-MM-DD` válido en que el CLENA atiende (lunes a sábado). La reserva es por día completo, sin hora. |
-| `Ubicacion` | Depósito, estantería y caja. |
-| `DocumentoIdentidad` | Tipo (CC, CE, TI, PAS, NIT) más número. Único por persona. |
-| `NombrePersona` | Primer nombre y primer apellido obligatorios; segundo nombre y segundo apellido opcionales. Máximo 40 caracteres cada uno. Igual en `Usuario` y `Solicitante`. |
-| `Email` | Correo con formato válido. |
-| `Consentimiento` | Aceptación del aviso de privacidad, con fecha y versión (Ley 1581). |
-
-### 1.2 Relaciones
-
-| Relación | Cardinalidad |
-|---|---|
-| Solicitante – Solicitud | 1 : N |
-| Solicitud – Material (a través de los ítems) | N : M |
-| Solicitud – CambioEstado | 1 : N (siempre al menos uno) |
-| Solicitud – Cita | 1 : N (solo una cita `PROGRAMADA` a la vez) |
-| Cita – Material (a través de las reservas) | N : M |
-| Solicitud – Notificación | 1 : N |
-| Usuario – Solicitud | 1 : N (quién la registra y quién es el responsable) |
-| Usuario – CambioEstado / Cita | 1 : N (quién ejecuta el cambio y quién agenda la cita) |
-| Usuario – Solicitante | 0..1 : 0..1 |
-
-### 1.3 Estados de la solicitud y transiciones
-
-```mermaid
-stateDiagram-v2
-    [*] --> RECIBIDA : registrar
-    RECIBIDA --> EN_BUSQUEDA : tomar
-    RECIBIDA --> RECHAZADA : rechazar
-    EN_BUSQUEDA --> DISPONIBLE : marcarDisponible
-    EN_BUSQUEDA --> RECHAZADA : rechazar
-    DISPONIBLE --> AGENDADA : agendar
-    DISPONIBLE --> ATENDIDA : atender (entrega digital)
-    DISPONIBLE --> CERRADA : cerrar (sin respuesta del solicitante)
-    AGENDADA --> DISPONIBLE : volverADisponible (cita cancelada / no asistió)
-    AGENDADA --> ATENDIDA : atender (cita cumplida)
-    ATENDIDA --> CERRADA : cerrar
-    RECHAZADA --> [*]
-    CERRADA --> [*]
-```
-
-| Transición | Condición |
-|---|---|
-| → `RECIBIDA` | El solicitante dio su consentimiento. La fecha deseada es ≥ hoy + el plazo mínimo. |
-| `RECIBIDA` → `EN_BUSQUEDA` | Se asignan un responsable y una fecha compromiso. |
-| `RECIBIDA` / `EN_BUSQUEDA` → `RECHAZADA` | Motivo obligatorio. |
-| `EN_BUSQUEDA` → `DISPONIBLE` | Al menos un material, y todos localizados. |
-| `DISPONIBLE` → `AGENDADA` | La entrega es presencial y hay una cita programada. Solo se alcanza agendando la cita (HU-18), no desde «Cambiar estado». |
-| `DISPONIBLE` → `ATENDIDA` | La entrega es digital. |
-| `AGENDADA` → `ATENDIDA` | La cita se cumplió. |
-| `AGENDADA` → `DISPONIBLE` | La cita se canceló o el solicitante no asistió. Se liberan las reservas. |
-| `DISPONIBLE` / `ATENDIDA` → `CERRADA` | Cierre manual, o automático después de N días. |
-
-- Cualquier otra transición se rechaza (HTTP 409). `CERRADA` y `RECHAZADA` son estados finales.
-- Cada transición deja un **cambio de estado inmutable** (quién, cuándo y comentario) y genera una **notificación** al solicitante.
-
-### 1.4 Sin dobles reservas de material
-
-Un material físico **no puede reservarse dos veces el mismo día**: la reserva es por día completo, material y fecha, sin franjas horarias. Se controla en tres niveles:
-
-1. **Dominio:** la reserva de un material es el día de su cita (`appointment_materials.booked_date`), mientras la cita está `PROGRAMADA`.
-2. **Caso de uso `AgendarCita`:** antes de guardar, consulta los materiales de la solicitud y las citas `PROGRAMADA` de ese día. Si un material ya está reservado, responde 409 `MATERIAL_ALREADY_BOOKED` nombrando el material, la fecha y el radicado de la solicitud que lo tiene; si está en restauración o no consultable, 409 `MATERIAL_NOT_AVAILABLE`. El estado `EN_USO` no bloquea: solo aplica al día en que el material está en sala (HU-72).
-3. **Base de datos:** índice único `(material_id, booked_date)` en `appointment_materials` frena las peticiones simultáneas (dos funcionarios agendando a la vez). El repositorio traduce esa violación al mismo error del punto 2.
-
-Además:
-
-- Solo se reserva el material de acceso físico.
-- Cumplir la cita o registrar una inasistencia libera el día del material: `booked_date` pasa a `NULL`, y un `NULL` nunca choca en el índice único.
-
-### 1.5 Otras reglas
-
-- Las citas deben caer dentro del horario de atención y no pueden superar los cupos de la sala.
-- Los datos de una solicitud solo se pueden editar mientras está en `RECIBIDA`.
-- Una solicitud está **vencida** si pasó su fecha compromiso y no está atendida, cerrada ni rechazada.
-- El usuario público solo ve sus propias solicitudes.
-- El solicitante debe tener correo **o** teléfono. Eliminar su cuenta anonimiza sus datos, pero no borra sus solicitudes.
+Describe el esquema que existe hoy, es decir, el de `backend/prisma/schema.prisma` y las migraciones de `backend/prisma/migrations/`. Lo que aún no tiene tabla se indica como previsto.
 
 ## 2. Diagrama entidad-relación
 
-Leyenda: `PK` clave primaria · `FK` clave foránea · `UK` valor único · `IDX` columna con índice (ver §4).
+![Figura 1. Diagrama entidad-relación de la base de datos de Trackhive](img/datos-diagrama-er.png)
 
-```mermaid
-erDiagram
-    direction LR
-    REQUESTERS {
-        uuid id PK
-        uuid user_id FK, UK "IDX unico"
-        varchar(5) document_type
-        varchar(20) document_number "IDX, UK con document_type"
-        varchar(40) first_name "IDX GIN trgm con los otros tres"
-        varchar(40) middle_name
-        varchar(40) last_name
-        varchar(40) second_last_name
-        varchar(160) email "IDX"
-        varchar(20) phone
-        varchar(15) requester_type
-        varchar(150) institution
-        boolean accepts_data_processing
-        timestamptz consented_at
-        varchar(10) privacy_policy_version
-        timestamptz anonymized_at
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    REQUESTS {
-        uuid id PK
-        varchar(16) tracking_code UK
-        uuid requester_id FK "IDX"
-        uuid created_by_id FK "IDX"
-        uuid assignee_id FK "IDX"
-        varchar(25) request_type
-        varchar(10) origin_channel
-        varchar(10) delivery_mode
-        varchar(15) purpose
-        text reason
-        text requirement_description
-        date desired_date
-        date committed_date
-        varchar(5) priority
-        varchar(12) status "IDX con committed_date"
-        varchar(500) rejection_reason
-        text notes
-        timestamptz registered_at "IDX"
-        timestamptz attended_at
-        timestamptz closed_at
-        int version
-        timestamptz updated_at
-    }
-    REQUEST_ITEMS {
-        uuid id PK
-        uuid request_id FK "IDX, UK con material_id"
-        uuid material_id FK "IDX"
-        varchar(15) item_status
-        varchar(10) access_type
-        text note
-    }
-    MATERIALS {
-        uuid id PK
-        varchar(40) catalog_code UK
-        varchar(255) title "IDX GIN trgm"
-        varchar(20) material_type "IDX"
-        varchar(150) author "IDX GIN trgm"
-        varchar(120) collection "IDX GIN trgm"
-        date publication_date
-        varchar(150) publisher
-        varchar(40) depot
-        varchar(40) shelf
-        varchar(40) box
-        varchar(20) status
-        timestamptz status_changed_at
-        uuid status_changed_by FK
-        varchar(500) status_change_reason
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    STATUS_HISTORY {
-        bigint id PK
-        uuid request_id FK "IDX con changed_at"
-        varchar(12) previous_status
-        varchar(12) new_status
-        uuid user_id FK "IDX"
-        text comment
-        boolean visible_to_requester
-        timestamptz changed_at
-    }
-    NOTIFICATIONS {
-        uuid id PK
-        uuid request_id FK "IDX"
-        bigint status_history_id FK, UK
-        varchar(160) recipient_email
-        varchar(25) template
-        varchar(200) subject
-        text body
-        text html_body
-        varchar(10) delivery_status "IDX con scheduled_at"
-        smallint attempts
-        text last_error
-        timestamptz scheduled_at
-        timestamptz sent_at
-        timestamptz created_at
-    }
-    APPOINTMENTS {
-        uuid id PK
-        uuid request_id FK "IDX"
-        uuid requester_id FK "IDX"
-        uuid scheduled_by_id FK "IDX"
-        date appointment_date "IDX"
-        varchar(12) status
-        text notes
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    APPOINTMENT_MATERIALS {
-        uuid appointment_id PK, FK
-        uuid material_id PK, FK "IDX"
-        date booked_date "UK con material_id"
-    }
-    USERS {
-        uuid id PK
-        varchar(40) first_name
-        varchar(40) middle_name
-        varchar(40) last_name
-        varchar(40) second_last_name
-        varchar(160) email UK
-        varchar(255) password_hash
-        varchar(10) role
-        boolean active
-        timestamptz privacy_policy_accepted_at
-        varchar(10) privacy_policy_version
-        timestamptz last_login_at
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    REFRESH_TOKENS {
-        uuid id PK
-        uuid user_id FK "IDX"
-        varchar(255) token_hash UK
-        timestamptz expires_at
-        timestamptz revoked_at
-        timestamptz created_at
-    }
-    SERVICE_HOURS {
-        smallint weekday PK
-        time opens_at
-        time closes_at
-        smallint concurrent_slots
-        smallint appointment_duration_min
-        boolean active
-    }
-    REQUESTERS ||--o{ REQUESTS : "realiza"
-    REQUESTS ||--o{ REQUEST_ITEMS : "incluye"
-    REQUEST_ITEMS }o--|| MATERIALS : "referencia a"
-    REQUESTS ||--|{ STATUS_HISTORY : "registra cambios"
-    STATUS_HISTORY |o--o| NOTIFICATIONS : "dispara"
-    REQUESTS ||--o{ NOTIFICATIONS : "genera"
-    REQUESTS ||--o{ APPOINTMENTS : "se agenda en"
-    APPOINTMENTS ||--o{ APPOINTMENT_MATERIALS : "incluye"
-    APPOINTMENT_MATERIALS }o--|| MATERIALS : "reserva el día de"
-    APPOINTMENTS }o--|| REQUESTERS : "para"
-    REQUESTS }o--|| USERS : "registrada por"
-    REQUESTS }o--o| USERS : "atendida por"
-    STATUS_HISTORY }o--|| USERS : "ejecutado por"
-    APPOINTMENTS }o--|| USERS : "agendada por"
-    REQUESTERS |o--o| USERS : "tiene cuenta"
-    USERS ||--o{ REFRESH_TOKENS : "posee"
-    USERS |o--o{ MATERIALS : "cambia el estado de"
-```
+**Figura 1.** Diagrama entidad-relación de la base de datos de Trackhive.
+
+Leyenda: cada recuadro es una tabla con sus columnas y su tipo de PostgreSQL. `PK` clave primaria, `FK` clave foránea, `UK` valor único; `UK¹`, `UK²` y `UK³` marcan las columnas que forman juntas un único compuesto. `NULL` indica que la columna admite nulos; el resto es `NOT NULL`. Las líneas usan la notación de pata de gallo: dos rayas, exactamente uno; círculo y raya, cero o uno; círculo y pata, cero o muchos; raya y pata, uno o muchos. Cada línea une la tabla padre (lado de la clave primaria) con la tabla hija (lado de la clave foránea); la tabla siguiente indica la columna de cada relación. Ninguna línea se cruza con otra.
+
+| Relación | Cardinalidad | Clave foránea |
+|---|---|---|
+| users – refresh_tokens | 1 : 0..N | `refresh_tokens.user_id` |
+| users – requesters | 0..1 : 0..1 | `requesters.user_id` (única) |
+| users – materials | 0..1 : 0..N | `materials.status_changed_by` |
+| requesters – requests | 1 : 0..N | `requests.requester_id` |
+| users – requests | 1 : 0..N (registrada por) y 0..1 : 0..N (atendida por) | `requests.created_by_id`, `requests.assignee_id` |
+| requests – request_items | 1 : 1..N | `request_items.request_id` |
+| materials – request_items | 1 : 0..N | `request_items.material_id` |
+| requests – status_history | 1 : 1..N | `status_history.request_id` |
+| users – status_history | 1 : 0..N | `status_history.user_id` |
+| requests – appointments | 1 : 0..N | `appointments.request_id` |
+| requesters – appointments | 1 : 0..N | `appointments.requester_id` |
+| users – appointments | 1 : 0..N | `appointments.scheduled_by_id` |
+| appointments – appointment_materials | 1 : 0..N | `appointment_materials.appointment_id` |
+| materials – appointment_materials | 1 : 0..N | `appointment_materials.material_id` |
+| requests – notifications | 1 : 0..N | `notifications.request_id` |
+| status_history – notifications | 0..1 : 0..1 | `notifications.status_history_id` (única) |
 
 Decisiones principales:
 
-- Las enumeraciones son `varchar` con `CHECK`. Las PK son `uuid`, salvo el historial, que usa `bigint`.
-- `status_history` solo admite `INSERT` (un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`). Es la auditoría y la base del reporte de tiempos de atención.
+- Las enumeraciones son `varchar` con `CHECK`. Las PK son `uuid`, salvo el historial, que usa `bigint` con identidad.
+- `status_history` solo admite `INSERT`: un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`. Es la auditoría y la base del reporte de tiempos de atención.
 - `appointment_materials` tiene el índice único `(material_id, booked_date)`, así que la base de datos impide reservar el mismo material dos veces el mismo día (HU-20).
-- Ninguna FK borra en cascada. Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
+- Ninguna FK borra en cascada: todas son `RESTRICT`, salvo `materials.status_changed_by`, que es `SET NULL` (si se borrara el usuario, el material pierde solo el responsable del último cambio). Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
+- No hay tabla de horario ni de capacidad de la sala. El horario de atención (lunes a viernes de 8:00 a 17:00, sábados de 9:00 a 13:00) está en el dominio (`backend/src/requests/domain/appointment-date.ts`). La capacidad diaria configurable llega con HU-20.1.
 
 ## 3. Descripción de tablas
 
-Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negocio tienen además `created_at` y `updated_at` (`timestamptz DEFAULT now()`), que no se listan.
+Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las fechas con hora son `timestamptz` y `created_at` y `updated_at` tienen `DEFAULT now()`.
 
 ### users
+
+Creada en HU-01 (migración `20261104224647_create_users`).
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -360,14 +59,17 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | last_name | varchar(40) | | Primer apellido |
 | second_last_name | varchar(40) | NULL | Segundo apellido |
 | email | varchar(160) | UK | Correo de inicio de sesión |
-| password_hash | varchar(255) | | Hash argon2 |
+| password_hash | varchar(255) | | Hash argon2, nunca la contraseña |
 | role | varchar(10) | CHECK | `ADMIN`, `PERSONAL`, `PUBLICO` |
-| active | boolean | DEFAULT true | `false` = cuenta desactivada o eliminada |
+| active | boolean | DEFAULT true | `false` = cuenta desactivada |
 | privacy_policy_accepted_at | timestamptz | NULL, CHECK con la versión | Fecha en que la persona aceptó el aviso; se llena en los registros públicos |
-| privacy_policy_version | varchar(10) | NULL, CHECK con la fecha | Versión del aviso aceptado (Ley 1581) |
+| privacy_policy_version | varchar(10) | NULL, CHECK con la fecha | Versión del aviso aceptado. Las dos columnas van juntas: ambas con valor o ambas `NULL` |
 | last_login_at | timestamptz | NULL | |
+| created_at, updated_at | timestamptz | | |
 
 ### refresh_tokens
+
+Creada en HU-03 (migración `20261108000152_create_refresh_tokens`).
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -376,15 +78,18 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | token_hash | varchar(255) | UK | Hash SHA-256 del refresh token, nunca el token en claro |
 | expires_at | timestamptz | | Las filas vencidas se borran cada día (HU-3.1) |
 | revoked_at | timestamptz | NULL | `NULL` = vigente |
+| created_at | timestamptz | | |
 
 ### requesters
+
+Creada en HU-09 (migración `20261109000000_create_requests`).
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
 | user_id | uuid | FK → users, UK, NULL | Cuenta, si tiene |
-| document_type | varchar(5) | CHECK, UK con document_number | `CC`, `CE`, `TI`, `PAS`, `NIT` |
-| document_number | varchar(20) | UK con document_type, IDX | Sin puntos ni espacios |
+| document_type | varchar(5) | NULL, CHECK, UK con document_number | `CC`, `CE`, `TI`, `PAS`, `NIT` |
+| document_number | varchar(20) | NULL, UK con document_type, IDX | Sin puntos ni espacios |
 | first_name | varchar(40) | IDX trigram | Primer nombre |
 | middle_name | varchar(40) | NULL, IDX trigram | Segundo nombre |
 | last_name | varchar(40) | IDX trigram | Primer apellido |
@@ -397,10 +102,11 @@ Todas las columnas son `NOT NULL` salvo las marcadas `NULL`. Las tablas de negoc
 | consented_at | timestamptz | | |
 | privacy_policy_version | varchar(10) | | Versión del aviso aceptado |
 | anonymized_at | timestamptz | NULL | Fecha en que se anonimizó (§6) |
+| created_at, updated_at | timestamptz | | |
 
 ### materials
 
-Campos según HU-06, HU-07 y HU-20.
+Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó las tres columnas `status_change*`.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -408,95 +114,101 @@ Campos según HU-06, HU-07 y HU-20.
 | catalog_code | varchar(40) | UK | Código de catalogación único |
 | title | varchar(255) | IDX trigram | |
 | material_type | varchar(20) | CHECK, IDX | `DOCUMENTO`, `PERIODICO`, `PROTOCOLO_NOTARIAL`, `OTRO` |
-| author | varchar(150) | NULL, IDX trigram | Opcional |
+| author | varchar(150) | NULL, IDX trigram | |
 | collection | varchar(120) | IDX trigram | Colección o tema |
 | publication_date | date | NULL | Solo periódicos |
 | publisher | varchar(150) | NULL | Empresa editora; solo periódicos |
 | depot, shelf, box | varchar(40) | | Ubicación física. Nunca se muestra al rol `PUBLICO` |
 | status | varchar(20) | CHECK | `DISPONIBLE`, `EN_USO`, `EN_RESTAURACION`, `NO_CONSULTABLE` |
-| status_changed_at | timestamptz | NULL | Fecha del último cambio de estado (HU-08). Vacío si nunca se cambió |
-| status_changed_by | uuid | FK → users, NULL | Responsable del último cambio de estado (HU-08) |
-| status_change_reason | varchar(500) | NULL | Motivo opcional del último cambio de estado (HU-08) |
+| status_changed_at | timestamptz | NULL | Fecha del último cambio de estado. `NULL` si nunca se cambió |
+| status_changed_by | uuid | FK → users, NULL | Responsable del último cambio de estado |
+| status_change_reason | varchar(500) | NULL | Motivo opcional del último cambio de estado |
 | created_at, updated_at | timestamptz | | |
 
 ### requests
 
+Creada en HU-09 (migración `20261109000000_create_requests`).
+
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| tracking_code | varchar(16) | UK | `SOL-AAAA-NNNNN` |
+| tracking_code | varchar(16) | UK | Radicado `SOL-AAAA-NNNNN` |
 | requester_id | uuid | FK → requesters, IDX | |
 | created_by_id | uuid | FK → users, IDX | Quién la registró |
 | assignee_id | uuid | FK → users, NULL, IDX | Funcionario asignado |
 | request_type | varchar(25) | CHECK | `CONSULTA_SALA`, `BUSQUEDA_INFORMACION`, `REPRODUCCION` |
 | origin_channel | varchar(10) | CHECK | `WEB`, `PRESENCIAL`, `CORREO` |
 | delivery_mode | varchar(10) | CHECK | `PRESENCIAL`, `DIGITAL` |
-| purpose | varchar(15) | CHECK | Investigación, académico, trámite, genealogía… |
+| purpose | varchar(15) | CHECK | `INVESTIGACION`, `ACADEMICO`, `TRAMITE`, `GENEALOGIA`, `OTRO` |
 | reason | text | NULL | |
 | requirement_description | text | | Lo que busca, en palabras del solicitante |
 | desired_date | date | | |
 | committed_date | date | NULL, IDX con status | La fija el personal |
-| priority | varchar(5) | CHECK, DEFAULT 'MEDIA' | `BAJA`, `MEDIA`, `ALTA` |
-| status | varchar(12) | CHECK, IDX con committed_date | `RECIBIDA` … `RECHAZADA` (ver §1.3) |
-| rejection_reason | varchar(500) | NULL, CHECK | Motivo del rechazo, en texto libre; lo ve el solicitante en «Mis solicitudes». Obligatorio y no vacío solo si `status = 'RECHAZADA'` (HU-16, migración `20261112000000_widen_rejection_reason`) |
+| priority | varchar(5) | CHECK, DEFAULT `MEDIA` | `BAJA`, `MEDIA`, `ALTA` |
+| status | varchar(12) | CHECK, DEFAULT `RECIBIDA`, IDX con committed_date | `RECIBIDA` … `RECHAZADA` (figura 2 de `docs/modelo-dominio.md`) |
+| rejection_reason | varchar(500) | NULL, CHECK | Motivo del rechazo que lee el solicitante. Obligatorio y no vacío solo si `status = 'RECHAZADA'` (HU-16) |
 | notes | text | NULL | Notas internas |
 | registered_at | timestamptz | IDX | Fecha de radicación |
 | attended_at, closed_at | timestamptz | NULL | |
-| version | int | DEFAULT 1 | Bloqueo optimista |
+| version | integer | DEFAULT 1 | Bloqueo optimista |
+| updated_at | timestamptz | | |
 
 ### request_items
+
+Creada en HU-09 (migración `20261109000000_create_requests`).
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| request_id | uuid | FK → requests, UK con material_id | |
+| request_id | uuid | FK → requests, UK con material_id | Un material no se repite en la misma solicitud |
 | material_id | uuid | FK → materials, IDX | Base del reporte de material más solicitado |
-| item_status | varchar(15) | CHECK | `PENDIENTE`, `LOCALIZADO`, `NO_LOCALIZADO`, `NO_APTO` |
-| access_type | varchar(10) | CHECK | `FISICO`, `DIGITAL` (solo `FISICO` se reserva) |
+| item_status | varchar(15) | CHECK, DEFAULT `PENDIENTE` | `PENDIENTE`, `LOCALIZADO`, `NO_LOCALIZADO`, `NO_APTO` |
+| access_type | varchar(10) | CHECK, DEFAULT `FISICO` | `FISICO`, `DIGITAL` |
 | note | text | NULL | |
 
 ### status_history
 
-Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila por cada cambio de estado; el personal la genera desde la acción «Cambiar estado» del detalle de la solicitud.
+Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila por cada cambio de estado.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| id | bigint | PK (identity) | |
+| id | bigint | PK (autoincremental) | |
 | request_id | uuid | FK → requests, IDX con changed_at | |
-| previous_status | varchar(12) | NULL, CHECK | `NULL` en la creación. Distinto de `new_status` (CHECK) |
+| previous_status | varchar(12) | NULL, CHECK | `NULL` en la fila de creación. Distinto de `new_status` (CHECK) |
 | new_status | varchar(12) | CHECK | |
 | user_id | uuid | FK → users, IDX | Quién hizo el cambio |
-| comment | text | NULL | Obligatorio al rechazar |
+| comment | text | NULL | Obligatorio al rechazar: es el motivo |
 | visible_to_requester | boolean | DEFAULT true | |
 | changed_at | timestamptz | DEFAULT now() | |
 
 ### appointments
 
-Creada en HU-18 (migración `20261112100000_create_appointments`). La cita es **por día, sin hora**: el solicitante puede consultar el material durante todo el horario de atención de ese día (lunes a viernes 8:00–17:00, sábados 9:00–13:00). El personal la crea desde la acción «Agendar cita» del detalle de una solicitud `DISPONIBLE` con entrega presencial, y la solicitud pasa a `AGENDADA` en la misma transacción.
+Creada en HU-18 (migración `20261112100000_create_appointments`). La cita es por día, sin hora.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| request_id | uuid | FK → requests, IDX | Solo una cita `PROGRAMADA` a la vez: agendar exige que la solicitud esté en `DISPONIBLE` (bloqueo optimista) |
+| request_id | uuid | FK → requests, IDX | |
 | requester_id | uuid | FK → requesters, IDX | Solicitante de la cita |
 | scheduled_by_id | uuid | FK → users, IDX | Quién la agendó |
-| appointment_date | date | IDX, CHECK no domingo | Vista de calendario |
-| status | varchar(12) | CHECK, DEFAULT `PROGRAMADA` | `PROGRAMADA`, `CUMPLIDA`, `CANCELADA`, `NO_ASISTIO`. Al registrar «asistió» pasa a `CUMPLIDA` y «no asistió», a `NO_ASISTIO` |
+| appointment_date | date | IDX, CHECK no domingo | |
+| status | varchar(12) | CHECK, DEFAULT `PROGRAMADA` | `PROGRAMADA`, `CUMPLIDA`, `CANCELADA`, `NO_ASISTIO` |
 | notes | text | NULL | |
+| created_at, updated_at | timestamptz | | |
 
 ### appointment_materials
 
-Creada en HU-18. Todos los materiales de la solicitud, copiados al agendar la cita. La migración `20261114100000_material_day_booking` (HU-20) agregó `booked_date` y el índice único que impide las dobles reservas por día.
+Creada en HU-18. La migración `20261114100000_material_day_booking` (HU-20) agregó `booked_date` y el índice único que impide las dobles reservas.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | appointment_id | uuid | PK con material_id, FK → appointments | |
-| material_id | uuid | FK → materials, IDX | El material reservado |
-| booked_date | date | NULL, UK con material_id | El día reservado, mientras la cita está `PROGRAMADA`. Al cumplirse, registrar inasistencia o cancelarse pasa a `NULL` y libera el día: un `NULL` nunca choca en el índice único. **Impide las dobles reservas** (HU-20) |
+| material_id | uuid | PK con appointment_id, FK → materials, IDX | El material reservado |
+| booked_date | date | NULL, UK con material_id | El día reservado, mientras la cita está `PROGRAMADA`. Al cumplirse, registrar la inasistencia o cancelarse pasa a `NULL` y libera el día: un `NULL` nunca choca en el índice único |
 
 ### notifications
 
-Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla de salida de D-10. Cada cambio de estado inserta aquí el correo al solicitante en la misma transacción, y un proceso programado lo envía cada 10 segundos. Si el envío falla, el cambio de estado se conserva y el correo se reintenta. Solo tiene `created_at`.
+Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla de salida de los correos (D-10): cada cambio de estado inserta aquí el correo en la misma transacción, y un proceso programado lo envía cada 10 segundos.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -504,90 +216,107 @@ Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla 
 | request_id | uuid | FK → requests, IDX | |
 | status_history_id | bigint | FK → status_history, UK, NULL | Cambio que la disparó |
 | recipient_email | varchar(160) | CHECK no vacío | Correo del solicitante en el momento del cambio |
-| template | varchar(25) | CHECK | `CAMBIO_ESTADO` (HU-24 agrega una plantilla por estado) |
+| template | varchar(25) | CHECK | `CAMBIO_ESTADO` |
 | subject | varchar(200) | | Asunto, con el radicado y el nuevo estado |
-| body | text | | Texto plano: nuevo estado, material y, si aplica, fecha de la cita o motivo del rechazo |
+| body | text | | Texto plano |
 | html_body | text | NULL | El mismo contenido en HTML |
-| delivery_status | varchar(10) | CHECK, IDX con scheduled_at | `PENDIENTE`, `ENVIADA`, `FALLIDA` |
+| delivery_status | varchar(10) | CHECK, DEFAULT `PENDIENTE`, IDX con scheduled_at | `PENDIENTE`, `ENVIADA`, `FALLIDA` |
 | attempts | smallint | DEFAULT 0, CHECK ≥ 0 | Intentos de envío. Al quinto fallo pasa a `FALLIDA` |
 | last_error | text | NULL | Último error del servidor de correo, sin direcciones de correo |
-| scheduled_at | timestamptz | | Cuándo se puede enviar o reintentar: 1, 5, 15 y 60 minutos después de cada fallo |
-| sent_at | timestamptz | NULL, CHECK | Solo, y siempre, si `delivery_status = 'ENVIADA'` |
-
-### service_hours
-
-| Columna | Tipo | Restricciones | Descripción |
-|---|---|---|---|
-| weekday | smallint | PK, CHECK 1–7 | 1 = lunes |
-| opens_at, closes_at | time | CHECK closes_at > opens_at | |
-| concurrent_slots | smallint | CHECK > 0 | Citas a la misma hora |
-| appointment_duration_min | smallint | DEFAULT 60 | |
-| active | boolean | DEFAULT true | |
+| scheduled_at | timestamptz | | Cuándo se puede enviar o reintentar |
+| sent_at | timestamptz | NULL, CHECK | Tiene valor si, y solo si, `delivery_status = 'ENVIADA'` |
+| created_at | timestamptz | | |
 
 ## 4. Índices
 
-Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano.
+Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, porque PostgreSQL no lo hace. Los índices GIN trigram usan la extensión `pg_trgm` y permiten buscar con `ILIKE '%texto%'` sin recorrer toda la tabla (D-16).
 
-| Tabla | Columna(s) | Motivo (búsqueda, filtro, etc.) |
+| Tabla | Columna(s) | Justificación |
 |---|---|---|
-| users | email (UK) | Inicio de sesión |
-| refresh_tokens | user_id | Revocar las sesiones de un usuario |
-| requesters | (document_type, document_number) (UK), document_number, email | Buscar a la persona en el registro asistido sin duplicarla |
-| requesters | GIN trigram (first_name, middle_name, last_name, second_last_name) | Búsqueda por nombre con errores de escritura |
-| materials | catalog_code (UK), GIN trigram (title, author, collection), material_type | Listar y buscar material (HU-07) y agregarlo a una solicitud |
+| users | email (UK) | Inicio de sesión por correo y que no haya dos cuentas con el mismo correo |
+| refresh_tokens | token_hash (UK) | Encontrar la sesión al renovar el token |
+| refresh_tokens | user_id | Revocar todas las sesiones de un usuario |
+| requesters | user_id (UK) | Encontrar el solicitante de la cuenta que inició sesión; una cuenta tiene a lo sumo un solicitante |
+| requesters | (document_type, document_number) (UK), document_number | No duplicar a la persona y buscarla por su documento |
+| requesters | email | Buscar al solicitante por correo antes de registrar a su nombre (HU-10) |
+| requesters | GIN trigram (first_name, middle_name, last_name, second_last_name) | Búsqueda por nombre que tolera errores de escritura |
+| materials | catalog_code (UK) | Código de catalogación único |
+| materials | GIN trigram (title), (author), (collection) | Búsqueda de material por texto (HU-07) |
+| materials | material_type | Filtro por tipo en la búsqueda |
 | requests | tracking_code (UK) | Consulta por radicado |
-| requests | (status, committed_date) | Bandeja de trabajo y solicitudes vencidas |
-| requests | requester_id, assignee_id, created_by_id | «Mis solicitudes», «asignadas a mí» |
+| requests | (status, committed_date) | Bandeja del personal filtrada por estado y solicitudes vencidas |
+| requests | requester_id | «Mis solicitudes» (HU-11) |
+| requests | assignee_id, created_by_id | Solicitudes asignadas a un funcionario o registradas por él |
 | requests | registered_at | Listados y reportes por periodo |
-| request_items | material_id | Reporte de material más solicitado |
-| status_history | (request_id, changed_at), user_id | Línea de tiempo y tiempos de atención |
-| appointments | appointment_date | Calendario por rango de fechas |
+| request_items | (request_id, material_id) (UK) | Un material no se repite en una solicitud |
+| request_items | material_id | Reporte de material más solicitado y filtro de la bandeja por material |
+| status_history | (request_id, changed_at) | Línea de tiempo de una solicitud y tiempos de atención |
+| status_history | user_id | Cambios hechos por un funcionario |
+| appointments | appointment_date | Calendario por rango de fechas (HU-19) |
 | appointments | request_id, requester_id, scheduled_by_id | Citas de una solicitud, de un solicitante o de quien agendó |
-| appointment_materials | material_id | Citas de un material (dobles reservas, HU-20) |
-| appointment_materials | Único (material_id, booked_date) | Un material no se reserva dos veces el mismo día (HU-20) |
-| notifications | (delivery_status, scheduled_at), request_id | Proceso de envío de correos |
+| appointment_materials | material_id | Citas de un material y filtro del calendario por material |
+| appointment_materials | Único (material_id, booked_date) | Un material no se reserva dos veces el mismo día, incluso si dos funcionarios agendan a la vez (HU-20) |
+| notifications | (delivery_status, scheduled_at) | El proceso de envío busca los correos pendientes cuya hora llegó |
+| notifications | request_id | Correos de una solicitud |
+| notifications | status_history_id (UK) | Un cambio de estado dispara a lo sumo un correo |
 
 ## 5. Migraciones y datos semilla
 
-- **Migraciones:**
-  - Van en `backend/prisma/migrations/` (Prisma Migrate). En desarrollo se crean con `pnpm db:migrate:dev` y fuera de local se aplican con `pnpm db:migrate`.
-  - `prisma db push` no se usa fuera del entorno local. Una migración que ya está en `main` no se edita: se crea otra.
-  - Lo que el esquema de Prisma no expresa (`CHECK`, índices trigram) se agrega a mano en el SQL, creando la migración con `--create-only`.
-  - El contenedor del backend corre `pnpm db:migrate` al arrancar.
-  - Orden: extensiones → users y refresh_tokens → requesters → materials → requests y request_items → status_history → appointments y appointment_materials → notifications → service_hours → vistas de reportes.
-- **Semillas:**
-  - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
-  - Contenido actual: 1 admin, 2 funcionarios y 4 usuarios públicos.
-  - Contenido previsto, a medida que cada HU agregue sus tablas: 10 solicitantes, 30 materiales, 20 solicitudes repartidas en todos los estados y 8 citas.
-  - Las contraseñas salen de variables de entorno (`SEED_ADMIN_PASSWORD`, `SEED_DEMO_PASSWORD`).
-  - Datos **ficticios**, con correos `@example.com`. No usar datos reales del CLENA sin autorización escrita.
+**Migraciones:**
+
+- Van en `backend/prisma/migrations/` (Prisma Migrate). En desarrollo se crean con `pnpm db:migrate:dev` y fuera de local se aplican con `pnpm db:migrate`. El contenedor del backend las aplica al arrancar.
+- `prisma db push` no se usa fuera del entorno local. Una migración que ya está en `main` no se edita: se crea otra.
+- Lo que el esquema de Prisma no expresa (`CHECK`, trigger, índices trigram) se agrega a mano en el SQL, creando la migración con `--create-only`.
+
+| Migración | HU | Qué hace |
+|---|---|---|
+| `20261104224647_create_users` | HU-01 | Tabla `users` |
+| `20261108000152_create_refresh_tokens` | HU-03 | Tabla `refresh_tokens` |
+| `20261108035559_create_materials` | HU-07 | Extensión `pg_trgm` y tabla `materials` |
+| `20261109000000_create_requests` | HU-09 | Tablas `requesters`, `requests` y `request_items`, y la secuencia `request_tracking_seq` que numera los radicados |
+| `20261109200235_split_person_names` | #96 | Separa nombres y apellidos en cuatro columnas en `users` y `requesters` |
+| `20261110000000_add_material_status_change` | HU-08 | Columnas del último cambio de estado del material |
+| `20261110120000_add_user_privacy_consent` | HU-31 | Consentimiento en `users` |
+| `20261111000000_create_status_history` | HU-15 | Tabla `status_history` y su trigger de solo inserción |
+| `20261112000000_widen_rejection_reason` | HU-16 | Motivo de rechazo de hasta 500 caracteres y su `CHECK` |
+| `20261112100000_create_appointments` | HU-18 | Tablas `appointments` y `appointment_materials` |
+| `20261113000000_create_notifications` | HU-23 | Tabla `notifications` |
+| `20261114100000_material_day_booking` | HU-20 | `booked_date` y el índice único contra dobles reservas |
+
+**Semillas:**
+
+- Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
+- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos), 30 materiales, 12 solicitudes repartidas en los 7 estados y 4 citas.
+- Las contraseñas salen de variables de entorno (`SEED_ADMIN_PASSWORD`, `SEED_DEMO_PASSWORD`).
+- Datos **ficticios**, con correos `@example.com`. No se usan datos reales del CLENA sin autorización escrita.
 
 ## 6. Datos personales (Ley 1581 de 2012)
 
-| Dato | Por qué se guarda |
-|---|---|
-| Documento (tipo y número) | Identificar a la persona en la atención presencial y evitar duplicados |
-| Nombres y apellidos | Atender al solicitante |
-| Correo **o** teléfono (al menos uno) | Avisar los cambios de estado y contactar a la persona |
-| Tipo de solicitante e institución | Estadísticas del servicio (la institución es opcional) |
-| Contraseña (solo el hash) | Acceso al sistema |
-| Consentimiento (fecha y versión) | Prueba de la autorización del titular |
+| Dato | Dónde | Por qué se guarda |
+|---|---|---|
+| Documento (tipo y número) | `requesters` | Identificar a la persona en la atención presencial y evitar duplicados. Es opcional |
+| Nombres y apellidos | `users`, `requesters` | Atender al solicitante y saber qué funcionario hizo cada acción |
+| Correo | `users`, `requesters`, `notifications` | Iniciar sesión y avisar cada cambio de estado |
+| Teléfono | `requesters` | Contactar a quien no tiene correo (se exige correo o teléfono) |
+| Tipo de solicitante e institución | `requesters` | Estadísticas del servicio. La institución es opcional |
+| Contraseña (solo el hash) | `users` | Acceso al sistema |
+| Consentimiento (fecha y versión del aviso) | `users`, `requesters` | Prueba de la autorización del titular |
 
 No se piden datos sensibles.
 
 **Protección:**
 
-- Aviso de privacidad y casilla de aceptación sin marcar.
-- Acceso según el rol.
-- Contraseñas y tokens guardados como hash.
-- Logs sin datos personales.
-- HTTPS.
+- Aviso de privacidad y casilla de aceptación sin marcar al crear la cuenta (HU-31). Cuando el personal registra a un solicitante sin cuenta, hoy el sistema llena `accepts_data_processing`, `consented_at` y `privacy_policy_version` sin preguntarle; recoger esa aceptación sigue pendiente.
+- Acceso según el rol: el usuario público solo ve sus solicitudes.
+- Contraseñas y refresh tokens guardados como hash.
+- `last_error` de `notifications` y los logs no guardan direcciones de correo.
+- HTTPS al desplegar (D-24); hoy el entorno local usa HTTP.
 
-**Eliminar la cuenta:** `DELETE /api/v1/me` anonimiza en una sola transacción:
+**Eliminar la cuenta (prevista, HU-33):** anonimizará en una sola transacción:
 
-1. Cierra las solicitudes en curso y libera sus reservas.
-2. Reemplaza nombre, documento, correo y teléfono por valores neutros y marca `anonymized_at`.
-3. Desactiva el usuario y revoca sus tokens.
-4. Borra el correo y el cuerpo de sus notificaciones.
+1. Cerrar las solicitudes en curso y liberar sus reservas.
+2. Reemplazar nombre, documento, correo y teléfono por valores neutros y marcar `anonymized_at`.
+3. Desactivar el usuario y revocar sus tokens.
+4. Borrar el correo y el cuerpo de sus notificaciones.
 
 Las solicitudes se conservan sin datos que identifiquen a la persona, para no perder las estadísticas.
