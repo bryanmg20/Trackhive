@@ -64,8 +64,8 @@ Criterio de asignación: un issue o PR se asocia a la reunión cuya ventana (esa
 **Planning Meeting (2026-11-01, Sprint 1)**
 
 - La reunión definió el alcance del Sprint 1 y el reparto de historias; la ejecución arranca ese mismo día.
-- #34 estructura base con Clean Architecture (PR #56, merge el 1 de noviembre a las 21:20), junto con el scaffold de NestJS, Prisma y Vite.
-- #39 integración continua (PR #57, merge el 3 de noviembre).
+- Issue #34: estructura base con Clean Architecture (PR #56, merge el 1 de noviembre a las 21:20), junto con el scaffold de NestJS, Prisma y Vite.
+- Issue #39: integración continua (PR #57, merge el 3 de noviembre).
 
 **Review Sprint (2026-11-10, Sprint 1)**
 
