@@ -54,6 +54,8 @@ export function PrivacyConsent({ registration, error }: PrivacyConsentProps) {
             className={styles.fullTextBody}
             role="region"
             aria-label="Aviso de privacidad completo"
+            // Región con scroll: debe recibir foco para desplazarla con teclado.
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
             tabIndex={0}
           >
             <div className={styles.purposes}>
