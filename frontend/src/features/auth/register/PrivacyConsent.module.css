@@ -155,10 +155,58 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  padding-top: 0.7rem;
+  margin-top: 0.7rem;
+  padding-right: 0.5rem;
+  max-height: min(55vh, 24rem);
+  overflow-y: auto;
   font-size: 0.78rem;
   line-height: 1.55;
   color: var(--muted);
+}
+
+.fullTextBody:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--gold-text);
+}
+
+.closeButton::before {
+  content: '−';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.closeButton:hover {
+  color: var(--gold-deep);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .fullTextBody h3 {
