@@ -62,10 +62,7 @@ async function fillForm(
       values.secondLastName,
     );
   }
-  await user.type(
-    screen.getByLabelText('Correo electrónico'),
-    values.email,
-  );
+  await user.type(screen.getByLabelText('Correo electrónico'), values.email);
   await user.type(screen.getByLabelText('Contraseña'), values.password);
   await user.type(
     screen.getByLabelText('Confirmar contraseña'),
@@ -108,16 +105,45 @@ describe('RegisterPage', () => {
         name: /acepto el aviso de privacidad/i,
       }),
     ).not.toBeChecked();
-    expect(screen.getByText('Leer aviso completo')).toBeVisible();
-    expect(screen.getByRole('link', { name: /ya tengo cuenta/i })).toHaveAttribute(
-      'href',
-      '/login',
-    );
+    expect(
+      screen.getByText('Ver finalidad de cada dato y aviso completo'),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: /ya tengo cuenta/i }),
+    ).toHaveAttribute('href', '/login');
   });
 
-  it('explains the purpose of every data field in the privacy notice', () => {
+  it('keeps the privacy notice collapsed and lets the user close it', async () => {
+    const user = userEvent.setup();
     renderRegisterPage();
 
+    const summary = screen.getByText(
+      'Ver finalidad de cada dato y aviso completo',
+    );
+    const details = summary.closest('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(
+      screen.queryByRole('table', { name: 'Finalidad de cada dato' }),
+    ).not.toBeVisible();
+
+    await user.click(summary);
+    expect(details.open).toBe(true);
+    expect(
+      screen.getByRole('heading', { name: '6. Transferencias y cambios' }),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+    expect(details.open).toBe(false);
+    expect(summary.closest('summary')).toHaveFocus();
+  });
+
+  it('explains the purpose of every data field in the privacy notice', async () => {
+    const user = userEvent.setup();
+    renderRegisterPage();
+
+    await user.click(
+      screen.getByText('Ver finalidad de cada dato y aviso completo'),
+    );
     const table = screen.getByRole('table', {
       name: 'Finalidad de cada dato',
     });
@@ -137,9 +163,7 @@ describe('RegisterPage', () => {
       ).toBeVisible();
     }
 
-    expect(
-      within(table).getByText(/permitirle iniciar sesión/i),
-    ).toBeVisible();
+    expect(within(table).getByText(/permitirle iniciar sesión/i)).toBeVisible();
   });
 
   it('shows per-field errors and keeps the typed values after an invalid submit', async () => {
@@ -150,10 +174,7 @@ describe('RegisterPage', () => {
     await user.type(screen.getByLabelText('Primer apellido'), 'P');
     await user.type(screen.getByLabelText('Correo electrónico'), 'ana@mail');
     await user.type(screen.getByLabelText('Contraseña'), 'secret123');
-    await user.type(
-      screen.getByLabelText('Confirmar contraseña'),
-      'secret123',
-    );
+    await user.type(screen.getByLabelText('Confirmar contraseña'), 'secret123');
     await user.click(
       screen.getByRole('checkbox', { name: /acepto el aviso de privacidad/i }),
     );
@@ -284,7 +305,10 @@ describe('RegisterPage', () => {
         code: 'VALIDATION_ERROR',
         message: 'La petición contiene datos inválidos',
         details: [
-          { field: 'lastName', messages: ['El primer apellido es obligatorio'] },
+          {
+            field: 'lastName',
+            messages: ['El primer apellido es obligatorio'],
+          },
         ],
       }),
     );
@@ -338,7 +362,9 @@ describe('RegisterPage', () => {
     await fillForm(user);
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
-    expect(await screen.findByText('El correo ya está registrado.')).toBeVisible();
+    expect(
+      await screen.findByText('El correo ya está registrado.'),
+    ).toBeVisible();
     expect(screen.getByLabelText('Primer nombre')).toHaveValue('Ana');
     expect(screen.getByLabelText('Primer apellido')).toHaveValue('Pérez');
     expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
@@ -361,7 +387,9 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(
-      await screen.findByText('Ya existe una cuenta con este correo. Inicie sesión.'),
+      await screen.findByText(
+        'Ya existe una cuenta con este correo. Inicie sesión.',
+      ),
     ).toBeVisible();
     expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
       'ana@mail.com',

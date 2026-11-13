@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import {
   PRIVACY_CONTACT_EMAIL,
@@ -11,11 +12,17 @@ interface PrivacyConsentProps {
   error?: string;
 }
 
-export function PrivacyConsent({
-  registration,
-  error,
-}: PrivacyConsentProps) {
+export function PrivacyConsent({ registration, error }: PrivacyConsentProps) {
   const errorId = error ? 'acceptedPrivacy-error' : undefined;
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const summaryRef = useRef<HTMLElement>(null);
+
+  function closeNotice() {
+    if (detailsRef.current) {
+      detailsRef.current.open = false;
+    }
+    summaryRef.current?.focus();
+  }
 
   return (
     <section className={styles.consent} aria-labelledby="privacy-title">
@@ -38,79 +45,91 @@ export function PrivacyConsent({
           vendemos su información.
         </p>
 
-        <div className={styles.purposes}>
-          <h3 className={styles.purposesTitle} id="privacy-purposes-title">
-            Finalidad de cada dato
-          </h3>
-          <div className={styles.purposesScroll}>
-            <table
-              className={styles.purposesTable}
-              aria-labelledby="privacy-purposes-title"
-            >
-              <thead>
-                <tr>
-                  <th scope="col">Dato</th>
-                  <th scope="col">Para qué lo usamos</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">Primer nombre</th>
-                  <td>Identificarle y dirigirnos a usted en la atención.</td>
-                </tr>
-                <tr>
-                  <th scope="row">Segundo nombre (opcional)</th>
-                  <td>
-                    Diferenciarle de otras personas con nombres similares.
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row">Primer apellido</th>
-                  <td>Identificarle y dirigirnos a usted en la atención.</td>
-                </tr>
-                <tr>
-                  <th scope="row">Segundo apellido (opcional)</th>
-                  <td>
-                    Diferenciarle de otras personas con apellidos similares.
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row">Correo electrónico</th>
-                  <td>
-                    Crear y administrar su cuenta, permitirle iniciar sesión y
-                    enviarle avisos sobre sus solicitudes.
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row">Contraseña</th>
-                  <td>
-                    Proteger el acceso a su cuenta; se almacena únicamente como
-                    hash.
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row">Fecha y versión del aviso aceptado</th>
-                  <td>
-                    Dejar constancia de que usted autorizó el tratamiento de sus
-                    datos.
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row">Datos de sus solicitudes</th>
-                  <td>
-                    Tramitar, responder y hacer seguimiento a sus solicitudes, y
-                    generar reportes con información agregada.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <details className={styles.fullText} ref={detailsRef}>
+          <summary className={styles.summary} ref={summaryRef}>
+            Ver finalidad de cada dato y aviso completo
+          </summary>
 
-        <details className={styles.fullText}>
-          <summary className={styles.summary}>Leer aviso completo</summary>
+          <div
+            className={styles.fullTextBody}
+            role="region"
+            aria-label="Aviso de privacidad completo"
+            tabIndex={0}
+          >
+            <div className={styles.purposes}>
+              <h3 className={styles.purposesTitle} id="privacy-purposes-title">
+                Finalidad de cada dato
+              </h3>
+              <div className={styles.purposesScroll}>
+                <table
+                  className={styles.purposesTable}
+                  aria-labelledby="privacy-purposes-title"
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col">Dato</th>
+                      <th scope="col">Para qué lo usamos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">Primer nombre</th>
+                      <td>
+                        Identificarle y dirigirnos a usted en la atención.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Segundo nombre (opcional)</th>
+                      <td>
+                        Diferenciarle de otras personas con nombres similares.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Primer apellido</th>
+                      <td>
+                        Identificarle y dirigirnos a usted en la atención.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Segundo apellido (opcional)</th>
+                      <td>
+                        Diferenciarle de otras personas con apellidos similares.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Correo electrónico</th>
+                      <td>
+                        Crear y administrar su cuenta, permitirle iniciar sesión
+                        y enviarle avisos sobre sus solicitudes.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Contraseña</th>
+                      <td>
+                        Proteger el acceso a su cuenta; se almacena únicamente
+                        como hash.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Fecha y versión del aviso aceptado</th>
+                      <td>
+                        Dejar constancia de que usted autorizó el tratamiento de
+                        sus datos.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Datos de sus solicitudes</th>
+                      <td>
+                        Tramitar, responder y hacer seguimiento a sus
+                        solicitudes, y generar reportes con información
+                        agregada.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-          <div className={styles.fullTextBody}>
             <h3>1. Responsable del tratamiento</h3>
             <p>
               CLENA es el responsable del tratamiento de los datos personales
@@ -171,18 +190,27 @@ export function PrivacyConsent({
 
             <h3>6. Transferencias y cambios</h3>
             <p>
-              No vendemos ni cedemos sus datos a terceros para fines publicitarios.
-              Si este aviso cambia, publicaremos una nueva versión con su fecha
-              de vigencia y se la informaremos antes de aplicar el cambio.
+              No vendemos ni cedemos sus datos a terceros para fines
+              publicitarios. Si este aviso cambia, publicaremos una nueva
+              versión con su fecha de vigencia y se la informaremos antes de
+              aplicar el cambio.
             </p>
 
             <p className={styles.acceptance}>
               Al marcar la casilla usted declara haber leído este aviso y
               autoriza el tratamiento de sus datos personales para las
-              finalidades aquí descritas. Esta autorización es previa, expresa
-              e informada.
+              finalidades aquí descritas. Esta autorización es previa, expresa e
+              informada.
             </p>
           </div>
+
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={closeNotice}
+          >
+            Cerrar aviso
+          </button>
         </details>
       </div>
 
