@@ -47,10 +47,12 @@ Trackhive es el **Proyecto P4 — Curso Backend, Proyecto Final «Soluciones par
 
 | Integrante | Rol Scrum | GitHub |
 |---|---|---|
-| Bryan Montoya | **Product Owner** (también participa en el desarrollo) | [@bryanmg20](https://github.com/bryanmg20) |
-| Samuel Ricardo | **Scrum Master** (también participa en el desarrollo) | [@SRicardo05](https://github.com/SRicardo05) |
+| Bryan Montoya | **Development Team** | [@bryanmg20](https://github.com/bryanmg20) |
+| Samuel Ricardo | **Development Team** | [@SRicardo05](https://github.com/SRicardo05) |
 | Alan García | **Development Team** | [@AlanSan25](https://github.com/AlanSan25) |
 | Álvaro Jiménez | **Development Team** | [@doriada](https://github.com/doriada) |
+
+Todo el grupo conforma el **Development Team**. Los cuatro integrantes participan en el desarrollo y en las ceremonias; no hay roles separados de Product Owner ni de Scrum Master.
 
 El trabajo se organiza en sprints de dos semanas con el tablero [Trackhive - Tablero Scrum](https://github.com/users/bryanmg20/projects/2). Las ceremonias y sus evidencias se registran en [`docs/`](docs/).
 
