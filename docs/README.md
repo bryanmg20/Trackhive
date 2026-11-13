@@ -10,11 +10,14 @@ Documentos del proyecto en Markdown, con su versión exportada a PDF cuando apli
 | Sprint Planning | `sprint-planning.md` | `sprint-planning.pdf` |
 | Sprint Review | `sprint-review.md` | `sprint-review.pdf` |
 | Sprint Retrospective | `sprint-retrospective.md` | — |
-| Arquitectura | `arquitectura.md` | — |
-| Modelo de datos | `modelo-datos.md` | — |
+| Arquitectura | `arquitectura.md` | pendiente (E4) |
+| Modelo de datos | `modelo-datos.md` | pendiente (E4) |
+| Modelo de dominio | — | pendiente (E3) |
 | Manual de operación | `manual-operacion.md` | — |
 | Manual de usuario | `manual-usuario.md` | — |
 | Automatización del tablero | `automatizacion-tablero.md` | — |
+
+Los PDF de arquitectura, modelo de datos y modelo de dominio se agregan cuando entren las entregas E3 a E5; el script ya los exporta con el mismo comando.
 
 ## Exportar a PDF
 

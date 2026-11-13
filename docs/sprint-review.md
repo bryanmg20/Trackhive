@@ -44,7 +44,6 @@ Se demostró el primer MVP de la solución: autenticación con JWT y roles, mate
 | #22 Servicio de envío de correo | PR #88 | Mostrado |
 | #23 Notificar al solicitante en cada cambio de estado | PR #113 | Mostrado |
 | #28 Navegación y rutas protegidas por rol | PR #104 | Mostrado |
-| #29 Diseño responsive | PR #123 | Posterior a la review: se cerró el 12 de noviembre |
 | #30 Accesibilidad básica | PR #118 | Mostrado |
 | #31 Aviso de privacidad y consentimiento | PR #105 | Mostrado |
 | #34 Estructura base con Clean Architecture | PR #56 | Mostrado |
@@ -60,12 +59,12 @@ Se demostró el primer MVP de la solución: autenticación con JWT y roles, mate
 | #48 Pantalla de inicio de sesión | PR #92 | Mostrado |
 | #50 Pantalla de búsqueda de material | PR #94 | Mostrado |
 | #61 Unificar el .env en la raíz | PR #62 | Mostrado |
-| #68 Arquitectura con modelo C4 | PR #122 | Documentación entregada |
-| #70 README completo | PR #124 | Documentación entregada |
 | #76 Mover el issue a In Progress al crear su rama | PR #77 | Automatización mostrada |
 | #84 Limpiar refresh tokens vencidos | PR #87 | Mostrado |
 | #86 nginx no reenvía /api al backend | PR #90 | Mostrado |
 | #93 Pantalla para registrar solicitud como personal | PR #101 | Mostrado |
+
+> #29 diseño responsive, #68 arquitectura C4 y #70 README se cerraron el 2026-11-12 (PR #122, #123 y #124), después de esta reunión: se registran en la evidencia siguiente.
 
 ### Retroalimentación de G6
 

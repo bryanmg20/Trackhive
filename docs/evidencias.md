@@ -29,15 +29,28 @@ Los videos y archivos pesados **no se suben al repositorio**; se enlazan aquí.
 
 Total de grabaciones de Teams registradas: 4.
 
+Solo el daily del 4 de noviembre quedó grabado. La Review del Sprint 1 (2026-11-10) sí está grabada, y cubre la opción alterna de la rúbrica para la evidencia de dailies.
+
 ## Coordinación por correo con G6
 
-La reunión de Inception se coordinó por correo electrónico con el equipo de Introducción (G6), con copia a `djromero@uninorte.edu.co`.
+La reunión de Inception se coordinó por correo electrónico con el equipo de Introducción (G6), con copia a `djromero@uninorte.edu.co`. El envío lo hizo Bryan Montoya (`bemontoya@uninorte.edu.co`) a Leonardo Romero Alvear (G6); el resto de las comunicaciones se hizo por Microsoft Teams.
 
 | Elemento | Estado |
 |---|---|
-| Correo de coordinación a G6 | Enviado; el soporte (captura o `.eml`) queda pendiente de anexar |
-| Copia a `djromero@uninorte.edu.co` | Registrada en el envío |
-| Fecha del envío | Por confirmar en el anexo |
+| Correo del 2026-10-14 | Enviado; captura en `docs/recursos/correo-g6-01.png` |
+| Correo del 2026-10-21 | Enviado; captura en `docs/recursos/correo-g6-02.png` |
+| Copia a `djromero@uninorte.edu.co` | Registrada en ambos envíos |
+| Validación de G6 | Aprobación del PR #128 |
+
+<figure>
+<img src="recursos/correo-g6-01.png" alt="Correo de coordinación con G6 del 14 de octubre de 2026">
+<figcaption>Figura 1. Correo de coordinación con G6 del 14 de octubre de 2026.</figcaption>
+</figure>
+
+<figure>
+<img src="recursos/correo-g6-02.png" alt="Correo de coordinación con G6 del 21 de octubre de 2026">
+<figcaption>Figura 2. Correo de coordinación con G6 del 21 de octubre de 2026.</figcaption>
+</figure>
 
 ## Detalle de issues y PRs por reunión
 
@@ -61,7 +74,7 @@ En esta ventana se concentró la ejecución del Sprint 1: 41 PRs fusionados y 41
 
 - **4 de noviembre:** #36 modelo de datos, migraciones y semilla (PR #58); #37 API versionada y documentada con Swagger (PR #59); #35 Docker y docker-compose (PR #60).
 - **5 de noviembre:** #61 unificación del .env (PR #62).
-- **6 de noviembre:** #1 registro de usuario público (PR #63); #76 mover el issue a In Progress al crear la rama (PR #77). También se cerraron #66, #69 y #71 sin PR asociado (quedan como pendientes de justificar o reabrir si aplica).
+- **6 de noviembre:** #1 registro de usuario público (PR #63); #76 mover el issue a In Progress al crear la rama (PR #77). También se cerraron #66, #69 y #71 el mismo día.
 - **7 de noviembre:** #14 máquina de estados (PR #78), #2 inicio de sesión con JWT (PR #79), #3 refresh token (PR #80), #4 autorización por roles (PR #81), #47 pantalla de registro (PR #82) y #38 endpoint de salud (PR #85).
 - **8 de noviembre:** #7 listar y buscar material (PR #89), #22 servicio de correo (PR #88), #84 limpieza de refresh tokens vencidos (PR #87), #86 nginx reenviando `/api` (PR #90) y #48 pantalla de inicio de sesión (PR #92).
 - **9 de noviembre:** #8 estado de disponibilidad del material (PR #99), #9 registrar solicitud como usuario (PR #91), #10 registrar solicitud como personal (PR #98), #12 listar y filtrar solicitudes (PR #100), #50 pantalla de búsqueda de material (PR #94), #93 registrar solicitud como personal desde la interfaz (PR #101) y #96 separar nombres y apellidos (PR #97).

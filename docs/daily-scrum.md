@@ -11,7 +11,7 @@ members: "Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez"
 
 ## Sprint 1
 
-Dailies del 3, 4 y 7 de noviembre de 2026. Asistentes: Samuel Ricardo, Bryan Montoya, Alan Garcia y Alvaro Jimenez. Los issues y PRs citados existen en el repositorio con esa fecha.
+Dailies del 3, 4 y 7 de noviembre de 2026. Asistentes: Samuel Ricardo, Bryan Montoya, Alan Garcia y Alvaro Jimenez. Los issues y PRs citados existen en el repositorio con esa fecha. Solo el daily del 4 de noviembre quedó grabado; la Review del 10 de noviembre también tiene grabación.
 
 | Fecha | Asistentes | Qué se hizo (issues/PRs) | Qué sigue | Bloqueos | Grabación |
 |---|---|---|---|---|---|

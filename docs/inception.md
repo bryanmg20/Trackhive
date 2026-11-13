@@ -19,7 +19,7 @@ Reunión de arranque del proyecto **Trackhive**, sistema de gestión de solicitu
 | Modalidad | Microsoft Teams |
 | Objetivo | Conocer el proceso actual del CLENA y acordar el alcance del primer incremento |
 | Grabación | [Reunión inicial con G6](https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQAPT1bjPG6iS5qzZ-p361TjAdQxAtizY0W8F_lSoA6xnFk?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=GEebUB) |
-| Coordinación previa | Correo al equipo G6 con copia a `djromero@uninorte.edu.co` (pendiente de anexar el soporte) |
+| Coordinación previa | Correos del 14 y 21 de octubre de 2026 (ver figuras 1 y 2); el resto de la coordinación se hizo por Microsoft Teams |
 
 ### Asistentes
 
@@ -27,6 +27,21 @@ Reunión de arranque del proyecto **Trackhive**, sistema de gestión de solicitu
 |---|---|
 | Trackhive | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez |
 | G6 (Introducción) | Alejandro Suarez, Leonardo Romero, Angelo Foliaco, Santiago Hernandez |
+
+### Coordinación por correo
+
+La reunión se coordinó con el equipo G6 por correo electrónico, con copia a `djromero@uninorte.edu.co`. El envío lo hizo Bryan Montoya (`bemontoya@uninorte.edu.co`) a Leonardo Romero Alvear (G6); las comunicaciones siguientes se hicieron por Microsoft Teams.
+
+<figure>
+<img src="recursos/correo-g6-01.png" alt="Captura del correo de coordinación con G6">
+<figcaption>Figura 1. Correo de coordinación con G6 del 14 de octubre de 2026.</figcaption>
+</figure>
+
+<figure>
+<img src="recursos/correo-g6-02.png" alt="Captura del correo de coordinación con G6">
+<figcaption>Figura 2. Correo de coordinación con G6 del 21 de octubre de 2026.</figcaption>
+</figure>
+
 
 ## 2. Contexto recibido
 
@@ -38,9 +53,12 @@ El equipo G6 visitó el CLENA y entregó un informe con los procesos observados.
 | Fotos de la visita | 2026-10-30 | [Carpeta de fotos en SharePoint](https://uninorte-my.sharepoint.com/:f:/g/personal/sdricardo_uninorte_edu_co/IgBH9k1CmqF_TZ6L9f6QoNotAdy_DkdXA04Yq9Cg1ZMhwck?e=yjdJf5) |
 | Grabación de la reunión | 2026-10-28 | [Video de Teams](https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQAPT1bjPG6iS5qzZ-p361TjAdQxAtizY0W8F_lSoA6xnFk?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=GEebUB) |
 
-Figura 1. Visita del equipo G6 al CLENA.
+Figura 3. Sistema de radicación de correspondencia que usa el CLENA para recibir solicitudes.
 
-![Fotos de la visita del equipo G6 al CLENA](recursos/clena-visita-01.png)
+<figure>
+<img src="recursos/sistema-radicacion.png" alt="Sistema de radicación de correspondencia del CLENA">
+<figcaption>Figura 3. Sistema de radicación de correspondencia con el que el CLENA recibe las solicitudes; las fotos de la visita están en la carpeta de SharePoint.</figcaption>
+</figure>
 
 ## 3. Problemas confirmados
 
@@ -77,7 +95,7 @@ Figura 1. Visita del equipo G6 al CLENA.
 
 - G6 revisó el Product Backlog y los criterios de aceptación de cada historia.
 - El equipo G6 aprobó los avances y estuvo de acuerdo con los alcances planteados en la reunión y con la demostración del primer MVP de la solución (confirmado en la Review del 2026-11-10).
-- Queda registrada la validación del backlog por los cuatro integrantes de G6. Falta anexar la firma del acta o el comentario de validación en el issue #65.
+- Queda registrada la validación del backlog por los cuatro integrantes de G6. La aprobación del PR #128 por parte de G6 se toma como firma del acta y como validación del backlog (requisito E2).
 
 ## 6. Evidencia audiovisual
 
@@ -104,4 +122,4 @@ Los videos no se suben al repositorio. El detalle de todas las grabaciones está
 | Parte | Nombre | Estado |
 |---|---|---|
 | Trackhive | Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez | Documento elaborado |
-| G6 (Introducción) | Alejandro Suarez, Leonardo Romero, Angelo Foliaco, Santiago Hernandez | Backlog y alcance aprobados; firma pendiente |
+| G6 (Introducción) | Alejandro Suarez, Leonardo Romero, Angelo Foliaco, Santiago Hernandez | Backlog y alcance aprobados; aprobación registrada en el PR #128 |

@@ -65,6 +65,9 @@ th { background: #e8eef7; color: #0f2740; text-align: left; padding: 4pt 5pt; bo
 td { padding: 4pt 5pt; border: 0.5pt solid #d6dbe2; vertical-align: top; }
 td a { word-break: break-all; }
 img { max-width: 100%; height: auto; border: 0.5pt solid #d6dbe2; border-radius: 4pt; }
+figure { margin: 10pt 0 14pt; page-break-inside: avoid; break-inside: avoid; }
+figure img { display: block; margin: 0 auto; max-height: 110mm; width: auto; }
+figcaption { font-size: 8.8pt; color: #47505c; margin-top: 5pt; text-align: center; }
 blockquote { margin: 8pt 0; padding: 6pt 10pt; border-left: 3pt solid #1f6feb; background: #f5f8ff; }
 hr { border: none; border-top: 0.5pt solid #d6dbe2; margin: 14pt 0; }
 .cover { height: 245mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; }

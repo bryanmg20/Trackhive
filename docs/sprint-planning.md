@@ -14,7 +14,7 @@ Cada sprint dura 2 semanas. La sección se completa el día de la planeación.
 ## Sprint 1
 
 - **Fecha de planeación:** 2026-11-01
-- **Periodo del sprint:** 2026-11-01 a 2026-11-10
+- **Periodo del sprint:** 2026-11-01 a 2026-11-12
 - **Milestone en GitHub:** [Sprint 1](https://github.com/bryanmg20/Trackhive/milestone/1) (vence 2026-11-12)
 - **Asistentes:** Samuel Ricardo, Bryan Montoya, Alan Garcia, Alvaro Jimenez
 - **Grabación:** [Planning Meeting, Sprint 1](https://uninorte-my.sharepoint.com/:v:/g/personal/sdricardo_uninorte_edu_co/IQCLgimGSgZgQKnMHfuxC-5XAZvnr5xnOyg06BmRGS7fokw?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=uA4Ejf)
@@ -25,7 +25,9 @@ Dejar la base técnica del sistema (arquitectura, base de datos, CI y Docker) y 
 
 ### Issues comprometidos
 
-44 issues, 167 puntos. Responsable por usuario de GitHub.
+35 issues comprometidos en la planeación, 144 puntos. Responsable por usuario de GitHub.
+
+Los 9 issues restantes del milestone se crearon durante el sprint y se listan aparte.
 
 | Issue | Historia | Puntos | Responsable |
 |---|---|---|---|
@@ -64,15 +66,22 @@ Dejar la base técnica del sistema (arquitectura, base de datos, CI y Docker) y 
 | #47 | HU-1.1 Pantalla de registro | 2 | SRicardo05 |
 | #48 | HU-2.1 Pantalla de inicio de sesión | 3 | bryanmg20 |
 | #50 | HU-7.1 Pantalla de búsqueda de material | 3 | bryanmg20 |
-| #61 | HU-35.1 Unificar el .env en la raíz del proyecto | 2 | bryanmg20 |
-| #65 | HU-65 Acta de Inception, validación del backlog y evidencias Scrum | 3 | SRicardo05 |
-| #67 | HU-67 Informes del modelo de dominio y de datos | 3 | doriada |
-| #68 | HU-68 Arquitectura con modelo C4 | 5 | bryanmg20 |
-| #70 | HU-70 README completo | 2 | doriada |
-| #76 | HU-39.1 Mover el issue a In Progress al crear su rama | 2 | bryanmg20 |
-| #84 | HU-3.1 Limpiar refresh tokens vencidos | 2 | AlanSan25 |
-| #86 | nginx no reenvía /api al backend (405 en Docker) | 1 | SRicardo05 |
-| #93 | HU-10.1 Pantalla para registrar solicitud como personal | 3 | SRicardo05 |
+
+### Issues agregados durante el sprint
+
+Estos issues no existían el 2026-11-01: se crearon al detectar trabajo nuevo o un defecto durante la ejecución. Se suman al milestone Sprint 1 con su fecha real de creación (23 puntos adicionales).
+
+| Issue | Historia | Creado | Puntos | Responsable |
+|---|---|---|---|---|
+| #61 | HU-35.1 Unificar el .env en la raíz del proyecto | 2026-11-04 | 2 | bryanmg20 |
+| #65 | HU-65 Acta de Inception, validación del backlog y evidencias Scrum | 2026-11-06 | 3 | SRicardo05 |
+| #67 | HU-67 Informes del modelo de dominio y de datos | 2026-11-06 | 3 | doriada |
+| #68 | HU-68 Arquitectura con modelo C4 | 2026-11-06 | 5 | bryanmg20 |
+| #70 | HU-70 README completo | 2026-11-06 | 2 | doriada |
+| #76 | HU-39.1 Mover el issue a In Progress al crear su rama | 2026-11-06 | 2 | bryanmg20 |
+| #84 | HU-3.1 Limpiar refresh tokens vencidos | 2026-11-07 | 2 | AlanSan25 |
+| #86 | nginx no reenvía /api al backend (405 en Docker) | 2026-11-07 | 1 | SRicardo05 |
+| #93 | HU-10.1 Pantalla para registrar solicitud como personal | 2026-11-09 | 3 | SRicardo05 |
 
 ### Decisiones y acuerdos
 
