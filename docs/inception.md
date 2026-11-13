@@ -33,12 +33,12 @@ Reunión de arranque del proyecto **Trackhive**, sistema de gestión de solicitu
 La reunión se coordinó con el equipo G6 por correo electrónico, con copia a `djromero@uninorte.edu.co`. El envío lo hizo Bryan Montoya (`bemontoya@uninorte.edu.co`) a Leonardo Romero Alvear (G6); las comunicaciones siguientes se hicieron por Microsoft Teams.
 
 <figure>
-<img src="recursos/correo-g6-01.png" alt="Captura del correo de coordinación con G6">
+<img src="img/correo-g6-01.png" alt="Captura del correo de coordinación con G6">
 <figcaption>Figura 1. Correo de coordinación con G6 del 14 de octubre de 2026.</figcaption>
 </figure>
 
 <figure>
-<img src="recursos/correo-g6-02.png" alt="Captura del correo de coordinación con G6">
+<img src="img/correo-g6-02.png" alt="Captura del correo de coordinación con G6">
 <figcaption>Figura 2. Correo de coordinación con G6 del 21 de octubre de 2026.</figcaption>
 </figure>
 
@@ -56,7 +56,7 @@ El equipo G6 visitó el CLENA y entregó un informe con los procesos observados.
 Figura 3. Sistema de radicación de correspondencia que usa el CLENA para recibir solicitudes.
 
 <figure>
-<img src="recursos/sistema-radicacion.png" alt="Sistema de radicación de correspondencia del CLENA">
+<img src="img/sistema-radicacion.png" alt="Sistema de radicación de correspondencia del CLENA">
 <figcaption>Figura 3. Sistema de radicación de correspondencia con el que el CLENA recibe las solicitudes; las fotos de la visita están en la carpeta de SharePoint.</figcaption>
 </figure>
 

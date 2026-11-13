@@ -33,22 +33,21 @@ Solo el daily del 4 de noviembre quedó grabado. La Review del Sprint 1 (2026-11
 
 ## Coordinación por correo con G6
 
-La reunión de Inception se coordinó por correo electrónico con el equipo de Introducción (G6), con copia a `djromero@uninorte.edu.co`. El envío lo hizo Bryan Montoya (`bemontoya@uninorte.edu.co`) a Leonardo Romero Alvear (G6); el resto de las comunicaciones se hizo por Microsoft Teams.
+El envío lo hizo Bryan Montoya (`bemontoya@uninorte.edu.co`) a Leonardo Romero Alvear (G6); el resto de las comunicaciones se hizo por Microsoft Teams.
 
 | Elemento | Estado |
 |---|---|
-| Correo del 2026-10-14 | Enviado; captura en `docs/recursos/correo-g6-01.png` |
-| Correo del 2026-10-21 | Enviado; captura en `docs/recursos/correo-g6-02.png` |
-| Copia a `djromero@uninorte.edu.co` | Registrada en ambos envíos |
+| Correo del 2026-10-14 | Enviado; captura en `docs/img/correo-g6-01.png` |
+| Correo del 2026-10-21 | Enviado; captura en `docs/img/correo-g6-02.png` |
 | Validación de G6 | Aprobación del PR #128 |
 
 <figure>
-<img src="recursos/correo-g6-01.png" alt="Correo de coordinación con G6 del 14 de octubre de 2026">
+<img src="img/correo-g6-01.png" alt="Correo de coordinación con G6 del 14 de octubre de 2026">
 <figcaption>Figura 1. Correo de coordinación con G6 del 14 de octubre de 2026.</figcaption>
 </figure>
 
 <figure>
-<img src="recursos/correo-g6-02.png" alt="Correo de coordinación con G6 del 21 de octubre de 2026">
+<img src="img/correo-g6-02.png" alt="Correo de coordinación con G6 del 21 de octubre de 2026">
 <figcaption>Figura 2. Correo de coordinación con G6 del 21 de octubre de 2026.</figcaption>
 </figure>
 
