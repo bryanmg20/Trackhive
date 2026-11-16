@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
@@ -16,6 +16,7 @@ import type {
   SortOrder,
 } from './api/list-requests';
 import styles from './MyRequestsPage.module.css';
+import { RequestHistory } from './RequestHistory';
 import listStyles from './RequestsListPage.module.css';
 
 const PAGE_SIZE = 10;
@@ -58,6 +59,12 @@ export function MyRequestsPage() {
   });
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<ListResponse | null>(null);
+  // The request whose timeline is open (HU-17), one at a time. It remembers
+  // its params: a new page or filter closes it
+  const [openHistory, setOpenHistory] = useState<{
+    params: ListMyRequestsParams;
+    id: string;
+  } | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -273,8 +280,14 @@ export function MyRequestsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {result.items.map((item) => (
-                    <tr key={item.id}>
+                  {result.items.map((item) => {
+                    const historyOpen =
+                      openHistory?.params === params &&
+                      openHistory.id === item.id;
+                    const historyId = `history-${item.id}`;
+                    return (
+                    <Fragment key={item.id}>
+                    <tr>
                       <td className={searchStyles.titleCell}>
                         <strong>{item.trackingCode}</strong>
                       </td>
@@ -310,9 +323,36 @@ export function MyRequestsPage() {
                             {item.rejectionReason}
                           </p>
                         ) : null}
+                        <button
+                          type="button"
+                          className={styles.historyToggle}
+                          aria-expanded={historyOpen}
+                          aria-controls={historyOpen ? historyId : undefined}
+                          // Names the request: there is one button per row
+                          aria-label={`${historyOpen ? 'Ocultar' : 'Ver'} historial de ${item.trackingCode}`}
+                          onClick={() =>
+                            setOpenHistory(
+                              historyOpen ? null : { params, id: item.id },
+                            )
+                          }
+                        >
+                          {historyOpen ? 'Ocultar historial' : 'Ver historial'}
+                        </button>
                       </td>
                     </tr>
-                  ))}
+                    {historyOpen ? (
+                      <tr className={styles.historyRow}>
+                        <td id={historyId} colSpan={5}>
+                          <RequestHistory
+                            requestId={item.id}
+                            label={`Historial de estados de ${item.trackingCode}`}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
 

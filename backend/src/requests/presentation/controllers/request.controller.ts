@@ -34,6 +34,7 @@ import { ListMyRequestsQueryDto } from '../../application/dto/list-my-requests-q
 import { ListRequestsQueryDto } from '../../application/dto/list-requests-query.dto';
 import { PaginatedMyRequestsResponseDto } from '../../application/dto/my-request-list-response.dto';
 import { RequestDetailResponseDto } from '../../application/dto/request-detail-response.dto';
+import { RequestHistoryResponseDto } from '../../application/dto/request-history-response.dto';
 import { ScheduleAppointmentResponseDto } from '../../application/dto/schedule-appointment-response.dto';
 import { ScheduleAppointmentDto } from '../../application/dto/schedule-appointment.dto';
 import { PaginatedRequestsResponseDto } from '../../application/dto/request-list-response.dto';
@@ -43,6 +44,7 @@ import { ScheduleAppointmentUseCase } from '../../application/use-cases/schedule
 import { CreateRequestOnBehalfUseCase } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from '../../application/use-cases/create-request.use-case';
 import { GetRequestDetailUseCase } from '../../application/use-cases/get-request-detail.use-case';
+import { GetRequestHistoryUseCase } from '../../application/use-cases/get-request-history.use-case';
 import { ListMyRequestsUseCase } from '../../application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from '../../application/use-cases/list-requests.use-case';
 
@@ -55,6 +57,7 @@ export class RequestController {
     private readonly createRequestOnBehalfUseCase: CreateRequestOnBehalfUseCase,
     private readonly listRequestsUseCase: ListRequestsUseCase,
     private readonly getRequestDetailUseCase: GetRequestDetailUseCase,
+    private readonly getRequestHistoryUseCase: GetRequestHistoryUseCase,
     private readonly listMyRequestsUseCase: ListMyRequestsUseCase,
     private readonly changeRequestStatusUseCase: ChangeRequestStatusUseCase,
     private readonly scheduleAppointmentUseCase: ScheduleAppointmentUseCase,
@@ -172,6 +175,56 @@ export class RequestController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<RequestDetailResponseDto> {
     return this.getRequestDetailUseCase.execute({ id });
+  }
+
+  // No @Roles(): any session may ask, and the use case decides (HU-04, HU-17)
+  @Get(':id/history')
+  @ApiOperation({
+    summary: 'Historial de estados de una solicitud',
+    description:
+      'Devuelve cada cambio de estado de la solicitud, del más antiguo al ' +
+      'más reciente: estado anterior (vacío en el registro), estado nuevo, ' +
+      'fecha y hora, responsable y observación. El historial no se puede ' +
+      'editar ni borrar. PERSONAL y ADMIN ven el de cualquier solicitud, con ' +
+      'el nombre de quien hizo cada cambio. Un usuario PUBLICO solo ve el de ' +
+      'sus propias solicitudes, sin los registros marcados como internos y ' +
+      'con «Personal del CLENA» como responsable de los cambios del personal.',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
+  @ApiOkResponse({
+    description: 'Historial de la solicitud',
+    type: RequestHistoryResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'El identificador no es un UUID',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description:
+      'Un usuario público pidió una solicitud que no es suya ' +
+      '(REQUEST_ACCESS_FORBIDDEN)',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La solicitud no existe',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  history(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<RequestHistoryResponseDto> {
+    return this.getRequestHistoryUseCase.execute({
+      requestId: id,
+      viewer: { id: user.id, role: user.role },
+    });
   }
 
   @Patch(':id/status')

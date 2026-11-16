@@ -79,6 +79,7 @@ describe('ChangeRequestStatusUseCase', () => {
     const queries: IRequestQueryService = {
       list: jest.fn(),
       listByRequesterUser: jest.fn(),
+      findHistory: jest.fn(),
       findDetail: jest.fn(),
       listAppointments: jest.fn(),
       findRequesterByEmail: jest.fn(),

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffRoute } from '../auth/components/StaffRoute';
@@ -6,7 +6,25 @@ import { RequestDetailPage } from './RequestDetailPage';
 import { RequestsListPage } from './RequestsListPage';
 
 const fetchMock = vi.fn();
+// The history (HU-17) has its own mock, so the other calls keep their order
+const historyMock = vi.fn();
 const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+
+function history(entries: unknown[] = [registrationEntry()]) {
+  return { requestId: REQUEST_ID, trackingCode: 'SOL-2026-00001', entries };
+}
+
+function registrationEntry() {
+  return {
+    id: '1',
+    previousStatus: null,
+    newStatus: 'RECIBIDA',
+    // 10:00 a. m. in Bogotá
+    changedAt: '2026-11-10T15:00:00.000Z',
+    changedBy: 'Juan Carlos Pérez',
+    comment: null,
+  };
+}
 
 function tokenWithRole(role: string): string {
   const payload = btoa(
@@ -81,7 +99,86 @@ describe('RequestDetailPage', () => {
   beforeEach(() => {
     sessionStorage.clear();
     fetchMock.mockReset();
-    vi.stubGlobal('fetch', fetchMock);
+    historyMock.mockReset();
+    historyMock.mockResolvedValue(ok(history()));
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) =>
+      url.endsWith('/history') ? historyMock(url, init) : fetchMock(url, init),
+    );
+  });
+
+  describe('status history (HU-17)', () => {
+    it('shows each change with the previous and new status, date, responsible and comment', async () => {
+      fetchMock.mockResolvedValue(ok(detail({ status: 'EN_BUSQUEDA' })));
+      historyMock.mockResolvedValue(
+        ok(
+          history([
+            registrationEntry(),
+            {
+              id: '2',
+              previousStatus: 'RECIBIDA',
+              newStatus: 'EN_BUSQUEDA',
+              changedAt: '2026-11-11T14:30:00.000Z',
+              changedBy: 'Ana Gómez',
+              comment: 'Se busca en el depósito D-01',
+            },
+          ]),
+        ),
+      );
+      renderAt(`/solicitudes/${REQUEST_ID}`, 'PERSONAL');
+
+      const section = await screen.findByRole('region', {
+        name: 'Historial de estados',
+      });
+      const timeline = await within(section).findByRole('list', {
+        name: 'Historial de estados de SOL-2026-00001',
+      });
+      const [first, second] = within(timeline).getAllByRole('listitem');
+      expect(first).toHaveTextContent(/Solicitud registrada: Recibida/);
+      expect(first).toHaveTextContent(/10\/11\/2026.*10:00/);
+      expect(first).toHaveTextContent('Responsable: Juan Carlos Pérez');
+      expect(second).toHaveTextContent(/Recibida.*En búsqueda/);
+      expect(second).toHaveTextContent(/11\/11\/2026.*09:30/);
+      expect(second).toHaveTextContent('Responsable: Ana Gómez');
+      expect(second).toHaveTextContent(
+        'Observación: Se busca en el depósito D-01',
+      );
+      expect(historyMock).toHaveBeenCalledWith(
+        `/api/v1/requests/${REQUEST_ID}/history`,
+        expect.anything(),
+      );
+    });
+
+    it('offers no way to edit or delete a row of the history', async () => {
+      fetchMock.mockResolvedValue(ok(detail()));
+      renderAt(`/solicitudes/${REQUEST_ID}`, 'PERSONAL');
+
+      const section = await screen.findByRole('region', {
+        name: 'Historial de estados',
+      });
+      await within(section).findByRole('list');
+      expect(within(section).queryByRole('button')).not.toBeInTheDocument();
+      expect(within(section).queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('shows the error of the history without hiding the rest of the detail', async () => {
+      fetchMock.mockResolvedValue(ok(detail()));
+      historyMock.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ message: 'Error interno' }),
+      });
+      renderAt(`/solicitudes/${REQUEST_ID}`, 'PERSONAL');
+
+      const section = await screen.findByRole('region', {
+        name: 'Historial de estados',
+      });
+      expect(await within(section).findByRole('alert')).toHaveTextContent(
+        'Error interno',
+      );
+      expect(
+        screen.getByRole('region', { name: 'Solicitante' }),
+      ).toBeInTheDocument();
+    });
   });
 
   it.each(['PERSONAL', 'ADMIN'])(
@@ -399,6 +496,9 @@ describe('RequestDetailPage', () => {
         status: 'ATENDIDA',
         comment: 'Consultó las actas',
       });
+
+      // The history is loaded again and shows the new change (HU-17)
+      await waitFor(() => expect(historyMock).toHaveBeenCalledTimes(2));
 
       // The badge and the next transitions follow the new status
       const heading = screen.getByRole('heading', { name: 'SOL-2026-00001' });

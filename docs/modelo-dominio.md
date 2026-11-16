@@ -179,6 +179,7 @@ Uno por acción del negocio. Cada caso de uso es una clase con un método `execu
 | `ConsultarMisSolicitudes` | Ver mis solicitudes y su estado | Usuario público | HU-11 | `ListMyRequestsUseCase` |
 | `ListarSolicitudes` | Ver la bandeja con filtros, orden y paginación | Personal | HU-12 | `ListRequestsUseCase` |
 | `VerDetalleSolicitud` | Ver una solicitud con sus materiales y las transiciones permitidas | Personal | HU-13 | `GetRequestDetailUseCase` |
+| `ConsultarHistorialEstados` | Ver la línea de tiempo de los cambios de una solicitud | Personal, usuario público (solo las suyas) | HU-17 | `GetRequestHistoryUseCase` |
 | `CambiarEstadoSolicitud` | Avanzar la solicitud, o rechazarla con motivo | Personal | HU-15, HU-16 | `ChangeRequestStatusUseCase` |
 | `AgendarCita` | Reservar el día de consulta sin dobles reservas | Personal | HU-18, HU-20 | `ScheduleAppointmentUseCase` |
 | `ConsultarCalendario` | Ver las citas por mes y filtrar por material | Personal | HU-19 | `ListAppointmentsUseCase` |
@@ -193,7 +194,6 @@ Hay dos casos de uso técnicos que no son acciones del negocio: `GetHealthUseCas
 |---|---|---|---|
 | `GestionarFuncionarios` | Crear, editar y desactivar cuentas del personal | Administrador | HU-05 |
 | `RegistrarMaterial` | Agregar material consultable al catálogo | Personal | HU-06 |
-| `ConsultarHistorialEstados` | Ver la línea de tiempo de los cambios de una solicitud | Personal, usuario público | HU-17 |
 | `ConfigurarCapacidadSala` | Fijar cuántas citas recibe la sala por día | Administrador | HU-20.1 |
 | `ReprogramarCita` | Mover la cita a otro día, sin dobles reservas | Personal | HU-21 |
 | `CancelarCita` | Cancelar la cita y liberar el material | Personal | HU-21 |

@@ -12,6 +12,7 @@ import { CreateRequestOnBehalfUseCase } from './application/use-cases/create-req
 import { CreateRequestUseCase } from './application/use-cases/create-request.use-case';
 import { FindRequesterByEmailUseCase } from './application/use-cases/find-requester-by-email.use-case';
 import { GetRequestDetailUseCase } from './application/use-cases/get-request-detail.use-case';
+import { GetRequestHistoryUseCase } from './application/use-cases/get-request-history.use-case';
 import { ListAppointmentsUseCase } from './application/use-cases/list-appointments.use-case';
 import { ListMyRequestsUseCase } from './application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from './application/use-cases/list-requests.use-case';
@@ -40,6 +41,7 @@ import { RequesterController } from './presentation/controllers/requester.contro
     ListRequestsUseCase,
     ListAppointmentsUseCase,
     GetRequestDetailUseCase,
+    GetRequestHistoryUseCase,
     ListMyRequestsUseCase,
     ChangeRequestStatusUseCase,
     ScheduleAppointmentUseCase,

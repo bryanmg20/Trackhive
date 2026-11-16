@@ -7,6 +7,7 @@ import type {
   MaterialDayBooking,
   RequestDetail,
   RequesterProfile,
+  RequestHistory,
   RequestListItem,
   RequestNotificationContext,
 } from '../../application/ports/request-query.port';
@@ -29,6 +30,30 @@ const PERSON_NAME = {
   lastName: true,
   secondLastName: true,
 } satisfies Prisma.UserModelSelect;
+
+/** What the timeline of a request loads (HU-17), oldest change first. */
+export const REQUEST_HISTORY_SELECT = {
+  id: true,
+  trackingCode: true,
+  requester: { select: { userId: true } },
+  statusHistory: {
+    select: {
+      id: true,
+      previousStatus: true,
+      newStatus: true,
+      changedAt: true,
+      comment: true,
+      visibleToRequester: true,
+      user: { select: PERSON_NAME },
+    },
+    // Two changes in the same instant keep the order they were inserted in
+    orderBy: [{ changedAt: 'asc' }, { id: 'asc' }],
+  },
+} satisfies Prisma.RequestModelSelect;
+
+type RequestHistoryRow = Prisma.RequestModelGetPayload<{
+  select: typeof REQUEST_HISTORY_SELECT;
+}>;
 
 /** What the calendar loads of an appointment (HU-19). */
 export const APPOINTMENT_LIST_INCLUDE = {
@@ -93,6 +118,33 @@ export class PrismaRequestReadMapper {
         catalogCode: material.catalogCode,
         title: material.title,
       })),
+    };
+  }
+
+  static toHistory(model: RequestHistoryRow): RequestHistory {
+    return {
+      requestId: model.id,
+      trackingCode: model.trackingCode,
+      requesterUserId: model.requester.userId,
+      entries: model.statusHistory.map((row) => {
+        const previousStatus = row.previousStatus;
+        if (
+          !isRequestStatus(row.newStatus) ||
+          (previousStatus !== null && !isRequestStatus(previousStatus))
+        ) {
+          throw new Error(`Status history ${row.id} has an invalid status`);
+        }
+        return {
+          // BIGINT: as text, so it survives JSON
+          id: row.id.toString(),
+          previousStatus,
+          newStatus: row.newStatus,
+          changedAt: row.changedAt,
+          comment: row.comment,
+          visibleToRequester: row.visibleToRequester,
+          changedBy: row.user,
+        };
+      }),
     };
   }
 

@@ -3,6 +3,7 @@ import { Request } from '../../domain/entities/request.entity';
 import type { OriginChannel } from '../../domain/entities/request.entity';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isRequestStatus } from '../../domain/enums/request-status';
+import { PrismaStatusHistoryMapper } from './prisma-status-history.mapper';
 
 /** The columns of a request that the entity needs, with its materials. */
 export interface RequestEntityRow {
@@ -44,7 +45,10 @@ export class PrismaRequestMapper {
     });
   }
 
-  /** A new request, with one item per material (HU-09, HU-10). */
+  /**
+   * A new request, with one item per material (HU-09, HU-10) and the first
+   * row of its history (HU-17), all in the same insert.
+   */
   static toPersistence(
     request: Request,
     itemId: () => string,
@@ -73,6 +77,9 @@ export class PrismaRequestMapper {
           itemStatus: 'PENDIENTE',
           accessType: 'FISICO',
         })),
+      },
+      statusHistory: {
+        create: PrismaStatusHistoryMapper.toCreationRow(request),
       },
     };
   }
