@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from '../../../common/pagination';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -18,9 +19,6 @@ import type {
   MaterialSortField,
   SortOrder,
 } from '../../domain/repositories/material.repository';
-
-export const DEFAULT_PAGE_LIMIT = 20;
-export const MAX_PAGE_LIMIT = 100;
 
 // Empty text means "no filter"
 const trimToUndefined = ({ value }: { value: unknown }): unknown => {

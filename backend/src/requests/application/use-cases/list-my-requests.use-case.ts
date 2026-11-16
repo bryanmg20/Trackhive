@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ListMyRequestsQueryDto } from '../dto/list-my-requests-query.dto';
-import { DEFAULT_REQUEST_PAGE_LIMIT } from '../dto/list-requests-query.dto';
+import { DEFAULT_REQUEST_PAGE_LIMIT } from '../../../common/pagination';
 import {
   MyRequestListItemDto,
   PaginatedMyRequestsResponseDto,

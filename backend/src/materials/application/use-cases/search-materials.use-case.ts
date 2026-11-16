@@ -8,7 +8,7 @@ import type {
   SortOrder,
 } from '../../domain/repositories/material.repository';
 import { PaginatedMaterialsResponseDto } from '../dto/material-response.dto';
-import { DEFAULT_PAGE_LIMIT } from '../dto/search-materials-query.dto';
+import { DEFAULT_PAGE_LIMIT } from '../../../common/pagination';
 import { MaterialResponseMapper } from '../mappers/material-response.mapper';
 import { MATERIAL_REPOSITORY } from '../tokens';
 

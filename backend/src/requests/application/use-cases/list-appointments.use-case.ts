@@ -4,10 +4,8 @@ import {
   AppointmentListItemDto,
   PaginatedAppointmentsResponseDto,
 } from '../dto/appointment-list-response.dto';
-import {
-  DEFAULT_APPOINTMENT_PAGE_LIMIT,
-  ListAppointmentsQueryDto,
-} from '../dto/list-appointments-query.dto';
+import { DEFAULT_APPOINTMENT_PAGE_LIMIT } from '../../../common/pagination';
+import { ListAppointmentsQueryDto } from '../dto/list-appointments-query.dto';
 import type {
   AppointmentListItem,
   RequestRepository,

@@ -1,3 +1,7 @@
+import {
+  DEFAULT_REQUEST_PAGE_LIMIT,
+  MAX_REQUEST_PAGE_LIMIT,
+} from '../../../common/pagination';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -18,9 +22,6 @@ import type {
   RequestSortField,
   SortOrder,
 } from '../ports/request.repository.port';
-
-export const DEFAULT_REQUEST_PAGE_LIMIT = 20;
-export const MAX_REQUEST_PAGE_LIMIT = 100;
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 

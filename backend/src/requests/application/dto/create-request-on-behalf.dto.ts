@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsDefined, ValidateNested } from 'class-validator';
 import { CreateRequestDto } from './create-request.dto';
-import { RequesterInputDto } from './requester-input.dto';
+import { RequesterInputDto } from './requester-request.dto';
 
 export class CreateRequestOnBehalfDto extends CreateRequestDto {
   @ApiProperty({
