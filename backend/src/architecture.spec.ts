@@ -309,18 +309,31 @@ describe('Arquitectura del backend', () => {
     );
     for (const info of contracts) {
       for (const statement of info.source.statements) {
-        if (!ts.isInterfaceDeclaration(statement)) {
+        // Both `interface X {}` and `type X = {}` can declare a contract
+        let members: ts.NodeArray<ts.TypeElement> | undefined;
+        let name = '';
+        if (ts.isInterfaceDeclaration(statement)) {
+          members = statement.members;
+          name = statement.name.text;
+        } else if (
+          ts.isTypeAliasDeclaration(statement) &&
+          ts.isTypeLiteralNode(statement.type)
+        ) {
+          members = statement.type.members;
+          name = statement.name.text;
+        }
+        if (!members) {
           continue;
         }
-        const hasMethods = statement.members.some(
+        const hasMethods = members.some(
           (member) =>
             ts.isMethodSignature(member) ||
             (ts.isPropertySignature(member) &&
               member.type !== undefined &&
               ts.isFunctionTypeNode(member.type)),
         );
-        if (hasMethods && !/^I[A-Z]/.test(statement.name.text)) {
-          problems.push(`${info.rel}: ${statement.name.text}`);
+        if (hasMethods && !/^I[A-Z]/.test(name)) {
+          problems.push(`${info.rel}: ${name}`);
         }
       }
     }

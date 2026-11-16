@@ -463,6 +463,6 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
     - un puerto importa un caso de uso;
     - un caso de uso define tipos o funciones en su archivo;
     - `execute` no recibe una sola interfaz `...Input`;
-    - una respuesta se arma sin mapeador;
-    - un contrato con métodos no empieza con `I`.
+    - una respuesta se arma sin mapeador (un caso de uso puede delegarla en un servicio de `application/services/` que use el mapeador, como `login` y `refresh-session` con `SessionTokenIssuer`);
+    - un contrato con métodos (declarado con `interface` o con `type`) en `domain/repositories/` o `application/ports/` no empieza con `I`.
   - **Crear una solicitud** sigue el modelo del curso: el caso de uso arma la entidad con `Request.create()`, obtiene el radicado del puerto `ITrackingCodeGenerator`, resuelve el solicitante con `RequesterResolver` (entidad `Requester` e `IRequesterRepository`) y la guarda con `IRequestRepository.save()`.

@@ -22,6 +22,7 @@ import {
   todayInBogota,
 } from '../src/requests/domain/value-objects/desired-date';
 import { Request } from '../src/requests/domain/entities/request.entity';
+import type { Requester } from '../src/requests/domain/entities/requester.entity';
 import { RequestStatusConflictError } from '../src/requests/domain/errors/request-status-conflict.error';
 import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
 import { USER_REPOSITORY } from '../src/users/application/tokens';
@@ -247,7 +248,15 @@ describe('Request registration (e2e)', () => {
           'visitante@ejemplo.com',
         );
         const [saved] = repository.save.mock.calls[0];
+        const [visitor] = requesters.save.mock.calls[0] as [Requester];
+        expect(visitor.props).toMatchObject({
+          email: 'visitante@ejemplo.com',
+          firstName: 'Visitante',
+          lastName: 'Prueba',
+          userId: null,
+        });
         expect(saved.registration).toMatchObject({
+          requesterId: visitor.id,
           createdById: 'user-1',
           originChannel: 'PRESENCIAL',
         });
