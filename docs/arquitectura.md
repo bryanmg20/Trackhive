@@ -71,15 +71,16 @@ Leyenda: azul claro, componente de la API; azul, contenedor de Trackhive; gris, 
 | Capa | Componentes | Contiene | No puede importar |
 |---|---|---|---|
 | Presentación | Controladores; guards, validación y filtro de errores | Ocho controladores bajo `/api/v1`, `JwtAuthGuard` y `RolesGuard` globales, `@Roles()`, `@Public()`, `ValidationPipe` global y `AllExceptionsFilter` global | Repositorios |
-| Aplicación | Casos de uso; DTOs y mapeadores; puertos | 19 casos de uso con un método `execute`, DTOs de petición y de respuesta, puertos (`MailSender`, `TokenService`, `PasswordHasher`, `RequestRepository`…) y los tokens de inyección | Prisma, controladores |
-| Dominio | Entidades, objetos de valor y errores; interfaces de repositorio | `User`, `RefreshToken`, `Material`, `Request` (con su máquina de estados), `StatusChange`, errores que extienden `DomainError`, `IUserRepository`, `IRefreshTokenRepository`, `IMaterialRepository` | NestJS, Prisma, librerías externas |
-| Infraestructura | Repositorios Prisma; adaptadores y tareas programadas | `Prisma…Repository`, mapeadores de `users`, `auth` y `materials`, `SmtpMailSender`, `JwtTokenService`, `Sha256TokenHasher`, `Argon2PasswordHasher`, `SendPendingNotificationsJob`, `PurgeExpiredTokensJob` | Controladores |
+| Aplicación | Casos de uso; entradas, DTOs y mapeadores; puertos y servicios | 19 casos de uso con un método `execute` que recibe una interfaz `...Input`, DTOs de petición y de respuesta, mapeadores de respuesta, puertos (`IMailSender`, `ITokenService`, `IPasswordHasher`, `IRequestQueryService`, `INotificationQueue`…), servicios (`SessionTokenIssuer`, `RequesterResolver`) y los tokens de inyección | Prisma, controladores, infraestructura |
+| Dominio | Entidades, enumeraciones, objetos de valor, políticas y errores; interfaces de repositorio | `User`, `RefreshToken`, `Material`, `Request` (con su máquina de estados y `Request.create()`), `Requester`, `StatusChange`, errores que extienden `DomainError`, `IUserRepository`, `IRefreshTokenRepository`, `IMaterialRepository`, `IRequestRepository`, `IRequesterRepository` | NestJS, Prisma, librerías externas |
+| Infraestructura | Repositorios Prisma; mapeadores de Prisma; adaptadores y tareas programadas | `Prisma…Repository`, `PrismaRequestQueryService`, `PrismaNotificationQueue`, mapeadores de Prisma de cada módulo, `SmtpMailSender`, `JwtTokenService`, `Sha256TokenHasher`, `Argon2PasswordHasher`, `PrismaTrackingCodeGenerator`, `SendPendingNotificationsJob`, `PurgeExpiredTokensJob` | Controladores |
 
-Tres precisiones sobre el código actual:
+Cuatro precisiones sobre el código actual:
 
 - `src/common/` es una carpeta de código compartido, fuera de las cuatro capas. La figura 3 no la dibuja aparte: muestra `AllExceptionsFilter` en presentación y `DomainError` en dominio, ambos con la nota «en `src/common/`». Contiene `AllExceptionsFilter`, `validationExceptionFactory`, `setupSwagger` y la clase base `DomainError`, que no importa ningún paquete externo. Los errores del dominio la extienden, y esa es la única dependencia del dominio hacia fuera de su capa.
-- Las interfaces de repositorio de `users`, `auth` y `materials` están en `domain/repositories/`. Las de `requests` y `notifications` (`RequestRepository`, `NotificationRepository`) están en `application/ports/`, porque devuelven modelos de lectura propios de los casos de uso. En ambos casos la implementación Prisma depende de la interfaz, nunca al revés.
+- Las interfaces de repositorio están en `domain/repositories/` y trabajan con entidades (R3 de D-25). Lo que se lee para las pantallas y no es una entidad (listados, detalle, agenda, contexto del correo) está en un puerto de consulta de la aplicación, `IRequestQueryService` (D-25). La cola de correos es el puerto `INotificationQueue`, porque no trabaja con una entidad. En todos los casos la implementación Prisma depende de la interfaz, nunca al revés.
 - Los casos de uso usan los decoradores `@Injectable()` e `@Inject()` de NestJS para la inyección de dependencias (D-04). El dominio no importa ningún paquete externo.
+- Estas reglas no dependen solo de la revisión: `backend/eslint.config.mjs` y `backend/src/architecture.spec.ts` las verifican en el CI (D-25).
 
 ## 5. Estructura de carpetas del backend
 
@@ -100,45 +101,46 @@ backend/
 │   │   ├── filters/             # AllExceptionsFilter
 │   │   ├── html/  swagger/  validation/
 │   ├── prisma/                  # PrismaModule (global) y PrismaService
+│   ├── architecture.spec.ts     # reglas de arquitectura verificadas en el CI (D-25)
 │   ├── auth/
 │   │   ├── auth.module.ts
 │   │   ├── domain/              # entities/  errors/  repositories/
-│   │   ├── application/         # use-cases/  dto/  ports/  services/  tokens.ts
+│   │   ├── application/         # use-cases/  dto/  mappers/  ports/  services/  tokens.ts
 │   │   ├── infrastructure/      # persistence/  mappers/  security/  jobs/
 │   │   └── presentation/        # controllers/  guards/  decorators/
 │   ├── users/
 │   │   ├── users.module.ts
-│   │   ├── domain/              # entities/  errors/  repositories/
+│   │   ├── domain/              # entities/  enums/  errors/  policies/  repositories/  value-objects/
 │   │   ├── application/         # use-cases/  dto/  mappers/  ports/  tokens.ts
 │   │   ├── infrastructure/      # persistence/  mappers/  security/
 │   │   └── presentation/        # controllers/
 │   ├── materials/
 │   │   ├── materials.module.ts
-│   │   ├── domain/              # entities/  errors/  repositories/
+│   │   ├── domain/              # entities/  enums/  errors/  repositories/
 │   │   ├── application/         # use-cases/  dto/  mappers/  tokens.ts
 │   │   ├── infrastructure/      # persistence/  mappers/
 │   │   └── presentation/        # controllers/
 │   ├── requests/
 │   │   ├── requests.module.ts
-│   │   ├── domain/              # entities/  errors/  y objetos de valor
-│   │   ├── application/         # use-cases/  dto/  mappers/  ports/  notifications/  tokens.ts
-│   │   ├── infrastructure/      # persistence/
+│   │   ├── domain/              # entities/  enums/  errors/  policies/  repositories/  value-objects/
+│   │   ├── application/         # use-cases/  dto/  mappers/  ports/  services/  tokens.ts
+│   │   ├── infrastructure/      # persistence/  mappers/
 │   │   └── presentation/        # controllers/
 │   ├── notifications/
 │   │   ├── notifications.module.ts
-│   │   ├── domain/              # errors/
-│   │   ├── application/         # use-cases/  dto/  ports/  tokens.ts
-│   │   ├── infrastructure/      # persistence/  mail/  jobs/
+│   │   ├── domain/              # enums/  errors/  value-objects/
+│   │   ├── application/         # use-cases/  dto/  mappers/  ports/  tokens.ts
+│   │   ├── infrastructure/      # persistence/  mappers/  mail/  jobs/
 │   │   └── presentation/        # controllers/
 │   └── health/
 │       ├── health.module.ts
-│       ├── application/         # use-cases/  dto/  ports/  tokens.ts
+│       ├── application/         # use-cases/  dto/  mappers/  ports/  tokens.ts
 │       ├── infrastructure/      # database/
 │       └── presentation/        # controllers/
 └── test/                        # pruebas e2e y fakes en memoria
 ```
 
-Las pruebas unitarias (`*.spec.ts`) están junto al archivo que prueban.
+Las pruebas unitarias (`*.spec.ts`) están junto al archivo que prueban. En `application/dto/`, los archivos `*.input.ts` y `*.result.ts` son las interfaces planas de entrada y de resultado de los casos de uso; los `*.dto.ts` son las clases con decoradores que valida y documenta la API.
 
 ## 6. Módulo NestJS: unión de un caso de uso con su repositorio
 
@@ -244,6 +246,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 | D-22 | Docker, docker-compose y GitHub Actions | Implementada |
 | D-23 | Configuración por entorno validada al arrancar y logs estructurados | Parcial (faltan los logs en JSON) |
 | D-24 | Plataforma de despliegue | **Pendiente** |
+| D-25 | Estructura de Clean Architecture del curso, verificada en el CI | Implementada |
 
 ---
 
@@ -317,11 +320,11 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 
 ### D-10. Notificaciones por puerto, con tabla de salida y reintentos
 
-- **Decisión:** `ChangeRequestStatusUseCase` no envía correos: registra una fila en `notifications` (estado `PENDIENTE`) dentro de la misma transacción del cambio de estado. Un proceso programado (`@nestjs/schedule`) la envía a través del puerto `MailSender`, implementado con SMTP (Nodemailer), y marca `ENVIADA` o `FALLIDA` con un contador de reintentos.
+- **Decisión:** `ChangeRequestStatusUseCase` no envía correos: registra una fila en `notifications` (estado `PENDIENTE`) dentro de la misma transacción del cambio de estado. Un proceso programado (`@nestjs/schedule`) la envía a través del puerto `IMailSender`, implementado con SMTP (Nodemailer), y marca `ENVIADA` o `FALLIDA` con un contador de reintentos.
 - **Alternativas:** enviar el correo de forma síncrona dentro del caso de uso; usar una cola externa (Redis, RabbitMQ).
 - **Justificación:** una caída del servidor SMTP no debe impedir ni revertir un cambio de estado legítimo. Una tabla de salida da fiabilidad sin sumar infraestructura nueva, algo importante porque el CLENA debe poder operarlo. Una cola externa se descarta por exceso de complejidad para este volumen.
-- **Consecuencias:** el correo no es instantáneo (llega en el siguiente ciclo del proceso, de segundos a un par de minutos). En desarrollo se usa Mailpit para inspeccionar correos sin enviarlos. HU-22 implementó el puerto con el nombre `MailSender` (`notifications/application/ports/`), su versión SMTP con Nodemailer (`SmtpMailSender`, configurada con las variables `SMTP_*`) y el servicio Mailpit en `docker-compose.yml`. Un administrador puede comprobar la configuración con `POST /api/v1/notifications/test-email`, que le envía un correo de prueba a su propio correo.
-- **Implementación (HU-23):** todo cambio de estado pasa por `PrismaRequestRepository.applyStatusChange()`, tanto «Cambiar estado» (`PATCH /requests/:id/status`, HU-15 y HU-16) como «Agendar cita» (`POST /requests/:id/appointments`, HU-18). En la misma transacción que actualiza la solicitud y crea la fila de `status_history`, inserta una fila `PENDIENTE` en `notifications` (migración `20261113000000_create_notifications`), enlazada a esa fila del historial. Antes de guardar, `ChangeRequestStatusUseCase` y `ScheduleAppointmentUseCase` arman el correo con `buildStatusChangeEmail()` (`requests/application/notifications/`). El correo lleva el radicado, el nuevo estado y el material, y además la fecha y el horario de la cita en `AGENDADA` o el motivo en `RECHAZADA`. Se guarda en texto plano y en HTML, con los datos escritos por personas escapados. Si el solicitante no tiene correo, el cambio se guarda sin notificación y queda un aviso en el log. `SendPendingNotificationsJob` (`@Interval`, cada 10 s) llama a `SendPendingNotificationsUseCase`. El caso de uso reclama hasta 20 correos con bloqueo optimista sobre `attempts`, así que dos ejecuciones o dos instancias no envían el mismo correo, y deja un plazo de 5 minutos para volver a tomar un correo cuyo envío se cortó. Luego los envía por `MailSender` y los marca `ENVIADA`. Si el envío falla, registra en el log el id del correo, el radicado, el intento y el motivo, sin el destinatario (D-23). El motivo queda en `last_error` y el correo se reintenta a los 1, 5, 15 y 60 minutos; al quinto fallo queda `FALLIDA`. El cambio de estado nunca se revierte por un fallo del correo. La entrega es «al menos una vez»: si la base de datos falla justo después de enviar un correo, ese correo puede repetirse. Las plantillas por estado son de HU-24.
+- **Consecuencias:** el correo no es instantáneo (llega en el siguiente ciclo del proceso, de segundos a un par de minutos). En desarrollo se usa Mailpit para inspeccionar correos sin enviarlos. HU-22 implementó el puerto `IMailSender` (`notifications/application/ports/`), su versión SMTP con Nodemailer (`SmtpMailSender`, configurada con las variables `SMTP_*`) y el servicio Mailpit en `docker-compose.yml`. Un administrador puede comprobar la configuración con `POST /api/v1/notifications/test-email`, que le envía un correo de prueba a su propio correo.
+- **Implementación (HU-23):** todo cambio de estado pasa por `PrismaRequestRepository.applyStatusChange()`, tanto «Cambiar estado» (`PATCH /requests/:id/status`, HU-15 y HU-16) como «Agendar cita» (`POST /requests/:id/appointments`, HU-18). En la misma transacción que actualiza la solicitud y crea la fila de `status_history`, inserta una fila `PENDIENTE` en `notifications` (migración `20261113000000_create_notifications`), enlazada a esa fila del historial. Antes de guardar, `ChangeRequestStatusUseCase` y `ScheduleAppointmentUseCase` arman el correo con `buildStatusChangeEmail()` (`requests/application/services/`). El correo lleva el radicado, el nuevo estado y el material, y además la fecha y el horario de la cita en `AGENDADA` o el motivo en `RECHAZADA`. Se guarda en texto plano y en HTML, con los datos escritos por personas escapados. Si el solicitante no tiene correo, el cambio se guarda sin notificación y queda un aviso en el log. `SendPendingNotificationsJob` (`@Interval`, cada 10 s) llama a `SendPendingNotificationsUseCase`. El caso de uso reclama hasta 20 correos con bloqueo optimista sobre `attempts`, así que dos ejecuciones o dos instancias no envían el mismo correo, y deja un plazo de 5 minutos para volver a tomar un correo cuyo envío se cortó. Luego los envía por `MailSender` y los marca `ENVIADA`. Si el envío falla, registra en el log el id del correo, el radicado, el intento y el motivo, sin el destinatario (D-23). El motivo queda en `last_error` y el correo se reintenta a los 1, 5, 15 y 60 minutos; al quinto fallo queda `FALLIDA`. El cambio de estado nunca se revierte por un fallo del correo. La entrega es «al menos una vez»: si la base de datos falla justo después de enviar un correo, ese correo puede repetirse. Las plantillas por estado son de HU-24.
 
 ### D-11. JWT (access y refresh) con rotación y argon2
 
@@ -343,7 +346,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Decisión:** los DTOs de petición (clases con `class-validator` en `application/dto/`) validan forma y tipos. Los aplica en la frontera de presentación un `ValidationPipe` global, con `whitelist` y `forbidNonWhitelisted` activos. Las reglas de negocio (transiciones, fechas coherentes, disponibilidad) se validan en dominio y aplicación.
 - **Alternativas:** validar todo en los DTOs; validar todo en el dominio.
 - **Justificación:** los decoradores de validación son dependencias de framework, así que no pueden estar en el dominio. Cada nivel responde a una pregunta distinta: "¿la petición está bien formada?" y "¿la operación está permitida?".
-- **Consecuencias:** los DTOs viven en la capa de aplicación y llevan decoradores de `class-validator` y de Swagger, así que esa capa depende de esas dos librerías; el dominio no. La mayoría de los casos de uso declaran además su propia entrada sin decoradores (por ejemplo, `SearchMaterialsInput`), y el controlador convierte el DTO en esa entrada.
+- **Consecuencias:** los DTOs viven en la capa de aplicación y llevan decoradores de `class-validator` y de Swagger, así que esa capa depende de esas dos librerías; el dominio no. Cada caso de uso recibe además su propia entrada sin decoradores, una interfaz `...Input` en `application/dto/*.input.ts` (por ejemplo, `SearchMaterialsInput`). El controlador le pasa el DTO ya validado junto con los datos de quien llama (`userId`, `viewerRole`), que van dentro de la entrada. Así el caso de uso no conoce la petición HTTP (D-25, D-B).
 
 ### D-14. Errores de dominio traducidos por un filtro global
 
@@ -424,3 +427,42 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Opciones:** un servicio gestionado con contenedores (Render, Railway, Fly.io) o un VPS con docker-compose.
 - **Criterios:** costo (idealmente gratuito o muy bajo para la demo), soporte de PostgreSQL 15+, URL pública estable y facilidad para que el CLENA lo mantenga.
 - **Consecuencias:** debe resolverse antes del Sprint 3. Cualquier opción debe poder reproducirse a partir del `docker-compose` del repositorio.
+
+### D-25. Estructura de Clean Architecture del curso, verificada en el CI
+
+- **Decisión:** el backend sigue la estructura de Clean Architecture del curso («Clean Architecture con NestJS, Prisma y Docker») y la verifica en el CI (#144). Las reglas que se adoptan del curso son:
+  - **R1.** El dominio no importa NestJS, Prisma ni Swagger.
+  - **R2.** El dominio solo tiene subcarpetas: `entities/`, `errors/`, `repositories/` y `enums/`.
+  - **R3.** Las interfaces de repositorio están en `domain/repositories/` y reciben y devuelven entidades.
+  - **R4.** Los puertos de servicios externos están en `application/ports/`.
+  - **R5.** `application/dto/` guarda los contratos de entrada y salida; los DTOs llevan `class-validator` y Swagger.
+  - **R6.** Las respuestas se arman con mapeadores de `application/mappers/`.
+  - **R7.** El caso de uso orquesta y no conoce HTTP.
+  - **R8.** El mapeo entre Prisma y el dominio está en `infrastructure/mappers/`.
+  - **R9.** Las interfaces de contrato llevan el prefijo `I`.
+  - **R10.** Inyección por tokens, con `@Injectable()` e `@Inject()` en los casos de uso.
+- **Diferencias propias del equipo con el curso:**
+  - **D-A.** Hay una capa `presentation/` aparte. En el curso, los controladores, guards y decoradores van en `infrastructure/`; aquí se separan porque se entiende mejor qué entra por HTTP y qué sale hacia la base o el correo.
+  - **D-B.** Todo caso de uso recibe exactamente una interfaz `...Input` (o ninguna), aunque sea un solo dato. Los datos de quien llama van dentro de ella. El curso pasa datos sueltos, pero aquí hay entradas de 6 a 8 campos.
+  - **D-C.** Un caso de uso no define tipos ni funciones en su archivo. Los tipos están en `application/dto/` y el mapeo en `application/mappers/`.
+  - **D-D.** Lo que se lee y no es una entidad (listados, detalle, agenda, contexto del correo, conflictos de agenda) está en un puerto de consulta de la aplicación (`IRequestQueryService`), no en el repositorio del dominio.
+  - **D-E.** El dominio suma dos subcarpetas al curso: `value-objects/` (valores con sus reglas y registros inmutables, como `DesiredDate` o `StatusChange`) y `policies/` (reglas de negocio que no son de una sola entidad, como la disponibilidad del material).
+  - **D-F.** Los mapeadores de respuesta también convierten modelos de lectura y resultados de servicios, no solo entidades.
+- **Excepciones aceptadas:**
+  - `IMaterialRepository.search()` devuelve entidades con su paginación.
+  - `IRefreshTokenRepository.revoke()` y `deleteExpired()` devuelven una confirmación o un conteo.
+  - `IRequestRepository.saveStatusChange()` y `saveAppointment()` devuelven el registro guardado (`SavedStatusChange`, `SavedAppointment`), que es un objeto de valor del dominio.
+  - Se mantienen las diferencias que ya estaban documentadas: errores que extienden `DomainError` (D-14), guards globales (D-12) y las carpetas `application/services/` e `infrastructure/jobs|mail|database|security/`.
+- **Alternativas:** dejar la estructura solo en la documentación y la revisión de los PR; usar una herramienta externa de dependencias (dependency-cruiser).
+- **Justificación:** al terminar el Sprint 1 convivían dos estilos de organización, aunque la regla de dependencia se cumplía: archivos sueltos en el dominio, entradas definidas dentro de los casos de uso y respuestas armadas a mano. Una revisión no basta para evitar que vuelva a pasar, y una prueba con el compilador de TypeScript no agrega dependencias.
+- **Consecuencias:**
+  - **ESLint** (`backend/eslint.config.mjs`) impide que el dominio importe NestJS, Prisma, `class-validator`, `class-transformer` o Swagger. También impide que los casos de uso y servicios importen DTOs de petición o esas librerías, y que las interfaces `.input`/`.result` reutilicen DTOs.
+  - **La prueba de arquitectura** (`backend/src/architecture.spec.ts`, en `pnpm test`) falla si:
+    - el dominio tiene archivos sueltos o subcarpetas no permitidas;
+    - una capa importa a otra en sentido contrario;
+    - un puerto importa un caso de uso;
+    - un caso de uso define tipos o funciones en su archivo;
+    - `execute` no recibe una sola interfaz `...Input`;
+    - una respuesta se arma sin mapeador;
+    - un contrato con métodos no empieza con `I`.
+  - **Crear una solicitud** sigue el modelo del curso: el caso de uso arma la entidad con `Request.create()`, obtiene el radicado del puerto `ITrackingCodeGenerator`, resuelve el solicitante con `RequesterResolver` (entidad `Requester` e `IRequesterRepository`) y la guarda con `IRequestRepository.save()`.

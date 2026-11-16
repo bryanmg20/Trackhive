@@ -41,7 +41,7 @@ Decisiones principales:
 - `status_history` solo admite `INSERT`: un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`. Es la auditoría y la base del reporte de tiempos de atención.
 - `appointment_materials` tiene el índice único `(material_id, booked_date)`, así que la base de datos impide reservar el mismo material dos veces el mismo día (HU-20).
 - Ninguna FK borra en cascada: todas son `RESTRICT`, salvo `materials.status_changed_by`, que es `SET NULL` (si se borrara el usuario, el material pierde solo el responsable del último cambio). Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
-- No hay tabla de horario ni de capacidad de la sala. El horario de atención (lunes a viernes de 8:00 a 17:00, sábados de 9:00 a 13:00) está en el dominio (`backend/src/requests/domain/appointment-date.ts`). La capacidad diaria configurable llega con HU-20.1.
+- No hay tabla de horario ni de capacidad de la sala. El horario de atención (lunes a viernes de 8:00 a 17:00, sábados de 9:00 a 13:00) está en el dominio (`backend/src/requests/domain/value-objects/appointment-date.ts`). La capacidad diaria configurable llega con HU-20.1.
 
 ## 3. Descripción de tablas
 
