@@ -1,33 +1,16 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { IRequestRepository } from '../../domain/repositories/request.repository';
+import type { ScheduleAppointmentInput } from '../dto/schedule-appointment.input';
 import { toAppointmentDay } from '../../domain/value-objects/appointment-date';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { MaterialNotAvailableError } from '../../domain/errors/material-not-available.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { blocksScheduling } from '../../domain/policies/material-availability';
 import { ScheduleAppointmentResponseDto } from '../dto/schedule-appointment-response.dto';
-import { buildStatusChangeEmail } from '../notifications/status-change-email';
-import type { RequestRepository } from '../ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../tokens';
-
-export interface ScheduleAppointmentInput {
-  requestId: string;
-  // YYYY-MM-DD
-  date: string;
-  // Who schedules it: always the user of the access token
-  userId: string;
-}
-
-interface PersonName {
-  firstName: string;
-  middleName: string | null;
-  lastName: string;
-  secondLastName: string | null;
-}
-
-const fullName = (person: PersonName): string =>
-  [person.firstName, person.middleName, person.lastName, person.secondLastName]
-    .filter(Boolean)
-    .join(' ');
+import { buildStatusChangeEmail } from '../services/status-change-email';
+import { ScheduleAppointmentResponseMapper } from '../mappers/schedule-appointment-response.mapper';
+import type { IRequestQueryService } from '../ports/request-query.port';
+import { REQUEST_QUERY_SERVICE, REQUEST_REPOSITORY } from '../tokens';
 
 /**
  * «Agendar cita de consulta» (HU-18). The appointment is a whole day, without
@@ -42,7 +25,9 @@ export class ScheduleAppointmentUseCase {
   private readonly logger = new Logger(ScheduleAppointmentUseCase.name);
 
   constructor(
-    @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
+    @Inject(REQUEST_REPOSITORY) private readonly repository: IRequestRepository,
+    @Inject(REQUEST_QUERY_SERVICE)
+    private readonly queries: IRequestQueryService,
   ) {}
 
   async execute(
@@ -51,7 +36,7 @@ export class ScheduleAppointmentUseCase {
     // Throws InvalidAppointmentDateError (400) on a Sunday or a wrong date
     const day = toAppointmentDay(input.date);
 
-    const request = await this.repository.findEntityById(input.requestId);
+    const request = await this.repository.findById(input.requestId);
     if (!request) {
       throw new RequestNotFoundError();
     }
@@ -63,7 +48,7 @@ export class ScheduleAppointmentUseCase {
     // over, and one with a cita that day is already committed. EN_USO does
     // not block: it only applies to the day the material is in the room
     // (HU-72). Nothing is saved when either check fails
-    const conflicts = await this.repository.findSchedulingConflicts(
+    const conflicts = await this.queries.findSchedulingConflicts(
       request.id,
       day.date,
     );
@@ -78,7 +63,7 @@ export class ScheduleAppointmentUseCase {
     }
 
     // HU-23: the requester learns the day and the service hours by email
-    const context = await this.repository.findNotificationContext(request.id);
+    const context = await this.queries.findNotificationContext(request.id);
     const notification = context
       ? buildStatusChangeEmail(context, {
           newStatus: change.newStatus,
@@ -98,29 +83,10 @@ export class ScheduleAppointmentUseCase {
       notification,
     );
 
-    const { statusChange } = saved;
-    return {
-      id: request.id,
-      status: request.status,
-      allowedTransitions: request.allowedTransitions,
-      appointment: {
-        id: saved.id,
-        date: saved.date.toISOString().slice(0, 10),
-        serviceHours: day.serviceHours,
-        status: saved.status,
-        requester: { id: saved.requester.id, name: fullName(saved.requester) },
-        materials: saved.materials,
-      },
-      statusChange: {
-        previousStatus: statusChange.previousStatus,
-        newStatus: statusChange.newStatus,
-        changedAt: statusChange.changedAt.toISOString(),
-        changedBy: {
-          id: statusChange.changedBy.id,
-          name: fullName(statusChange.changedBy),
-        },
-        comment: statusChange.comment,
-      },
-    };
+    return ScheduleAppointmentResponseMapper.toDto(
+      request,
+      saved,
+      day.serviceHours,
+    );
   }
 }

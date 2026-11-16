@@ -1,21 +1,23 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Request } from '../../domain/entities/request.entity';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
+import type { GetRequestDetailInput } from '../dto/get-request-detail.input';
 import { RequestDetailResponseDto } from '../dto/request-detail-response.dto';
-import type { RequestRepository } from '../ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../tokens';
-
-// Date-only column: send YYYY-MM-DD, without time or time zone
-const toDateOnly = (date: Date): string => date.toISOString().slice(0, 10);
+import { RequestDetailResponseMapper } from '../mappers/request-detail-response.mapper';
+import type { IRequestQueryService } from '../ports/request-query.port';
+import { REQUEST_QUERY_SERVICE } from '../tokens';
 
 @Injectable()
 export class GetRequestDetailUseCase {
   constructor(
-    @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
+    @Inject(REQUEST_QUERY_SERVICE)
+    private readonly queries: IRequestQueryService,
   ) {}
 
-  async execute(id: string): Promise<RequestDetailResponseDto> {
-    const detail = await this.repository.findById(id);
+  async execute(
+    input: GetRequestDetailInput,
+  ): Promise<RequestDetailResponseDto> {
+    const detail = await this.queries.findDetail(input.id);
     if (!detail) {
       throw new RequestNotFoundError();
     }
@@ -29,39 +31,6 @@ export class GetRequestDetailUseCase {
       rejectionReason: detail.rejectionReason,
     });
 
-    const { requester } = detail;
-    return {
-      id: detail.id,
-      trackingCode: detail.trackingCode,
-      status: detail.status,
-      allowedTransitions,
-      deliveryMode: detail.deliveryMode,
-      originChannel: detail.originChannel,
-      reason: detail.reason,
-      requirementDescription: detail.requirementDescription,
-      desiredDate: toDateOnly(detail.desiredDate),
-      committedDate: detail.committedDate
-        ? toDateOnly(detail.committedDate)
-        : null,
-      registeredAt: detail.registeredAt.toISOString(),
-      rejectionReason: detail.rejectionReason,
-      requester: {
-        name: [
-          requester.firstName,
-          requester.middleName,
-          requester.lastName,
-          requester.secondLastName,
-        ]
-          .filter(Boolean)
-          .join(' '),
-        email: requester.email,
-        phone: requester.phone,
-        requesterType: requester.requesterType,
-        institution: requester.institution,
-        documentType: requester.documentType,
-        documentNumber: requester.documentNumber,
-      },
-      materials: detail.materials,
-    };
+    return RequestDetailResponseMapper.toDto(detail, allowedTransitions);
   }
 }

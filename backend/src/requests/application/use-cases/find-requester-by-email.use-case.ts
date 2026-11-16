@@ -1,19 +1,23 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { RequesterNotFoundError } from '../../domain/errors/requester-not-found.error';
+import type { FindRequesterByEmailInput } from '../dto/find-requester-by-email.input';
 import { RequesterResponseDto } from '../dto/requester-response.dto';
 import { RequesterResponseMapper } from '../mappers/requester-response.mapper';
-import type { RequestRepository } from '../ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../tokens';
-import { RequesterNotFoundError } from '../../domain/errors/requester-not-found.error';
+import type { IRequestQueryService } from '../ports/request-query.port';
+import { REQUEST_QUERY_SERVICE } from '../tokens';
 
 @Injectable()
 export class FindRequesterByEmailUseCase {
   constructor(
-    @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
+    @Inject(REQUEST_QUERY_SERVICE)
+    private readonly queries: IRequestQueryService,
   ) {}
 
-  async execute(email: string): Promise<RequesterResponseDto> {
-    const profile = await this.repository.findRequesterByEmail(
-      email.trim().toLowerCase(),
+  async execute(
+    input: FindRequesterByEmailInput,
+  ): Promise<RequesterResponseDto> {
+    const profile = await this.queries.findRequesterByEmail(
+      input.email.trim().toLowerCase(),
     );
     if (!profile) {
       throw new RequesterNotFoundError();

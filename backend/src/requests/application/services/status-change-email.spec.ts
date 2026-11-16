@@ -1,4 +1,4 @@
-import type { RequestNotificationContext } from '../ports/request.repository.port';
+import type { RequestNotificationContext } from '../ports/request-query.port';
 import { buildStatusChangeEmail } from './status-change-email';
 
 const CONTEXT: RequestNotificationContext = {

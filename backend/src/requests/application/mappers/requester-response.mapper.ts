@@ -1,4 +1,4 @@
-import type { RequesterProfile } from '../ports/request.repository.port';
+import type { RequesterProfile } from '../ports/request-query.port';
 import { RequesterResponseDto } from '../dto/requester-response.dto';
 
 export class RequesterResponseMapper {

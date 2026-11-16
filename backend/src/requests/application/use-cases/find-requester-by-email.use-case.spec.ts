@@ -20,22 +20,18 @@ describe('FindRequesterByEmailUseCase', () => {
 
   it('normalizes the email and returns the requester data', async () => {
     const repository = {
-      create: jest.fn(),
-      createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn().mockResolvedValue(profile),
       list: jest.fn(),
       listAppointments: jest.fn(),
-      findById: jest.fn(),
+      findDetail: jest.fn(),
       listByRequesterUser: jest.fn(),
-      findEntityById: jest.fn(),
       findNotificationContext: jest.fn(),
-      saveStatusChange: jest.fn(),
-      saveAppointment: jest.fn(),
       findSchedulingConflicts: jest.fn(),
+      findMissingMaterialIds: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 
-    const result = await useCase.execute(' Visitante@Ejemplo.com ');
+    const result = await useCase.execute({ email: ' Visitante@Ejemplo.com ' });
 
     expect(repository.findRequesterByEmail).toHaveBeenCalledWith(
       'visitante@ejemplo.com',
@@ -49,23 +45,19 @@ describe('FindRequesterByEmailUseCase', () => {
 
   it('throws when the email is unknown', async () => {
     const repository = {
-      create: jest.fn(),
-      createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn().mockResolvedValue(null),
       list: jest.fn(),
       listAppointments: jest.fn(),
-      findById: jest.fn(),
+      findDetail: jest.fn(),
       listByRequesterUser: jest.fn(),
-      findEntityById: jest.fn(),
       findNotificationContext: jest.fn(),
-      saveStatusChange: jest.fn(),
-      saveAppointment: jest.fn(),
       findSchedulingConflicts: jest.fn(),
+      findMissingMaterialIds: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 
-    await expect(useCase.execute('nadie@ejemplo.com')).rejects.toBeInstanceOf(
-      RequesterNotFoundError,
-    );
+    await expect(
+      useCase.execute({ email: 'nadie@ejemplo.com' }),
+    ).rejects.toBeInstanceOf(RequesterNotFoundError);
   });
 });

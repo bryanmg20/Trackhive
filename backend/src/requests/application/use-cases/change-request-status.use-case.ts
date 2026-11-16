@@ -1,18 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { IRequestRepository } from '../../domain/repositories/request.repository';
+import type { ChangeRequestStatusInput } from '../dto/change-request-status.input';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
-import type { ChangeableStatus } from '../../domain/enums/request-status';
 import { ChangeRequestStatusResponseDto } from '../dto/change-request-status-response.dto';
-import { buildStatusChangeEmail } from '../notifications/status-change-email';
-import type { RequestRepository } from '../ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../tokens';
-
-export interface ChangeRequestStatusInput {
-  requestId: string;
-  status: ChangeableStatus;
-  comment?: string;
-  // Who makes the change: always the user of the access token
-  userId: string;
-}
+import { buildStatusChangeEmail } from '../services/status-change-email';
+import { ChangeRequestStatusResponseMapper } from '../mappers/change-request-status-response.mapper';
+import type { IRequestQueryService } from '../ports/request-query.port';
+import { REQUEST_QUERY_SERVICE, REQUEST_REPOSITORY } from '../tokens';
 
 /**
  * «Cambiar estado de una solicitud» (HU-15). The entity decides whether the
@@ -25,13 +19,15 @@ export class ChangeRequestStatusUseCase {
   private readonly logger = new Logger(ChangeRequestStatusUseCase.name);
 
   constructor(
-    @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
+    @Inject(REQUEST_REPOSITORY) private readonly repository: IRequestRepository,
+    @Inject(REQUEST_QUERY_SERVICE)
+    private readonly queries: IRequestQueryService,
   ) {}
 
   async execute(
     input: ChangeRequestStatusInput,
   ): Promise<ChangeRequestStatusResponseDto> {
-    const request = await this.repository.findEntityById(input.requestId);
+    const request = await this.repository.findById(input.requestId);
     if (!request) {
       throw new RequestNotFoundError();
     }
@@ -45,7 +41,7 @@ export class ChangeRequestStatusUseCase {
     );
 
     // HU-23: the new status and, if rejected, the reason the requester reads
-    const context = await this.repository.findNotificationContext(request.id);
+    const context = await this.queries.findNotificationContext(request.id);
     const notification = context
       ? buildStatusChangeEmail(context, {
           newStatus: change.newStatus,
@@ -61,29 +57,6 @@ export class ChangeRequestStatusUseCase {
 
     const saved = await this.repository.saveStatusChange(change, notification);
 
-    const { changedBy } = saved;
-    return {
-      id: request.id,
-      status: request.status,
-      allowedTransitions: request.allowedTransitions,
-      rejectionReason: request.rejectionReason,
-      statusChange: {
-        previousStatus: saved.previousStatus,
-        newStatus: saved.newStatus,
-        changedAt: saved.changedAt.toISOString(),
-        changedBy: {
-          id: changedBy.id,
-          name: [
-            changedBy.firstName,
-            changedBy.middleName,
-            changedBy.lastName,
-            changedBy.secondLastName,
-          ]
-            .filter(Boolean)
-            .join(' '),
-        },
-        comment: saved.comment,
-      },
-    };
+    return ChangeRequestStatusResponseMapper.toDto(request, saved);
   }
 }

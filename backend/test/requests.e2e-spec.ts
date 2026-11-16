@@ -9,11 +9,14 @@ import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { NOTIFICATION_QUEUE } from '../src/notifications/application/tokens';
 import type { NotificationDraft } from '../src/notifications/domain/value-objects/notification-draft';
 import { PrismaService } from '../src/prisma/prisma.service';
-import type {
-  SavedAppointment,
-  SavedStatusChange,
-} from '../src/requests/application/ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../src/requests/application/tokens';
+import type { SavedAppointment } from '../src/requests/domain/value-objects/saved-appointment';
+import type { SavedStatusChange } from '../src/requests/domain/value-objects/saved-status-change';
+import {
+  REQUEST_QUERY_SERVICE,
+  REQUEST_REPOSITORY,
+  REQUESTER_REPOSITORY,
+  TRACKING_CODE_GENERATOR,
+} from '../src/requests/application/tokens';
 import {
   addBusinessDays,
   todayInBogota,
@@ -21,6 +24,8 @@ import {
 import { Request } from '../src/requests/domain/entities/request.entity';
 import { RequestStatusConflictError } from '../src/requests/domain/errors/request-status-conflict.error';
 import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
+import { USER_REPOSITORY } from '../src/users/application/tokens';
+import { User } from '../src/users/domain/entities/user.entity';
 import type { UserRole } from '../src/users/domain/enums/user-role';
 import { InMemoryNotificationQueue } from './fakes/in-memory-notification.queue';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
@@ -43,21 +48,14 @@ describe('Request registration (e2e)', () => {
   let server: Server;
   const jwt = new JwtService();
   const repository = {
-    create: jest.fn().mockResolvedValue({
-      id: 'request-1',
-      trackingCode: 'SOL-2026-00001',
-      status: 'RECIBIDA',
-    }),
-    createOnBehalf: jest.fn().mockResolvedValue({
-      id: 'request-2',
-      trackingCode: 'SOL-2026-00002',
-      status: 'RECIBIDA',
-    }),
+    // The new request: Request.create in the use case, saved here (HU-09)
+    save: jest.fn<Promise<void>, [Request]>(() => Promise.resolve()),
+    findMissingMaterialIds: jest.fn().mockResolvedValue([]),
     list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     listAppointments: jest.fn().mockResolvedValue({ items: [], total: 0 }),
-    findById: jest.fn(),
+    findDetail: jest.fn(),
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
-    findEntityById: jest.fn(),
+    findById: jest.fn(),
     // HU-23: who receives the email of a status change and what it lists
     findNotificationContext: jest.fn().mockResolvedValue({
       trackingCode: 'SOL-2026-00042',
@@ -91,6 +89,30 @@ describe('Request registration (e2e)', () => {
     }),
   };
 
+  // Who a new request is for (HU-09, HU-10): no requester exists yet
+  const requesters = {
+    findByUserId: jest.fn().mockResolvedValue(null),
+    findByEmail: jest.fn().mockResolvedValue(null),
+    save: jest.fn().mockResolvedValue(undefined),
+  };
+  const users = {
+    findById: jest.fn().mockResolvedValue(
+      new User({
+        id: 'user-1',
+        firstName: 'Ana',
+        lastName: 'Pérez',
+        email: 'ana@ejemplo.com',
+        passwordHash: 'hash',
+        role: 'PUBLICO',
+        active: true,
+      }),
+    ),
+    findByEmail: jest.fn().mockResolvedValue(null),
+    findAll: jest.fn(),
+    save: jest.fn(),
+  };
+  const trackingCodes = { next: jest.fn() };
+
   const accessToken = (role: UserRole, sub = 'user-1') =>
     jwt.sign({ sub, role }, { secret: ACCESS_SECRET, expiresIn: 900 });
 
@@ -123,8 +145,17 @@ describe('Request registration (e2e)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
+      // One fake answers both the entity repository and the query service
       .overrideProvider(REQUEST_REPOSITORY)
       .useValue(repository)
+      .overrideProvider(REQUEST_QUERY_SERVICE)
+      .useValue(repository)
+      .overrideProvider(REQUESTER_REPOSITORY)
+      .useValue(requesters)
+      .overrideProvider(USER_REPOSITORY)
+      .useValue(users)
+      .overrideProvider(TRACKING_CODE_GENERATOR)
+      .useValue(trackingCodes)
       // The startup purge of expired tokens (HU-3.1) needs a repository
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
@@ -143,6 +174,7 @@ describe('Request registration (e2e)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    trackingCodes.next.mockResolvedValue('SOL-2026-00001');
   });
 
   afterAll(async () => {
@@ -158,10 +190,11 @@ describe('Request registration (e2e)', () => {
         .expect(201);
 
       expect(response.body).toMatchObject({
-        id: 'request-1',
+        id: expect.any(String) as unknown,
         trackingCode: 'SOL-2026-00001',
         status: 'RECIBIDA',
       });
+      expect(repository.save).toHaveBeenCalledTimes(1);
     });
 
     it.each(['PERSONAL', 'ADMIN'] as UserRole[])(
@@ -205,18 +238,19 @@ describe('Request registration (e2e)', () => {
           .expect(201);
 
         expect(response.body).toMatchObject({
-          id: 'request-2',
-          trackingCode: 'SOL-2026-00002',
+          id: expect.any(String) as unknown,
+          trackingCode: 'SOL-2026-00001',
           status: 'RECIBIDA',
         });
-        expect(repository.createOnBehalf).toHaveBeenCalledWith(
-          expect.objectContaining({
-            createdById: 'user-1',
-            requester: expect.objectContaining({
-              email: 'visitante@ejemplo.com',
-            }) as unknown,
-          }),
+        // The staff member is the creator and the visitor is the requester
+        expect(requesters.findByEmail).toHaveBeenCalledWith(
+          'visitante@ejemplo.com',
         );
+        const [saved] = repository.save.mock.calls[0];
+        expect(saved.registration).toMatchObject({
+          createdById: 'user-1',
+          originChannel: 'PRESENCIAL',
+        });
       },
     );
 
@@ -422,8 +456,8 @@ describe('Request registration (e2e)', () => {
     };
 
     beforeEach(() => {
-      repository.findById.mockReset();
-      repository.findById.mockResolvedValue(detail);
+      repository.findDetail.mockReset();
+      repository.findDetail.mockResolvedValue(detail);
     });
 
     it('rejects a request without an access token with 401', async () => {
@@ -435,7 +469,7 @@ describe('Request registration (e2e)', () => {
         .get(detailPath(REQUEST_ID))
         .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
         .expect(403);
-      expect(repository.findById).not.toHaveBeenCalled();
+      expect(repository.findDetail).not.toHaveBeenCalled();
     });
 
     it.each<UserRole>(['PERSONAL', 'ADMIN'])(
@@ -461,11 +495,11 @@ describe('Request registration (e2e)', () => {
         .get(detailPath('no-es-uuid'))
         .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
         .expect(400);
-      expect(repository.findById).not.toHaveBeenCalled();
+      expect(repository.findDetail).not.toHaveBeenCalled();
     });
 
     it('answers 404 when the request does not exist', async () => {
-      repository.findById.mockResolvedValue(null);
+      repository.findDetail.mockResolvedValue(null);
 
       const response = await request(server)
         .get(detailPath(REQUEST_ID))
@@ -509,8 +543,8 @@ describe('Request registration (e2e)', () => {
       new Request({ id: REQUEST_ID, status, deliveryMode: 'PRESENCIAL' });
 
     beforeEach(() => {
-      repository.findEntityById.mockReset();
-      repository.findEntityById.mockResolvedValue(entity('AGENDADA'));
+      repository.findById.mockReset();
+      repository.findById.mockResolvedValue(entity('AGENDADA'));
       repository.saveStatusChange.mockReset();
       repository.saveStatusChange.mockImplementation(
         (change: StatusChange): Promise<SavedStatusChange> =>
@@ -561,7 +595,7 @@ describe('Request registration (e2e)', () => {
     });
 
     it('queues no email when the change is not valid (HU-23)', async () => {
-      repository.findEntityById.mockResolvedValue(entity('RECIBIDA'));
+      repository.findById.mockResolvedValue(entity('RECIBIDA'));
 
       await request(server)
         .patch(statusPath(REQUEST_ID))
@@ -592,7 +626,7 @@ describe('Request registration (e2e)', () => {
         statusCode: 403,
         code: 'FORBIDDEN',
       });
-      expect(repository.findEntityById).not.toHaveBeenCalled();
+      expect(repository.findById).not.toHaveBeenCalled();
       expect(repository.saveStatusChange).not.toHaveBeenCalled();
     });
 
@@ -607,7 +641,7 @@ describe('Request registration (e2e)', () => {
           .send({ status: 'ATENDIDA', comment: '  Consultó las actas  ' })
           .expect(200);
 
-        expect(repository.findEntityById).toHaveBeenCalledWith(REQUEST_ID);
+        expect(repository.findById).toHaveBeenCalledWith(REQUEST_ID);
         expect(savedChange()).toMatchObject({
           requestId: REQUEST_ID,
           previousStatus: 'AGENDADA',
@@ -666,7 +700,7 @@ describe('Request registration (e2e)', () => {
     });
 
     it('rejects an invalid transition with 409 and a clear error, and saves nothing', async () => {
-      repository.findEntityById.mockResolvedValue(entity('RECIBIDA'));
+      repository.findById.mockResolvedValue(entity('RECIBIDA'));
 
       const response = await request(server)
         .patch(statusPath(REQUEST_ID))
@@ -683,7 +717,7 @@ describe('Request registration (e2e)', () => {
     });
 
     it('rejects any change of a closed request with 409', async () => {
-      repository.findEntityById.mockResolvedValue(entity('CERRADA'));
+      repository.findById.mockResolvedValue(entity('CERRADA'));
 
       const response = await request(server)
         .patch(statusPath(REQUEST_ID))
@@ -711,7 +745,7 @@ describe('Request registration (e2e)', () => {
     });
 
     it('answers 404 when the request does not exist', async () => {
-      repository.findEntityById.mockResolvedValue(null);
+      repository.findById.mockResolvedValue(null);
 
       const response = await request(server)
         .patch(statusPath(REQUEST_ID))
@@ -729,7 +763,7 @@ describe('Request registration (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
         .send({ status: 'ATENDIDA' })
         .expect(400);
-      expect(repository.findEntityById).not.toHaveBeenCalled();
+      expect(repository.findById).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -749,7 +783,7 @@ describe('Request registration (e2e)', () => {
         .expect(400);
 
       expect((response.body as ErrorBody).code).toBe('VALIDATION_ERROR');
-      expect(repository.findEntityById).not.toHaveBeenCalled();
+      expect(repository.findById).not.toHaveBeenCalled();
       expect(repository.saveStatusChange).not.toHaveBeenCalled();
     });
 
@@ -757,7 +791,7 @@ describe('Request registration (e2e)', () => {
       const REASON = 'El material está restringido por la familia donante';
 
       beforeEach(() => {
-        repository.findEntityById.mockResolvedValue(entity('RECIBIDA'));
+        repository.findById.mockResolvedValue(entity('RECIBIDA'));
       });
 
       it.each<UserRole>(['PERSONAL', 'ADMIN'])(
@@ -828,12 +862,12 @@ describe('Request registration (e2e)', () => {
           .expect(403);
 
         expect((response.body as ErrorBody).code).toBe('FORBIDDEN');
-        expect(repository.findEntityById).not.toHaveBeenCalled();
+        expect(repository.findById).not.toHaveBeenCalled();
         expect(repository.saveStatusChange).not.toHaveBeenCalled();
       });
 
       it('only rejects from RECIBIDA or EN_BUSQUEDA: 409 from AGENDADA', async () => {
-        repository.findEntityById.mockResolvedValue(entity('AGENDADA'));
+        repository.findById.mockResolvedValue(entity('AGENDADA'));
 
         const response = await request(server)
           .patch(statusPath(REQUEST_ID))
@@ -877,8 +911,8 @@ describe('Request registration (e2e)', () => {
     ) => new Request({ id: REQUEST_ID, status, deliveryMode });
 
     beforeEach(() => {
-      repository.findEntityById.mockReset();
-      repository.findEntityById.mockResolvedValue(entity('DISPONIBLE'));
+      repository.findById.mockReset();
+      repository.findById.mockResolvedValue(entity('DISPONIBLE'));
       repository.saveAppointment.mockReset();
       repository.saveAppointment.mockImplementation(
         (change: StatusChange, date: Date): Promise<SavedAppointment> =>
@@ -929,7 +963,7 @@ describe('Request registration (e2e)', () => {
         .expect(403);
 
       expect((response.body as ErrorBody).code).toBe('FORBIDDEN');
-      expect(repository.findEntityById).not.toHaveBeenCalled();
+      expect(repository.findById).not.toHaveBeenCalled();
       expect(repository.saveAppointment).not.toHaveBeenCalled();
     });
 
@@ -1010,7 +1044,7 @@ describe('Request registration (e2e)', () => {
     ])(
       'rejects a request in %s with 409 and schedules nothing',
       async (status) => {
-        repository.findEntityById.mockResolvedValue(entity(status));
+        repository.findById.mockResolvedValue(entity(status));
 
         const response = await request(server)
           .post(appointmentsPath(REQUEST_ID))
@@ -1026,9 +1060,7 @@ describe('Request registration (e2e)', () => {
     );
 
     it('rejects a request with a digital delivery with 409', async () => {
-      repository.findEntityById.mockResolvedValue(
-        entity('DISPONIBLE', 'DIGITAL'),
-      );
+      repository.findById.mockResolvedValue(entity('DISPONIBLE', 'DIGITAL'));
 
       await request(server)
         .post(appointmentsPath(REQUEST_ID))
@@ -1053,7 +1085,7 @@ describe('Request registration (e2e)', () => {
     });
 
     it('answers 404 when the request does not exist', async () => {
-      repository.findEntityById.mockResolvedValue(null);
+      repository.findById.mockResolvedValue(null);
 
       const response = await request(server)
         .post(appointmentsPath(REQUEST_ID))

@@ -1,8 +1,8 @@
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import type {
   RequestDetail,
-  RequestRepository,
-} from '../ports/request.repository.port';
+  IRequestQueryService,
+} from '../ports/request-query.port';
 import { GetRequestDetailUseCase } from './get-request-detail.use-case';
 
 const buildDetail = (
@@ -55,25 +55,21 @@ describe('GetRequestDetailUseCase', () => {
     findById = jest.fn<Promise<RequestDetail | null>, [string]>(() =>
       Promise.resolve(buildDetail()),
     );
-    const repository: RequestRepository = {
-      create: jest.fn(),
-      createOnBehalf: jest.fn(),
+    const repository: IRequestQueryService = {
       findRequesterByEmail: jest.fn(),
       list: jest.fn(),
       listAppointments: jest.fn(),
-      findById,
+      findDetail: findById,
       listByRequesterUser: jest.fn(),
-      findEntityById: jest.fn(),
       findNotificationContext: jest.fn(),
       findSchedulingConflicts: jest.fn(),
-      saveStatusChange: jest.fn(),
-      saveAppointment: jest.fn(),
+      findMissingMaterialIds: jest.fn(),
     };
     useCase = new GetRequestDetailUseCase(repository);
   });
 
   it('returns requester, material, reason, desired date and status', async () => {
-    const result = await useCase.execute('request-1');
+    const result = await useCase.execute({ id: 'request-1' });
 
     expect(findById).toHaveBeenCalledWith('request-1');
     expect(result).toMatchObject({
@@ -109,7 +105,7 @@ describe('GetRequestDetailUseCase', () => {
       buildDetail({ status: 'RECIBIDA', committedDate: null }),
     );
 
-    const result = await useCase.execute('request-1');
+    const result = await useCase.execute({ id: 'request-1' });
 
     expect(result.committedDate).toBeNull();
   });
@@ -122,7 +118,7 @@ describe('GetRequestDetailUseCase', () => {
       }),
     );
 
-    const result = await useCase.execute('request-1');
+    const result = await useCase.execute({ id: 'request-1' });
 
     expect(result.status).toBe('RECHAZADA');
     expect(result.rejectionReason).toBe('Material no localizado');
@@ -139,7 +135,7 @@ describe('GetRequestDetailUseCase', () => {
     async (status, deliveryMode, expected) => {
       findById.mockResolvedValue(buildDetail({ status, deliveryMode }));
 
-      const result = await useCase.execute('request-1');
+      const result = await useCase.execute({ id: 'request-1' });
 
       expect(result.allowedTransitions).toEqual(expected);
     },
@@ -148,7 +144,7 @@ describe('GetRequestDetailUseCase', () => {
   it('throws RequestNotFoundError when the request does not exist', async () => {
     findById.mockResolvedValue(null);
 
-    await expect(useCase.execute('missing')).rejects.toThrow(
+    await expect(useCase.execute({ id: 'missing' })).rejects.toThrow(
       RequestNotFoundError,
     );
   });

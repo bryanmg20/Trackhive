@@ -14,12 +14,13 @@ import { SendPendingNotificationsUseCase } from '../src/notifications/applicatio
 import type { NotificationDraft } from '../src/notifications/domain/value-objects/notification-draft';
 import { SendPendingNotificationsJob } from '../src/notifications/infrastructure/jobs/send-pending-notifications.job';
 import { PrismaService } from '../src/prisma/prisma.service';
-import type {
-  RequestNotificationContext,
-  SavedStatusChange,
-} from '../src/requests/application/ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../src/requests/application/tokens';
+import type { RequestNotificationContext } from '../src/requests/application/ports/request-query.port';
+import {
+  REQUEST_QUERY_SERVICE,
+  REQUEST_REPOSITORY,
+} from '../src/requests/application/tokens';
 import { Request } from '../src/requests/domain/entities/request.entity';
+import type { SavedStatusChange } from '../src/requests/domain/value-objects/saved-status-change';
 import type { RequestStatus } from '../src/requests/domain/enums/request-status';
 import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
 import { FakeMailSender } from './fakes/fake-mail-sender';
@@ -87,7 +88,7 @@ describe('Status change emails (e2e)', () => {
   };
 
   const repository = {
-    findEntityById: jest.fn(() =>
+    findById: jest.fn(() =>
       Promise.resolve(
         new Request({ id: REQUEST_ID, status, deliveryMode: 'PRESENCIAL' }),
       ),
@@ -129,7 +130,10 @@ describe('Status change emails (e2e)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
+      // One fake answers both the entity repository and the query service
       .overrideProvider(REQUEST_REPOSITORY)
+      .useValue(repository)
+      .overrideProvider(REQUEST_QUERY_SERVICE)
       .useValue(repository)
       .overrideProvider(NOTIFICATION_QUEUE)
       .useValue(outbox)

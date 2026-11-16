@@ -1,40 +1,65 @@
+import { Request } from '../../domain/entities/request.entity';
+import { Requester } from '../../domain/entities/requester.entity';
+import { DesiredDateError } from '../../domain/errors/desired-date-invalid.error';
+import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
+import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
+import { RequesterEmailRequiredError } from '../../domain/errors/requester-email-required.error';
+import { RequesterNameRequiredError } from '../../domain/errors/requester-name-required.error';
+import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import {
   addBusinessDays,
   todayInBogota,
 } from '../../domain/value-objects/desired-date';
-import { DesiredDateError } from '../../domain/errors/desired-date-invalid.error';
-import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
-import { RequesterEmailRequiredError } from '../../domain/errors/requester-email-required.error';
-import { RequesterNameRequiredError } from '../../domain/errors/requester-name-required.error';
-import type { CreateRequestOnBehalfInput } from './create-request-on-behalf.use-case';
+import type { CreateRequestOnBehalfInput } from '../dto/create-request-on-behalf.input';
+import type { IRequestQueryService } from '../ports/request-query.port';
+import type { RequesterResolver } from '../services/requester-resolver';
 import { CreateRequestOnBehalfUseCase } from './create-request-on-behalf.use-case';
 
 const validDate = () =>
   addBusinessDays(todayInBogota(), 10).toISOString().slice(0, 10);
 
+const VISITOR = Requester.fromContact(
+  {
+    email: 'visitante@ejemplo.com',
+    firstName: 'Visitante',
+    lastName: 'Prueba',
+  },
+  'requester-1',
+);
+
 describe('CreateRequestOnBehalfUseCase', () => {
-  const repository = {
-    create: jest.fn(),
-    createOnBehalf: jest.fn().mockResolvedValue({
-      id: 'request-1',
-      trackingCode: 'SOL-2026-00001',
-      status: 'RECIBIDA',
-    }),
-    findRequesterByEmail: jest.fn(),
-    list: jest.fn(),
-    listAppointments: jest.fn(),
+  const save = jest.fn<Promise<void>, [Request]>(() => Promise.resolve());
+  const repository: IRequestRepository = {
+    save,
     findById: jest.fn(),
-    listByRequesterUser: jest.fn(),
-    findEntityById: jest.fn(),
-    findNotificationContext: jest.fn(),
     saveStatusChange: jest.fn(),
     saveAppointment: jest.fn(),
-    findSchedulingConflicts: jest.fn(),
   };
-  const useCase = new CreateRequestOnBehalfUseCase(repository);
+  const findMissingMaterialIds = jest.fn<
+    Promise<string[]>,
+    [readonly string[]]
+  >(() => Promise.resolve([]));
+  const queries: IRequestQueryService = {
+    list: jest.fn(),
+    listByRequesterUser: jest.fn(),
+    findDetail: jest.fn(),
+    listAppointments: jest.fn(),
+    findRequesterByEmail: jest.fn(),
+    findNotificationContext: jest.fn(),
+    findSchedulingConflicts: jest.fn(),
+    findMissingMaterialIds,
+  };
+  const forContact = jest.fn(() => Promise.resolve(VISITOR));
+  const useCase = new CreateRequestOnBehalfUseCase(
+    repository,
+    queries,
+    { next: () => Promise.resolve('SOL-2026-00002') },
+    { forContact } as unknown as RequesterResolver,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
+    findMissingMaterialIds.mockResolvedValue([]);
   });
 
   const input = (): CreateRequestOnBehalfInput => ({
@@ -47,69 +72,83 @@ describe('CreateRequestOnBehalfUseCase', () => {
       firstName: 'Visitante',
       lastName: 'Prueba',
     },
+    createdById: 'staff-1',
   });
 
-  it('registers the request with the staff member as creator', async () => {
-    await useCase.execute(input(), 'staff-1');
+  it('registers the request with the staff member as creator, in person', async () => {
+    const result = await useCase.execute(input());
 
-    expect(repository.createOnBehalf).toHaveBeenCalledWith(
-      expect.objectContaining({
-        createdById: 'staff-1',
-        requester: expect.objectContaining({
-          email: 'visitante@ejemplo.com',
-        }) as unknown,
-      }),
+    expect(forContact).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'visitante@ejemplo.com' }),
     );
+    const [saved] = save.mock.calls[0];
+    expect(saved.registration).toMatchObject({
+      trackingCode: 'SOL-2026-00002',
+      requesterId: 'requester-1',
+      createdById: 'staff-1',
+      originChannel: 'PRESENCIAL',
+    });
+    expect(result).toMatchObject({
+      trackingCode: 'SOL-2026-00002',
+      status: 'RECIBIDA',
+    });
   });
 
   it('accepts an existing user without repeating the names', async () => {
     const data = input();
-    data.requester = {
-      email: 'visitante@ejemplo.com',
-      userId: '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f',
-    };
+    data.requester = { email: 'usuario@ejemplo.com', userId: 'user-1' };
 
-    await useCase.execute(data, 'staff-1');
+    await useCase.execute(data);
 
-    expect(repository.createOnBehalf).toHaveBeenCalled();
+    expect(save).toHaveBeenCalled();
   });
 
   it('rejects a date earlier than ten business days', async () => {
-    const data = input();
-    data.desiredDate = addBusinessDays(todayInBogota(), 1)
-      .toISOString()
-      .slice(0, 10);
+    const data = {
+      ...input(),
+      desiredDate: addBusinessDays(todayInBogota(), 1)
+        .toISOString()
+        .slice(0, 10),
+    };
 
-    await expect(useCase.execute(data, 'staff-1')).rejects.toBeInstanceOf(
+    await expect(useCase.execute(data)).rejects.toBeInstanceOf(
       DesiredDateError,
     );
-    expect(repository.createOnBehalf).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('rejects a request without materials', async () => {
-    const data = input();
-    data.materialIds = [];
+    const data = { ...input(), materialIds: [] };
 
-    await expect(useCase.execute(data, 'staff-1')).rejects.toBeInstanceOf(
+    await expect(useCase.execute(data)).rejects.toBeInstanceOf(
       RequestMaterialsRequiredError,
     );
   });
 
+  it('rejects a material that is not in the catalog', async () => {
+    findMissingMaterialIds.mockResolvedValue(['material-1']);
+
+    await expect(useCase.execute(input())).rejects.toBeInstanceOf(
+      RequestMaterialNotFoundError,
+    );
+    expect(forContact).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('rejects a request without requester email', async () => {
     const data = input();
-    data.requester.email = '   ';
+    data.requester = { ...data.requester, email: '' };
 
-    await expect(useCase.execute(data, 'staff-1')).rejects.toBeInstanceOf(
+    await expect(useCase.execute(data)).rejects.toBeInstanceOf(
       RequesterEmailRequiredError,
     );
   });
 
   it('rejects a new requester without names', async () => {
     const data = input();
-    data.requester.firstName = '';
-    data.requester.lastName = '';
+    data.requester = { email: 'visitante@ejemplo.com' };
 
-    await expect(useCase.execute(data, 'staff-1')).rejects.toBeInstanceOf(
+    await expect(useCase.execute(data)).rejects.toBeInstanceOf(
       RequesterNameRequiredError,
     );
   });

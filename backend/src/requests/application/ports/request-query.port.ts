@@ -1,17 +1,6 @@
-import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
-import type { Request } from '../../domain/entities/request.entity';
 import type { RequestStatus } from '../../domain/enums/request-status';
-import type { StatusChange } from '../../domain/value-objects/status-change';
-import type { CreateRequestInput } from '../use-cases/create-request.use-case';
-import type { CreateRequestOnBehalfInput } from '../use-cases/create-request-on-behalf.use-case';
-
-export interface CreatedRequest {
-  id: string;
-  trackingCode: string;
-  status: 'RECIBIDA';
-}
 
 export interface RequesterProfile {
   requesterId: string | null;
@@ -117,21 +106,6 @@ export interface RequestDetail {
   }[];
 }
 
-/** A row of status_history as it was saved, with the name of who made it. */
-export interface SavedStatusChange {
-  previousStatus: RequestStatus;
-  newStatus: RequestStatus;
-  changedAt: Date;
-  comment: string | null;
-  changedBy: {
-    id: string;
-    firstName: string;
-    middleName: string | null;
-    lastName: string;
-    secondLastName: string | null;
-  };
-}
-
 /** What the email of a status change needs to know of the request (HU-23). */
 export interface RequestNotificationContext {
   trackingCode: string;
@@ -142,23 +116,6 @@ export interface RequestNotificationContext {
     email: string | null;
   };
   materials: { catalogCode: string; title: string }[];
-}
-
-/** An appointment as it was saved (HU-18), with the names to show. */
-export interface SavedAppointment {
-  id: string;
-  // UTC midnight of the day
-  date: Date;
-  status: 'PROGRAMADA';
-  requester: {
-    id: string;
-    firstName: string;
-    middleName: string | null;
-    lastName: string;
-    secondLastName: string | null;
-  };
-  materials: { id: string; catalogCode: string; title: string }[];
-  statusChange: SavedStatusChange;
 }
 
 /** A material of the request, as the scheduling checks read it (HU-20). */
@@ -256,24 +213,15 @@ export interface AppointmentListResult {
   total: number;
 }
 
-export interface RequestRepository {
-  create(
-    input: CreateRequestInput & { createdById: string },
-  ): Promise<CreatedRequest>;
-
-  createOnBehalf(
-    input: CreateRequestOnBehalfInput & { createdById: string },
-  ): Promise<CreatedRequest>;
-
-  findRequesterByEmail(email: string): Promise<RequesterProfile | null>;
-
+/**
+ * What the use cases read and that is not the Request entity (D-D): the
+ * listings and the detail of the screens, the context of the email and the
+ * checks of «Agendar cita». The entity is saved and loaded with
+ * IRequestRepository.
+ */
+export interface IRequestQueryService {
   list(criteria: RequestListCriteria): Promise<RequestListResult>;
 
-  listAppointments(
-    criteria: AppointmentListCriteria,
-  ): Promise<AppointmentListResult>;
-
-  findById(id: string): Promise<RequestDetail | null>;
   /**
    * Only the requests whose requester is linked to this user account: the
    * ones the user radicated and the ones the staff registered for them.
@@ -283,8 +231,15 @@ export interface RequestRepository {
     criteria: MyRequestListCriteria,
   ): Promise<RequestListResult>;
 
-  /** The request as a domain entity, to apply its transition rules (HU-15). */
-  findEntityById(id: string): Promise<Request | null>;
+  /** Everything the detail screen shows (HU-13). */
+  findDetail(id: string): Promise<RequestDetail | null>;
+
+  listAppointments(
+    criteria: AppointmentListCriteria,
+  ): Promise<AppointmentListResult>;
+
+  /** A requester, or a user account without a requester yet (HU-10). */
+  findRequesterByEmail(email: string): Promise<RequesterProfile | null>;
 
   /** Tracking code, requester and materials for the status email (HU-23). */
   findNotificationContext(
@@ -302,28 +257,6 @@ export interface RequestRepository {
     date: Date,
   ): Promise<SchedulingConflicts>;
 
-  /**
-   * Saves the new status and inserts its row in status_history in one
-   * transaction (D-08). In the same transaction it queues `notification`,
-   * the email to the requester, in the outbox (HU-23, D-10); null when the
-   * requester has no email. Throws RequestStatusConflictError when the
-   * request is no longer in `previousStatus` because someone else changed it
-   * first, and then nothing is saved or queued.
-   */
-  saveStatusChange(
-    change: StatusChange,
-    notification: NotificationDraft | null,
-  ): Promise<SavedStatusChange>;
-
-  /**
-   * Schedules an appointment (HU-18) in one transaction: saves the change to
-   * AGENDADA with its row in status_history and its email, like
-   * saveStatusChange, and creates the appointment for `date` with the
-   * requester and every material of the request.
-   */
-  saveAppointment(
-    change: StatusChange,
-    date: Date,
-    notification: NotificationDraft | null,
-  ): Promise<SavedAppointment>;
+  /** The ids of this list that are not a material of the catalog (RN-04). */
+  findMissingMaterialIds(materialIds: readonly string[]): Promise<string[]>;
 }

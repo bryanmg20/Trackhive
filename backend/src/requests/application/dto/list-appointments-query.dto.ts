@@ -17,11 +17,11 @@ import {
 } from 'class-validator';
 import { APPOINTMENT_STATUSES } from '../../domain/enums/appointment-status';
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
-import { APPOINTMENT_SORT_FIELDS } from '../ports/request.repository.port';
+import { APPOINTMENT_SORT_FIELDS } from '../ports/request-query.port';
 import type {
   AppointmentSortField,
   SortOrder,
-} from '../ports/request.repository.port';
+} from '../ports/request-query.port';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 

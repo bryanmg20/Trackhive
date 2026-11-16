@@ -131,7 +131,7 @@ export class RequestController {
     @Query() query: ListMyRequestsQueryDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<PaginatedMyRequestsResponseDto> {
-    return this.listMyRequestsUseCase.execute(query, user.id);
+    return this.listMyRequestsUseCase.execute({ ...query, userId: user.id });
   }
 
   @Get(':id')
@@ -171,7 +171,7 @@ export class RequestController {
   detail(
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<RequestDetailResponseDto> {
-    return this.getRequestDetailUseCase.execute(id);
+    return this.getRequestDetailUseCase.execute({ id });
   }
 
   @Patch(':id/status')
@@ -322,7 +322,7 @@ export class RequestController {
     @Body() dto: CreateRequestDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<CreateRequestResponseDto> {
-    return this.createRequestUseCase.execute(dto, user.id);
+    return this.createRequestUseCase.execute({ ...dto, userId: user.id });
   }
 
   @Post('on-behalf')
@@ -365,6 +365,9 @@ export class RequestController {
     @Body() dto: CreateRequestOnBehalfDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<CreateRequestResponseDto> {
-    return this.createRequestOnBehalfUseCase.execute(dto, user.id);
+    return this.createRequestOnBehalfUseCase.execute({
+      ...dto,
+      createdById: user.id,
+    });
   }
 }

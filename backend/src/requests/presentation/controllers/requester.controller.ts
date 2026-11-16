@@ -58,6 +58,6 @@ export class RequesterController {
     type: ErrorResponseDto,
   })
   find(@Query() query: FindRequesterQueryDto): Promise<RequesterResponseDto> {
-    return this.findRequesterByEmailUseCase.execute(query.email);
+    return this.findRequesterByEmailUseCase.execute({ email: query.email });
   }
 }

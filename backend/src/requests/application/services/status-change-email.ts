@@ -3,7 +3,7 @@ import type { NotificationDraft } from '../../../notifications/domain/value-obje
 import type { ServiceHours } from '../../domain/value-objects/appointment-date';
 import { REQUEST_STATUS_LABELS } from '../../domain/enums/request-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
-import type { RequestNotificationContext } from '../ports/request.repository.port';
+import type { RequestNotificationContext } from '../ports/request-query.port';
 
 export interface StatusChangeEmailDetails {
   newStatus: RequestStatus;

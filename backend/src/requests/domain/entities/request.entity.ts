@@ -1,4 +1,5 @@
 import { DeliveryMode } from '../enums/delivery-mode';
+import { RequestMaterialsRequiredError } from '../errors/request-materials-required.error';
 import { InvalidRequestStatusError } from '../errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../errors/rejection-reason-required.error';
@@ -9,6 +10,7 @@ import {
   REQUEST_STATUSES,
   RequestStatus,
 } from '../enums/request-status';
+import { assertValidDesiredDate } from '../value-objects/desired-date';
 import type { StatusChange } from '../value-objects/status-change';
 
 // Business rule: the only status changes allowed (docs/modelo-dominio.md, section 4)
@@ -22,11 +24,44 @@ const ALLOWED_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
   RECHAZADA: [],
 };
 
+/** How the request arrived: the public form or the staff (HU-09, HU-10). */
+export type OriginChannel = 'WEB' | 'PRESENCIAL';
+
+/** What was registered when the request was created (HU-09, HU-10). */
+export interface RequestRegistration {
+  readonly trackingCode: string;
+  readonly requesterId: string;
+  readonly createdById: string;
+  readonly originChannel: OriginChannel;
+  readonly reason: string;
+  readonly requirementDescription: string;
+  // UTC midnight of the day
+  readonly desiredDate: Date;
+  readonly materialIds: readonly string[];
+}
+
+/** The data of a new request, before it exists (Request.create). */
+export interface NewRequestData {
+  id: string;
+  trackingCode: string;
+  requesterId: string;
+  createdById: string;
+  originChannel: OriginChannel;
+  deliveryMode: DeliveryMode;
+  reason: string;
+  requirementDescription?: string;
+  // YYYY-MM-DD
+  desiredDate: string;
+  materialIds: readonly string[];
+}
+
 export interface RequestProps {
   id: string;
   status: RequestStatus;
   deliveryMode: DeliveryMode;
   rejectionReason?: string | null;
+  // Loaded by the repository; null for a request rebuilt only to apply its rules
+  registration?: RequestRegistration | null;
 }
 
 export class Request {
@@ -34,6 +69,7 @@ export class Request {
   public readonly deliveryMode: DeliveryMode;
   private currentStatus: RequestStatus;
   private currentRejectionReason: string | null;
+  public readonly registration: RequestRegistration | null;
 
   constructor(props: RequestProps) {
     if (!isRequestStatus(props.status)) {
@@ -43,6 +79,42 @@ export class Request {
     this.deliveryMode = props.deliveryMode;
     this.currentStatus = props.status;
     this.currentRejectionReason = props.rejectionReason ?? null;
+    this.registration = props.registration ?? null;
+  }
+
+  /**
+   * The rules a new request must meet (HU-09, HU-10): at least one material
+   * (RN-04) and a valid desired date (RN-03). The use cases check them first,
+   * before looking up the requester, and create() checks them again.
+   */
+  static assertCanBeCreated(
+    data: Pick<NewRequestData, 'desiredDate' | 'materialIds'>,
+    now: Date = new Date(),
+  ): void {
+    assertValidDesiredDate(data.desiredDate, now);
+    if (data.materialIds.length === 0) {
+      throw new RequestMaterialsRequiredError();
+    }
+  }
+
+  /** A new request: it always starts RECIBIDA. A repeated material counts once. */
+  static create(data: NewRequestData, now: Date = new Date()): Request {
+    Request.assertCanBeCreated(data, now);
+    return new Request({
+      id: data.id,
+      status: 'RECIBIDA',
+      deliveryMode: data.deliveryMode,
+      registration: {
+        trackingCode: data.trackingCode,
+        requesterId: data.requesterId,
+        createdById: data.createdById,
+        originChannel: data.originChannel,
+        reason: data.reason,
+        requirementDescription: data.requirementDescription ?? data.reason,
+        desiredDate: new Date(`${data.desiredDate}T00:00:00.000Z`),
+        materialIds: [...new Set(data.materialIds)],
+      },
+    });
   }
 
   get status(): RequestStatus {

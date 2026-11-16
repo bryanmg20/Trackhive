@@ -9,12 +9,13 @@ import { RequestNotFoundError } from '../../domain/errors/request-not-found.erro
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import type { RequestStatus } from '../../domain/enums/request-status';
 import type { StatusChange } from '../../domain/value-objects/status-change';
+import type { IRequestRepository } from '../../domain/repositories/request.repository';
+import type { SavedAppointment } from '../../domain/value-objects/saved-appointment';
 import type {
   RequestNotificationContext,
-  RequestRepository,
-  SavedAppointment,
   SchedulingConflicts,
-} from '../ports/request.repository.port';
+  IRequestQueryService,
+} from '../ports/request-query.port';
 import { ScheduleAppointmentUseCase } from './schedule-appointment.use-case';
 
 const buildRequest = (
@@ -65,7 +66,7 @@ const savedFrom = (change: StatusChange, date: Date): SavedAppointment => ({
 });
 
 describe('ScheduleAppointmentUseCase', () => {
-  let findEntityById: jest.Mock<Promise<Request | null>, [string]>;
+  let findById: jest.Mock<Promise<Request | null>, [string]>;
   let findSchedulingConflicts: jest.Mock<
     Promise<SchedulingConflicts>,
     [string, Date]
@@ -87,7 +88,7 @@ describe('ScheduleAppointmentUseCase', () => {
   };
 
   beforeEach(() => {
-    findEntityById = jest.fn<Promise<Request | null>, [string]>(() =>
+    findById = jest.fn<Promise<Request | null>, [string]>(() =>
       Promise.resolve(buildRequest('DISPONIBLE')),
     );
     findSchedulingConflicts = jest.fn<
@@ -98,21 +99,23 @@ describe('ScheduleAppointmentUseCase', () => {
       Promise<SavedAppointment>,
       [StatusChange, Date, NotificationDraft | null]
     >((change, date) => Promise.resolve(savedFrom(change, date)));
-    const repository: RequestRepository = {
-      create: jest.fn(),
-      createOnBehalf: jest.fn(),
-      findRequesterByEmail: jest.fn(),
-      list: jest.fn(),
-      listAppointments: jest.fn(),
-      findById: jest.fn(),
-      listByRequesterUser: jest.fn(),
-      findEntityById,
-      findNotificationContext: jest.fn(() => Promise.resolve(CONTEXT)),
-      findSchedulingConflicts,
+    const repository: IRequestRepository = {
+      save: jest.fn(),
+      findById,
       saveStatusChange: jest.fn(),
       saveAppointment,
     };
-    useCase = new ScheduleAppointmentUseCase(repository);
+    const queries: IRequestQueryService = {
+      list: jest.fn(),
+      listByRequesterUser: jest.fn(),
+      findDetail: jest.fn(),
+      listAppointments: jest.fn(),
+      findRequesterByEmail: jest.fn(),
+      findNotificationContext: jest.fn(() => Promise.resolve(CONTEXT)),
+      findSchedulingConflicts,
+      findMissingMaterialIds: jest.fn(),
+    };
+    useCase = new ScheduleAppointmentUseCase(repository, queries);
   });
 
   const schedule = (date = '2026-11-20') =>
@@ -284,21 +287,21 @@ describe('ScheduleAppointmentUseCase', () => {
     'CERRADA',
     'RECHAZADA',
   ])('rejects a request in %s and saves nothing', async (status) => {
-    findEntityById.mockResolvedValue(buildRequest(status));
+    findById.mockResolvedValue(buildRequest(status));
 
     await expect(schedule()).rejects.toThrow(InvalidStatusTransitionError);
     expect(saveAppointment).not.toHaveBeenCalled();
   });
 
   it('rejects a request with a digital delivery', async () => {
-    findEntityById.mockResolvedValue(buildRequest('DISPONIBLE', 'DIGITAL'));
+    findById.mockResolvedValue(buildRequest('DISPONIBLE', 'DIGITAL'));
 
     await expect(schedule()).rejects.toThrow(InvalidStatusTransitionError);
     expect(saveAppointment).not.toHaveBeenCalled();
   });
 
   it('throws RequestNotFoundError when the request does not exist', async () => {
-    findEntityById.mockResolvedValue(null);
+    findById.mockResolvedValue(null);
 
     await expect(schedule()).rejects.toThrow(RequestNotFoundError);
   });
