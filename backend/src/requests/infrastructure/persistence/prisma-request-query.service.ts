@@ -125,14 +125,7 @@ export class PrismaRequestQueryService implements IRequestQueryService {
         },
       },
     });
-    if (!model) {
-      return null;
-    }
-    return {
-      trackingCode: model.trackingCode,
-      requester: model.requester,
-      materials: model.items.map(({ material }) => material),
-    };
+    return model ? PrismaRequestReadMapper.toNotificationContext(model) : null;
   }
 
   findSchedulingConflicts(

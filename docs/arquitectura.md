@@ -354,6 +354,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Alternativas:** lanzar `HttpException` desde los casos de uso.
 - **Justificación:** las `HttpException` pertenecen a NestJS y contaminarían el núcleo. Un `code` estable permite al frontend reaccionar por tipo de error sin depender del texto del mensaje.
 - **Consecuencias:** cada error nuevo requiere una línea en el mapeo; un error sin mapear devuelve 500 y se registra en logs.
+- **Criterio para los errores de validación del dominio:** los errores que dicen que un dato no es válido (`INVALID_MATERIAL_TYPE`, `INVALID_MATERIAL_STATUS`, `INVALID_NAME`…) responden 400, aunque hoy algunos solo puedan salir de una fila ya guardada. La entidad los lanza igual al crearse desde una petición (por ejemplo, al registrar material en HU-06), y ahí el error es del cliente. Un dato corrupto en la base es un caso excepcional que se investiga con el log del filtro.
 
 ### D-15. API REST versionada con OpenAPI
 

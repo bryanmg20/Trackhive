@@ -17,18 +17,7 @@ export class PrismaUserRepository implements IUserRepository {
     try {
       await this.prisma.userModel.upsert({
         where: { id: user.id },
-        update: {
-          firstName: data.firstName,
-          middleName: data.middleName,
-          lastName: data.lastName,
-          secondLastName: data.secondLastName,
-          email: data.email,
-          passwordHash: data.passwordHash,
-          role: data.role,
-          active: data.active,
-          privacyPolicyAcceptedAt: data.privacyPolicyAcceptedAt,
-          privacyPolicyVersion: data.privacyPolicyVersion,
-        },
+        update: PrismaUserMapper.toUpdate(user),
         create: data,
       });
     } catch (error) {

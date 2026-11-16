@@ -8,6 +8,7 @@ import type {
   RequestDetail,
   RequesterProfile,
   RequestListItem,
+  RequestNotificationContext,
 } from '../../application/ports/request-query.port';
 import type { RequesterRow } from './prisma-requester.mapper';
 
@@ -242,6 +243,19 @@ export class PrismaRequestReadMapper {
       title: material.title,
       date,
       trackingCode,
+    };
+  }
+
+  /** What the status email needs of the request (HU-23). */
+  static toNotificationContext(model: {
+    trackingCode: string;
+    requester: { firstName: string; lastName: string; email: string | null };
+    items: { material: { catalogCode: string; title: string } }[];
+  }): RequestNotificationContext {
+    return {
+      trackingCode: model.trackingCode,
+      requester: model.requester,
+      materials: model.items.map(({ material }) => material),
     };
   }
 }

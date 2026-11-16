@@ -38,4 +38,20 @@ export class PrismaUserMapper {
       privacyPolicyVersion: entity.privacyPolicyVersion,
     };
   }
+
+  /** What an existing account can change: everything but its id. */
+  static toUpdate(entity: User) {
+    return {
+      firstName: entity.firstName,
+      middleName: entity.middleName,
+      lastName: entity.lastName,
+      secondLastName: entity.secondLastName,
+      email: entity.email,
+      passwordHash: entity.passwordHash,
+      role: entity.role,
+      active: entity.active,
+      privacyPolicyAcceptedAt: entity.privacyPolicyAcceptedAt,
+      privacyPolicyVersion: entity.privacyPolicyVersion,
+    };
+  }
 }

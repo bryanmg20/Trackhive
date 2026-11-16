@@ -341,6 +341,8 @@ describe('Arquitectura del backend', () => {
   });
 
   it('la infraestructura traduce con mapeadores de infrastructure/mappers (R8)', () => {
+    // The keys of Prisma whose value is written to the database
+    const WRITE_KEYS = new Set(['data', 'create', 'update']);
     const problems: string[] = [];
     const persistence = filesIn(
       /^[^/]+\/infrastructure\/persistence\/[^/]+\.ts$/,
@@ -366,10 +368,10 @@ describe('Arquitectura del backend', () => {
         // What is written to the database comes from a mapper
         if (
           ts.isPropertyAssignment(node) &&
-          node.name.getText() === 'data' &&
+          WRITE_KEYS.has(node.name.getText()) &&
           ts.isObjectLiteralExpression(node.initializer)
         ) {
-          problems.push(`${info.rel}: arma «data» a mano`);
+          problems.push(`${info.rel}: arma «${node.name.getText()}» a mano`);
         }
         // The entities are rebuilt by the mapper, not by the repository
         if (
