@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffRoute } from '../auth/components/StaffRoute';
 import { RequestsListPage } from './RequestsListPage';
 
@@ -70,6 +70,157 @@ describe('RequestsListPage', () => {
     sessionStorage.clear();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+  });
+
+  describe('automatic updates (#141)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function tick() {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+    }
+
+    it('refreshes every 30 seconds without replacing the table or showing loading', async () => {
+      fetchMock.mockResolvedValueOnce(page([item()]));
+      renderPage('PERSONAL');
+      const table = await screen.findByRole('table');
+      let resolveRefresh!: (value: ReturnType<typeof page>) => void;
+      fetchMock.mockImplementationOnce(() => new Promise((resolve) => {
+        resolveRefresh = resolve;
+      }));
+
+      await tick();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('table')).toBe(table);
+      expect(screen.queryByText('Cargando…')).not.toBeInTheDocument();
+      expect(screen.getByText('SOL-2026-00001')).toBeInTheDocument();
+
+      await act(async () => {
+        resolveRefresh(page([item(), item({ id: 'new', trackingCode: 'SOL-2026-00002' })]));
+      });
+      expect(screen.getByText('SOL-2026-00002')).toBeInTheDocument();
+      expect(screen.getByRole('table')).toBe(table);
+
+      fetchMock.mockResolvedValue(page([item()]));
+      await tick();
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('skips hidden intervals and refreshes immediately when the tab becomes visible', async () => {
+      fetchMock.mockResolvedValue(page([item()]));
+      renderPage('PERSONAL');
+      await screen.findByRole('table');
+      const visibility = vi.spyOn(document, 'visibilityState', 'get');
+      visibility.mockReturnValue('hidden');
+      await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+      await tick();
+      await tick();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      visibility.mockReturnValue('visible');
+      await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('refreshes on window focus and avoids overlapping requests', async () => {
+      fetchMock.mockResolvedValueOnce(page([item()]));
+      renderPage('ADMIN');
+      await screen.findByRole('table');
+      fetchMock.mockImplementationOnce(() => new Promise(() => {}));
+
+      await act(async () => window.dispatchEvent(new Event('focus')));
+      await tick();
+      await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps applied filters, sort, page, draft text and scroll during a refresh', async () => {
+      const user = userEvent.setup();
+      fetchMock.mockResolvedValue(page([item()], 25));
+      renderPage('PERSONAL');
+      await screen.findByRole('table');
+      await user.click(screen.getByRole('radio', { name: 'Recibida' }));
+      await user.type(screen.getByLabelText('Material'), 'acta');
+      await user.type(screen.getByLabelText('Fecha deseada desde'), '2026-12-01');
+      await user.type(screen.getByLabelText('Fecha deseada hasta'), '2026-12-31');
+      await user.type(screen.getByLabelText('Solicitante'), 'juan{Enter}');
+      await user.selectOptions(screen.getByLabelText('Ordenar por'), 'desiredDate');
+      await user.selectOptions(screen.getByLabelText('Dirección'), 'asc');
+      await screen.findByRole('table');
+      await user.click(screen.getByRole('button', { name: /siguiente/i }));
+      await screen.findByText('Página 2 de 3');
+      await user.type(screen.getByLabelText('Solicitante'), ' borrador');
+      const url = lastUrl().href;
+      const table = screen.getByRole('table');
+      table.parentElement!.scrollTop = 120;
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+      fetchMock.mockResolvedValue(page([item()], 26, 2));
+
+      await tick();
+
+      expect(lastUrl().href).toBe(url);
+      expect(screen.getByText('Página 2 de 3')).toBeInTheDocument();
+      expect(screen.getByLabelText('Solicitante')).toHaveValue('juan borrador');
+      expect(screen.getByRole('table')).toBe(table);
+      expect(table.parentElement!.scrollTop).toBe(120);
+      expect(scrollTo).not.toHaveBeenCalled();
+    });
+
+    it('keeps previous results on a network error and recovers on the next interval', async () => {
+      fetchMock.mockResolvedValueOnce(page([item()]));
+      renderPage('PERSONAL');
+      const table = await screen.findByRole('table');
+      fetchMock.mockRejectedValueOnce(new TypeError('Offline'));
+      await tick();
+      expect(screen.getByRole('table')).toBe(table);
+      expect(screen.getByRole('alert')).toHaveTextContent('No pudimos conectar');
+
+      fetchMock.mockResolvedValue(page([item({ status: 'EN_BUSQUEDA' })]));
+      await tick();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(within(table).getByText('En búsqueda')).toBeInTheDocument();
+    });
+
+    it('ignores a stale refresh after filters change', async () => {
+      const user = userEvent.setup();
+      fetchMock.mockResolvedValueOnce(page([item()]));
+      renderPage('PERSONAL');
+      await screen.findByRole('table');
+      let resolveOld!: (value: ReturnType<typeof page>) => void;
+      fetchMock.mockImplementationOnce(() => new Promise((resolve) => {
+        resolveOld = resolve;
+      }));
+      await tick();
+      fetchMock.mockResolvedValue(page([item({ status: 'AGENDADA', trackingCode: 'FILTERED' })]));
+      await user.click(screen.getByRole('radio', { name: 'Agendada' }));
+      await screen.findByText('FILTERED');
+      await act(async () => resolveOld(page([item()])));
+      expect(screen.getByText('FILTERED')).toBeInTheDocument();
+      expect(screen.queryByText('SOL-2026-00001')).not.toBeInTheDocument();
+      await tick();
+      expect(lastUrl().searchParams.get('status')).toBe('AGENDADA');
+    });
+
+    it('cleans up the timer and listeners when leaving the page', async () => {
+      fetchMock.mockResolvedValue(page([item()]));
+      const { unmount } = renderPage('PERSONAL');
+      await screen.findByRole('table');
+      unmount();
+      await tick();
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        window.dispatchEvent(new Event('focus'));
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   it.each(['PERSONAL', 'ADMIN'])(
