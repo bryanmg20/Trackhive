@@ -23,7 +23,7 @@ export default defineConfig([
   },
   {
     // Playwright config and specs run in Node, not in the browser bundle.
-    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    files: ['e2e/**/*.ts', 'e2e-docker/**/*.ts', 'playwright*.config.ts'],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },
     },

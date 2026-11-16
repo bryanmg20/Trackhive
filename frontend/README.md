@@ -22,6 +22,7 @@ pnpm test     # Vitest + Testing Library
 pnpm build    # tsc -b && vite build
 pnpm exec playwright install chromium  # una sola vez, para las pruebas e2e
 pnpm test:e2e # Playwright: cada ruta de ROUTES a 360 px
+pnpm test:e2e:docker # Con Docker activo: polling real a través de localhost:8080
 ```
 
 ## Rutas
@@ -45,6 +46,19 @@ ni `ADMIN`, redirigen a `/materiales` o a `/login`. Cualquier otra ruta redirige
 a `/registro`.
 
 ## API
+
+El listado del personal (`/solicitudes`, #141) se actualiza cada 30 segundos
+mientras la pestaña está visible, y al volver a la pestaña o enfocar la ventana.
+Las consultas conservan los filtros aplicados, el orden y la página actual;
+la tabla permanece visible durante la actualización, sin restablecer el scroll.
+Si falla la conexión, se conservan los últimos resultados y se vuelve a intentar
+en la siguiente actualización. No se usan WebSocket ni SSE.
+
+La prueba `test:e2e:docker` requiere la semilla de demostración (`RUN_SEED=true`),
+al menos dos páginas de solicitudes y Chromium instalado. Usa
+`personal1@example.com`, con contraseña `1` o la variable `SEED_DEMO_PASSWORD`
+del proceso que ejecuta la prueba. Crea una solicitud ficticia en la base local
+y comprueba una actualización real de 30 segundos, sin simular la API.
 
 En desarrollo, Vite reenvía las peticiones `/api` a `http://localhost:3000`
 (ver `vite.config.ts`). En el despliegue con Docker, nginx reenvía `/api/`,
