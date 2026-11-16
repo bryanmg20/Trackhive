@@ -69,6 +69,7 @@ describe('ListAppointmentsUseCase', () => {
       findRequesterByEmail: jest.fn(),
       list: jest.fn(),
       listAppointments,
+      findHistory: jest.fn(),
       findDetail: jest.fn(),
       listByRequesterUser: jest.fn(),
       findNotificationContext: jest.fn(),

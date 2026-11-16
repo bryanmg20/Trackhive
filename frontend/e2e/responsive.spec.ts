@@ -176,6 +176,30 @@ const appointment = {
   ],
 };
 
+// HU-17: long names and comments must wrap inside the timeline
+const requestHistory = {
+  requestId: REQUEST_ID,
+  trackingCode: REQUEST_ID,
+  entries: [
+    {
+      id: '1',
+      previousStatus: null,
+      newStatus: 'RECIBIDA',
+      changedAt: '2026-11-10T15:00:00.000Z',
+      changedBy: 'María Fernanda de los Ángeles Rodríguez',
+      comment: null,
+    },
+    {
+      id: '2',
+      previousStatus: 'RECIBIDA',
+      newStatus: 'RECHAZADA',
+      changedAt: '2026-11-12T15:00:00.000Z',
+      changedBy: 'Personal del CLENA',
+      comment: myRequest.rejectionReason,
+    },
+  ],
+};
+
 async function mockApi(page: Page): Promise<void> {
   await page.route('**/api/v1/**', async (route) => {
     const { pathname } = new URL(route.request().url());
@@ -213,6 +237,11 @@ async function mockApi(page: Page): Promise<void> {
         limit: 10,
         total: 1,
       });
+      return;
+    }
+
+    if (pathname === `/api/v1/requests/${REQUEST_ID}/history`) {
+      await json(requestHistory);
       return;
     }
 
@@ -299,6 +328,30 @@ test.describe('HU-29 · cada ruta de ROUTES a 360 px', () => {
       ).toBeLessThanOrEqual(0);
     });
   }
+});
+
+test('HU-17 · el historial abierto en «Mis solicitudes» cabe a 360 px', async ({
+  page,
+}) => {
+  await seedSession(page, 'PUBLICO');
+  await mockApi(page);
+  await page.setViewportSize({ width: MOBILE_WIDTH, height: 800 });
+  await page.goto(ROUTES.myRequests);
+  await waitForStableLayout(page);
+
+  await page
+    .getByRole('button', { name: `Ver historial de ${REQUEST_ID}` })
+    .click();
+  await expect(
+    page.getByRole('list', { name: `Historial de estados de ${REQUEST_ID}` }),
+  ).toBeVisible();
+  await waitForStableLayout(page);
+
+  const overflow = await horizontalOverflow(page);
+  expect(
+    overflow,
+    `el historial desborda ${overflow}px a ${MOBILE_WIDTH}px de ancho`,
+  ).toBeLessThanOrEqual(0);
 });
 
 test('el menú se adapta al redimensionar sin cortar contenido', async ({

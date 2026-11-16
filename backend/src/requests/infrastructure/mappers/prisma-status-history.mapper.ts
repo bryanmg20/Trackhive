@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import type { Request } from '../../domain/entities/request.entity';
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
 import type { StatusChange } from '../../domain/value-objects/status-change';
 
@@ -61,6 +62,25 @@ export class PrismaStatusHistoryMapper {
       userId: change.changedBy,
       comment: change.comment,
       changedAt: change.changedAt,
+    };
+  }
+
+  /**
+   * The first row of a new request (HU-17): no previous status, RECIBIDA, and
+   * who registered it. Created together with the request, so its date is the
+   * same as registered_at (both default to the transaction time).
+   */
+  static toCreationRow(
+    request: Request,
+  ): Prisma.StatusHistoryModelUncheckedCreateWithoutRequestInput {
+    const { registration } = request;
+    if (!registration) {
+      throw new Error(`Request ${request.id} has no registration data`);
+    }
+    return {
+      previousStatus: null,
+      newStatus: request.status,
+      userId: registration.createdById,
     };
   }
 }
