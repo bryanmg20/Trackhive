@@ -1,0 +1,73 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+import type {
+  INotificationQueue,
+  PendingNotification,
+} from '../../application/ports/notification-queue.port';
+import { PrismaNotificationMapper } from '../mappers/prisma-notification.mapper';
+
+@Injectable()
+export class PrismaNotificationQueue implements INotificationQueue {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async claimDue(
+    now: Date,
+    limit: number,
+    leaseUntil: Date,
+  ): Promise<PendingNotification[]> {
+    const due = await this.prisma.notificationModel.findMany({
+      where: { deliveryStatus: 'PENDIENTE', scheduledAt: { lte: now } },
+      orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'asc' }],
+      take: limit,
+      select: {
+        id: true,
+        recipientEmail: true,
+        subject: true,
+        body: true,
+        htmlBody: true,
+        attempts: true,
+        request: { select: { trackingCode: true } },
+      },
+    });
+
+    const claimed: PendingNotification[] = [];
+    for (const row of due) {
+      // Optimistic lock on the attempts: if another run or instance claimed
+      // it after this read, it already counted one more attempt and nothing
+      // is updated here, so the email is not sent twice
+      const { count } = await this.prisma.notificationModel.updateMany({
+        where: {
+          id: row.id,
+          deliveryStatus: 'PENDIENTE',
+          attempts: row.attempts,
+        },
+        data: PrismaNotificationMapper.toClaimed(leaseUntil),
+      });
+      if (count === 1) {
+        claimed.push(PrismaNotificationMapper.toPending(row));
+      }
+    }
+    return claimed;
+  }
+
+  async markSent(id: string, sentAt: Date): Promise<void> {
+    await this.prisma.notificationModel.update({
+      where: { id },
+      data: PrismaNotificationMapper.toSent(sentAt),
+    });
+  }
+
+  async scheduleRetry(id: string, error: string, retryAt: Date): Promise<void> {
+    await this.prisma.notificationModel.update({
+      where: { id },
+      data: PrismaNotificationMapper.toRetry(error, retryAt),
+    });
+  }
+
+  async markFailed(id: string, error: string): Promise<void> {
+    await this.prisma.notificationModel.update({
+      where: { id },
+      data: PrismaNotificationMapper.toFailed(error),
+    });
+  }
+}

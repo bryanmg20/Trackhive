@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type {
   TokenPayload,
-  TokenService,
+  ITokenService,
 } from '../../application/ports/token-service.port';
 
 const contextFor = (request: Record<string, unknown>): ExecutionContext =>
@@ -28,7 +28,7 @@ describe('JwtAuthGuard', () => {
         token === 'valid' ? { sub: 'user-1', role: 'PUBLICO' as const } : null,
       ),
     );
-    const tokenService = { verifyAccessToken } as unknown as TokenService;
+    const tokenService = { verifyAccessToken } as unknown as ITokenService;
     guard = new JwtAuthGuard(reflector, tokenService);
   });
 

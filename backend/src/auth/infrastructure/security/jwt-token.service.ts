@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
-import { isUserRole } from '../../../users/domain/user-role';
+import { isUserRole } from '../../../users/domain/enums/user-role';
 import type {
   SignedToken,
   TokenPayload,
-  TokenService,
+  ITokenService,
 } from '../../application/ports/token-service.port';
 
 // D-11: short-lived access token, long-lived refresh token
@@ -14,7 +14,7 @@ const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL = '7d';
 
 @Injectable()
-export class JwtTokenService implements TokenService {
+export class JwtTokenService implements ITokenService {
   constructor(
     private readonly jwt: JwtService,
     private readonly config: ConfigService,

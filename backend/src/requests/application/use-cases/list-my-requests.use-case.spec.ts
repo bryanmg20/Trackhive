@@ -1,8 +1,8 @@
 import type {
   MyRequestListCriteria,
   RequestListItem,
-  RequestRepository,
-} from '../ports/request.repository.port';
+  IRequestQueryService,
+} from '../ports/request-query.port';
 import { ListMyRequestsUseCase } from './list-my-requests.use-case';
 
 const buildItem = (): RequestListItem => ({
@@ -31,7 +31,7 @@ const buildItem = (): RequestListItem => ({
 
 describe('ListMyRequestsUseCase', () => {
   let listByRequesterUser: jest.Mock<
-    ReturnType<RequestRepository['listByRequesterUser']>,
+    ReturnType<IRequestQueryService['listByRequesterUser']>,
     [string, MyRequestListCriteria]
   >;
   let list: jest.Mock;
@@ -39,28 +39,24 @@ describe('ListMyRequestsUseCase', () => {
 
   beforeEach(() => {
     listByRequesterUser = jest.fn<
-      ReturnType<RequestRepository['listByRequesterUser']>,
+      ReturnType<IRequestQueryService['listByRequesterUser']>,
       [string, MyRequestListCriteria]
     >(() => Promise.resolve({ items: [buildItem()], total: 3 }));
     list = jest.fn();
     useCase = new ListMyRequestsUseCase({
-      create: jest.fn(),
-      createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn(),
       list,
       listAppointments: jest.fn(),
-      findById: jest.fn(),
+      findDetail: jest.fn(),
       listByRequesterUser,
-      findEntityById: jest.fn(),
       findNotificationContext: jest.fn(),
-      saveStatusChange: jest.fn(),
-      saveAppointment: jest.fn(),
       findSchedulingConflicts: jest.fn(),
+      findMissingMaterialIds: jest.fn(),
     });
   });
 
   it("asks only for the signed-in user's requests, newest first, first page", async () => {
-    await useCase.execute({}, 'user-1');
+    await useCase.execute({ userId: 'user-1' });
 
     expect(listByRequesterUser).toHaveBeenCalledWith('user-1', {
       status: undefined,
@@ -72,22 +68,20 @@ describe('ListMyRequestsUseCase', () => {
   });
 
   it('never uses the staff list of every request', async () => {
-    await useCase.execute({}, 'user-1');
+    await useCase.execute({ userId: 'user-1' });
 
     expect(list).not.toHaveBeenCalled();
   });
 
   it('passes the status filter, the order and the page', async () => {
-    await useCase.execute(
-      {
-        status: 'AGENDADA',
-        sort: 'desiredDate',
-        order: 'asc',
-        page: 2,
-        limit: 5,
-      },
-      'user-7',
-    );
+    await useCase.execute({
+      status: 'AGENDADA',
+      sort: 'desiredDate',
+      order: 'asc',
+      page: 2,
+      limit: 5,
+      userId: 'user-7',
+    });
 
     expect(listByRequesterUser).toHaveBeenCalledWith('user-7', {
       status: 'AGENDADA',
@@ -99,7 +93,11 @@ describe('ListMyRequestsUseCase', () => {
   });
 
   it('returns tracking code, dates as text and status, without the requester data', async () => {
-    const result = await useCase.execute({ page: 1, limit: 10 }, 'user-1');
+    const result = await useCase.execute({
+      page: 1,
+      limit: 10,
+      userId: 'user-1',
+    });
 
     expect(result).toEqual({
       items: [
@@ -138,7 +136,7 @@ describe('ListMyRequestsUseCase', () => {
       total: 1,
     });
 
-    const result = await useCase.execute({}, 'user-1');
+    const result = await useCase.execute({ userId: 'user-1' });
 
     expect(result.items[0]).toMatchObject({
       status: 'RECHAZADA',

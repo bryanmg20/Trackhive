@@ -1,3 +1,3 @@
-export interface DatabaseHealthChecker {
+export interface IDatabaseHealthChecker {
   isAvailable(): Promise<boolean>;
 }

@@ -1,18 +1,19 @@
 import { Logger } from '@nestjs/common';
-import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
-import { DeliveryMode } from '../../domain/delivery-mode';
+import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
+import { DeliveryMode } from '../../domain/enums/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../../domain/errors/rejection-reason-required.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
-import { RequestStatus } from '../../domain/request-status';
-import type { StatusChange } from '../../domain/status-change';
+import { RequestStatus } from '../../domain/enums/request-status';
+import type { StatusChange } from '../../domain/value-objects/status-change';
+import type { IRequestRepository } from '../../domain/repositories/request.repository';
+import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
 import type {
   RequestNotificationContext,
-  RequestRepository,
-  SavedStatusChange,
-} from '../ports/request.repository.port';
+  IRequestQueryService,
+} from '../ports/request-query.port';
 import { ChangeRequestStatusUseCase } from './change-request-status.use-case';
 
 const CONTEXT: RequestNotificationContext = {
@@ -46,7 +47,7 @@ const savedFrom = (change: StatusChange): SavedStatusChange => ({
 });
 
 describe('ChangeRequestStatusUseCase', () => {
-  let findEntityById: jest.Mock<Promise<Request | null>, [string]>;
+  let findById: jest.Mock<Promise<Request | null>, [string]>;
   let findNotificationContext: jest.Mock<
     Promise<RequestNotificationContext | null>,
     [string]
@@ -58,7 +59,7 @@ describe('ChangeRequestStatusUseCase', () => {
   let useCase: ChangeRequestStatusUseCase;
 
   beforeEach(() => {
-    findEntityById = jest.fn<Promise<Request | null>, [string]>(() =>
+    findById = jest.fn<Promise<Request | null>, [string]>(() =>
       Promise.resolve(buildRequest('AGENDADA')),
     );
     findNotificationContext = jest.fn<
@@ -69,21 +70,23 @@ describe('ChangeRequestStatusUseCase', () => {
       Promise<SavedStatusChange>,
       [StatusChange, NotificationDraft | null]
     >((change) => Promise.resolve(savedFrom(change)));
-    const repository: RequestRepository = {
-      create: jest.fn(),
-      createOnBehalf: jest.fn(),
-      findRequesterByEmail: jest.fn(),
-      list: jest.fn(),
-      listAppointments: jest.fn(),
-      findById: jest.fn(),
-      listByRequesterUser: jest.fn(),
-      findEntityById,
-      findNotificationContext,
-      findSchedulingConflicts: jest.fn(),
+    const repository: IRequestRepository = {
+      save: jest.fn(),
+      findById,
       saveStatusChange,
       saveAppointment: jest.fn(),
     };
-    useCase = new ChangeRequestStatusUseCase(repository);
+    const queries: IRequestQueryService = {
+      list: jest.fn(),
+      listByRequesterUser: jest.fn(),
+      findDetail: jest.fn(),
+      listAppointments: jest.fn(),
+      findRequesterByEmail: jest.fn(),
+      findNotificationContext,
+      findSchedulingConflicts: jest.fn(),
+      findMissingMaterialIds: jest.fn(),
+    };
+    useCase = new ChangeRequestStatusUseCase(repository, queries);
   });
 
   // The email queued with the change (HU-23)
@@ -109,7 +112,7 @@ describe('ChangeRequestStatusUseCase', () => {
     });
 
     it('includes the reason when the request is rejected', async () => {
-      findEntityById.mockResolvedValue(buildRequest('RECIBIDA'));
+      findById.mockResolvedValue(buildRequest('RECIBIDA'));
 
       await useCase.execute({
         requestId: 'request-1',
@@ -159,7 +162,7 @@ describe('ChangeRequestStatusUseCase', () => {
     });
 
     it('queues nothing when the transition is not valid', async () => {
-      findEntityById.mockResolvedValue(buildRequest('RECIBIDA'));
+      findById.mockResolvedValue(buildRequest('RECIBIDA'));
 
       await expect(
         useCase.execute({
@@ -183,7 +186,7 @@ describe('ChangeRequestStatusUseCase', () => {
       userId: 'staff-1',
     });
 
-    expect(findEntityById).toHaveBeenCalledWith('request-1');
+    expect(findById).toHaveBeenCalledWith('request-1');
     expect(saveStatusChange).toHaveBeenCalledTimes(1);
     const saved = saveStatusChange.mock.calls[0][0];
     expect(saved).toMatchObject({
@@ -249,7 +252,7 @@ describe('ChangeRequestStatusUseCase', () => {
 
   describe('rejecting (HU-16)', () => {
     beforeEach(() => {
-      findEntityById.mockResolvedValue(buildRequest('EN_BUSQUEDA'));
+      findById.mockResolvedValue(buildRequest('EN_BUSQUEDA'));
     });
 
     it('saves the reason as the rejection reason and the history comment', async () => {
@@ -288,7 +291,7 @@ describe('ChangeRequestStatusUseCase', () => {
   });
 
   it('throws RequestNotFoundError and saves nothing when the request does not exist', async () => {
-    findEntityById.mockResolvedValue(null);
+    findById.mockResolvedValue(null);
 
     await expect(
       useCase.execute({
@@ -301,7 +304,7 @@ describe('ChangeRequestStatusUseCase', () => {
   });
 
   it('throws InvalidStatusTransitionError and saves nothing for an invalid transition', async () => {
-    findEntityById.mockResolvedValue(buildRequest('RECIBIDA'));
+    findById.mockResolvedValue(buildRequest('RECIBIDA'));
 
     await expect(
       useCase.execute({
@@ -316,7 +319,7 @@ describe('ChangeRequestStatusUseCase', () => {
   it.each<RequestStatus>(['CERRADA', 'RECHAZADA'])(
     'does not change a request in the final status %s',
     async (finalStatus) => {
-      findEntityById.mockResolvedValue(buildRequest(finalStatus));
+      findById.mockResolvedValue(buildRequest(finalStatus));
 
       await expect(
         useCase.execute({

@@ -1,9 +1,9 @@
 import { LogoutUseCase } from './logout.use-case';
 import { InMemoryRefreshTokenRepository } from '../../../../test/fakes/in-memory-refresh-token.repository';
 import { RefreshToken } from '../../domain/entities/refresh-token.entity';
-import type { TokenHasher } from '../ports/token-hasher.port';
+import type { ITokenHasher } from '../ports/token-hasher.port';
 
-const tokenHasher: TokenHasher = { hash: (token) => `sha256:${token}` };
+const tokenHasher: ITokenHasher = { hash: (token) => `sha256:${token}` };
 
 describe('LogoutUseCase', () => {
   let refreshTokens: InMemoryRefreshTokenRepository;

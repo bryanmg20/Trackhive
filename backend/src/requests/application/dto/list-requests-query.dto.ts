@@ -1,3 +1,7 @@
+import {
+  DEFAULT_REQUEST_PAGE_LIMIT,
+  MAX_REQUEST_PAGE_LIMIT,
+} from '../../../common/pagination';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -11,16 +15,10 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { REQUEST_STATUSES } from '../../domain/request-status';
-import type { RequestStatus } from '../../domain/request-status';
-import { REQUEST_SORT_FIELDS } from '../ports/request.repository.port';
-import type {
-  RequestSortField,
-  SortOrder,
-} from '../ports/request.repository.port';
-
-export const DEFAULT_REQUEST_PAGE_LIMIT = 20;
-export const MAX_REQUEST_PAGE_LIMIT = 100;
+import { REQUEST_STATUSES } from '../../domain/enums/request-status';
+import type { RequestStatus } from '../../domain/enums/request-status';
+import { REQUEST_SORT_FIELDS } from '../ports/request-query.port';
+import type { RequestSortField, SortOrder } from '../ports/request-query.port';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 

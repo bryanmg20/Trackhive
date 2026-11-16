@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
-import { MAIL_SENDER, NOTIFICATION_REPOSITORY } from './application/tokens';
+import { MAIL_SENDER, NOTIFICATION_QUEUE } from './application/tokens';
 import { SendPendingNotificationsUseCase } from './application/use-cases/send-pending-notifications.use-case';
 import { SendTestEmailUseCase } from './application/use-cases/send-test-email.use-case';
 import { SendPendingNotificationsJob } from './infrastructure/jobs/send-pending-notifications.job';
 import { SmtpMailSender } from './infrastructure/mail/smtp-mail-sender';
-import { PrismaNotificationRepository } from './infrastructure/persistence/prisma-notification.repository';
+import { PrismaNotificationQueue } from './infrastructure/persistence/prisma-notification.queue';
 import { NotificationsController } from './presentation/controllers/notifications.controller';
 
 @Module({
@@ -17,8 +17,8 @@ import { NotificationsController } from './presentation/controllers/notification
       useClass: SmtpMailSender,
     },
     {
-      provide: NOTIFICATION_REPOSITORY,
-      useClass: PrismaNotificationRepository,
+      provide: NOTIFICATION_QUEUE,
+      useClass: PrismaNotificationQueue,
     },
     SendTestEmailUseCase,
     // HU-23: the status change queues its email in the outbox, in the same

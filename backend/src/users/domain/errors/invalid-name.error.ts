@@ -1,5 +1,5 @@
 import { DomainError } from '../../../common/errors/domain.error';
-import { NAME_MAX_LENGTH, type NameField } from '../person-name';
+import { NAME_MAX_LENGTH, type NameField } from '../value-objects/person-name';
 
 const FIELD_LABELS: Record<NameField, string> = {
   firstName: 'El primer nombre',

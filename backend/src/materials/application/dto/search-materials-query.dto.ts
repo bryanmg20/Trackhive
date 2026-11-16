@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from '../../../common/pagination';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -9,18 +10,15 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { MATERIAL_STATUSES } from '../../domain/material-status';
-import type { MaterialStatus } from '../../domain/material-status';
-import { MATERIAL_TYPES } from '../../domain/material-type';
-import type { MaterialType } from '../../domain/material-type';
+import { MATERIAL_STATUSES } from '../../domain/enums/material-status';
+import type { MaterialStatus } from '../../domain/enums/material-status';
+import { MATERIAL_TYPES } from '../../domain/enums/material-type';
+import type { MaterialType } from '../../domain/enums/material-type';
 import { MATERIAL_SORT_FIELDS } from '../../domain/repositories/material.repository';
 import type {
   MaterialSortField,
   SortOrder,
 } from '../../domain/repositories/material.repository';
-
-export const DEFAULT_PAGE_LIMIT = 20;
-export const MAX_PAGE_LIMIT = 100;
 
 // Empty text means "no filter"
 const trimToUndefined = ({ value }: { value: unknown }): unknown => {

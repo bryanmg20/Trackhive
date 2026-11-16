@@ -11,8 +11,8 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { NAME_MAX_LENGTH } from '../../domain/person-name';
-import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/privacy-policy';
+import { NAME_MAX_LENGTH } from '../../domain/value-objects/person-name';
+import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/policies/privacy-policy';
 
 const trimText = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;

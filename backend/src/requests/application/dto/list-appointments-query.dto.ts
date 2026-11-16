@@ -1,3 +1,7 @@
+import {
+  DEFAULT_APPOINTMENT_PAGE_LIMIT,
+  MAX_APPOINTMENT_PAGE_LIMIT,
+} from '../../../common/pagination';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -11,16 +15,13 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { APPOINTMENT_STATUSES } from '../../domain/appointment-status';
-import type { AppointmentStatus } from '../../domain/appointment-status';
-import { APPOINTMENT_SORT_FIELDS } from '../ports/request.repository.port';
+import { APPOINTMENT_STATUSES } from '../../domain/enums/appointment-status';
+import type { AppointmentStatus } from '../../domain/enums/appointment-status';
+import { APPOINTMENT_SORT_FIELDS } from '../ports/request-query.port';
 import type {
   AppointmentSortField,
   SortOrder,
-} from '../ports/request.repository.port';
-
-export const DEFAULT_APPOINTMENT_PAGE_LIMIT = 20;
-export const MAX_APPOINTMENT_PAGE_LIMIT = 100;
+} from '../ports/request-query.port';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 

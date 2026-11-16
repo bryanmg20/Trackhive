@@ -1,4 +1,4 @@
-import { DeliveryMode } from '../delivery-mode';
+import { DeliveryMode } from '../enums/delivery-mode';
 import { InvalidRequestStatusError } from '../errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../errors/rejection-reason-required.error';
@@ -7,7 +7,7 @@ import {
   ChangeableStatus,
   REQUEST_STATUSES,
   RequestStatus,
-} from '../request-status';
+} from '../enums/request-status';
 import { Request } from './request.entity';
 
 const buildRequest = (
@@ -217,6 +217,15 @@ describe('Request', () => {
           comment: 'Revisado',
           // When rejecting, the comment is the reason (HU-16)
           rejectionReason: to === 'RECHAZADA' ? 'Revisado' : null,
+          attendedAt: to === 'ATENDIDA' ? NOW : null,
+          closedAt: to === 'CERRADA' ? NOW : null,
+          // Leaving AGENDADA settles the appointment (HU-20)
+          appointmentOutcome:
+            from === 'AGENDADA'
+              ? to === 'ATENDIDA'
+                ? 'CUMPLIDA'
+                : 'NO_ASISTIO'
+              : null,
         });
       },
     );
@@ -343,6 +352,9 @@ describe('Request', () => {
         changedAt: NOW,
         comment: null,
         rejectionReason: null,
+        attendedAt: null,
+        closedAt: null,
+        appointmentOutcome: null,
       });
       expect(Object.isFrozen(change)).toBe(true);
     });

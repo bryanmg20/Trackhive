@@ -6,7 +6,6 @@ import {
   ParseUUIDPipe,
   Patch,
   Query,
-  Req,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -20,6 +19,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../../auth/presentation/guards/authenticated-user';
 import { Roles } from '../../../auth/presentation/decorators/roles.decorator';
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
@@ -69,9 +69,12 @@ export class MaterialController {
   async search(
     @Query() query: SearchMaterialsQueryDto,
     // JwtAuthGuard (global) always sets the user before reaching here
-    @Req() request: { user: AuthenticatedUser },
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<PaginatedMaterialsResponseDto> {
-    return this.searchMaterialsUseCase.execute(query, request.user.role);
+    return this.searchMaterialsUseCase.execute({
+      ...query,
+      viewerRole: user.role,
+    });
   }
 
   @Patch(':id/status')
@@ -111,13 +114,13 @@ export class MaterialController {
   async changeStatus(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: ChangeMaterialStatusDto,
-    @Req() request: { user: AuthenticatedUser },
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<MaterialResponseDto> {
     return this.changeMaterialStatusUseCase.execute({
       materialId: id,
       status: body.status,
       reason: body.reason,
-      userId: request.user.id,
+      userId: user.id,
     });
   }
 }

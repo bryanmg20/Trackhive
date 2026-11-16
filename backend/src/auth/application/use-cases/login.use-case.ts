@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { PasswordHasher } from '../../../users/application/ports/password-hasher.port';
+import type { LoginInput } from '../dto/login.input';
+import type { IPasswordHasher } from '../../../users/application/ports/password-hasher.port';
 import {
   PASSWORD_HASHER,
   USER_REPOSITORY,
@@ -9,16 +10,11 @@ import { InvalidCredentialsError } from '../../domain/errors/invalid-credentials
 import { LoginResponseDto } from '../dto/login-response.dto';
 import { SessionTokenIssuer } from '../services/session-token-issuer';
 
-export interface LoginInput {
-  email: string;
-  password: string;
-}
-
 @Injectable()
 export class LoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
+    @Inject(PASSWORD_HASHER) private readonly passwordHasher: IPasswordHasher,
     private readonly sessionTokenIssuer: SessionTokenIssuer,
   ) {}
 

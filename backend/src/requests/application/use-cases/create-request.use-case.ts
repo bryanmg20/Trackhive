@@ -1,33 +1,58 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { Request } from '../../domain/entities/request.entity';
+import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
+import type { IRequestRepository } from '../../domain/repositories/request.repository';
+import type { CreateRequestInput } from '../dto/create-request.input';
 import { CreateRequestResponseDto } from '../dto/create-request-response.dto';
-import type { RequestRepository } from '../ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../tokens';
-import { assertValidDesiredDate } from '../../domain/desired-date';
-import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
+import { CreateRequestResponseMapper } from '../mappers/create-request-response.mapper';
+import type { IRequestQueryService } from '../ports/request-query.port';
+import type { ITrackingCodeGenerator } from '../ports/tracking-code-generator.port';
+import { RequesterResolver } from '../services/requester-resolver';
+import {
+  REQUEST_QUERY_SERVICE,
+  REQUEST_REPOSITORY,
+  TRACKING_CODE_GENERATOR,
+} from '../tokens';
 
-export interface CreateRequestInput {
-  materialIds: string[];
-  reason: string;
-  desiredDate: string;
-  deliveryMode: 'PRESENCIAL' | 'DIGITAL';
-  requirementDescription?: string;
-}
-
+/** A public user radicates their own request from the web form (HU-09). */
 @Injectable()
 export class CreateRequestUseCase {
   constructor(
-    @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
+    @Inject(REQUEST_REPOSITORY) private readonly repository: IRequestRepository,
+    @Inject(REQUEST_QUERY_SERVICE)
+    private readonly queries: IRequestQueryService,
+    @Inject(TRACKING_CODE_GENERATOR)
+    private readonly trackingCodes: ITrackingCodeGenerator,
+    private readonly requesterResolver: RequesterResolver,
   ) {}
 
-  async execute(
-    input: CreateRequestInput,
-    userId: string,
-  ): Promise<CreateRequestResponseDto> {
-    assertValidDesiredDate(input.desiredDate);
-    if (input.materialIds.length === 0) {
-      throw new RequestMaterialsRequiredError();
+  async execute(input: CreateRequestInput): Promise<CreateRequestResponseDto> {
+    // RN-03 and RN-04 before looking anything up
+    Request.assertCanBeCreated(input);
+
+    const requester = await this.requesterResolver.forUser(input.userId);
+    const missing = await this.queries.findMissingMaterialIds(
+      input.materialIds,
+    );
+    if (missing.length > 0) {
+      throw new RequestMaterialNotFoundError();
     }
 
-    return this.repository.create({ ...input, createdById: userId });
+    const request = Request.create({
+      id: randomUUID(),
+      trackingCode: await this.trackingCodes.next(),
+      requesterId: requester.id,
+      createdById: input.userId,
+      originChannel: 'WEB',
+      deliveryMode: input.deliveryMode,
+      reason: input.reason,
+      requirementDescription: input.requirementDescription,
+      desiredDate: input.desiredDate,
+      materialIds: input.materialIds,
+    });
+    await this.repository.save(request);
+
+    return CreateRequestResponseMapper.toDto(request);
   }
 }

@@ -1,4 +1,4 @@
-import type { UserRole } from '../../../users/domain/user-role';
+import type { UserRole } from '../../../users/domain/enums/user-role';
 
 export interface TokenPayload {
   sub: string;
@@ -11,7 +11,7 @@ export interface SignedToken {
 }
 
 /** Signs and checks the session tokens without the use cases knowing about JWT. */
-export interface TokenService {
+export interface ITokenService {
   signAccessToken(payload: TokenPayload): Promise<string>;
   signRefreshToken(payload: TokenPayload): Promise<SignedToken>;
   /** True only for a refresh token signed by us that has not expired. */

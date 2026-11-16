@@ -1,8 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { FakeMailSender } from '../../../../test/fakes/fake-mail-sender';
-import { InMemoryNotificationRepository } from '../../../../test/fakes/in-memory-notification.repository';
+import { InMemoryNotificationQueue } from '../../../../test/fakes/in-memory-notification.queue';
 import { MailDeliveryFailedError } from '../../domain/errors/mail-delivery-failed.error';
-import type { NotificationDraft } from '../../domain/notification-draft';
+import type { NotificationDraft } from '../../domain/value-objects/notification-draft';
 import type { MailMessage } from '../ports/mail-sender.port';
 import {
   MAX_SEND_ATTEMPTS,
@@ -46,15 +46,15 @@ class FailsOnceMailSender extends FakeMailSender {
 }
 
 describe('SendPendingNotificationsUseCase', () => {
-  let outbox: InMemoryNotificationRepository;
+  let outbox: InMemoryNotificationQueue;
   let mailSender: FakeMailSender;
   let errorSpy: jest.SpyInstance;
 
   const run = (now: Date = NOW, sender: FakeMailSender = mailSender) =>
-    new SendPendingNotificationsUseCase(outbox, sender).execute(now);
+    new SendPendingNotificationsUseCase(outbox, sender).execute({ now });
 
   beforeEach(() => {
-    outbox = new InMemoryNotificationRepository();
+    outbox = new InMemoryNotificationQueue();
     mailSender = new FakeMailSender();
     errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
   });

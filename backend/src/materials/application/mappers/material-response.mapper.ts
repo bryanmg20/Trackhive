@@ -1,5 +1,8 @@
 import { Material } from '../../domain/entities/material.entity';
-import { MaterialResponseDto } from '../dto/material-response.dto';
+import {
+  MaterialResponseDto,
+  PaginatedMaterialsResponseDto,
+} from '../dto/material-response.dto';
 
 export class MaterialResponseMapper {
   static toDto(
@@ -23,5 +26,18 @@ export class MaterialResponseMapper {
       dto.location = { ...material.location };
     }
     return dto;
+  }
+
+  static toPaginatedDto(
+    materials: Material[],
+    pagination: { page: number; limit: number; total: number },
+    includeLocation: boolean,
+  ): PaginatedMaterialsResponseDto {
+    return {
+      items: materials.map((material) =>
+        MaterialResponseMapper.toDto(material, includeLocation),
+      ),
+      ...pagination,
+    };
   }
 }

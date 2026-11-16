@@ -19,6 +19,8 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    // TypeScript 6 no longer loads every @types package by default
+    "types": ["node", "jest"]
   }
 }

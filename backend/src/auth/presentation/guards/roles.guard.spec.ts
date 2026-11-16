@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { RolesGuard } from './roles.guard';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import type { UserRole } from '../../../users/domain/user-role';
+import type { UserRole } from '../../../users/domain/enums/user-role';
 
 const contextFor = (role?: UserRole): ExecutionContext =>
   ({

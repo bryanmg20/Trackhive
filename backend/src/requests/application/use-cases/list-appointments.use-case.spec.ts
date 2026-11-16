@@ -1,8 +1,8 @@
 import type {
   AppointmentListCriteria,
   AppointmentListItem,
-  RequestRepository,
-} from '../ports/request.repository.port';
+  IRequestQueryService,
+} from '../ports/request-query.port';
 import { ListAppointmentsUseCase } from './list-appointments.use-case';
 
 const buildItem = (
@@ -55,29 +55,25 @@ const buildItem = (
 
 describe('ListAppointmentsUseCase', () => {
   let listAppointments: jest.Mock<
-    ReturnType<RequestRepository['listAppointments']>,
+    ReturnType<IRequestQueryService['listAppointments']>,
     [AppointmentListCriteria]
   >;
   let useCase: ListAppointmentsUseCase;
 
   beforeEach(() => {
     listAppointments = jest.fn<
-      ReturnType<RequestRepository['listAppointments']>,
+      ReturnType<IRequestQueryService['listAppointments']>,
       [AppointmentListCriteria]
     >(() => Promise.resolve({ items: [buildItem()], total: 8 }));
     useCase = new ListAppointmentsUseCase({
-      create: jest.fn(),
-      createOnBehalf: jest.fn(),
       findRequesterByEmail: jest.fn(),
       list: jest.fn(),
       listAppointments,
-      findById: jest.fn(),
+      findDetail: jest.fn(),
       listByRequesterUser: jest.fn(),
-      findEntityById: jest.fn(),
       findNotificationContext: jest.fn(),
-      saveStatusChange: jest.fn(),
-      saveAppointment: jest.fn(),
       findSchedulingConflicts: jest.fn(),
+      findMissingMaterialIds: jest.fn(),
     });
   });
 

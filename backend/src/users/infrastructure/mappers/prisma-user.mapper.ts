@@ -1,7 +1,7 @@
 import { UserModel } from '@prisma/client';
 import { User } from '../../domain/entities/user.entity';
 import { InvalidRoleError } from '../../domain/errors/invalid-role.error';
-import { isUserRole } from '../../domain/user-role';
+import { isUserRole } from '../../domain/enums/user-role';
 
 export class PrismaUserMapper {
   static toDomain(model: UserModel): User {
@@ -26,6 +26,22 @@ export class PrismaUserMapper {
   static toPersistence(entity: User) {
     return {
       id: entity.id,
+      firstName: entity.firstName,
+      middleName: entity.middleName,
+      lastName: entity.lastName,
+      secondLastName: entity.secondLastName,
+      email: entity.email,
+      passwordHash: entity.passwordHash,
+      role: entity.role,
+      active: entity.active,
+      privacyPolicyAcceptedAt: entity.privacyPolicyAcceptedAt,
+      privacyPolicyVersion: entity.privacyPolicyVersion,
+    };
+  }
+
+  /** What an existing account can change: everything but its id. */
+  static toUpdate(entity: User) {
+    return {
       firstName: entity.firstName,
       middleName: entity.middleName,
       lastName: entity.lastName,

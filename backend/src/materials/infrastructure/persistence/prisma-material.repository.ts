@@ -44,12 +44,7 @@ export class PrismaMaterialRepository implements IMaterialRepository {
   async saveStatusChange(material: Material): Promise<void> {
     await this.prisma.materialModel.update({
       where: { id: material.id },
-      data: {
-        status: material.status,
-        statusChangedAt: material.statusChangedAt,
-        statusChangedById: material.statusChangedBy,
-        statusChangeReason: material.statusChangeReason,
-      },
+      data: PrismaMaterialMapper.toStatusUpdate(material),
     });
   }
 

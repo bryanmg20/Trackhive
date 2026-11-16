@@ -4,20 +4,20 @@ import { InMemoryUserRepository } from '../../../../test/fakes/in-memory-user.re
 import { User, UserProps } from '../../../users/domain/entities/user.entity';
 import { RefreshToken } from '../../domain/entities/refresh-token.entity';
 import { InvalidRefreshTokenError } from '../../domain/errors/invalid-refresh-token.error';
-import type { TokenHasher } from '../ports/token-hasher.port';
+import type { ITokenHasher } from '../ports/token-hasher.port';
 import type {
   SignedToken,
   TokenPayload,
-  TokenService,
+  ITokenService,
 } from '../ports/token-service.port';
 import { SessionTokenIssuer } from '../services/session-token-issuer';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const tokenHasher: TokenHasher = { hash: (token) => `sha256:${token}` };
+const tokenHasher: ITokenHasher = { hash: (token) => `sha256:${token}` };
 
 /** Readable tokens; only the ones that start with "refresh-" pass the signature check. */
-class FakeTokenService implements TokenService {
+class FakeTokenService implements ITokenService {
   private issued = 0;
 
   signAccessToken(payload: TokenPayload): Promise<string> {

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { REQUEST_STATUSES } from '../../domain/request-status';
-import type { RequestStatus } from '../../domain/request-status';
+import { REQUEST_STATUSES } from '../../domain/enums/request-status';
+import type { RequestStatus } from '../../domain/enums/request-status';
 import { StatusChangeDto } from './change-request-status-response.dto';
 
 export class AppointmentServiceHoursDto {

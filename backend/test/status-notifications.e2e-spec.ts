@@ -8,22 +8,23 @@ import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import {
   MAIL_SENDER,
-  NOTIFICATION_REPOSITORY,
+  NOTIFICATION_QUEUE,
 } from '../src/notifications/application/tokens';
 import { SendPendingNotificationsUseCase } from '../src/notifications/application/use-cases/send-pending-notifications.use-case';
-import type { NotificationDraft } from '../src/notifications/domain/notification-draft';
+import type { NotificationDraft } from '../src/notifications/domain/value-objects/notification-draft';
 import { SendPendingNotificationsJob } from '../src/notifications/infrastructure/jobs/send-pending-notifications.job';
 import { PrismaService } from '../src/prisma/prisma.service';
-import type {
-  RequestNotificationContext,
-  SavedStatusChange,
-} from '../src/requests/application/ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../src/requests/application/tokens';
+import type { RequestNotificationContext } from '../src/requests/application/ports/request-query.port';
+import {
+  REQUEST_QUERY_SERVICE,
+  REQUEST_REPOSITORY,
+} from '../src/requests/application/tokens';
 import { Request } from '../src/requests/domain/entities/request.entity';
-import type { RequestStatus } from '../src/requests/domain/request-status';
-import type { StatusChange } from '../src/requests/domain/status-change';
+import type { SavedStatusChange } from '../src/requests/domain/value-objects/saved-status-change';
+import type { RequestStatus } from '../src/requests/domain/enums/request-status';
+import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
 import { FakeMailSender } from './fakes/fake-mail-sender';
-import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
+import { InMemoryNotificationQueue } from './fakes/in-memory-notification.queue';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
 const ACCESS_SECRET = 'e2e-access-secret';
@@ -61,7 +62,7 @@ describe('Status change emails (e2e)', () => {
   let app: INestApplication;
   let server: Server;
   let status: RequestStatus;
-  const outbox = new InMemoryNotificationRepository();
+  const outbox = new InMemoryNotificationQueue();
   const mailSender = new FakeMailSender();
   const jwt = new JwtService();
   const token = jwt.sign(
@@ -87,7 +88,7 @@ describe('Status change emails (e2e)', () => {
   };
 
   const repository = {
-    findEntityById: jest.fn(() =>
+    findById: jest.fn(() =>
       Promise.resolve(
         new Request({ id: REQUEST_ID, status, deliveryMode: 'PRESENCIAL' }),
       ),
@@ -129,9 +130,12 @@ describe('Status change emails (e2e)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
+      // One fake answers both the entity repository and the query service
       .overrideProvider(REQUEST_REPOSITORY)
       .useValue(repository)
-      .overrideProvider(NOTIFICATION_REPOSITORY)
+      .overrideProvider(REQUEST_QUERY_SERVICE)
+      .useValue(repository)
+      .overrideProvider(NOTIFICATION_QUEUE)
       .useValue(outbox)
       .overrideProvider(MAIL_SENDER)
       .useValue(mailSender)
@@ -275,7 +279,7 @@ describe('Status change emails (e2e)', () => {
       mailSender.failing = false;
       await app
         .get(SendPendingNotificationsUseCase)
-        .execute(new Date(Date.now() + 61_000));
+        .execute({ now: new Date(Date.now() + 61_000) });
 
       expect(mailSender.sent).toHaveLength(1);
       expect(mailSender.sent[0].subject).toBe(

@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { RefreshSessionInput } from '../dto/refresh-session.input';
 import { USER_REPOSITORY } from '../../../users/application/tokens';
 import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
 import { InvalidRefreshTokenError } from '../../domain/errors/invalid-refresh-token.error';
 import type { IRefreshTokenRepository } from '../../domain/repositories/refresh-token.repository';
 import { LoginResponseDto } from '../dto/login-response.dto';
-import type { TokenHasher } from '../ports/token-hasher.port';
-import type { TokenService } from '../ports/token-service.port';
+import type { ITokenHasher } from '../ports/token-hasher.port';
+import type { ITokenService } from '../ports/token-service.port';
 import { SessionTokenIssuer } from '../services/session-token-issuer';
 import {
   REFRESH_TOKEN_REPOSITORY,
@@ -13,15 +14,11 @@ import {
   TOKEN_SERVICE,
 } from '../tokens';
 
-export interface RefreshSessionInput {
-  refreshToken: string;
-}
-
 @Injectable()
 export class RefreshSessionUseCase {
   constructor(
-    @Inject(TOKEN_SERVICE) private readonly tokenService: TokenService,
-    @Inject(TOKEN_HASHER) private readonly tokenHasher: TokenHasher,
+    @Inject(TOKEN_SERVICE) private readonly tokenService: ITokenService,
+    @Inject(TOKEN_HASHER) private readonly tokenHasher: ITokenHasher,
     @Inject(REFRESH_TOKEN_REPOSITORY)
     private readonly refreshTokens: IRefreshTokenRepository,
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,

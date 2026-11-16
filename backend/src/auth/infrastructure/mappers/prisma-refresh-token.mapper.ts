@@ -1,4 +1,5 @@
 import { RefreshTokenModel } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { RefreshToken } from '../../domain/entities/refresh-token.entity';
 
 export class PrismaRefreshTokenMapper {
@@ -20,5 +21,12 @@ export class PrismaRefreshTokenMapper {
       expiresAt: entity.expiresAt,
       revokedAt: entity.revokedAt,
     };
+  }
+
+  /** A token closed at `revokedAt`: it can no longer renew the session (D-11). */
+  static toRevoked(
+    revokedAt: Date,
+  ): Prisma.RefreshTokenModelUpdateManyMutationInput {
+    return { revokedAt };
   }
 }

@@ -1,50 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  DEFAULT_REQUEST_PAGE_LIMIT,
-  ListRequestsQueryDto,
-} from '../dto/list-requests-query.dto';
-import {
-  PaginatedRequestsResponseDto,
-  RequestListItemDto,
-} from '../dto/request-list-response.dto';
-import type {
-  RequestListItem,
-  RequestRepository,
-} from '../ports/request.repository.port';
-import { REQUEST_REPOSITORY } from '../tokens';
-
-export type ListRequestsInput = ListRequestsQueryDto;
-
-function fullName(requester: RequestListItem['requester']): string {
-  return [
-    requester.firstName,
-    requester.middleName,
-    requester.lastName,
-    requester.secondLastName,
-  ]
-    .filter(Boolean)
-    .join(' ');
-}
-
-function toDto(item: RequestListItem): RequestListItemDto {
-  return {
-    id: item.id,
-    trackingCode: item.trackingCode,
-    status: item.status,
-    deliveryMode: item.deliveryMode,
-    // Date-only column: send YYYY-MM-DD, without time or time zone
-    desiredDate: item.desiredDate.toISOString().slice(0, 10),
-    registeredAt: item.registeredAt.toISOString(),
-    requesterName: fullName(item.requester),
-    requesterEmail: item.requester.email,
-    materials: item.materials,
-  };
-}
+import { DEFAULT_REQUEST_PAGE_LIMIT } from '../../../common/pagination';
+import type { ListRequestsInput } from '../dto/list-requests.input';
+import { PaginatedRequestsResponseDto } from '../dto/request-list-response.dto';
+import { RequestListResponseMapper } from '../mappers/request-list-response.mapper';
+import type { IRequestQueryService } from '../ports/request-query.port';
+import { REQUEST_QUERY_SERVICE } from '../tokens';
 
 @Injectable()
 export class ListRequestsUseCase {
   constructor(
-    @Inject(REQUEST_REPOSITORY) private readonly repository: RequestRepository,
+    @Inject(REQUEST_QUERY_SERVICE)
+    private readonly queries: IRequestQueryService,
   ) {}
 
   async execute(
@@ -53,7 +19,7 @@ export class ListRequestsUseCase {
     const page = input.page ?? 1;
     const limit = input.limit ?? DEFAULT_REQUEST_PAGE_LIMIT;
 
-    const { items, total } = await this.repository.list({
+    const { items, total } = await this.queries.list({
       status: input.status,
       desiredFrom: input.desiredFrom,
       desiredTo: input.desiredTo,
@@ -66,6 +32,10 @@ export class ListRequestsUseCase {
       limit,
     });
 
-    return { items: items.map(toDto), page, limit, total };
+    return RequestListResponseMapper.toPaginatedDto(items, {
+      page,
+      limit,
+      total,
+    });
   }
 }

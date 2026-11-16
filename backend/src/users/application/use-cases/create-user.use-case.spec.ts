@@ -3,7 +3,7 @@ import { User } from '../../domain/entities/user.entity';
 import { EmailAlreadyExistsError } from '../../domain/errors/email-already-exists.error';
 import { PrivacyConsentRequiredError } from '../../domain/errors/privacy-consent-required.error';
 import { IUserRepository } from '../../domain/repositories/user.repository';
-import type { PasswordHasher } from '../ports/password-hasher.port';
+import type { IPasswordHasher } from '../ports/password-hasher.port';
 
 class InMemoryUserRepository implements IUserRepository {
   private readonly users = new Map<string, User>();
@@ -36,7 +36,7 @@ const consent = {
 
 describe('CreateUserUseCase', () => {
   let repository: InMemoryUserRepository;
-  let hasher: PasswordHasher;
+  let hasher: IPasswordHasher;
   let useCase: CreateUserUseCase;
   let hash: jest.Mock<Promise<string>, [string]>;
 

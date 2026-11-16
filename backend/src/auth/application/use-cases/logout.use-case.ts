@@ -1,16 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { LogoutInput } from '../dto/logout.input';
 import type { IRefreshTokenRepository } from '../../domain/repositories/refresh-token.repository';
-import type { TokenHasher } from '../ports/token-hasher.port';
+import type { ITokenHasher } from '../ports/token-hasher.port';
 import { REFRESH_TOKEN_REPOSITORY, TOKEN_HASHER } from '../tokens';
-
-export interface LogoutInput {
-  refreshToken: string;
-}
 
 @Injectable()
 export class LogoutUseCase {
   constructor(
-    @Inject(TOKEN_HASHER) private readonly tokenHasher: TokenHasher,
+    @Inject(TOKEN_HASHER) private readonly tokenHasher: ITokenHasher,
     @Inject(REFRESH_TOKEN_REPOSITORY)
     private readonly refreshTokens: IRefreshTokenRepository,
   ) {}

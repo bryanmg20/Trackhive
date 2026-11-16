@@ -1,18 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MaterialNotFoundError } from '../../domain/errors/material-not-found.error';
-import type { MaterialStatus } from '../../domain/material-status';
 import type { IMaterialRepository } from '../../domain/repositories/material.repository';
+import type { ChangeMaterialStatusInput } from '../dto/change-material-status.input';
 import { MaterialResponseDto } from '../dto/material-response.dto';
 import { MaterialResponseMapper } from '../mappers/material-response.mapper';
 import { MATERIAL_REPOSITORY } from '../tokens';
-
-export interface ChangeMaterialStatusInput {
-  materialId: string;
-  status: MaterialStatus;
-  reason?: string;
-  // Who makes the change
-  userId: string;
-}
 
 // Only staff can call this use case, so the location is always included
 const INCLUDE_LOCATION = true;

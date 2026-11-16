@@ -1,31 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { CreateUserInput } from '../dto/create-user.input';
 import { randomUUID } from 'crypto';
 import { User } from '../../domain/entities/user.entity';
 import { EmailAlreadyExistsError } from '../../domain/errors/email-already-exists.error';
 import { PrivacyConsentRequiredError } from '../../domain/errors/privacy-consent-required.error';
-import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/privacy-policy';
+import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/policies/privacy-policy';
 import type { IUserRepository } from '../../domain/repositories/user.repository';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UserResponseMapper } from '../mappers/user-response.mapper';
-import type { PasswordHasher } from '../ports/password-hasher.port';
+import type { IPasswordHasher } from '../ports/password-hasher.port';
 import { PASSWORD_HASHER, USER_REPOSITORY } from '../tokens';
-
-export interface CreateUserInput {
-  firstName: string;
-  middleName?: string | null;
-  lastName: string;
-  secondLastName?: string | null;
-  email: string;
-  password: string;
-  acceptedPrivacy: boolean;
-  privacyPolicyVersion: string;
-}
 
 @Injectable()
 export class CreateUserUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
+    @Inject(PASSWORD_HASHER) private readonly passwordHasher: IPasswordHasher,
   ) {}
 
   async execute(input: CreateUserInput): Promise<UserResponseDto> {
