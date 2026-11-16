@@ -42,6 +42,62 @@ export default tseslint.config(
           patterns: [
             { group: ['@nestjs/*'], message: 'El dominio no puede importar NestJS.' },
             { group: ['@prisma/*', 'prisma'], message: 'El dominio no puede importar el ORM.' },
+            {
+              group: ['class-validator', 'class-transformer', '@nestjs/swagger'],
+              message: 'El dominio no conoce la validación ni la documentación HTTP.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Clean Architecture (#144): los casos de uso y los servicios de aplicación
+    // reciben interfaces ...Input, nunca el DTO de la petición HTTP (D-B)
+    files: [
+      'src/**/application/use-cases/**/*.ts',
+      'src/**/application/services/**/*.ts',
+    ],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['class-validator', 'class-transformer', '@nestjs/swagger'],
+              message: 'Un caso de uso no conoce la validación ni la documentación HTTP.',
+            },
+            {
+              // Only the response DTOs, which the use case returns
+              regex: '(?<!-response)\\.dto$',
+              message:
+                'Un caso de uso no recibe DTOs de petición: usa una interfaz ...Input (D-B).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Los contratos de entrada y de resultado son interfaces planas (D-B)
+    files: [
+      'src/**/application/dto/*.input.ts',
+      'src/**/application/dto/*.result.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['class-validator', 'class-transformer', '@nestjs/swagger'],
+              message: 'Un contrato de entrada no lleva decoradores.',
+            },
+            {
+              regex: '\\.dto$',
+              message: 'Un contrato de entrada no reutiliza un DTO.',
+            },
           ],
         },
       ],
