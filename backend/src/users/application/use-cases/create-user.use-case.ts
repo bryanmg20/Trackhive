@@ -7,7 +7,7 @@ import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/policies/privacy-po
 import type { IUserRepository } from '../../domain/repositories/user.repository';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UserResponseMapper } from '../mappers/user-response.mapper';
-import type { PasswordHasher } from '../ports/password-hasher.port';
+import type { IPasswordHasher } from '../ports/password-hasher.port';
 import { PASSWORD_HASHER, USER_REPOSITORY } from '../tokens';
 
 export interface CreateUserInput {
@@ -25,7 +25,7 @@ export interface CreateUserInput {
 export class CreateUserUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
+    @Inject(PASSWORD_HASHER) private readonly passwordHasher: IPasswordHasher,
   ) {}
 
   async execute(input: CreateUserInput): Promise<UserResponseDto> {

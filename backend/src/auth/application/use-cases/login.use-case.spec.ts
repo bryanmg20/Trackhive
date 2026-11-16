@@ -1,11 +1,11 @@
 import { LoginUseCase } from './login.use-case';
 import { InMemoryRefreshTokenRepository } from '../../../../test/fakes/in-memory-refresh-token.repository';
-import type { PasswordHasher } from '../../../users/application/ports/password-hasher.port';
+import type { IPasswordHasher } from '../../../users/application/ports/password-hasher.port';
 import { User } from '../../../users/domain/entities/user.entity';
 import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
 import { InvalidCredentialsError } from '../../domain/errors/invalid-credentials.error';
-import type { TokenHasher } from '../ports/token-hasher.port';
-import type { TokenService } from '../ports/token-service.port';
+import type { ITokenHasher } from '../ports/token-hasher.port';
+import type { ITokenService } from '../ports/token-service.port';
 import { SessionTokenIssuer } from '../services/session-token-issuer';
 
 const REFRESH_EXPIRES_AT = new Date('2026-11-14T15:00:00.000Z');
@@ -37,14 +37,14 @@ describe('LoginUseCase', () => {
         Promise.resolve(storedUser?.email === email ? storedUser : null),
       ),
     };
-    const hasher: PasswordHasher = {
+    const hasher: IPasswordHasher = {
       hash: jest.fn(),
       verify: jest.fn((plain: string, hash: string) =>
         Promise.resolve(hash === `hashed:${plain}`),
       ),
     };
     signAccessToken = jest.fn(() => Promise.resolve('access-token'));
-    const tokenService: TokenService = {
+    const tokenService: ITokenService = {
       signAccessToken,
       signRefreshToken: jest.fn(() =>
         Promise.resolve({
@@ -55,7 +55,7 @@ describe('LoginUseCase', () => {
       verifyRefreshToken: jest.fn(),
       verifyAccessToken: jest.fn(),
     };
-    const tokenHasher: TokenHasher = { hash: (token) => `sha256:${token}` };
+    const tokenHasher: ITokenHasher = { hash: (token) => `sha256:${token}` };
     refreshTokens = new InMemoryRefreshTokenRepository();
     useCase = new LoginUseCase(
       repository,

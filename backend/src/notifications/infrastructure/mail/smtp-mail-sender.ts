@@ -4,7 +4,7 @@ import { createTransport, Transporter } from 'nodemailer';
 import { MailDeliveryFailedError } from '../../domain/errors/mail-delivery-failed.error';
 import type {
   MailMessage,
-  MailSender,
+  IMailSender,
 } from '../../application/ports/mail-sender.port';
 
 // Nodemailer waits up to 2 minutes by default; a request should not hang that long
@@ -13,12 +13,12 @@ const SOCKET_TIMEOUT_MS = 20_000;
 const SMTPS_PORT = 465;
 
 /**
- * MailSender over SMTP with Nodemailer (D-10). Every value comes from the
+ * IMailSender over SMTP with Nodemailer (D-10). Every value comes from the
  * SMTP_* variables of the .env. In development they point to Mailpit,
  * which keeps the emails without sending them.
  */
 @Injectable()
-export class SmtpMailSender implements MailSender {
+export class SmtpMailSender implements IMailSender {
   private readonly logger = new Logger(SmtpMailSender.name);
   private transporter?: Transporter;
 

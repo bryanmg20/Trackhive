@@ -12,7 +12,7 @@ export interface PendingNotification {
 }
 
 /** The outbox of emails (D-10): the table notifications. */
-export interface NotificationRepository {
+export interface INotificationQueue {
   /**
    * Claims up to `limit` PENDIENTE emails whose scheduled time is `now` or
    * earlier: counts the attempt and moves their scheduled time to

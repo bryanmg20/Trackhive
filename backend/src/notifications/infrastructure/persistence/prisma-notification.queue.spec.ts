@@ -1,5 +1,5 @@
 import type { PrismaService } from '../../../prisma/prisma.service';
-import { PrismaNotificationRepository } from './prisma-notification.repository';
+import { PrismaNotificationQueue } from './prisma-notification.queue';
 
 const NOW = new Date('2026-11-10T15:00:00.000Z');
 const LEASE_UNTIL = new Date('2026-11-10T15:05:00.000Z');
@@ -15,7 +15,7 @@ const row = (id: string, attempts = 0) => ({
 });
 
 /** The e2e tests run without a database, so Prisma is simulated here. */
-describe('PrismaNotificationRepository', () => {
+describe('PrismaNotificationQueue', () => {
   const build = (rows: unknown[], claimedCounts: number[] = []) => {
     const updateMany = jest.fn();
     rows.forEach((_, index) =>
@@ -28,7 +28,7 @@ describe('PrismaNotificationRepository', () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    const repository = new PrismaNotificationRepository(
+    const repository = new PrismaNotificationQueue(
       prisma as unknown as PrismaService,
     );
     return { prisma, repository };

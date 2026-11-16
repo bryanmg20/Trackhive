@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import type { TokenService } from '../../application/ports/token-service.port';
+import type { ITokenService } from '../../application/ports/token-service.port';
 import { TOKEN_SERVICE } from '../../application/tokens';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { AuthenticatedUser } from './authenticated-user';
@@ -19,7 +19,7 @@ const INVALID_TOKEN_MESSAGE = 'Token de acceso ausente, inválido o vencido';
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    @Inject(TOKEN_SERVICE) private readonly tokenService: TokenService,
+    @Inject(TOKEN_SERVICE) private readonly tokenService: ITokenService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

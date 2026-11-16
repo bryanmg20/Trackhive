@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import type { DatabaseHealthChecker } from '../../application/ports/database-health-checker.port';
+import type { IDatabaseHealthChecker } from '../../application/ports/database-health-checker.port';
 
 // Beyond this the database counts as down, even if it answers later
 export const DATABASE_HEALTH_CHECK_TIMEOUT_MS = 3000;
 
 @Injectable()
-export class PrismaDatabaseHealthChecker implements DatabaseHealthChecker {
+export class PrismaDatabaseHealthChecker implements IDatabaseHealthChecker {
   constructor(private readonly prisma: PrismaService) {}
 
   async isAvailable(): Promise<boolean> {

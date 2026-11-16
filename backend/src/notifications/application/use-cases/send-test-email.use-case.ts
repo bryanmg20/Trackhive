@@ -4,7 +4,7 @@ import { USER_REPOSITORY } from '../../../users/application/tokens';
 import { UserNotFoundError } from '../../../users/domain/errors/user-not-found.error';
 import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
 import { TestEmailResponseDto } from '../dto/test-email-response.dto';
-import type { MailSender } from '../ports/mail-sender.port';
+import type { IMailSender } from '../ports/mail-sender.port';
 import { MAIL_SENDER } from '../tokens';
 
 export interface SendTestEmailInput {
@@ -21,7 +21,7 @@ export interface SendTestEmailInput {
 export class SendTestEmailUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
+    @Inject(MAIL_SENDER) private readonly mailSender: IMailSender,
   ) {}
 
   async execute(input: SendTestEmailInput): Promise<TestEmailResponseDto> {

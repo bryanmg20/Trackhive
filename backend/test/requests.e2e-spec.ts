@@ -6,7 +6,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
-import { NOTIFICATION_REPOSITORY } from '../src/notifications/application/tokens';
+import { NOTIFICATION_QUEUE } from '../src/notifications/application/tokens';
 import type { NotificationDraft } from '../src/notifications/domain/value-objects/notification-draft';
 import { PrismaService } from '../src/prisma/prisma.service';
 import type {
@@ -22,7 +22,7 @@ import { Request } from '../src/requests/domain/entities/request.entity';
 import { RequestStatusConflictError } from '../src/requests/domain/errors/request-status-conflict.error';
 import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
 import type { UserRole } from '../src/users/domain/enums/user-role';
-import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
+import { InMemoryNotificationQueue } from './fakes/in-memory-notification.queue';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
 const ACCESS_SECRET = 'e2e-access-secret';
@@ -129,8 +129,8 @@ describe('Request registration (e2e)', () => {
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
       // The job of the outbox (HU-23) runs every 10 s; without a database
-      .overrideProvider(NOTIFICATION_REPOSITORY)
-      .useValue(new InMemoryNotificationRepository())
+      .overrideProvider(NOTIFICATION_QUEUE)
+      .useValue(new InMemoryNotificationQueue())
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();

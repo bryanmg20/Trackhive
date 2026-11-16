@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
-import type { TokenHasher } from '../../application/ports/token-hasher.port';
+import type { ITokenHasher } from '../../application/ports/token-hasher.port';
 
 /**
  * SHA-256 and not argon2: the token is long and random, so it cannot be
@@ -8,7 +8,7 @@ import type { TokenHasher } from '../../application/ports/token-hasher.port';
  * which is what lets us look it up.
  */
 @Injectable()
-export class Sha256TokenHasher implements TokenHasher {
+export class Sha256TokenHasher implements ITokenHasher {
   hash(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }

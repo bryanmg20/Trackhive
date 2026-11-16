@@ -1,7 +1,7 @@
 import type {
-  NotificationRepository,
+  INotificationQueue,
   PendingNotification,
-} from '../../src/notifications/application/ports/notification.repository.port';
+} from '../../src/notifications/application/ports/notification-queue.port';
 import type { NotificationDraft } from '../../src/notifications/domain/value-objects/notification-draft';
 
 export interface StoredNotification {
@@ -19,7 +19,7 @@ export interface StoredNotification {
 }
 
 /** Fake of the outbox (D-21): the notifications table in memory. */
-export class InMemoryNotificationRepository implements NotificationRepository {
+export class InMemoryNotificationQueue implements INotificationQueue {
   readonly rows: StoredNotification[] = [];
   private nextId = 1;
 

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { PasswordHasher } from '../../../users/application/ports/password-hasher.port';
+import type { IPasswordHasher } from '../../../users/application/ports/password-hasher.port';
 import {
   PASSWORD_HASHER,
   USER_REPOSITORY,
@@ -18,7 +18,7 @@ export interface LoginInput {
 export class LoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
+    @Inject(PASSWORD_HASHER) private readonly passwordHasher: IPasswordHasher,
     private readonly sessionTokenIssuer: SessionTokenIssuer,
   ) {}
 

@@ -8,7 +8,7 @@ import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import {
   MAIL_SENDER,
-  NOTIFICATION_REPOSITORY,
+  NOTIFICATION_QUEUE,
 } from '../src/notifications/application/tokens';
 import { SendPendingNotificationsUseCase } from '../src/notifications/application/use-cases/send-pending-notifications.use-case';
 import type { NotificationDraft } from '../src/notifications/domain/value-objects/notification-draft';
@@ -23,7 +23,7 @@ import { Request } from '../src/requests/domain/entities/request.entity';
 import type { RequestStatus } from '../src/requests/domain/enums/request-status';
 import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
 import { FakeMailSender } from './fakes/fake-mail-sender';
-import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
+import { InMemoryNotificationQueue } from './fakes/in-memory-notification.queue';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
 const ACCESS_SECRET = 'e2e-access-secret';
@@ -61,7 +61,7 @@ describe('Status change emails (e2e)', () => {
   let app: INestApplication;
   let server: Server;
   let status: RequestStatus;
-  const outbox = new InMemoryNotificationRepository();
+  const outbox = new InMemoryNotificationQueue();
   const mailSender = new FakeMailSender();
   const jwt = new JwtService();
   const token = jwt.sign(
@@ -131,7 +131,7 @@ describe('Status change emails (e2e)', () => {
     })
       .overrideProvider(REQUEST_REPOSITORY)
       .useValue(repository)
-      .overrideProvider(NOTIFICATION_REPOSITORY)
+      .overrideProvider(NOTIFICATION_QUEUE)
       .useValue(outbox)
       .overrideProvider(MAIL_SENDER)
       .useValue(mailSender)

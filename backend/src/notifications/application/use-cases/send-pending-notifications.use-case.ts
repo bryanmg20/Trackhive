@@ -1,11 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MailDeliveryFailedError } from '../../domain/errors/mail-delivery-failed.error';
-import type { MailSender } from '../ports/mail-sender.port';
+import type { IMailSender } from '../ports/mail-sender.port';
 import type {
-  NotificationRepository,
+  INotificationQueue,
   PendingNotification,
-} from '../ports/notification.repository.port';
-import { MAIL_SENDER, NOTIFICATION_REPOSITORY } from '../tokens';
+} from '../ports/notification-queue.port';
+import { MAIL_SENDER, NOTIFICATION_QUEUE } from '../tokens';
 
 /** After this many failed attempts the email is FALLIDA and not retried. */
 export const MAX_SEND_ATTEMPTS = 5;
@@ -41,9 +41,9 @@ export class SendPendingNotificationsUseCase {
   private readonly logger = new Logger(SendPendingNotificationsUseCase.name);
 
   constructor(
-    @Inject(NOTIFICATION_REPOSITORY)
-    private readonly notifications: NotificationRepository,
-    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
+    @Inject(NOTIFICATION_QUEUE)
+    private readonly notifications: INotificationQueue,
+    @Inject(MAIL_SENDER) private readonly mailSender: IMailSender,
   ) {}
 
   async execute(

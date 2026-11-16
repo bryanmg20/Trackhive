@@ -8,14 +8,14 @@ import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import {
   MAIL_SENDER,
-  NOTIFICATION_REPOSITORY,
+  NOTIFICATION_QUEUE,
 } from '../src/notifications/application/tokens';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { USER_REPOSITORY } from '../src/users/application/tokens';
 import { User } from '../src/users/domain/entities/user.entity';
 import type { UserRole } from '../src/users/domain/enums/user-role';
 import { FakeMailSender } from './fakes/fake-mail-sender';
-import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
+import { InMemoryNotificationQueue } from './fakes/in-memory-notification.queue';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 import { InMemoryUserRepository } from './fakes/in-memory-user.repository';
 
@@ -71,8 +71,8 @@ describe('Test email (e2e)', () => {
       .overrideProvider(MAIL_SENDER)
       .useValue(mailSender)
       // The job of the outbox (HU-23) runs every 10 s; without a database
-      .overrideProvider(NOTIFICATION_REPOSITORY)
-      .useValue(new InMemoryNotificationRepository())
+      .overrideProvider(NOTIFICATION_QUEUE)
+      .useValue(new InMemoryNotificationQueue())
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
       .overrideProvider(PrismaService)

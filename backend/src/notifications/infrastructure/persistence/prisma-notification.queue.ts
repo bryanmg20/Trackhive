@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
-  NotificationRepository,
+  INotificationQueue,
   PendingNotification,
-} from '../../application/ports/notification.repository.port';
+} from '../../application/ports/notification-queue.port';
 
 @Injectable()
-export class PrismaNotificationRepository implements NotificationRepository {
+export class PrismaNotificationQueue implements INotificationQueue {
   constructor(private readonly prisma: PrismaService) {}
 
   async claimDue(

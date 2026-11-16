@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { HealthResponseDto } from '../dto/health-response.dto';
-import type { DatabaseHealthChecker } from '../ports/database-health-checker.port';
+import type { IDatabaseHealthChecker } from '../ports/database-health-checker.port';
 import { DATABASE_HEALTH_CHECKER } from '../tokens';
 
 @Injectable()
 export class GetHealthUseCase {
   constructor(
     @Inject(DATABASE_HEALTH_CHECKER)
-    private readonly databaseHealthChecker: DatabaseHealthChecker,
+    private readonly databaseHealthChecker: IDatabaseHealthChecker,
   ) {}
 
   async execute(): Promise<HealthResponseDto> {
