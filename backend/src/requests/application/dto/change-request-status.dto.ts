@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
-import { CHANGEABLE_STATUSES } from '../../domain/request-status';
-import type { ChangeableStatus } from '../../domain/request-status';
+import { CHANGEABLE_STATUSES } from '../../domain/enums/request-status';
+import type { ChangeableStatus } from '../../domain/enums/request-status';
 
 export const MAX_STATUS_COMMENT_LENGTH = 500;
 

@@ -2,8 +2,8 @@ import { MaterialModel } from '@prisma/client';
 import { Material } from '../../domain/entities/material.entity';
 import { InvalidMaterialStatusError } from '../../domain/errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../../domain/errors/invalid-material-type.error';
-import { isMaterialStatus } from '../../domain/material-status';
-import { isMaterialType } from '../../domain/material-type';
+import { isMaterialStatus } from '../../domain/enums/material-status';
+import { isMaterialType } from '../../domain/enums/material-type';
 
 export class PrismaMaterialMapper {
   static toDomain(model: MaterialModel): Material {

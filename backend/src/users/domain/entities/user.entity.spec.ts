@@ -4,7 +4,7 @@ import { InvalidNameError } from '../errors/invalid-name.error';
 import { InvalidPasswordHashError } from '../errors/invalid-password-hash.error';
 import { InvalidPrivacyConsentError } from '../errors/invalid-privacy-consent.error';
 import { InvalidRoleError } from '../errors/invalid-role.error';
-import { UserRole } from '../user-role';
+import { UserRole } from '../enums/user-role';
 
 const validProps = (): UserProps => ({
   id: '1',

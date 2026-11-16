@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
-import { MATERIAL_STATUSES } from '../../domain/material-status';
-import type { MaterialStatus } from '../../domain/material-status';
+import { MATERIAL_STATUSES } from '../../domain/enums/material-status';
+import type { MaterialStatus } from '../../domain/enums/material-status';
 
 export const MAX_STATUS_REASON_LENGTH = 500;
 

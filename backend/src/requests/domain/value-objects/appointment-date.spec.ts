@@ -1,5 +1,5 @@
 import { toAppointmentDay } from './appointment-date';
-import { InvalidAppointmentDateError } from './errors/invalid-appointment-date.error';
+import { InvalidAppointmentDateError } from '../errors/invalid-appointment-date.error';
 
 describe('toAppointmentDay (HU-18)', () => {
   it.each([

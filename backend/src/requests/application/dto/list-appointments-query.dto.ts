@@ -11,8 +11,8 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { APPOINTMENT_STATUSES } from '../../domain/appointment-status';
-import type { AppointmentStatus } from '../../domain/appointment-status';
+import { APPOINTMENT_STATUSES } from '../../domain/enums/appointment-status';
+import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import { APPOINTMENT_SORT_FIELDS } from '../ports/request.repository.port';
 import type {
   AppointmentSortField,

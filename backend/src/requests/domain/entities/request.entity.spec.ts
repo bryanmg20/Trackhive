@@ -1,4 +1,4 @@
-import { DeliveryMode } from '../delivery-mode';
+import { DeliveryMode } from '../enums/delivery-mode';
 import { InvalidRequestStatusError } from '../errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../errors/rejection-reason-required.error';
@@ -7,7 +7,7 @@ import {
   ChangeableStatus,
   REQUEST_STATUSES,
   RequestStatus,
-} from '../request-status';
+} from '../enums/request-status';
 import { Request } from './request.entity';
 
 const buildRequest = (

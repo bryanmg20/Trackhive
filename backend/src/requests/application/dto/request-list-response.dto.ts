@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { DELIVERY_MODES } from '../../domain/delivery-mode';
-import type { DeliveryMode } from '../../domain/delivery-mode';
-import { REQUEST_STATUSES } from '../../domain/request-status';
-import type { RequestStatus } from '../../domain/request-status';
+import { DELIVERY_MODES } from '../../domain/enums/delivery-mode';
+import type { DeliveryMode } from '../../domain/enums/delivery-mode';
+import { REQUEST_STATUSES } from '../../domain/enums/request-status';
+import type { RequestStatus } from '../../domain/enums/request-status';
 
 export class RequestListMaterialDto {
   @ApiProperty({ example: '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })

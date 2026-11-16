@@ -13,7 +13,7 @@ import {
 import { PrismaService } from '../src/prisma/prisma.service';
 import { USER_REPOSITORY } from '../src/users/application/tokens';
 import { User } from '../src/users/domain/entities/user.entity';
-import type { UserRole } from '../src/users/domain/user-role';
+import type { UserRole } from '../src/users/domain/enums/user-role';
 import { FakeMailSender } from './fakes/fake-mail-sender';
 import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';

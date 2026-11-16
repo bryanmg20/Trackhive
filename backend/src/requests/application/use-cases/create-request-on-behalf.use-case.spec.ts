@@ -1,4 +1,7 @@
-import { addBusinessDays, todayInBogota } from '../../domain/desired-date';
+import {
+  addBusinessDays,
+  todayInBogota,
+} from '../../domain/value-objects/desired-date';
 import { DesiredDateError } from '../../domain/errors/desired-date-invalid.error';
 import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
 import { RequesterEmailRequiredError } from '../../domain/errors/requester-email-required.error';

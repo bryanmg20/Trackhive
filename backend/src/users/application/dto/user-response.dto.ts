@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { NAME_MAX_LENGTH } from '../../domain/person-name';
-import type { UserRole } from '../../domain/user-role';
+import { NAME_MAX_LENGTH } from '../../domain/value-objects/person-name';
+import type { UserRole } from '../../domain/enums/user-role';
 
 export class UserResponseDto {
   @ApiProperty({

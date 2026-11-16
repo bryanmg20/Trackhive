@@ -1,4 +1,4 @@
-import { DeliveryMode } from '../delivery-mode';
+import { DeliveryMode } from '../enums/delivery-mode';
 import { InvalidRequestStatusError } from '../errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../errors/rejection-reason-required.error';
@@ -8,8 +8,8 @@ import {
   isRequestStatus,
   REQUEST_STATUSES,
   RequestStatus,
-} from '../request-status';
-import type { StatusChange } from '../status-change';
+} from '../enums/request-status';
+import type { StatusChange } from '../value-objects/status-change';
 
 // Business rule: the only status changes allowed (docs/modelo-dominio.md, section 4)
 const ALLOWED_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {

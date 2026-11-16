@@ -1,5 +1,5 @@
 import { DomainError } from '../../../common/errors/domain.error';
-import { REQUEST_STATUS_LABELS, RequestStatus } from '../request-status';
+import { REQUEST_STATUS_LABELS, RequestStatus } from '../enums/request-status';
 
 export class InvalidStatusTransitionError extends DomainError {
   readonly code = 'INVALID_STATUS_TRANSITION';

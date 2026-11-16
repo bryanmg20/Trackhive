@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserRole } from '../../../users/domain/user-role';
-import type { MaterialStatus } from '../../domain/material-status';
-import type { MaterialType } from '../../domain/material-type';
+import type { UserRole } from '../../../users/domain/enums/user-role';
+import type { MaterialStatus } from '../../domain/enums/material-status';
+import type { MaterialType } from '../../domain/enums/material-type';
 import type {
   IMaterialRepository,
   MaterialSortField,

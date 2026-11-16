@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateRequestResponseDto } from '../dto/create-request-response.dto';
 import type { RequestRepository } from '../ports/request.repository.port';
 import { REQUEST_REPOSITORY } from '../tokens';
-import { assertValidDesiredDate } from '../../domain/desired-date';
+import { assertValidDesiredDate } from '../../domain/value-objects/desired-date';
 import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
 
 export interface CreateRequestInput {

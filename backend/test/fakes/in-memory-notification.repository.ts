@@ -2,7 +2,7 @@ import type {
   NotificationRepository,
   PendingNotification,
 } from '../../src/notifications/application/ports/notification.repository.port';
-import type { NotificationDraft } from '../../src/notifications/domain/notification-draft';
+import type { NotificationDraft } from '../../src/notifications/domain/value-objects/notification-draft';
 
 export interface StoredNotification {
   id: string;

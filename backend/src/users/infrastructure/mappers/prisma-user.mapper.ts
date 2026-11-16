@@ -1,7 +1,7 @@
 import { UserModel } from '@prisma/client';
 import { User } from '../../domain/entities/user.entity';
 import { InvalidRoleError } from '../../domain/errors/invalid-role.error';
-import { isUserRole } from '../../domain/user-role';
+import { isUserRole } from '../../domain/enums/user-role';
 
 export class PrismaUserMapper {
   static toDomain(model: UserModel): User {

@@ -1,11 +1,11 @@
 import { Prisma } from '@prisma/client';
-import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
+import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { RequesterInput } from '../../application/use-cases/create-request-on-behalf.use-case';
 import { Request } from '../../domain/entities/request.entity';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
-import type { StatusChange } from '../../domain/status-change';
+import type { StatusChange } from '../../domain/value-objects/status-change';
 import { PrismaRequestRepository } from './prisma-request.repository';
 
 const MATERIAL_ID = 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc';

@@ -1,7 +1,7 @@
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
-import { isMaterialStatus, MaterialStatus } from '../material-status';
-import { isMaterialType, MaterialType } from '../material-type';
+import { isMaterialStatus, MaterialStatus } from '../enums/material-status';
+import { isMaterialType, MaterialType } from '../enums/material-type';
 
 // Physical location in the archive. Never shown to the PUBLICO role
 export interface MaterialLocation {

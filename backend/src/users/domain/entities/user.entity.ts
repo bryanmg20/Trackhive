@@ -2,8 +2,8 @@ import { InvalidEmailError } from '../errors/invalid-email.error';
 import { InvalidPasswordHashError } from '../errors/invalid-password-hash.error';
 import { InvalidPrivacyConsentError } from '../errors/invalid-privacy-consent.error';
 import { InvalidRoleError } from '../errors/invalid-role.error';
-import { optionalName, requiredName } from '../person-name';
-import { isUserRole, UserRole } from '../user-role';
+import { optionalName, requiredName } from '../value-objects/person-name';
+import { isUserRole, UserRole } from '../enums/user-role';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LENGTH = 160;

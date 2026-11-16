@@ -1,4 +1,4 @@
-import type { RequestStatus } from './request-status';
+import type { RequestStatus } from '../enums/request-status';
 
 /**
  * Immutable record of one status change of a request («CambioEstado» in

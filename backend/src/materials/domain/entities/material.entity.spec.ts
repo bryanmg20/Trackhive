@@ -1,5 +1,5 @@
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
-import type { MaterialStatus } from '../material-status';
+import type { MaterialStatus } from '../enums/material-status';
 import { Material } from './material.entity';
 
 const buildMaterial = (): Material =>

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { User } from '../../domain/entities/user.entity';
 import { EmailAlreadyExistsError } from '../../domain/errors/email-already-exists.error';
 import { PrivacyConsentRequiredError } from '../../domain/errors/privacy-consent-required.error';
-import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/privacy-policy';
+import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/policies/privacy-policy';
 import type { IUserRepository } from '../../domain/repositories/user.repository';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UserResponseMapper } from '../mappers/user-response.mapper';

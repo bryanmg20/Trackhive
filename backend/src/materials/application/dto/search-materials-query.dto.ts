@@ -9,10 +9,10 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { MATERIAL_STATUSES } from '../../domain/material-status';
-import type { MaterialStatus } from '../../domain/material-status';
-import { MATERIAL_TYPES } from '../../domain/material-type';
-import type { MaterialType } from '../../domain/material-type';
+import { MATERIAL_STATUSES } from '../../domain/enums/material-status';
+import type { MaterialStatus } from '../../domain/enums/material-status';
+import { MATERIAL_TYPES } from '../../domain/enums/material-type';
+import type { MaterialType } from '../../domain/enums/material-type';
 import { MATERIAL_SORT_FIELDS } from '../../domain/repositories/material.repository';
 import type {
   MaterialSortField,

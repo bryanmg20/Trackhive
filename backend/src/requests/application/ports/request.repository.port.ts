@@ -1,9 +1,9 @@
-import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
-import type { AppointmentStatus } from '../../domain/appointment-status';
-import type { DeliveryMode } from '../../domain/delivery-mode';
+import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
+import type { AppointmentStatus } from '../../domain/enums/appointment-status';
+import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { Request } from '../../domain/entities/request.entity';
-import type { RequestStatus } from '../../domain/request-status';
-import type { StatusChange } from '../../domain/status-change';
+import type { RequestStatus } from '../../domain/enums/request-status';
+import type { StatusChange } from '../../domain/value-objects/status-change';
 import type { CreateRequestInput } from '../use-cases/create-request.use-case';
 import type { CreateRequestOnBehalfInput } from '../use-cases/create-request-on-behalf.use-case';
 

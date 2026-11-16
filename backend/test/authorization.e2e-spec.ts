@@ -8,7 +8,7 @@ import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { Roles } from '../src/auth/presentation/decorators/roles.decorator';
 import { PrismaService } from '../src/prisma/prisma.service';
-import type { UserRole } from '../src/users/domain/user-role';
+import type { UserRole } from '../src/users/domain/enums/user-role';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 
 const ACCESS_SECRET = 'e2e-access-secret';

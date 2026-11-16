@@ -11,8 +11,8 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { REQUEST_STATUSES } from '../../domain/request-status';
-import type { RequestStatus } from '../../domain/request-status';
+import { REQUEST_STATUSES } from '../../domain/enums/request-status';
+import type { RequestStatus } from '../../domain/enums/request-status';
 import { REQUEST_SORT_FIELDS } from '../ports/request.repository.port';
 import type {
   RequestSortField,

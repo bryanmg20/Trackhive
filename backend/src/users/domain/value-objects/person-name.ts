@@ -1,4 +1,4 @@
-import { InvalidNameError } from './errors/invalid-name.error';
+import { InvalidNameError } from '../errors/invalid-name.error';
 
 /**
  * A person's name is stored in four fields, the same in users and

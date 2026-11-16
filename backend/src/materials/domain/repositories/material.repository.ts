@@ -1,6 +1,6 @@
 import { Material } from '../entities/material.entity';
-import { MaterialStatus } from '../material-status';
-import { MaterialType } from '../material-type';
+import { MaterialStatus } from '../enums/material-status';
+import { MaterialType } from '../enums/material-type';
 
 export const MATERIAL_SORT_FIELDS = [
   'title',

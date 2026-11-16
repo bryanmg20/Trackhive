@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { APPOINTMENT_STATUSES } from '../../domain/appointment-status';
-import type { AppointmentStatus } from '../../domain/appointment-status';
-import { DELIVERY_MODES } from '../../domain/delivery-mode';
-import type { DeliveryMode } from '../../domain/delivery-mode';
-import { REQUEST_STATUSES } from '../../domain/request-status';
-import type { RequestStatus } from '../../domain/request-status';
+import { APPOINTMENT_STATUSES } from '../../domain/enums/appointment-status';
+import type { AppointmentStatus } from '../../domain/enums/appointment-status';
+import { DELIVERY_MODES } from '../../domain/enums/delivery-mode';
+import type { DeliveryMode } from '../../domain/enums/delivery-mode';
+import { REQUEST_STATUSES } from '../../domain/enums/request-status';
+import type { RequestStatus } from '../../domain/enums/request-status';
 import { AppointmentServiceHoursDto } from './schedule-appointment-response.dto';
 
 export class AppointmentLocationDto {

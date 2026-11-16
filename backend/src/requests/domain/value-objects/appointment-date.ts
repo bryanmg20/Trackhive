@@ -1,4 +1,4 @@
-import { InvalidAppointmentDateError } from './errors/invalid-appointment-date.error';
+import { InvalidAppointmentDateError } from '../errors/invalid-appointment-date.error';
 
 /** Opening and closing time of a day, as HH:mm in America/Bogota. */
 export interface ServiceHours {

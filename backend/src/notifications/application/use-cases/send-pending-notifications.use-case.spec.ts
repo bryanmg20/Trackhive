@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { FakeMailSender } from '../../../../test/fakes/fake-mail-sender';
 import { InMemoryNotificationRepository } from '../../../../test/fakes/in-memory-notification.repository';
 import { MailDeliveryFailedError } from '../../domain/errors/mail-delivery-failed.error';
-import type { NotificationDraft } from '../../domain/notification-draft';
+import type { NotificationDraft } from '../../domain/value-objects/notification-draft';
 import type { MailMessage } from '../ports/mail-sender.port';
 import {
   MAX_SEND_ATTEMPTS,

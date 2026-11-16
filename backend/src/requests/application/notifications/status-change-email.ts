@@ -1,8 +1,8 @@
 import { escapeHtml } from '../../../common/html/escape-html';
-import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
-import type { ServiceHours } from '../../domain/appointment-date';
-import { REQUEST_STATUS_LABELS } from '../../domain/request-status';
-import type { RequestStatus } from '../../domain/request-status';
+import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
+import type { ServiceHours } from '../../domain/value-objects/appointment-date';
+import { REQUEST_STATUS_LABELS } from '../../domain/enums/request-status';
+import type { RequestStatus } from '../../domain/enums/request-status';
 import type { RequestNotificationContext } from '../ports/request.repository.port';
 
 export interface StatusChangeEmailDetails {

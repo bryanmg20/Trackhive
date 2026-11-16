@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { toAppointmentDay } from '../../domain/appointment-date';
+import { toAppointmentDay } from '../../domain/value-objects/appointment-date';
 import {
   AppointmentListItemDto,
   PaginatedAppointmentsResponseDto,

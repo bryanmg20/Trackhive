@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { DELIVERY_MODES } from '../../domain/delivery-mode';
-import type { DeliveryMode } from '../../domain/delivery-mode';
-import { REQUEST_STATUSES } from '../../domain/request-status';
-import type { RequestStatus } from '../../domain/request-status';
+import { DELIVERY_MODES } from '../../domain/enums/delivery-mode';
+import type { DeliveryMode } from '../../domain/enums/delivery-mode';
+import { REQUEST_STATUSES } from '../../domain/enums/request-status';
+import type { RequestStatus } from '../../domain/enums/request-status';
 
 export class RequestDetailRequesterDto {
   @ApiProperty({ description: 'Nombre completo', example: 'Juan Carlos Pérez' })

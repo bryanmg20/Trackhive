@@ -1,9 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { toAppointmentDay } from '../../domain/appointment-date';
+import { toAppointmentDay } from '../../domain/value-objects/appointment-date';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { MaterialNotAvailableError } from '../../domain/errors/material-not-available.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
-import { blocksScheduling } from '../../domain/material-availability';
+import { blocksScheduling } from '../../domain/policies/material-availability';
 import { ScheduleAppointmentResponseDto } from '../dto/schedule-appointment-response.dto';
 import { buildStatusChangeEmail } from '../notifications/status-change-email';
 import type { RequestRepository } from '../ports/request.repository.port';

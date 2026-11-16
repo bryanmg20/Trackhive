@@ -11,7 +11,7 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
-import { NAME_MAX_LENGTH } from '../../../users/domain/person-name';
+import { NAME_MAX_LENGTH } from '../../../users/domain/value-objects/person-name';
 
 const trimText = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;

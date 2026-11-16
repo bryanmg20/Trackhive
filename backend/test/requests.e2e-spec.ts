@@ -7,7 +7,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { NOTIFICATION_REPOSITORY } from '../src/notifications/application/tokens';
-import type { NotificationDraft } from '../src/notifications/domain/notification-draft';
+import type { NotificationDraft } from '../src/notifications/domain/value-objects/notification-draft';
 import { PrismaService } from '../src/prisma/prisma.service';
 import type {
   SavedAppointment,
@@ -17,11 +17,11 @@ import { REQUEST_REPOSITORY } from '../src/requests/application/tokens';
 import {
   addBusinessDays,
   todayInBogota,
-} from '../src/requests/domain/desired-date';
+} from '../src/requests/domain/value-objects/desired-date';
 import { Request } from '../src/requests/domain/entities/request.entity';
 import { RequestStatusConflictError } from '../src/requests/domain/errors/request-status-conflict.error';
-import type { StatusChange } from '../src/requests/domain/status-change';
-import type { UserRole } from '../src/users/domain/user-role';
+import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
+import type { UserRole } from '../src/users/domain/enums/user-role';
 import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
 

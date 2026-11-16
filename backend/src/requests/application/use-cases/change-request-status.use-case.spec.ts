@@ -1,13 +1,13 @@
 import { Logger } from '@nestjs/common';
-import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
-import { DeliveryMode } from '../../domain/delivery-mode';
+import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
+import { DeliveryMode } from '../../domain/enums/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../../domain/errors/rejection-reason-required.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
-import { RequestStatus } from '../../domain/request-status';
-import type { StatusChange } from '../../domain/status-change';
+import { RequestStatus } from '../../domain/enums/request-status';
+import type { StatusChange } from '../../domain/value-objects/status-change';
 import type {
   RequestNotificationContext,
   RequestRepository,

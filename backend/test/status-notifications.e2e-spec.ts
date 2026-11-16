@@ -11,7 +11,7 @@ import {
   NOTIFICATION_REPOSITORY,
 } from '../src/notifications/application/tokens';
 import { SendPendingNotificationsUseCase } from '../src/notifications/application/use-cases/send-pending-notifications.use-case';
-import type { NotificationDraft } from '../src/notifications/domain/notification-draft';
+import type { NotificationDraft } from '../src/notifications/domain/value-objects/notification-draft';
 import { SendPendingNotificationsJob } from '../src/notifications/infrastructure/jobs/send-pending-notifications.job';
 import { PrismaService } from '../src/prisma/prisma.service';
 import type {
@@ -20,8 +20,8 @@ import type {
 } from '../src/requests/application/ports/request.repository.port';
 import { REQUEST_REPOSITORY } from '../src/requests/application/tokens';
 import { Request } from '../src/requests/domain/entities/request.entity';
-import type { RequestStatus } from '../src/requests/domain/request-status';
-import type { StatusChange } from '../src/requests/domain/status-change';
+import type { RequestStatus } from '../src/requests/domain/enums/request-status';
+import type { StatusChange } from '../src/requests/domain/value-objects/status-change';
 import { FakeMailSender } from './fakes/fake-mail-sender';
 import { InMemoryNotificationRepository } from './fakes/in-memory-notification.repository';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';

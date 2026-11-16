@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
-import type { ChangeableStatus } from '../../domain/request-status';
+import type { ChangeableStatus } from '../../domain/enums/request-status';
 import { ChangeRequestStatusResponseDto } from '../dto/change-request-status-response.dto';
 import { buildStatusChangeEmail } from '../notifications/status-change-email';
 import type { RequestRepository } from '../ports/request.repository.port';

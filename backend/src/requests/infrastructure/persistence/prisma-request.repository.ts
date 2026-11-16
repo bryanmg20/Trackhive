@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
-import type { NotificationDraft } from '../../../notifications/domain/notification-draft';
+import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
   AppointmentListCriteria,
@@ -23,11 +23,11 @@ import type {
   CreateRequestOnBehalfInput,
   RequesterInput,
 } from '../../application/use-cases/create-request-on-behalf.use-case';
-import { isAppointmentStatus } from '../../domain/appointment-status';
-import { isDeliveryMode } from '../../domain/delivery-mode';
+import { isAppointmentStatus } from '../../domain/enums/appointment-status';
+import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
-import { isRequestStatus } from '../../domain/request-status';
-import type { StatusChange } from '../../domain/status-change';
+import { isRequestStatus } from '../../domain/enums/request-status';
+import type { StatusChange } from '../../domain/value-objects/status-change';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';

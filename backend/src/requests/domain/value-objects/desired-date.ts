@@ -1,4 +1,4 @@
-import { DesiredDateError } from './errors/desired-date-invalid.error';
+import { DesiredDateError } from '../errors/desired-date-invalid.error';
 
 export const minimumBusinessDays = 10;
 

@@ -2,7 +2,7 @@ import {
   addBusinessDays,
   isAttendedDate,
   todayInBogota,
-} from '../../domain/desired-date';
+} from '../../domain/value-objects/desired-date';
 import { DesiredDateError } from '../../domain/errors/desired-date-invalid.error';
 import { RequestMaterialsRequiredError } from '../../domain/errors/request-materials-required.error';
 import { CreateRequestUseCase } from './create-request.use-case';

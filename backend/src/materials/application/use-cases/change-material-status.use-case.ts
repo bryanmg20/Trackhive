@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MaterialNotFoundError } from '../../domain/errors/material-not-found.error';
-import type { MaterialStatus } from '../../domain/material-status';
+import type { MaterialStatus } from '../../domain/enums/material-status';
 import type { IMaterialRepository } from '../../domain/repositories/material.repository';
 import { MaterialResponseDto } from '../dto/material-response.dto';
 import { MaterialResponseMapper } from '../mappers/material-response.mapper';

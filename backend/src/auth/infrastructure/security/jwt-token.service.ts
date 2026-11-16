@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
-import { isUserRole } from '../../../users/domain/user-role';
+import { isUserRole } from '../../../users/domain/enums/user-role';
 import type {
   SignedToken,
   TokenPayload,
