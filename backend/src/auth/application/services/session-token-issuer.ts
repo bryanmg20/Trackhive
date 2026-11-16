@@ -4,6 +4,7 @@ import type { User } from '../../../users/domain/entities/user.entity';
 import { RefreshToken } from '../../domain/entities/refresh-token.entity';
 import type { IRefreshTokenRepository } from '../../domain/repositories/refresh-token.repository';
 import { LoginResponseDto } from '../dto/login-response.dto';
+import { LoginResponseMapper } from '../mappers/login-response.mapper';
 import type { ITokenHasher } from '../ports/token-hasher.port';
 import type { ITokenService } from '../ports/token-service.port';
 import {
@@ -44,6 +45,6 @@ export class SessionTokenIssuer {
       }),
     );
 
-    return { accessToken, refreshToken: refreshToken.token };
+    return LoginResponseMapper.toDto(accessToken, refreshToken.token);
   }
 }

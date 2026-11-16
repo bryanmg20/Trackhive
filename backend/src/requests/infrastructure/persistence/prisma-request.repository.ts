@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
+import { PrismaNotificationMapper } from '../../../notifications/infrastructure/mappers/prisma-notification.mapper';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type {
   AppointmentListCriteria,
@@ -678,18 +679,15 @@ export class PrismaRequestRepository implements RequestRepository {
     // slow down nor undo the change (D-10)
     if (notification) {
       await tx.notificationModel.create({
-        data: {
-          id: randomUUID(),
-          requestId: change.requestId,
-          statusHistoryId: row.id,
-          recipientEmail: notification.recipientEmail,
-          template: notification.template,
-          subject: notification.subject,
-          body: notification.text,
-          htmlBody: notification.html,
-          deliveryStatus: 'PENDIENTE',
-          scheduledAt: change.changedAt,
-        },
+        data: PrismaNotificationMapper.toPersistence(
+          notification,
+          {
+            id: randomUUID(),
+            requestId: change.requestId,
+            statusHistoryId: row.id,
+          },
+          change.changedAt,
+        ),
       });
     }
 

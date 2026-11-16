@@ -1,30 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { UserRole } from '../../../users/domain/enums/user-role';
-import type { MaterialStatus } from '../../domain/enums/material-status';
-import type { MaterialType } from '../../domain/enums/material-type';
-import type {
-  IMaterialRepository,
-  MaterialSortField,
-  SortOrder,
-} from '../../domain/repositories/material.repository';
-import { PaginatedMaterialsResponseDto } from '../dto/material-response.dto';
 import { DEFAULT_PAGE_LIMIT } from '../../../common/pagination';
+import type { IMaterialRepository } from '../../domain/repositories/material.repository';
+import { PaginatedMaterialsResponseDto } from '../dto/material-response.dto';
+import type { SearchMaterialsInput } from '../dto/search-materials.input';
 import { MaterialResponseMapper } from '../mappers/material-response.mapper';
 import { MATERIAL_REPOSITORY } from '../tokens';
 
 // Business rule (HU-07): only staff can see where a material is stored
 const ROLES_THAT_SEE_LOCATION: readonly UserRole[] = ['PERSONAL', 'ADMIN'];
-
-export interface SearchMaterialsInput {
-  q?: string;
-  type?: MaterialType;
-  collection?: string;
-  status?: MaterialStatus;
-  sort?: MaterialSortField;
-  order?: SortOrder;
-  page?: number;
-  limit?: number;
-}
 
 @Injectable()
 export class SearchMaterialsUseCase {
@@ -35,7 +19,6 @@ export class SearchMaterialsUseCase {
 
   async execute(
     input: SearchMaterialsInput,
-    viewerRole: UserRole,
   ): Promise<PaginatedMaterialsResponseDto> {
     const page = input.page ?? 1;
     const limit = input.limit ?? DEFAULT_PAGE_LIMIT;
@@ -51,14 +34,11 @@ export class SearchMaterialsUseCase {
       limit,
     });
 
-    const includeLocation = ROLES_THAT_SEE_LOCATION.includes(viewerRole);
-    return {
-      items: items.map((material) =>
-        MaterialResponseMapper.toDto(material, includeLocation),
-      ),
-      page,
-      limit,
-      total,
-    };
+    const includeLocation = ROLES_THAT_SEE_LOCATION.includes(input.viewerRole);
+    return MaterialResponseMapper.toPaginatedDto(
+      items,
+      { page, limit, total },
+      includeLocation,
+    );
   }
 }

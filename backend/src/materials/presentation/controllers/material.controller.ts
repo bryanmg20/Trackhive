@@ -71,7 +71,10 @@ export class MaterialController {
     // JwtAuthGuard (global) always sets the user before reaching here
     @Req() request: { user: AuthenticatedUser },
   ): Promise<PaginatedMaterialsResponseDto> {
-    return this.searchMaterialsUseCase.execute(query, request.user.role);
+    return this.searchMaterialsUseCase.execute({
+      ...query,
+      viewerRole: request.user.role,
+    });
   }
 
   @Patch(':id/status')

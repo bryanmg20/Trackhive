@@ -41,7 +41,7 @@ describe('SearchMaterialsUseCase', () => {
   });
 
   it('hides the physical location from the PUBLICO role', async () => {
-    const result = await useCase.execute({}, 'PUBLICO');
+    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
 
     expect(result.items[0]).not.toHaveProperty('location');
   });
@@ -49,7 +49,7 @@ describe('SearchMaterialsUseCase', () => {
   it.each(['PERSONAL', 'ADMIN'] as const)(
     'shows the physical location to %s',
     async (role) => {
-      const result = await useCase.execute({}, role);
+      const result = await useCase.execute({ viewerRole: role });
 
       expect(result.items[0].location).toEqual({
         depot: 'D-03',
@@ -60,7 +60,7 @@ describe('SearchMaterialsUseCase', () => {
   );
 
   it('uses page 1, 20 per page and title ascending by default', async () => {
-    const result = await useCase.execute({}, 'PUBLICO');
+    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
 
     expect(search).toHaveBeenCalledWith({
       q: undefined,
@@ -76,19 +76,17 @@ describe('SearchMaterialsUseCase', () => {
   });
 
   it('passes the filters, sort and page to the repository', async () => {
-    const result = await useCase.execute(
-      {
-        q: 'correo',
-        type: 'PERIODICO',
-        collection: 'Prensa regional',
-        status: 'DISPONIBLE',
-        sort: 'author',
-        order: 'desc',
-        page: 2,
-        limit: 5,
-      },
-      'PERSONAL',
-    );
+    const result = await useCase.execute({
+      q: 'correo',
+      type: 'PERIODICO',
+      collection: 'Prensa regional',
+      status: 'DISPONIBLE',
+      sort: 'author',
+      order: 'desc',
+      page: 2,
+      limit: 5,
+      viewerRole: 'PERSONAL',
+    });
 
     expect(search).toHaveBeenCalledWith({
       q: 'correo',
@@ -104,7 +102,7 @@ describe('SearchMaterialsUseCase', () => {
   });
 
   it('sends the publication date without time', async () => {
-    const result = await useCase.execute({}, 'PUBLICO');
+    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
 
     expect(result.items[0].publicationDate).toBe('1915-03-21');
   });

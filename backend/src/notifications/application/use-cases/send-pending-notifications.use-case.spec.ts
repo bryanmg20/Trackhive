@@ -51,7 +51,7 @@ describe('SendPendingNotificationsUseCase', () => {
   let errorSpy: jest.SpyInstance;
 
   const run = (now: Date = NOW, sender: FakeMailSender = mailSender) =>
-    new SendPendingNotificationsUseCase(outbox, sender).execute(now);
+    new SendPendingNotificationsUseCase(outbox, sender).execute({ now });
 
   beforeEach(() => {
     outbox = new InMemoryNotificationQueue();

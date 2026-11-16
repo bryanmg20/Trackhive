@@ -1,4 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { SendPendingNotificationsInput } from '../dto/send-pending-notifications.input';
+import type { SendPendingNotificationsResult } from '../dto/send-pending-notifications.result';
 import { MailDeliveryFailedError } from '../../domain/errors/mail-delivery-failed.error';
 import type { IMailSender } from '../ports/mail-sender.port';
 import type {
@@ -22,14 +24,6 @@ const BATCH_SIZE = 20;
 // sending it) is claimed again. Much longer than the SMTP timeouts
 const LEASE_MS = 5 * MINUTE_MS;
 
-export interface SendPendingNotificationsResult {
-  sent: number;
-  // Failed now, but will be tried again
-  retrying: number;
-  // Failed for the last time: FALLIDA
-  failed: number;
-}
-
 /**
  * Sends the pending emails of the outbox (HU-23, D-10). The status change
  * already happened and was saved; this only delivers its email. A failure is
@@ -47,8 +41,9 @@ export class SendPendingNotificationsUseCase {
   ) {}
 
   async execute(
-    now: Date = new Date(),
+    input: SendPendingNotificationsInput = {},
   ): Promise<SendPendingNotificationsResult> {
+    const now = input.now ?? new Date();
     const due = await this.notifications.claimDue(
       now,
       BATCH_SIZE,
@@ -85,7 +80,7 @@ export class SendPendingNotificationsUseCase {
     error: unknown,
     now: Date,
   ): Promise<boolean> {
-    const reason = describe(error);
+    const reason = SendPendingNotificationsUseCase.describe(error);
     // Never the recipient in the logs (D-23): the id and the tracking code
     // are enough to find the email in the notifications table
     const what =
@@ -105,11 +100,12 @@ export class SendPendingNotificationsUseCase {
     this.logger.error(`${what}. Next attempt at ${retryAt.toISOString()}`);
     return true;
   }
-}
 
-function describe(error: unknown): string {
-  if (error instanceof MailDeliveryFailedError) {
-    return error.detail ?? error.message;
+  /** The reason of a failed delivery, for the log and `last_error`. */
+  private static describe(error: unknown): string {
+    if (error instanceof MailDeliveryFailedError) {
+      return error.detail ?? error.message;
+    }
+    return error instanceof Error ? error.message : String(error);
   }
-  return error instanceof Error ? error.message : String(error);
 }

@@ -4,6 +4,7 @@ import type {
   INotificationQueue,
   PendingNotification,
 } from '../../application/ports/notification-queue.port';
+import { PrismaNotificationMapper } from '../mappers/prisma-notification.mapper';
 
 @Injectable()
 export class PrismaNotificationQueue implements INotificationQueue {
@@ -43,15 +44,7 @@ export class PrismaNotificationQueue implements INotificationQueue {
         data: { attempts: { increment: 1 }, scheduledAt: leaseUntil },
       });
       if (count === 1) {
-        claimed.push({
-          id: row.id,
-          trackingCode: row.request.trackingCode,
-          recipientEmail: row.recipientEmail,
-          subject: row.subject,
-          text: row.body,
-          html: row.htmlBody,
-          attempts: row.attempts + 1,
-        });
+        claimed.push(PrismaNotificationMapper.toPending(row));
       }
     }
     return claimed;

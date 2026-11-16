@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { RefreshSessionInput } from '../dto/refresh-session.input';
 import { USER_REPOSITORY } from '../../../users/application/tokens';
 import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
 import { InvalidRefreshTokenError } from '../../domain/errors/invalid-refresh-token.error';
@@ -12,10 +13,6 @@ import {
   TOKEN_HASHER,
   TOKEN_SERVICE,
 } from '../tokens';
-
-export interface RefreshSessionInput {
-  refreshToken: string;
-}
 
 @Injectable()
 export class RefreshSessionUseCase {

@@ -1,11 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { LogoutInput } from '../dto/logout.input';
 import type { IRefreshTokenRepository } from '../../domain/repositories/refresh-token.repository';
 import type { ITokenHasher } from '../ports/token-hasher.port';
 import { REFRESH_TOKEN_REPOSITORY, TOKEN_HASHER } from '../tokens';
-
-export interface LogoutInput {
-  refreshToken: string;
-}
 
 @Injectable()
 export class LogoutUseCase {

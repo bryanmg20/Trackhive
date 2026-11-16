@@ -275,7 +275,7 @@ describe('Status change emails (e2e)', () => {
       mailSender.failing = false;
       await app
         .get(SendPendingNotificationsUseCase)
-        .execute(new Date(Date.now() + 61_000));
+        .execute({ now: new Date(Date.now() + 61_000) });
 
       expect(mailSender.sent).toHaveLength(1);
       expect(mailSender.sent[0].subject).toBe(

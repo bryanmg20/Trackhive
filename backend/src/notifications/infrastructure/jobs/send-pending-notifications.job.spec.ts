@@ -1,9 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { SendPendingNotificationsJob } from './send-pending-notifications.job';
-import type {
-  SendPendingNotificationsResult,
-  SendPendingNotificationsUseCase,
-} from '../../application/use-cases/send-pending-notifications.use-case';
+import type { SendPendingNotificationsResult } from '../../application/dto/send-pending-notifications.result';
+import type { SendPendingNotificationsUseCase } from '../../application/use-cases/send-pending-notifications.use-case';
 
 describe('SendPendingNotificationsJob', () => {
   let execute: jest.Mock<Promise<SendPendingNotificationsResult>, []>;

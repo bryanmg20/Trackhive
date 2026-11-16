@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { HealthResponseDto } from '../dto/health-response.dto';
+import { HealthResponseMapper } from '../mappers/health-response.mapper';
 import type { IDatabaseHealthChecker } from '../ports/database-health-checker.port';
 import { DATABASE_HEALTH_CHECKER } from '../tokens';
 
@@ -13,9 +14,6 @@ export class GetHealthUseCase {
   async execute(): Promise<HealthResponseDto> {
     const databaseAvailable = await this.databaseHealthChecker.isAvailable();
 
-    return {
-      status: databaseAvailable ? 'ok' : 'degraded',
-      database: databaseAvailable ? 'up' : 'down',
-    };
+    return HealthResponseMapper.toDto(databaseAvailable);
   }
 }
