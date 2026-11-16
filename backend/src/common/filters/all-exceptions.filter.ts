@@ -58,6 +58,8 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   REQUEST_NOT_FOUND: HttpStatus.NOT_FOUND,
   MATERIAL_NOT_FOUND: HttpStatus.NOT_FOUND,
   INVALID_MATERIAL_STATUS: HttpStatus.BAD_REQUEST,
+  // The material type is not one of the catalog (HU-06)
+  INVALID_MATERIAL_TYPE: HttpStatus.BAD_REQUEST,
   // A material cannot be scheduled twice the same day (HU-20)
   MATERIAL_ALREADY_BOOKED: HttpStatus.CONFLICT,
   MATERIAL_NOT_AVAILABLE: HttpStatus.CONFLICT,
