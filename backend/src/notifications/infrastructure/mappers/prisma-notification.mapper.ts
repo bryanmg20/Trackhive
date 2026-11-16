@@ -45,4 +45,28 @@ export class PrismaNotificationMapper {
       scheduledAt,
     };
   }
+
+  /** Claimed by this run: one more attempt and a lease until `leaseUntil`. */
+  static toClaimed(
+    leaseUntil: Date,
+  ): Prisma.NotificationModelUpdateManyMutationInput {
+    return { attempts: { increment: 1 }, scheduledAt: leaseUntil };
+  }
+
+  static toSent(sentAt: Date): Prisma.NotificationModelUpdateInput {
+    return { deliveryStatus: 'ENVIADA', sentAt };
+  }
+
+  /** Failed, to be tried again at `retryAt`. */
+  static toRetry(
+    error: string,
+    retryAt: Date,
+  ): Prisma.NotificationModelUpdateInput {
+    return { scheduledAt: retryAt, lastError: error };
+  }
+
+  /** Failed for the last time. */
+  static toFailed(error: string): Prisma.NotificationModelUpdateInput {
+    return { deliveryStatus: 'FALLIDA', lastError: error };
+  }
 }

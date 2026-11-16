@@ -109,18 +109,32 @@ describe('PrismaRequestRepository', () => {
       secondLastName: null,
     };
 
+    // What Request.changeStatus() derives from the statuses, as the entity does
     const buildChange = (
       overrides: Partial<StatusChange> = {},
-    ): StatusChange => ({
-      requestId: 'request-1',
-      previousStatus: 'AGENDADA',
-      newStatus: 'ATENDIDA',
-      changedBy: 'staff-1',
-      changedAt: CHANGED_AT,
-      comment: 'Asistió a la cita',
-      rejectionReason: null,
-      ...overrides,
-    });
+    ): StatusChange => {
+      const base = {
+        requestId: 'request-1',
+        previousStatus: 'AGENDADA' as const,
+        newStatus: 'ATENDIDA' as const,
+        changedBy: 'staff-1',
+        changedAt: CHANGED_AT,
+        comment: 'Asistió a la cita',
+        rejectionReason: null,
+        ...overrides,
+      };
+      return {
+        attendedAt: base.newStatus === 'ATENDIDA' ? base.changedAt : null,
+        closedAt: base.newStatus === 'CERRADA' ? base.changedAt : null,
+        appointmentOutcome:
+          base.previousStatus === 'AGENDADA'
+            ? base.newStatus === 'ATENDIDA'
+              ? 'CUMPLIDA'
+              : 'NO_ASISTIO'
+            : null,
+        ...base,
+      };
+    };
 
     // Simulated interactive transaction: the callback receives the client `tx`
     const buildTransaction = (updatedRows = 1) => {
@@ -422,6 +436,9 @@ describe('PrismaRequestRepository', () => {
       newStatus: 'AGENDADA',
       changedBy: 'staff-1',
       changedAt: CHANGED_AT,
+      attendedAt: null,
+      closedAt: null,
+      appointmentOutcome: null,
       comment: null,
       rejectionReason: null,
     };

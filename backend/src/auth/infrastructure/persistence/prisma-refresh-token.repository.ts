@@ -26,7 +26,7 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
     // the row while revoked_at is still NULL; the other one updates 0 rows
     const { count } = await this.prisma.refreshTokenModel.updateMany({
       where: { id, revokedAt: null },
-      data: { revokedAt },
+      data: PrismaRefreshTokenMapper.toRevoked(revokedAt),
     });
     return count === 1;
   }
@@ -34,7 +34,7 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   async revokeAllForUser(userId: string, revokedAt: Date): Promise<void> {
     await this.prisma.refreshTokenModel.updateMany({
       where: { userId, revokedAt: null },
-      data: { revokedAt },
+      data: PrismaRefreshTokenMapper.toRevoked(revokedAt),
     });
   }
 

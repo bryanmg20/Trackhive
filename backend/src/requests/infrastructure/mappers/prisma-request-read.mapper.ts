@@ -4,6 +4,7 @@ import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isRequestStatus } from '../../domain/enums/request-status';
 import type {
   AppointmentListItem,
+  MaterialDayBooking,
   RequestDetail,
   RequesterProfile,
   RequestListItem,
@@ -226,6 +227,21 @@ export class PrismaRequestReadMapper {
       documentType: null,
       documentNumber: null,
       foundIn: 'USER',
+    };
+  }
+
+  /** A material already booked that day by another appointment (HU-20). */
+  static toMaterialDayBooking(
+    material: { id: string; catalogCode: string; title: string },
+    date: Date,
+    trackingCode: string,
+  ): MaterialDayBooking {
+    return {
+      materialId: material.id,
+      catalogCode: material.catalogCode,
+      title: material.title,
+      date,
+      trackingCode,
     };
   }
 }

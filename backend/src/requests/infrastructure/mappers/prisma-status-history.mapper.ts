@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
 import type { StatusChange } from '../../domain/value-objects/status-change';
 
@@ -26,6 +27,40 @@ export class PrismaStatusHistoryMapper {
       changedAt: row.changedAt,
       comment: row.comment,
       changedBy: row.user,
+    };
+  }
+
+  /**
+   * The new status of the request and what the change derived from it
+   * (attendedAt, closedAt, the rejection reason). Only the columns the
+   * change sets are written.
+   */
+  static toRequestUpdate(
+    change: StatusChange,
+  ): Prisma.RequestModelUpdateManyMutationInput {
+    return {
+      status: change.newStatus,
+      version: { increment: 1 },
+      ...(change.attendedAt && { attendedAt: change.attendedAt }),
+      ...(change.closedAt && { closedAt: change.closedAt }),
+      // HU-16: the reason the requester reads in «Mis solicitudes»
+      ...(change.rejectionReason && {
+        rejectionReason: change.rejectionReason,
+      }),
+    };
+  }
+
+  /** The row of status_history of the change (D-08). */
+  static toHistoryRow(
+    change: StatusChange,
+  ): Prisma.StatusHistoryModelUncheckedCreateInput {
+    return {
+      requestId: change.requestId,
+      previousStatus: change.previousStatus,
+      newStatus: change.newStatus,
+      userId: change.changedBy,
+      comment: change.comment,
+      changedAt: change.changedAt,
     };
   }
 }

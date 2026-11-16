@@ -1,4 +1,4 @@
-import { MaterialModel } from '@prisma/client';
+import { MaterialModel, Prisma } from '@prisma/client';
 import { Material } from '../../domain/entities/material.entity';
 import { InvalidMaterialStatusError } from '../../domain/errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../../domain/errors/invalid-material-type.error';
@@ -30,5 +30,17 @@ export class PrismaMaterialMapper {
       createdAt: model.createdAt,
       updatedAt: model.updatedAt,
     });
+  }
+
+  /** The status of the material and who changed it last (HU-08). */
+  static toStatusUpdate(
+    material: Material,
+  ): Prisma.MaterialModelUncheckedUpdateInput {
+    return {
+      status: material.status,
+      statusChangedAt: material.statusChangedAt,
+      statusChangedById: material.statusChangedBy,
+      statusChangeReason: material.statusChangeReason,
+    };
   }
 }

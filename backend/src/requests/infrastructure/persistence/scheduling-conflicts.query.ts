@@ -1,5 +1,6 @@
 import type { PrismaService } from '../../../prisma/prisma.service';
 import type { SchedulingConflicts } from '../../application/ports/request-query.port';
+import { PrismaRequestReadMapper } from '../mappers/prisma-request-read.mapper';
 
 /**
  * The materials of the request and the PROGRAMADA appointments that already
@@ -63,13 +64,13 @@ export async function findSchedulingConflicts(
     ({ appointmentDate, request: appointmentRequest, materials: booked }) =>
       booked
         .filter(({ material }) => materialIds.includes(material.id))
-        .map(({ material }) => ({
-          materialId: material.id,
-          catalogCode: material.catalogCode,
-          title: material.title,
-          date: appointmentDate,
-          trackingCode: appointmentRequest.trackingCode,
-        })),
+        .map(({ material }) =>
+          PrismaRequestReadMapper.toMaterialDayBooking(
+            material,
+            appointmentDate,
+            appointmentRequest.trackingCode,
+          ),
+        ),
   );
 
   return { materials, bookedMaterials };

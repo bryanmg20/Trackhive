@@ -219,15 +219,25 @@ export class Request {
     comment: string | null | undefined,
     now: Date,
   ): StatusChange {
-    const rejected = this.currentStatus === 'RECHAZADA';
+    const newStatus = this.currentStatus;
+    const leftAppointment = previousStatus === 'AGENDADA';
     return Object.freeze({
       requestId: this.id,
       previousStatus,
-      newStatus: this.currentStatus,
+      newStatus,
       changedBy,
       changedAt: now,
       comment: comment?.trim() || null,
-      rejectionReason: rejected ? this.currentRejectionReason : null,
+      rejectionReason:
+        newStatus === 'RECHAZADA' ? this.currentRejectionReason : null,
+      attendedAt: newStatus === 'ATENDIDA' ? now : null,
+      closedAt: newStatus === 'CERRADA' ? now : null,
+      // From AGENDADA only ATENDIDA (attended) and DISPONIBLE (did not) are allowed
+      appointmentOutcome: leftAppointment
+        ? newStatus === 'ATENDIDA'
+          ? 'CUMPLIDA'
+          : 'NO_ASISTIO'
+        : null,
     });
   }
 

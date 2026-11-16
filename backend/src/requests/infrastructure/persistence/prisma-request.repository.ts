@@ -11,6 +11,7 @@ import type { IRequestRepository } from '../../domain/repositories/request.repos
 import type { SavedAppointment } from '../../domain/value-objects/saved-appointment';
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
 import type { StatusChange } from '../../domain/value-objects/status-change';
+import { PrismaAppointmentMapper } from '../mappers/prisma-appointment.mapper';
 import { PrismaRequestMapper } from '../mappers/prisma-request.mapper';
 import { PrismaStatusHistoryMapper } from '../mappers/prisma-status-history.mapper';
 import { findSchedulingConflicts } from './scheduling-conflicts.query';
@@ -43,17 +44,13 @@ export class PrismaRequestRepository implements IRequestRepository {
     return this.prisma.$transaction(async (tx) => {
       const saved = await this.applyStatusChange(tx, change, notification);
 
-      // Leaving AGENDADA settles its appointment, so the request can be
-      // scheduled again: ATENDIDA = the requester attended, DISPONIBLE = not
-      if (change.previousStatus === 'AGENDADA') {
+      // The entity decided how the appointment ends (appointmentOutcome);
+      // here it is only saved, and the day of its materials is released
+      if (change.appointmentOutcome) {
         await tx.appointmentModel.updateMany({
           where: { requestId: change.requestId, status: 'PROGRAMADA' },
-          data: {
-            status: change.newStatus === 'ATENDIDA' ? 'CUMPLIDA' : 'NO_ASISTIO',
-          },
+          data: PrismaAppointmentMapper.toSettled(change.appointmentOutcome),
         });
-        // HU-20: the day of its materials is free again. booked_date only
-        // holds it while the appointment is PROGRAMADA
         await tx.appointmentMaterialModel.updateMany({
           where: {
             appointment: {
@@ -62,7 +59,7 @@ export class PrismaRequestRepository implements IRequestRepository {
             },
             bookedDate: { not: null },
           },
-          data: { bookedDate: null },
+          data: PrismaAppointmentMapper.toBookingReleased(),
         });
       }
       return saved;
@@ -107,14 +104,10 @@ export class PrismaRequestRepository implements IRequestRepository {
         })),
       });
 
-      return {
-        id: appointment.id,
-        date: appointment.appointmentDate,
-        status: 'PROGRAMADA',
-        requester: appointment.requester,
-        materials: appointment.materials.map(({ material }) => material),
+      return PrismaAppointmentMapper.toSavedAppointment(
+        appointment,
         statusChange,
-      };
+      );
     });
   }
 
@@ -137,20 +130,14 @@ export class PrismaRequestRepository implements IRequestRepository {
   ) {
     try {
       return await tx.appointmentModel.create({
-        data: {
+        data: PrismaAppointmentMapper.toPersistence({
           id: randomUUID(),
           requestId: input.requestId,
           requesterId: input.requesterId,
           scheduledById: input.scheduledById,
-          appointmentDate: input.date,
-          status: 'PROGRAMADA',
-          materials: {
-            create: input.materials.map(({ materialId }) => ({
-              materialId,
-              bookedDate: input.date,
-            })),
-          },
-        },
+          date: input.date,
+          materialIds: input.materials.map(({ materialId }) => materialId),
+        }),
         select: {
           id: true,
           appointmentDate: true,
@@ -216,34 +203,14 @@ export class PrismaRequestRepository implements IRequestRepository {
     // meantime, nothing is written and the history stays consistent.
     const { count } = await tx.requestModel.updateMany({
       where: { id: change.requestId, status: change.previousStatus },
-      data: {
-        status: change.newStatus,
-        version: { increment: 1 },
-        ...(change.newStatus === 'ATENDIDA' && {
-          attendedAt: change.changedAt,
-        }),
-        ...(change.newStatus === 'CERRADA' && {
-          closedAt: change.changedAt,
-        }),
-        // HU-16: the reason the requester reads in «Mis solicitudes»
-        ...(change.newStatus === 'RECHAZADA' && {
-          rejectionReason: change.rejectionReason,
-        }),
-      },
+      data: PrismaStatusHistoryMapper.toRequestUpdate(change),
     });
     if (count === 0) {
       throw new RequestStatusConflictError();
     }
 
     const row = await tx.statusHistoryModel.create({
-      data: {
-        requestId: change.requestId,
-        previousStatus: change.previousStatus,
-        newStatus: change.newStatus,
-        userId: change.changedBy,
-        comment: change.comment,
-        changedAt: change.changedAt,
-      },
+      data: PrismaStatusHistoryMapper.toHistoryRow(change),
       include: {
         user: {
           select: {

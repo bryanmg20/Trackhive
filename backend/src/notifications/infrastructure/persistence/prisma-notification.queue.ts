@@ -41,7 +41,7 @@ export class PrismaNotificationQueue implements INotificationQueue {
           deliveryStatus: 'PENDIENTE',
           attempts: row.attempts,
         },
-        data: { attempts: { increment: 1 }, scheduledAt: leaseUntil },
+        data: PrismaNotificationMapper.toClaimed(leaseUntil),
       });
       if (count === 1) {
         claimed.push(PrismaNotificationMapper.toPending(row));
@@ -53,21 +53,21 @@ export class PrismaNotificationQueue implements INotificationQueue {
   async markSent(id: string, sentAt: Date): Promise<void> {
     await this.prisma.notificationModel.update({
       where: { id },
-      data: { deliveryStatus: 'ENVIADA', sentAt },
+      data: PrismaNotificationMapper.toSent(sentAt),
     });
   }
 
   async scheduleRetry(id: string, error: string, retryAt: Date): Promise<void> {
     await this.prisma.notificationModel.update({
       where: { id },
-      data: { scheduledAt: retryAt, lastError: error },
+      data: PrismaNotificationMapper.toRetry(error, retryAt),
     });
   }
 
   async markFailed(id: string, error: string): Promise<void> {
     await this.prisma.notificationModel.update({
       where: { id },
-      data: { deliveryStatus: 'FALLIDA', lastError: error },
+      data: PrismaNotificationMapper.toFailed(error),
     });
   }
 }

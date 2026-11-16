@@ -339,4 +339,50 @@ describe('Arquitectura del backend', () => {
     }
     expect(problems).toEqual([]);
   });
+
+  it('la infraestructura traduce con mapeadores de infrastructure/mappers (R8)', () => {
+    const problems: string[] = [];
+    const persistence = filesIn(
+      /^[^/]+\/infrastructure\/persistence\/[^/]+\.ts$/,
+    );
+    for (const info of persistence) {
+      const entityImports = new Set<string>();
+      for (const statement of info.source.statements.filter(
+        ts.isImportDeclaration,
+      )) {
+        const specifier = (statement.moduleSpecifier as ts.StringLiteral).text;
+        const bindings = statement.importClause?.namedBindings;
+        if (
+          specifier.includes('/domain/entities/') &&
+          bindings &&
+          ts.isNamedImports(bindings)
+        ) {
+          bindings.elements.forEach((element) =>
+            entityImports.add(element.name.text),
+          );
+        }
+      }
+      ts.forEachChild(info.source, function visit(node) {
+        // What is written to the database comes from a mapper
+        if (
+          ts.isPropertyAssignment(node) &&
+          node.name.getText() === 'data' &&
+          ts.isObjectLiteralExpression(node.initializer)
+        ) {
+          problems.push(`${info.rel}: arma «data» a mano`);
+        }
+        // The entities are rebuilt by the mapper, not by the repository
+        if (
+          ts.isNewExpression(node) &&
+          entityImports.has(node.expression.getText())
+        ) {
+          problems.push(
+            `${info.rel}: crea ${node.expression.getText()} sin el mapeador`,
+          );
+        }
+        ts.forEachChild(node, visit);
+      });
+    }
+    expect(problems).toEqual([]);
+  });
 });
