@@ -25,7 +25,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prisma generate
       - run: pnpm lint:check
-      - run: pnpm test
+      - name: Pruebas unitarias con cobertura (dominio y aplicación, mínimo 70 %)
+        run: pnpm test:cov
+      - name: Reporte de cobertura por capa
+        if: ${{ !cancelled() }}
+        run: pnpm coverage:report
+      - name: Publicar reporte de cobertura
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+          retention-days: 14
+          if-no-files-found: warn
       - run: pnpm test:e2e
       - run: pnpm build
 
