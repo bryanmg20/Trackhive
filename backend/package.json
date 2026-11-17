@@ -19,7 +19,7 @@
     "test:cov": "jest --coverage",
     "coverage:report": "node scripts/coverage-report.mjs",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "dotenv -e ../.env -- jest --config ./test/jest-e2e.json",
     "db:migrate": "dotenv -e ../.env -- prisma migrate deploy",
     "db:migrate:dev": "dotenv -e ../.env -- prisma migrate dev",
     "db:seed": "dotenv -e ../.env -- prisma db seed"
