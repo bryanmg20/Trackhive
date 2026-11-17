@@ -368,6 +368,86 @@ describe('PrismaRequestQueryService', () => {
     });
   });
 
+  describe('findHistory (HU-17)', () => {
+    const person = {
+      id: 'user-1',
+      firstName: 'Ana',
+      middleName: null,
+      lastName: 'Gómez',
+      secondLastName: null,
+    };
+
+    it('loads every row oldest first and the account of the requester', async () => {
+      const findUnique = jest.fn().mockResolvedValue({
+        id: 'request-1',
+        trackingCode: 'SOL-2026-00001',
+        requester: { userId: 'owner-1' },
+        statusHistory: [
+          {
+            id: BigInt(7),
+            previousStatus: null,
+            newStatus: 'RECIBIDA',
+            changedAt: new Date('2026-11-10T15:00:00.000Z'),
+            comment: null,
+            visibleToRequester: true,
+            user: person,
+          },
+          {
+            id: BigInt(9),
+            previousStatus: 'RECIBIDA',
+            newStatus: 'RECHAZADA',
+            changedAt: new Date('2026-11-11T15:00:00.000Z'),
+            comment: 'Fuera del alcance del archivo',
+            visibleToRequester: true,
+            user: person,
+          },
+        ],
+      });
+
+      const result = await new PrismaRequestQueryService({
+        requestModel: { findUnique },
+      } as unknown as PrismaService).findHistory('request-1');
+
+      expect(findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'request-1' },
+          select: expect.objectContaining({
+            statusHistory: expect.objectContaining({
+              orderBy: [{ changedAt: 'asc' }, { id: 'asc' }],
+            }) as unknown,
+          }) as unknown,
+        }),
+      );
+      expect(result).toEqual({
+        requestId: 'request-1',
+        trackingCode: 'SOL-2026-00001',
+        requesterUserId: 'owner-1',
+        entries: [
+          expect.objectContaining({
+            id: '7',
+            previousStatus: null,
+            newStatus: 'RECIBIDA',
+            changedBy: person,
+          }),
+          expect.objectContaining({
+            id: '9',
+            previousStatus: 'RECIBIDA',
+            newStatus: 'RECHAZADA',
+            comment: 'Fuera del alcance del archivo',
+          }),
+        ],
+      });
+    });
+
+    it('returns null when the request does not exist', async () => {
+      const result = await new PrismaRequestQueryService({
+        requestModel: { findUnique: jest.fn().mockResolvedValue(null) },
+      } as unknown as PrismaService).findHistory('missing');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('findNotificationContext (HU-23)', () => {
     it('loads the tracking code, the requester and the materials in catalog order', async () => {
       const findUnique = jest.fn().mockResolvedValue({

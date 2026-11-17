@@ -323,4 +323,98 @@ describe('MyRequestsPage', () => {
       within(nav).getByRole('link', { name: 'Mis solicitudes' }),
     ).toHaveAttribute('aria-current', 'page');
   });
+  describe('status history (HU-17)', () => {
+    const history = {
+      requestId: item().id,
+      trackingCode: 'SOL-2026-00001',
+      entries: [
+        {
+          id: '1',
+          previousStatus: null,
+          newStatus: 'RECIBIDA',
+          changedAt: '2026-11-10T15:00:00.000Z',
+          changedBy: 'Juan Pérez',
+          comment: null,
+        },
+        {
+          id: '2',
+          previousStatus: 'RECIBIDA',
+          newStatus: 'EN_BUSQUEDA',
+          changedAt: '2026-11-11T15:00:00.000Z',
+          changedBy: 'Personal del CLENA',
+          comment: 'Estamos buscando el material',
+        },
+      ],
+    };
+
+    function mockApi(historyResponse: unknown = { ok: true, status: 200, json: async () => history }) {
+      fetchMock.mockImplementation((url: string) =>
+        Promise.resolve(
+          url.endsWith('/history') ? historyResponse : page([item()]),
+        ),
+      );
+    }
+
+    it('opens the timeline of a request with «Ver historial» and closes it', async () => {
+      mockApi();
+      const user = userEvent.setup();
+      renderPage('PUBLICO');
+
+      const toggle = await screen.findByRole('button', {
+        name: 'Ver historial de SOL-2026-00001',
+      });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(
+        fetchMock.mock.calls.some(([url]) => String(url).endsWith('/history')),
+      ).toBe(false);
+
+      await user.click(toggle);
+
+      const timeline = await screen.findByRole('list', {
+        name: 'Historial de estados de SOL-2026-00001',
+      });
+      expect(lastUrl().pathname).toBe(
+        `/api/v1/requests/${item().id}/history`,
+      );
+      const [first, second] = within(timeline).getAllByRole('listitem');
+      expect(first).toHaveTextContent('Solicitud registrada: Recibida');
+      expect(first).toHaveTextContent('Responsable: Juan Pérez');
+      expect(second).toHaveTextContent(/Recibida.*En búsqueda/);
+      expect(second).toHaveTextContent('Responsable: Personal del CLENA');
+      expect(second).toHaveTextContent(
+        'Observación: Estamos buscando el material',
+      );
+
+      const close = screen.getByRole('button', {
+        name: 'Ocultar historial de SOL-2026-00001',
+      });
+      expect(close).toHaveAttribute('aria-expanded', 'true');
+      await user.click(close);
+      expect(
+        screen.queryByRole('list', {
+          name: 'Historial de estados de SOL-2026-00001',
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows a clear message when the history is not theirs (403)', async () => {
+      mockApi({
+        ok: false,
+        status: 403,
+        json: async () => ({ message: 'No tiene permiso para ver esta solicitud.' }),
+      });
+      const user = userEvent.setup();
+      renderPage('PUBLICO');
+
+      await user.click(
+        await screen.findByRole('button', {
+          name: 'Ver historial de SOL-2026-00001',
+        }),
+      );
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'No tiene permiso para ver el historial de esta solicitud.',
+      );
+    });
+  });
 });

@@ -333,7 +333,7 @@ Creada en HU-09 (migración `20261109000000_create_requests`).
 
 ### status_history
 
-Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila por cada cambio de estado.
+Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila por cada cambio de estado. Desde HU-17 la primera fila de cada solicitud es su registro (`previous_status` NULL, `RECIBIDA`, quien la registró), insertada junto con la solicitud; la migración `20261116000000_backfill_status_history_creation` la agregó a las solicitudes que ya existían, con su `registered_at`.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|

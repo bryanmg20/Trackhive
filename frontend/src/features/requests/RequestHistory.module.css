@@ -1,0 +1,73 @@
+/* Timeline of the status changes of a request (HU-17) */
+.timeline {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  border-left: 2px solid var(--line);
+  list-style: none;
+}
+
+.entry {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+}
+
+/* The dot on the line, at the height of the date */
+.entry::before {
+  content: '';
+  position: absolute;
+  top: 0.3rem;
+  left: calc(-1.1rem - 6px);
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--surface-strong);
+  border-radius: 50%;
+  background: var(--sage-deep);
+}
+
+.entry:last-child::before {
+  background: var(--gold-text);
+}
+
+.date {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.change {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.previous {
+  color: var(--muted);
+}
+
+.meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.comment {
+  max-width: 40rem;
+  margin: 0.15rem 0 0;
+  color: var(--ink);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.commentLabel {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

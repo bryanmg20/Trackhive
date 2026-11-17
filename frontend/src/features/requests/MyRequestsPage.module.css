@@ -15,3 +15,41 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* «Ver historial» under the status (HU-17) */
+.historyToggle {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gold-text);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.historyToggle:focus-visible {
+  outline: 2px solid var(--gold-text);
+  outline-offset: 2px;
+}
+
+/* The timeline spans the whole row, right below its request */
+.historyRow td {
+  background: var(--surface);
+}
+
+@media (max-width: 900px) {
+  /* The rows are cards here: the timeline joins the card above it */
+  .historyRow {
+    margin-top: calc(-0.75rem - 1px);
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}

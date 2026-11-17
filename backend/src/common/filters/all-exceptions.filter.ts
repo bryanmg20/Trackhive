@@ -57,6 +57,7 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   REQUEST_MATERIALS_REQUIRED: HttpStatus.BAD_REQUEST,
   REQUEST_MATERIAL_NOT_FOUND: HttpStatus.NOT_FOUND,
   REQUEST_NOT_FOUND: HttpStatus.NOT_FOUND,
+  REQUEST_ACCESS_FORBIDDEN: HttpStatus.FORBIDDEN,
   MATERIAL_NOT_FOUND: HttpStatus.NOT_FOUND,
   INVALID_MATERIAL_STATUS: HttpStatus.BAD_REQUEST,
   // The material type is not one of the catalog. Today it only comes from a

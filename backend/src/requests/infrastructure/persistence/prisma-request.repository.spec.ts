@@ -11,7 +11,7 @@ const MATERIAL_ID = 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc';
 
 describe('PrismaRequestRepository', () => {
   describe('save (HU-09, HU-10)', () => {
-    it('inserts the new request with one item per material', async () => {
+    it('inserts the new request with one item per material and its first history row', async () => {
       const create = jest.fn().mockResolvedValue({});
       const repository = new PrismaRequestRepository({
         requestModel: { create },
@@ -51,6 +51,14 @@ describe('PrismaRequestRepository', () => {
                 accessType: 'FISICO',
               }),
             ],
+          },
+          // HU-17: the history starts with RECIBIDA and who registered it
+          statusHistory: {
+            create: {
+              previousStatus: null,
+              newStatus: 'RECIBIDA',
+              userId: 'staff-1',
+            },
           },
         }) as unknown,
       });

@@ -109,6 +109,33 @@ export interface RequestDetail {
   }[];
 }
 
+/** One row of status_history, with the name of who made the change (HU-17). */
+export interface RequestHistoryEntry {
+  id: string;
+  // NULL only in the row of the creation
+  previousStatus: RequestStatus | null;
+  newStatus: RequestStatus;
+  changedAt: Date;
+  comment: string | null;
+  visibleToRequester: boolean;
+  changedBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  };
+}
+
+/** The timeline of a request, oldest change first (HU-17). */
+export interface RequestHistory {
+  requestId: string;
+  trackingCode: string;
+  // The account linked to the requester; NULL for a visitor without account
+  requesterUserId: string | null;
+  entries: RequestHistoryEntry[];
+}
+
 /** What the email of a status change needs to know of the request (HU-23). */
 export interface RequestNotificationContext {
   trackingCode: string;
@@ -236,6 +263,12 @@ export interface IRequestQueryService {
 
   /** Everything the detail screen shows (HU-13). */
   findDetail(id: string): Promise<RequestDetail | null>;
+
+  /**
+   * Every row of status_history of the request, oldest first, and the
+   * account of its requester to check who may read it (HU-17).
+   */
+  findHistory(id: string): Promise<RequestHistory | null>;
 
   listAppointments(
     criteria: AppointmentListCriteria,

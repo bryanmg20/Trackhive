@@ -55,6 +55,7 @@ describe('Request registration (e2e)', () => {
     list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     listAppointments: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findDetail: jest.fn(),
+    findHistory: jest.fn(),
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findById: jest.fn(),
     // HU-23: who receives the email of a status change and what it lists
@@ -530,6 +531,146 @@ describe('Request registration (e2e)', () => {
         (response.body as { allowedTransitions: string[] }).allowedTransitions,
       ).toEqual(['EN_BUSQUEDA', 'RECHAZADA']);
     });
+  });
+
+  describe('GET /requests/:id/history (status history, HU-17)', () => {
+    const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const historyPath = (id: string) => `${REQUESTS_PATH}/${id}/history`;
+    const OWNER_ID = 'owner-1';
+    const staff = {
+      id: 'staff-1',
+      firstName: 'Ana',
+      middleName: null,
+      lastName: 'Gómez',
+      secondLastName: null,
+    };
+    const history = {
+      requestId: REQUEST_ID,
+      trackingCode: 'SOL-2026-00001',
+      requesterUserId: OWNER_ID,
+      entries: [
+        {
+          id: '1',
+          previousStatus: null,
+          newStatus: 'RECIBIDA',
+          changedAt: new Date('2026-11-10T15:00:00.000Z'),
+          comment: null,
+          visibleToRequester: true,
+          changedBy: {
+            ...staff,
+            id: OWNER_ID,
+            firstName: 'Juan',
+            lastName: 'Pérez',
+          },
+        },
+        {
+          id: '2',
+          previousStatus: 'RECIBIDA',
+          newStatus: 'EN_BUSQUEDA',
+          changedAt: new Date('2026-11-11T15:00:00.000Z'),
+          comment: 'Buscando en el depósito',
+          visibleToRequester: true,
+          changedBy: staff,
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      repository.findHistory.mockReset();
+      repository.findHistory.mockResolvedValue(history);
+    });
+
+    it('rejects a request without an access token with 401', async () => {
+      await request(server).get(historyPath(REQUEST_ID)).expect(401);
+      expect(repository.findHistory).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s see the history of any request with the previous and new status, date and responsible',
+      async (role) => {
+        const response = await request(server)
+          .get(historyPath(REQUEST_ID))
+          .set('Authorization', `Bearer ${accessToken(role, 'staff-2')}`)
+          .expect(200);
+
+        expect(repository.findHistory).toHaveBeenCalledWith(REQUEST_ID);
+        expect(response.body).toEqual({
+          requestId: REQUEST_ID,
+          trackingCode: 'SOL-2026-00001',
+          entries: [
+            {
+              id: '1',
+              previousStatus: null,
+              newStatus: 'RECIBIDA',
+              changedAt: '2026-11-10T15:00:00.000Z',
+              changedBy: 'Juan Pérez',
+              comment: null,
+            },
+            {
+              id: '2',
+              previousStatus: 'RECIBIDA',
+              newStatus: 'EN_BUSQUEDA',
+              changedAt: '2026-11-11T15:00:00.000Z',
+              changedBy: 'Ana Gómez',
+              comment: 'Buscando en el depósito',
+            },
+          ],
+        });
+      },
+    );
+
+    it('lets the owner see their history, with «Personal del CLENA» as the staff', async () => {
+      const response = await request(server)
+        .get(historyPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO', OWNER_ID)}`)
+        .expect(200);
+
+      const body = response.body as { entries: { changedBy: string }[] };
+      expect(body.entries.map(({ changedBy }) => changedBy)).toEqual([
+        'Juan Pérez',
+        'Personal del CLENA',
+      ]);
+    });
+
+    it('rejects a public user who does not own the request with 403', async () => {
+      const response = await request(server)
+        .get(historyPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO', 'other-user')}`)
+        .expect(403);
+
+      expect((response.body as ErrorBody).code).toBe(
+        'REQUEST_ACCESS_FORBIDDEN',
+      );
+    });
+
+    it('rejects an id that is not a UUID with 400', async () => {
+      await request(server)
+        .get(historyPath('no-es-uuid'))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(400);
+      expect(repository.findHistory).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 when the request does not exist', async () => {
+      repository.findHistory.mockResolvedValue(null);
+
+      const response = await request(server)
+        .get(historyPath(REQUEST_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REQUEST_NOT_FOUND');
+    });
+
+    it.each(['put', 'patch', 'delete'] as const)(
+      'offers no way to %s a history row',
+      async (method) => {
+        await request(server)
+          [method](`${historyPath(REQUEST_ID)}/1`)
+          .set('Authorization', `Bearer ${accessToken('ADMIN')}`)
+          .expect(404);
+      },
+    );
   });
 
   describe('PATCH /requests/:id/status (change status, HU-15)', () => {

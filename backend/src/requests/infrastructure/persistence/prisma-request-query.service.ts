@@ -7,6 +7,7 @@ import type {
   IRequestQueryService,
   MyRequestListCriteria,
   RequestDetail,
+  RequestHistory,
   RequestListCriteria,
   RequestListResult,
   RequestNotificationContext,
@@ -16,6 +17,7 @@ import type {
 import {
   APPOINTMENT_LIST_INCLUDE,
   PrismaRequestReadMapper,
+  REQUEST_HISTORY_SELECT,
   REQUEST_WITH_REQUESTER_AND_MATERIALS,
 } from '../mappers/prisma-request-read.mapper';
 import { findSchedulingConflicts } from './scheduling-conflicts.query';
@@ -107,6 +109,14 @@ export class PrismaRequestQueryService implements IRequestQueryService {
       include: REQUEST_WITH_REQUESTER_AND_MATERIALS,
     });
     return model ? PrismaRequestReadMapper.toDetail(model) : null;
+  }
+
+  async findHistory(id: string): Promise<RequestHistory | null> {
+    const model = await this.prisma.requestModel.findUnique({
+      where: { id },
+      select: REQUEST_HISTORY_SELECT,
+    });
+    return model ? PrismaRequestReadMapper.toHistory(model) : null;
   }
 
   async findNotificationContext(

@@ -20,6 +20,7 @@ import type {
 import styles from './RequestsListPage.module.css';
 
 const PAGE_SIZE = 10;
+const REFRESH_INTERVAL_MS = 30_000;
 const FORM_ID = 'request-search';
 const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
@@ -59,23 +60,46 @@ export function RequestsListPage() {
 
   useEffect(() => {
     let ignore = false;
-    listRequests(params)
-      .then((page) => {
+    let inFlight = false;
+
+    async function load() {
+      // A slow response must not overlap with the timer or tab activation.
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const page = await listRequests(params);
         if (!ignore) setResponse({ params, page, error: null });
-      })
-      .catch((caught: unknown) => {
+      } catch (caught: unknown) {
         if (ignore) return;
-        setResponse({
+        setResponse((current) => ({
           params,
-          page: null,
+          // Keep the table mounted during background refreshes, even offline.
+          page: current?.params === params ? current.page : null,
           error:
             caught instanceof RequestsApiError
               ? caught
               : new RequestsApiError(NETWORK_ERROR_MESSAGE, 0),
-        });
-      });
+        }));
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    function refreshIfVisible() {
+      if (document.visibilityState === 'visible') {
+        void load();
+      }
+    }
+
+    void load();
+    const interval = window.setInterval(refreshIfVisible, REFRESH_INTERVAL_MS);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    window.addEventListener('focus', refreshIfVisible);
     return () => {
       ignore = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+      window.removeEventListener('focus', refreshIfVisible);
     };
   }, [params]);
 

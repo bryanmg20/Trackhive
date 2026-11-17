@@ -13,6 +13,7 @@ import type { RequestDetail } from './api/get-request';
 import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
 import { ChangeRequestStatusForm } from './ChangeRequestStatusForm';
 import styles from './RequestDetailPage.module.css';
+import { RequestHistory } from './RequestHistory';
 import { ScheduleAppointmentForm } from './ScheduleAppointmentForm';
 
 const NETWORK_ERROR_MESSAGE =
@@ -70,6 +71,8 @@ export function RequestDetailPage() {
   const { id = '' } = useParams();
   // The answer remembers which id it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<DetailResponse | null>(null);
+  // Each status change adds a row to the history (HU-17): reload it
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -106,6 +109,7 @@ export function RequestDetailPage() {
     > &
       Partial<Pick<ChangeRequestStatusResult, 'rejectionReason'>>,
   ) {
+    setHistoryVersion((version) => version + 1);
     setResponse((current) =>
       current?.request?.id === result.id
         ? {
@@ -253,6 +257,17 @@ export function RequestDetailPage() {
                   />
                 ) : null}
               </dl>
+            </section>
+
+            <section className={styles.card} aria-labelledby="sec-history">
+              <h2 id="sec-history" className={styles.cardTitle}>
+                Historial de estados
+              </h2>
+              <RequestHistory
+                key={`${request.id}-${historyVersion}`}
+                requestId={request.id}
+                label={`Historial de estados de ${request.trackingCode}`}
+              />
             </section>
 
             <section className={styles.card} aria-labelledby="sec-materials">

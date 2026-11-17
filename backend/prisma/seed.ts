@@ -464,6 +464,16 @@ type SeedRequest = {
   materialCodes: string[];
   // Only for RECHAZADA; the column holds at most 500 characters (HU-16)
   rejectionReason?: string;
+  // The changes after RECIBIDA, oldest first, all made by the staff (HU-17).
+  // They follow the state machine (D-07) and the last one ends in `status`
+  history: SeedStatusChange[];
+};
+
+type SeedStatusChange = {
+  status: SeedRequestStatus;
+  at: string;
+  // The change to RECHAZADA takes the rejectionReason of the request
+  comment?: string;
 };
 
 const VISITOR_EMAIL = 'visitante@example.com';
@@ -478,6 +488,7 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-10',
     registeredAt: '2026-11-09T14:00:00Z',
     materialCodes: ['TH-DOC-0001'],
+    history: [],
   },
   {
     trackingCode: 'SOL-2026-90002',
@@ -487,6 +498,7 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-15',
     registeredAt: '2026-11-08T09:30:00Z',
     materialCodes: ['TH-PER-0001', 'TH-PER-0003'],
+    history: [],
   },
   {
     trackingCode: 'SOL-2026-90003',
@@ -496,6 +508,7 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-12',
     registeredAt: '2026-11-05T16:45:00Z',
     materialCodes: ['TH-NOT-0001'],
+    history: [{ status: 'EN_BUSQUEDA', at: '2026-11-06T14:00:00Z' }],
   },
   {
     trackingCode: 'SOL-2026-90004',
@@ -505,6 +518,7 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-18',
     registeredAt: '2026-11-04T11:15:00Z',
     materialCodes: ['TH-DOC-0006'],
+    history: [{ status: 'EN_BUSQUEDA', at: '2026-11-05T15:30:00Z' }],
   },
   {
     trackingCode: 'SOL-2026-90005',
@@ -514,6 +528,14 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-09',
     registeredAt: '2026-10-30T10:00:00Z',
     materialCodes: ['TH-DOC-0004', 'TH-DOC-0010'],
+    history: [
+      { status: 'EN_BUSQUEDA', at: '2026-10-31T14:00:00Z' },
+      {
+        status: 'DISPONIBLE',
+        at: '2026-11-04T16:00:00Z',
+        comment: 'Ambos documentos localizados en el depósito D-01.',
+      },
+    ],
   },
   {
     trackingCode: 'SOL-2026-90006',
@@ -523,6 +545,10 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-02',
     registeredAt: '2026-10-28T15:20:00Z',
     materialCodes: ['TH-OTR-0001'],
+    history: [
+      { status: 'EN_BUSQUEDA', at: '2026-10-29T13:00:00Z' },
+      { status: 'DISPONIBLE', at: '2026-11-03T15:00:00Z' },
+    ],
   },
   {
     trackingCode: 'SOL-2026-90007',
@@ -532,6 +558,11 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-03',
     registeredAt: '2026-10-27T08:50:00Z',
     materialCodes: ['TH-NOT-0003'],
+    history: [
+      { status: 'EN_BUSQUEDA', at: '2026-10-28T14:00:00Z' },
+      { status: 'DISPONIBLE', at: '2026-11-03T16:30:00Z' },
+      { status: 'AGENDADA', at: '2026-11-06T15:00:00Z' },
+    ],
   },
   {
     trackingCode: 'SOL-2026-90008',
@@ -541,6 +572,17 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-12-05',
     registeredAt: '2026-10-26T13:10:00Z',
     materialCodes: ['TH-PER-0007', 'TH-DOC-0002'],
+    history: [
+      { status: 'EN_BUSQUEDA', at: '2026-10-27T14:00:00Z' },
+      { status: 'DISPONIBLE', at: '2026-10-31T15:00:00Z' },
+      { status: 'AGENDADA', at: '2026-11-04T14:30:00Z' },
+      {
+        status: 'DISPONIBLE',
+        at: '2026-11-14T18:00:00Z',
+        comment: 'No asistió a la cita; pidió una nueva fecha.',
+      },
+      { status: 'AGENDADA', at: '2026-11-15T14:00:00Z' },
+    ],
   },
   {
     trackingCode: 'SOL-2026-90009',
@@ -550,6 +592,15 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-11-20',
     registeredAt: '2026-10-15T09:00:00Z',
     materialCodes: ['TH-PER-0005'],
+    history: [
+      { status: 'EN_BUSQUEDA', at: '2026-10-16T14:00:00Z' },
+      { status: 'DISPONIBLE', at: '2026-10-21T15:00:00Z' },
+      {
+        status: 'ATENDIDA',
+        at: '2026-10-22T16:00:00Z',
+        comment: 'Copia digital enviada al correo del solicitante.',
+      },
+    ],
   },
   {
     trackingCode: 'SOL-2026-90010',
@@ -559,6 +610,13 @@ const REQUESTS: SeedRequest[] = [
     desiredDate: '2026-11-12',
     registeredAt: '2026-10-05T12:00:00Z',
     materialCodes: ['TH-DOC-0008'],
+    history: [
+      { status: 'EN_BUSQUEDA', at: '2026-10-06T14:00:00Z' },
+      { status: 'DISPONIBLE', at: '2026-10-14T15:00:00Z' },
+      { status: 'AGENDADA', at: '2026-10-20T14:00:00Z' },
+      { status: 'ATENDIDA', at: '2026-11-12T20:00:00Z' },
+      { status: 'CERRADA', at: '2026-11-13T14:00:00Z' },
+    ],
   },
   {
     trackingCode: 'SOL-2026-90011',
@@ -569,6 +627,10 @@ const REQUESTS: SeedRequest[] = [
     registeredAt: '2026-11-02T10:30:00Z',
     materialCodes: ['TH-DOC-0005'],
     rejectionReason: 'Material no localizado',
+    history: [
+      { status: 'EN_BUSQUEDA', at: '2026-11-03T14:00:00Z' },
+      { status: 'RECHAZADA', at: '2026-11-05T16:00:00Z' },
+    ],
   },
   {
     trackingCode: 'SOL-2026-90012',
@@ -579,6 +641,7 @@ const REQUESTS: SeedRequest[] = [
     registeredAt: '2026-11-03T17:00:00Z',
     materialCodes: ['TH-NOT-0005'],
     rejectionReason: 'Material restringido',
+    history: [{ status: 'RECHAZADA', at: '2026-11-04T15:00:00Z' }],
   },
 ];
 
@@ -739,8 +802,21 @@ async function main() {
         select: { id: true },
       });
       const registeredAt = new Date(seedRequest.registeredAt);
-      const attended =
-        seedRequest.status === 'ATENDIDA' || seedRequest.status === 'CERRADA';
+      const createdById = isVisitor ? staff.id : user!.id;
+      const lastStatus =
+        seedRequest.history[seedRequest.history.length - 1]?.status ??
+        'RECIBIDA';
+      if (lastStatus !== seedRequest.status) {
+        throw new Error(
+          `${seedRequest.trackingCode}: its history ends in ${lastStatus}`,
+        );
+      }
+      // attended_at and closed_at are the dates of those changes, as the API
+      // writes them (HU-15)
+      const changedAt = (status: SeedRequestStatus) => {
+        const change = seedRequest.history.find((c) => c.status === status);
+        return change ? new Date(change.at) : null;
+      };
 
       await prisma.requestModel.create({
         data: {
@@ -748,7 +824,7 @@ async function main() {
           trackingCode: seedRequest.trackingCode,
           requesterId: requester.id,
           // A visitor's request is registered by the staff, the others by the user
-          createdById: isVisitor ? staff.id : user!.id,
+          createdById,
           requestType: 'CONSULTA_SALA',
           originChannel: isVisitor ? 'PRESENCIAL' : 'WEB',
           deliveryMode: seedRequest.deliveryMode,
@@ -763,8 +839,8 @@ async function main() {
           status: seedRequest.status,
           rejectionReason: seedRequest.rejectionReason ?? null,
           registeredAt,
-          attendedAt: attended ? registeredAt : null,
-          closedAt: seedRequest.status === 'CERRADA' ? registeredAt : null,
+          attendedAt: changedAt('ATENDIDA'),
+          closedAt: changedAt('CERRADA'),
           items: {
             create: materials.map(({ id }) => ({
               id: randomUUID(),
@@ -772,6 +848,32 @@ async function main() {
               itemStatus: ITEM_STATUS_BY_REQUEST_STATUS[seedRequest.status],
               accessType: 'FISICO',
             })),
+          },
+          // The timeline of the request (HU-17): its registration, then each
+          // change, each previous status being the one before it
+          statusHistory: {
+            create: [
+              {
+                previousStatus: null,
+                newStatus: 'RECIBIDA',
+                userId: createdById,
+                changedAt: registeredAt,
+              },
+              ...seedRequest.history.map((change, index) => ({
+                previousStatus:
+                  index === 0
+                    ? 'RECIBIDA'
+                    : seedRequest.history[index - 1].status,
+                newStatus: change.status,
+                userId: staff.id,
+                comment:
+                  change.comment ??
+                  (change.status === 'RECHAZADA'
+                    ? (seedRequest.rejectionReason ?? null)
+                    : null),
+                changedAt: new Date(change.at),
+              })),
+            ],
           },
         },
       });
