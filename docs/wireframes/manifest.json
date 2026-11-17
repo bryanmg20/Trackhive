@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "status": "Borrador pendiente de revisión G6",
+  "screens": [
+    {
+      "id": "WF-01",
+      "file": "wf-01-inicio-sesion",
+      "name": "Inicio de sesión",
+      "roles": "Sin sesión",
+      "route": "/login",
+      "state": "Pantalla existente",
+      "width": 1280,
+      "height": 1040,
+      "elements": 25
+    },
+    {
+      "id": "WF-02",
+      "file": "wf-02-registro",
+      "name": "Registro público",
+      "roles": "Sin sesión",
+      "route": "/registro",
+      "state": "Existente · HU-73 integrada",
+      "width": 1280,
+      "height": 1040,
+      "elements": 52
+    },
+    {
+      "id": "WF-03",
+      "file": "wf-03-mi-perfil",
+      "name": "Mi perfil",
+      "roles": "PUBLICO / PERSONAL / ADMIN",
+      "route": "/mi-perfil",
+      "state": "Pantalla existente · HU-73",
+      "width": 1280,
+      "height": 1040,
+      "elements": 29
+    },
+    {
+      "id": "WF-04",
+      "file": "wf-04-busqueda-material",
+      "name": "Búsqueda de material",
+      "roles": "PUBLICO",
+      "route": "/materiales",
+      "state": "Existente + propuesta HU-140",
+      "width": 1280,
+      "height": 1040,
+      "elements": 80
+    },
+    {
+      "id": "WF-05",
+      "file": "wf-05-formulario-material",
+      "name": "Formulario de material",
+      "roles": "PERSONAL / ADMIN",
+      "route": "/personal/materiales/nuevo (propuesta)",
+      "state": "Propuesta · HU-06 / HU-49",
+      "width": 1280,
+      "height": 1040,
+      "elements": 51
+    },
+    {
+      "id": "WF-06",
+      "file": "wf-06-mis-solicitudes",
+      "name": "Mis solicitudes",
+      "roles": "PUBLICO",
+      "route": "/mis-solicitudes",
+      "state": "Pantalla existente",
+      "width": 1280,
+      "height": 1040,
+      "elements": 60
+    },
+    {
+      "id": "WF-07",
+      "file": "wf-07-radicar-solicitud",
+      "name": "Radicar solicitud",
+      "roles": "PUBLICO",
+      "route": "/solicitudes/nueva?materiales=…",
+      "state": "Pantalla existente",
+      "width": 1280,
+      "height": 1040,
+      "elements": 32
+    },
+    {
+      "id": "WF-08",
+      "file": "wf-08-solicitud-personal",
+      "name": "Registro por el personal",
+      "roles": "PERSONAL / ADMIN",
+      "route": "/personal/solicitudes/nueva?materiales=…",
+      "state": "Pantalla existente · HU-10 / HU-73",
+      "width": 1280,
+      "height": 1040,
+      "elements": 50
+    },
+    {
+      "id": "WF-09",
+      "file": "wf-09-listado-personal",
+      "name": "Listado de solicitudes del personal",
+      "roles": "PERSONAL / ADMIN",
+      "route": "/solicitudes",
+      "state": "Existente · HU-12 / HU-141",
+      "width": 1280,
+      "height": 1040,
+      "elements": 81
+    },
+    {
+      "id": "WF-10",
+      "file": "wf-10-detalle-solicitud",
+      "name": "Detalle y cambio de estado",
+      "roles": "PERSONAL / ADMIN",
+      "route": "/solicitudes/:id",
+      "state": "Existente + propuesta HU-140",
+      "width": 1280,
+      "height": 1040,
+      "elements": 41
+    },
+    {
+      "id": "WF-11",
+      "file": "wf-11-calendario",
+      "name": "Calendario de citas",
+      "roles": "PERSONAL / ADMIN",
+      "route": "/calendario",
+      "state": "Existente · HU-19",
+      "width": 1280,
+      "height": 1040,
+      "elements": 120
+    },
+    {
+      "id": "WF-12",
+      "file": "wf-12-gestion-usuarios",
+      "name": "Gestión de usuarios del personal",
+      "roles": "ADMIN",
+      "route": "/admin/usuarios (propuesta)",
+      "state": "Propuesta · HU-05",
+      "width": 1280,
+      "height": 1040,
+      "elements": 64
+    },
+    {
+      "id": "WF-13",
+      "file": "wf-13-capacidad-sala",
+      "name": "Capacidad de la sala",
+      "roles": "ADMIN",
+      "route": "/admin/capacidad-sala (propuesta)",
+      "state": "Propuesta · HU-20.1",
+      "width": 1280,
+      "height": 1040,
+      "elements": 25
+    },
+    {
+      "id": "WF-14",
+      "file": "wf-14-sincronizacion-everything",
+      "name": "Sincronización con Everything",
+      "roles": "ADMIN",
+      "route": "/admin/sincronizacion (propuesta)",
+      "state": "Propuesta · HU-138 · depende de HU-137",
+      "width": 1280,
+      "height": 1040,
+      "elements": 36
+    },
+    {
+      "id": "WF-15",
+      "file": "wf-15-material-personal",
+      "name": "Material para personal",
+      "roles": "PERSONAL / ADMIN",
+      "route": "/personal/materiales",
+      "state": "Existente + propuestas HU-06 / HU-140",
+      "width": 1280,
+      "height": 1040,
+      "elements": 80
+    }
+  ]
+}

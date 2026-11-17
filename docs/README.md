@@ -15,6 +15,7 @@ Documentos del proyecto en Markdown, con su versión exportada a PDF cuando apli
 | Modelo de dominio | — | pendiente (E3) |
 | Manual de operación | `manual-operacion.md` | — |
 | Manual de usuario | `manual-usuario.md` | — |
+| Mapa de pantallas y wireframes (HU-46) | [pantallas.md](pantallas.md) · SVG y Excalidraw por pantalla | — |
 | Automatización del tablero | `automatizacion-tablero.md` | — |
 
 Los PDF de arquitectura, modelo de datos y modelo de dominio se agregan cuando entren las entregas E3 a E5; el script ya los exporta con el mismo comando.
