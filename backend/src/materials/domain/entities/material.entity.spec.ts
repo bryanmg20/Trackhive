@@ -1,5 +1,7 @@
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
+import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
 import type { MaterialStatus } from '../enums/material-status';
+import type { MaterialType } from '../enums/material-type';
 import { Material } from './material.entity';
 
 const buildMaterial = (): Material =>
@@ -63,5 +65,17 @@ describe('Material.changeStatus', () => {
     expect(() =>
       buildMaterial().changeStatus('ROTO' as MaterialStatus, 'user-1', null),
     ).toThrow(InvalidMaterialStatusError);
+  });
+});
+
+describe('Material', () => {
+  it('rejects a material type that does not exist', () => {
+    const props = { ...buildMaterial(), materialType: 'MAPA' as MaterialType };
+
+    expect(() => new Material(props)).toThrow(InvalidMaterialTypeError);
+  });
+
+  it('exposes a stable error code for an invalid material type', () => {
+    expect(new InvalidMaterialTypeError().code).toBe('INVALID_MATERIAL_TYPE');
   });
 });
