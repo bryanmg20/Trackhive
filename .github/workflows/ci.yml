@@ -12,6 +12,25 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Isolated PostgreSQL of the e2e tests (D-21, HU-41): same version as
+    # docker-compose, only for this job and empty on every run
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: trackhive_e2e
+          POSTGRES_USER: trackhive
+          POSTGRES_PASSWORD: trackhive
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trackhive -d trackhive_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # test/setup/global-setup.ts applies the migrations to this database
+      E2E_DATABASE_URL: postgresql://trackhive:trackhive@localhost:5432/trackhive_e2e?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -38,7 +57,8 @@ jobs:
           path: backend/coverage
           retention-days: 14
           if-no-files-found: warn
-      - run: pnpm test:e2e
+      - name: Pruebas e2e (PostgreSQL de prueba aislado)
+        run: pnpm test:e2e
       - run: pnpm build
 
   frontend:

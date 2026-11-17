@@ -282,6 +282,8 @@ pnpm exec playwright install chromium   # una sola vez
 pnpm test:e2e
 ```
 
+Las pruebas e2e del backend necesitan PostgreSQL. Con `docker compose up -d postgres` basta: `pnpm test:e2e` usa la base `<POSTGRES_DB>_e2e` (con el `.env.example`, `trackhive_e2e`), la borra y le aplica las migraciones al empezar, y nunca toca la base de desarrollo. Para usar otra base, define `E2E_DATABASE_URL`; su nombre debe terminar en `_e2e`. Las pruebas de `backend/test/flows/` recorren contra esa base el registro e inicio de sesión, radicar una solicitud (HU-09), cambiar su estado (HU-15) y agendar una cita (HU-18). Solo el servidor de correo se reemplaza por un fake.
+
 Las pruebas e2e del frontend abren cada ruta a 360 px y fallan si aparece desplazamiento horizontal. La Definition of Done completa está en la [plantilla de PR](.github/pull_request_template.md).
 
 ## Estructura del repositorio
