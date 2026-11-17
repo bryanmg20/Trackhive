@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# Reportes de cobertura de Jest
+/coverage

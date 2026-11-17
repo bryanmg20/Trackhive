@@ -407,10 +407,11 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Justificación:** los fakes aprovechan que los casos de uso dependen solo de interfaces y mantienen las pruebas rápidas y legibles. Las e2e necesitan PostgreSQL real para aplicar las mismas migraciones de producción: el índice único de la agenda (D-09) y `pg_trgm` (D-16), que SQLite no soporta.
 - **Consecuencias:** el CI es algo más lento.
 - **Estado actual:** las pruebas unitarias usan fakes en memoria. Las e2e corren en el CI, pero todavía con repositorios en memoria. Pasarlas a un PostgreSQL real es una meta del equipo (HU-41), más estricta que el curso, que pide pruebas e2e de los flujos principales.
+- **Cobertura mínima (HU-40):** `pnpm test:cov` mide solo `domain/` y `application/`, que es donde viven las reglas de negocio. Se excluyen los `*-response.dto.ts`: solo describen la respuesta para Swagger y no tienen lógica. Los DTOs de entrada sí se miden, porque validan. El umbral es 70 % en statements, branches, functions y lines. Jest lo exige sobre el total y `scripts/coverage-report.mjs` lo exige en cada capa por separado, para que el dominio no tape una aplicación con pocas pruebas. En cada PR, el CI publica la tabla por capa y por feature en el resumen del job y sube el reporte HTML como artefacto `backend-coverage`.
 
 ### D-22. Docker, docker-compose y GitHub Actions
 
-- **Decisión:** `docker-compose up` levanta backend, frontend y PostgreSQL sin pasos manuales (aplica migraciones y semillas de demostración). Cada Pull Request ejecuta lint, pruebas y build en GitHub Actions; `main` queda protegida y requiere CI en verde y una aprobación.
+- **Decisión:** `docker-compose up` levanta backend, frontend y PostgreSQL sin pasos manuales (aplica migraciones y semillas de demostración). Cada Pull Request ejecuta lint, pruebas unitarias con cobertura mínima del 70 % en dominio y aplicación (D-21), e2e y build en GitHub Actions; `main` queda protegida y requiere CI en verde y una aprobación.
 - **Alternativas:** instalación manual en el servidor del CLENA.
 - **Justificación:** es requisito y, además, es lo que permite que el CLENA opere el sistema sin el equipo. Un despliegue reproducible reduce el riesgo de que "funcione solo en una máquina".
 - **Consecuencias:** `docs/manual-operacion.md` debe cubrir variables de entorno, despliegue y respaldo de la base de datos.
