@@ -48,6 +48,11 @@ async function fillForm(
   values = validValues,
   acceptPrivacy = true,
 ) {
+  await user.type(
+    screen.getByLabelText('Municipio o distrito'),
+    'Barranquilla',
+  );
+  await user.selectOptions(screen.getByLabelText('Rango de edad'), '18-28');
   await user.type(screen.getByLabelText('Primer nombre'), values.firstName);
   if (values.middleName) {
     await user.type(
@@ -95,11 +100,16 @@ describe('RegisterPage', () => {
     expect(screen.queryByLabelText('Nombre completo')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Correo electrónico')).toBeInTheDocument();
     expect(screen.getByLabelText('Contraseña')).toBeInTheDocument();
+    expect(screen.getByLabelText('Municipio o distrito')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rango de edad')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Grupo poblacional (opcional)'),
+    ).not.toBeRequired();
     expect(screen.getByLabelText('Confirmar contraseña')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'Aviso de privacidad' }),
     ).toBeVisible();
-    expect(screen.getByText(/Versión 1\.0/)).toBeVisible();
+    expect(screen.getByText(/Versión 1\.1/)).toBeVisible();
     expect(
       screen.getByRole('checkbox', {
         name: /acepto el aviso de privacidad/i,
@@ -239,12 +249,14 @@ describe('RegisterPage', () => {
       await screen.findByRole('heading', { name: 'Cuenta creada' }),
     ).toBeVisible();
     expect(sentBody()).toEqual({
+      municipality: 'Barranquilla',
+      ageRange: '18-28',
       firstName: 'Ana',
       lastName: 'Pérez',
       email: 'ana@mail.com',
       password: 'secret123',
       acceptedPrivacy: true,
-      privacyPolicyVersion: '1.0',
+      privacyPolicyVersion: '1.1',
     });
   });
 

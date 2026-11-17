@@ -9,9 +9,10 @@ import {
   IsUUID,
   Matches,
   MaxLength,
-  ValidateIf,
 } from 'class-validator';
 import { NAME_MAX_LENGTH } from '../../../users/domain/value-objects/person-name';
+import { AGE_RANGES } from '../../domain/enums/age-range';
+import { POPULATION_GROUPS } from '../../domain/enums/population-group';
 
 const trimText = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -38,6 +39,29 @@ const REQUESTER_TYPES = [
 const DOCUMENT_TYPES = ['CC', 'CE', 'TI', 'PAS', 'NIT'] as const;
 
 export class RequesterInputDto {
+  @ApiPropertyOptional({
+    description: 'Municipio o distrito; obligatorio para solicitantes nuevos',
+    maxLength: 120,
+  })
+  @Transform(trimText)
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  municipality?: string;
+
+  @ApiPropertyOptional({
+    enum: AGE_RANGES,
+    description: 'Obligatorio para solicitantes nuevos',
+  })
+  @IsOptional()
+  @IsIn(AGE_RANGES)
+  ageRange?: string;
+
+  @ApiPropertyOptional({ nullable: true, enum: POPULATION_GROUPS })
+  @IsOptional()
+  @IsIn(POPULATION_GROUPS)
+  populationGroup?: string | null;
   @ApiProperty({
     description:
       'Correo del solicitante. Es obligatorio porque lo identifica y recibe las notificaciones.',
@@ -63,13 +87,12 @@ export class RequesterInputDto {
   userId?: string;
 
   @ApiPropertyOptional({
-    description:
-      'Primer nombre. Obligatorio cuando no se asocia un usuario existente.',
+    description: 'Primer nombre. Obligatorio solo para un solicitante nuevo.',
     example: 'Ana',
     maxLength: NAME_MAX_LENGTH,
   })
   @Transform(trimText)
-  @ValidateIf((requester: RequesterInputDto) => !requester.userId)
+  @IsOptional()
   @IsString({ message: 'El primer nombre del solicitante debe ser texto' })
   @IsNotEmpty({ message: 'El primer nombre del solicitante es obligatorio' })
   @MaxLength(NAME_MAX_LENGTH, {
@@ -93,13 +116,12 @@ export class RequesterInputDto {
   middleName?: string | null;
 
   @ApiPropertyOptional({
-    description:
-      'Primer apellido. Obligatorio cuando no se asocia un usuario existente.',
+    description: 'Primer apellido. Obligatorio solo para un solicitante nuevo.',
     example: 'Pérez',
     maxLength: NAME_MAX_LENGTH,
   })
   @Transform(trimText)
-  @ValidateIf((requester: RequesterInputDto) => !requester.userId)
+  @IsOptional()
   @IsString({ message: 'El primer apellido del solicitante debe ser texto' })
   @IsNotEmpty({ message: 'El primer apellido del solicitante es obligatorio' })
   @MaxLength(NAME_MAX_LENGTH, {

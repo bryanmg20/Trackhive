@@ -10,11 +10,168 @@ Describe el esquema que existe hoy, es decir, el de `backend/prisma/schema.prism
 
 ## 2. Diagrama entidad-relación
 
-![Figura 1. Diagrama entidad-relación de la base de datos de Trackhive](img/datos-diagrama-er.png)
+```mermaid
+erDiagram
+  users {
+    uuid id PK
+    varchar first_name "max 40"
+    varchar middle_name "max 40; NULL"
+    varchar last_name "max 40"
+    varchar second_last_name "max 40; NULL"
+    varchar email UK "max 160"
+    varchar password_hash "max 255"
+    varchar role "max 10"
+    boolean active
+    timestamptz privacy_policy_accepted_at "NULL"
+    varchar privacy_policy_version "max 10; NULL"
+    timestamptz last_login_at "NULL"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  refresh_tokens {
+    uuid id PK
+    uuid user_id FK
+    varchar token_hash UK "max 255"
+    timestamptz expires_at
+    timestamptz revoked_at "NULL"
+    timestamptz created_at
+  }
+  materials {
+    uuid id PK
+    varchar catalog_code UK "max 40"
+    varchar title "max 255"
+    varchar material_type "max 20"
+    varchar author "max 150; NULL"
+    varchar collection "max 120"
+    date publication_date "NULL"
+    varchar publisher "max 150; NULL"
+    varchar depot "max 40"
+    varchar shelf "max 40"
+    varchar box "max 40"
+    varchar status "max 20"
+    timestamptz status_changed_at "NULL"
+    uuid status_changed_by FK "NULL"
+    varchar status_change_reason "max 500; NULL"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  requesters {
+    varchar municipality "max 120; NULL"
+    varchar age_range "max 5; NULL"
+    varchar population_group "max 80; NULL"
+    uuid id PK
+    uuid user_id FK,UK "NULL"
+    varchar document_type "max 5; NULL"
+    varchar document_number "max 20; NULL"
+    varchar first_name "max 40"
+    varchar middle_name "max 40; NULL"
+    varchar last_name "max 40"
+    varchar second_last_name "max 40; NULL"
+    varchar email "max 160; NULL"
+    varchar phone "max 20; NULL"
+    varchar requester_type "max 15"
+    varchar institution "max 150; NULL"
+    boolean accepts_data_processing
+    timestamptz consented_at
+    varchar privacy_policy_version "max 10"
+    timestamptz anonymized_at "NULL"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  requests {
+    uuid id PK
+    varchar tracking_code UK "max 16"
+    uuid requester_id FK
+    uuid created_by_id FK
+    uuid assignee_id FK "NULL"
+    varchar request_type "max 25"
+    varchar origin_channel "max 10"
+    varchar delivery_mode "max 10"
+    varchar purpose "max 15"
+    text reason "NULL"
+    text requirement_description
+    date desired_date
+    date committed_date "NULL"
+    varchar priority "max 5"
+    varchar status "max 12"
+    varchar rejection_reason "max 500; NULL"
+    text notes "NULL"
+    timestamptz registered_at
+    timestamptz attended_at "NULL"
+    timestamptz closed_at "NULL"
+    int version
+    timestamptz updated_at
+  }
+  request_items {
+    uuid id PK
+    uuid request_id FK
+    uuid material_id FK
+    varchar item_status "max 15"
+    varchar access_type "max 10"
+    text note "NULL"
+  }
+  status_history {
+    bigint id PK
+    uuid request_id FK
+    varchar previous_status "max 12; NULL"
+    varchar new_status "max 12"
+    uuid user_id FK
+    text comment "NULL"
+    boolean visible_to_requester
+    timestamptz changed_at
+  }
+  appointments {
+    uuid id PK
+    uuid request_id FK
+    uuid requester_id FK
+    uuid scheduled_by_id FK
+    date appointment_date
+    varchar status "max 12"
+    text notes "NULL"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  appointment_materials {
+    uuid appointment_id PK,FK
+    uuid material_id PK,FK
+    date booked_date "NULL"
+  }
+  notifications {
+    uuid id PK
+    uuid request_id FK
+    bigint status_history_id FK,UK "NULL"
+    varchar recipient_email "max 160"
+    varchar template "max 25"
+    varchar subject "max 200"
+    text body
+    text html_body "NULL"
+    varchar delivery_status "max 10"
+    int attempts
+    text last_error "NULL"
+    timestamptz scheduled_at
+    timestamptz sent_at "NULL"
+    timestamptz created_at
+  }
+  users ||--o{ refresh_tokens : sesiones
+  users |o--o| requesters : cuenta
+  users |o--o{ materials : cambia_estado
+  requesters ||--o{ requests : solicita
+  users ||--o{ requests : registra
+  users |o--o{ requests : atiende
+  requests ||--|{ request_items : contiene
+  materials ||--o{ request_items : solicitado
+  requests ||--o{ status_history : historial
+  users ||--o{ status_history : responsable
+  requests ||--o{ appointments : agenda
+  requesters ||--o{ appointments : asiste
+  users ||--o{ appointments : programa
+  appointments ||--|{ appointment_materials : reserva
+  materials ||--o{ appointment_materials : reservado
+  requests ||--o{ notifications : notifica
+  status_history |o--o| notifications : genera
+```
 
-**Figura 1.** Diagrama entidad-relación de la base de datos de Trackhive.
-
-Leyenda: cada recuadro es una tabla con sus columnas y su tipo de PostgreSQL. `PK` clave primaria, `FK` clave foránea, `UK` valor único; `UK¹`, `UK²` y `UK³` marcan las columnas que forman juntas un único compuesto. `NULL` indica que la columna admite nulos; el resto es `NOT NULL`. Las líneas usan la notación de pata de gallo: dos rayas, exactamente uno; círculo y raya, cero o uno; círculo y pata, cero o muchos; raya y pata, uno o muchos. Cada línea une la tabla padre (lado de la clave primaria) con la tabla hija (lado de la clave foránea); la tabla siguiente indica la columna de cada relación. Ninguna línea se cruza con otra.
+**Figura 1.** Diagrama ER actualizado para HU-73, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
 
 | Relación | Cardinalidad | Clave foránea |
 |---|---|---|
@@ -98,11 +255,19 @@ Creada en HU-09 (migración `20261109000000_create_requests`).
 | phone | varchar(20) | NULL | `CHECK (email IS NOT NULL OR phone IS NOT NULL)` |
 | requester_type | varchar(15) | CHECK | `INVESTIGADOR`, `ESTUDIANTE`, `DOCENTE`, `CIUDADANO`, `ENTIDAD` |
 | institution | varchar(150) | NULL | |
+| municipality | varchar(120) | NULL, CHECK no vacío | Municipio o distrito; obligatorio para registros nuevos (HU-73) |
+| age_range | varchar(5) | NULL, CHECK | `0-5`, `6-11`, `12-17`, `18-28`, `29-59`, `60+` (HU-73) |
+| population_group | varchar(80) | NULL, CHECK | Opción del formato de asistencia o `PREFIERO_NO_RESPONDER`; opcional (HU-73) |
 | accepts_data_processing | boolean | CHECK = true | Consentimiento (Ley 1581) |
 | consented_at | timestamptz | | |
 | privacy_policy_version | varchar(10) | | Versión del aviso aceptado |
 | anonymized_at | timestamptz | NULL | Fecha en que se anonimizó (§6) |
 | created_at, updated_at | timestamptz | | |
+
+HU-73 agrega la migración `20261116150000_requester_characterization`. Los
+solicitantes previos conservan `NULL` en los tres campos; la aplicación exige
+municipio y rango de edad al registrar personas nuevas. La justificación,
+catálogo y finalidades pendientes se documentan en [datos-personales.md](datos-personales.md).
 
 ### materials
 

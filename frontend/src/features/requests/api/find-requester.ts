@@ -7,6 +7,9 @@ import {
 } from './request-api-error';
 
 export interface RequesterProfile {
+  municipality?: string | null;
+  ageRange?: string | null;
+  populationGroup?: string | null;
   requesterId: string | null;
   userId: string | null;
   firstName: string;

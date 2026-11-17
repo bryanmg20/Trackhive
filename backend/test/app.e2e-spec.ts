@@ -6,7 +6,10 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { REFRESH_TOKEN_REPOSITORY } from '../src/auth/application/tokens';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { USER_REPOSITORY } from '../src/users/application/tokens';
+import {
+  ACCOUNT_REGISTRATION,
+  USER_REPOSITORY,
+} from '../src/users/application/tokens';
 import { User } from '../src/users/domain/entities/user.entity';
 import { IUserRepository } from '../src/users/domain/repositories/user.repository';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
@@ -55,6 +58,8 @@ class InMemoryUserRepository implements IUserRepository {
 }
 
 const validRegistration = (email = 'ana@trackhive.test') => ({
+  municipality: 'Barranquilla',
+  ageRange: '18-28',
   firstName: 'Ana',
   middleName: 'María',
   lastName: 'Pérez',
@@ -62,7 +67,7 @@ const validRegistration = (email = 'ana@trackhive.test') => ({
   email,
   password: 'secreto123',
   acceptedPrivacy: true,
-  privacyPolicyVersion: '1.0',
+  privacyPolicyVersion: '1.1',
 });
 
 describe('Versioned API (e2e)', () => {
@@ -79,6 +84,8 @@ describe('Versioned API (e2e)', () => {
     })
       .overrideProvider(USER_REPOSITORY)
       .useValue(repository)
+      .overrideProvider(ACCOUNT_REGISTRATION)
+      .useValue({ save: (user: User) => repository.save(user) })
       // The startup purge of expired tokens (HU-3.1) needs a repository
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
@@ -121,7 +128,7 @@ describe('Versioned API (e2e)', () => {
     expect(stored?.passwordHash).toMatch(/^\$argon2/);
     expect(stored?.passwordHash).not.toBe('secreto123');
     expect(stored?.privacyPolicyAcceptedAt).toBeInstanceOf(Date);
-    expect(stored?.privacyPolicyVersion).toBe('1.0');
+    expect(stored?.privacyPolicyVersion).toBe('1.1');
   });
 
   it('rejects a registration without privacy consent', async () => {
@@ -168,9 +175,11 @@ describe('Versioned API (e2e)', () => {
         firstName: 'Luis',
         lastName: 'Rojas',
         email: 'solo-obligatorios@trackhive.test',
+        municipality: 'Barranquilla',
+        ageRange: '18-28',
         password: 'secreto123',
         acceptedPrivacy: true,
-        privacyPolicyVersion: '1.0',
+        privacyPolicyVersion: '1.1',
       })
       .expect(201);
 

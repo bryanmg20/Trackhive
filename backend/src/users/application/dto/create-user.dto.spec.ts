@@ -3,12 +3,14 @@ import { CreateUserDto } from './create-user.dto';
 
 const validDto = (overrides: Partial<CreateUserDto> = {}): CreateUserDto =>
   Object.assign(new CreateUserDto(), {
+    municipality: 'Barranquilla',
+    ageRange: '18-28',
     firstName: 'Ana',
     lastName: 'Pérez',
     email: 'ana@mail.com',
     password: 'secreto123',
     acceptedPrivacy: true,
-    privacyPolicyVersion: '1.0',
+    privacyPolicyVersion: '1.1',
     ...overrides,
   });
 

@@ -48,6 +48,9 @@ export class UserController {
     // it only asks the use case to execute the action.
     // Domain errors are translated by the global filter.
     return this.createUserUseCase.execute({
+      municipality: dto.municipality,
+      ageRange: dto.ageRange,
+      populationGroup: dto.populationGroup,
       firstName: dto.firstName,
       middleName: dto.middleName,
       lastName: dto.lastName,

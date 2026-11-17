@@ -15,6 +15,13 @@ import { readMaterialIds } from './selected-materials';
 import type { SelectedMaterial } from './selected-materials';
 import shellStyles from '../materials/MaterialSearchPage.module.css';
 import styles from './StaffNewRequestPage.module.css';
+import { CharacterizationFields } from '../profile/CharacterizationFields';
+import {
+  AGE_RANGES,
+  AGE_RANGE_LABELS,
+  POPULATION_GROUPS,
+  characterizationSchema,
+} from '../profile/characterization';
 
 interface NewRequestLocationState {
   materials?: SelectedMaterial[];
@@ -28,6 +35,9 @@ type LookupState =
   | { status: 'error'; email: string; message: string; expired: boolean };
 
 type FieldKey =
+  | 'municipality'
+  | 'ageRange'
+  | 'populationGroup'
   | 'email'
   | 'firstName'
   | 'middleName'
@@ -46,6 +56,9 @@ type FieldKey =
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 interface ContactData {
+  municipality: string;
+  ageRange: string;
+  populationGroup: string;
   firstName: string;
   middleName: string;
   lastName: string;
@@ -66,6 +79,9 @@ interface Receipt {
 }
 
 const EMPTY_CONTACT: ContactData = {
+  municipality: '',
+  ageRange: '',
+  populationGroup: '',
   firstName: '',
   middleName: '',
   lastName: '',
@@ -82,6 +98,9 @@ const REASON_MIN_LENGTH = 10;
 const REASON_MAX_LENGTH = 2000;
 
 const DETAIL_FIELD_BY_API: Record<string, FieldKey> = {
+  'requester.municipality': 'municipality',
+  'requester.ageRange': 'ageRange',
+  'requester.populationGroup': 'populationGroup',
   email: 'email',
   'requester.email': 'email',
   'requester.firstName': 'firstName',
@@ -162,8 +181,9 @@ function ContactField({
         aria-required={required}
         aria-invalid={error ? true : undefined}
         aria-describedby={
-          [hint ? hintId : '', error ? errorId : ''].filter(Boolean).join(' ') ||
-          undefined
+          [hint ? hintId : '', error ? errorId : '']
+            .filter(Boolean)
+            .join(' ') || undefined
         }
         autoComplete={autoComplete}
         inputMode={inputMode}
@@ -203,8 +223,7 @@ export function StaffNewRequestPage() {
   const [contact, setContact] = useState<ContactData>(EMPTY_CONTACT);
   const [reason, setReason] = useState('');
   const [desiredDate, setDesiredDate] = useState('');
-  const [deliveryMode, setDeliveryMode] =
-    useState<DeliveryMode>('PRESENCIAL');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('PRESENCIAL');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -247,10 +266,7 @@ export function StaffNewRequestPage() {
     setEmail(value);
     setFieldErrors((current) => ({ ...current, email: undefined }));
 
-    if (
-      lookup.status !== 'idle' &&
-      normalizeEmail(value) !== lookup.email
-    ) {
+    if (lookup.status !== 'idle' && normalizeEmail(value) !== lookup.email) {
       // The lookup belongs to the previous email: ask for it again.
       setLookup({ status: 'idle' });
     }
@@ -321,6 +337,14 @@ export function StaffNewRequestPage() {
     }
 
     if (lookup.status === 'new') {
+      const characterization = characterizationSchema.safeParse(contact);
+      if (!characterization.success) {
+        for (const issue of characterization.error.issues) {
+          const field = issue.path[0] as
+            'municipality' | 'ageRange' | 'populationGroup';
+          errors[field] = issue.message;
+        }
+      }
       if (!contact.firstName.trim()) {
         errors.firstName = 'El primer nombre es obligatorio.';
       }
@@ -360,6 +384,9 @@ export function StaffNewRequestPage() {
 
     return {
       email: normalizedEmail,
+      municipality: contact.municipality.trim(),
+      ageRange: contact.ageRange,
+      populationGroup: contact.populationGroup || undefined,
       firstName: contact.firstName.trim(),
       middleName: trimmed(contact.middleName),
       lastName: contact.lastName.trim(),
@@ -491,8 +518,8 @@ export function StaffNewRequestPage() {
           Ficha de solicitud
         </h1>
         <p className={styles.lede}>
-          Para personas que llegan o llaman sin cuenta. Busque el correo,
-          elija el material y entregue el código de seguimiento.
+          Para personas que llegan o llaman sin cuenta. Busque el correo, elija
+          el material y entregue el código de seguimiento.
         </p>
         <p className={styles.backRow}>
           <Link className={styles.backLink} to={ROUTES.staffMaterials}>
@@ -533,7 +560,9 @@ export function StaffNewRequestPage() {
             </div>
             <div>
               <dt>Modalidad</dt>
-              <dd>{receipt.deliveryMode === 'DIGITAL' ? 'Digital' : 'Presencial'}</dd>
+              <dd>
+                {receipt.deliveryMode === 'DIGITAL' ? 'Digital' : 'Presencial'}
+              </dd>
             </div>
             <div>
               <dt>Materiales</dt>
@@ -559,17 +588,14 @@ export function StaffNewRequestPage() {
         </section>
       ) : (
         <div className={styles.layout}>
-          <section
-            className={styles.card}
-            aria-labelledby="requester-title"
-          >
+          <section className={styles.card} aria-labelledby="requester-title">
             <p className={styles.step}>01 · Solicitante</p>
             <h2 id="requester-title" className={styles.sectionTitle}>
               ¿Quién solicita?
             </h2>
             <p className={styles.sectionIntro}>
-              Si ya está registrado, sus datos aparecen aquí y no se vuelven
-              a pedir.
+              Si ya está registrado, sus datos aparecen aquí y no se vuelven a
+              pedir.
             </p>
 
             <form
@@ -591,9 +617,7 @@ export function StaffNewRequestPage() {
                     onChange={(event) => changeEmail(event.target.value)}
                     required
                     aria-required="true"
-                    aria-invalid={
-                      fieldErrors.email ? true : undefined
-                    }
+                    aria-invalid={fieldErrors.email ? true : undefined}
                     aria-describedby={
                       fieldErrors.email ? 'requester-email-error' : undefined
                     }
@@ -640,10 +664,37 @@ export function StaffNewRequestPage() {
                 role="status"
               >
                 <p className={styles.stamp}>Encontrado</p>
-                <p className={styles.foundName}>
-                  {fullName(lookup.profile)}
-                </p>
+                <p className={styles.foundName}>{fullName(lookup.profile)}</p>
                 <dl className={styles.foundData}>
+                  {lookup.profile.municipality && (
+                    <div>
+                      <dt>Municipio o distrito</dt>
+                      <dd>{lookup.profile.municipality}</dd>
+                    </div>
+                  )}
+                  {lookup.profile.ageRange && (
+                    <div>
+                      <dt>Rango de edad</dt>
+                      <dd>
+                        {AGE_RANGE_LABELS[
+                          AGE_RANGES.findIndex(
+                            (range) => range === lookup.profile.ageRange,
+                          )
+                        ] ?? lookup.profile.ageRange}
+                      </dd>
+                    </div>
+                  )}
+                  {lookup.profile.populationGroup && (
+                    <div>
+                      <dt>Grupo poblacional</dt>
+                      <dd>
+                        {POPULATION_GROUPS.find(
+                          (group) =>
+                            group.value === lookup.profile.populationGroup,
+                        )?.label ?? lookup.profile.populationGroup}
+                      </dd>
+                    </div>
+                  )}
                   <div>
                     <dt>Correo</dt>
                     <dd>{lookup.profile.email}</dd>
@@ -679,7 +730,8 @@ export function StaffNewRequestPage() {
                   ) : null}
                 </dl>
                 <p className={styles.hint}>
-                  Datos tomados de la cuenta registrada.
+                  Datos guardados del solicitante; no necesita volver a
+                  completarlos.
                 </p>
               </div>
             ) : null}
@@ -727,9 +779,7 @@ export function StaffNewRequestPage() {
                     id="requester-second-last-name"
                     label="Segundo apellido"
                     value={contact.secondLastName}
-                    onChange={(value) =>
-                      updateContact('secondLastName', value)
-                    }
+                    onChange={(value) => updateContact('secondLastName', value)}
                     error={fieldErrors.secondLastName}
                     autoComplete="additional-name"
                     maxLength={40}
@@ -747,6 +797,25 @@ export function StaffNewRequestPage() {
                   inputMode="tel"
                   maxLength={20}
                   hint="Opcional. Útil si el CLENA necesita contactar al solicitante."
+                />
+
+                <CharacterizationFields
+                  municipalityInput={{
+                    value: contact.municipality,
+                    onChange: (event) =>
+                      updateContact('municipality', event.target.value),
+                  }}
+                  ageRangeInput={{
+                    value: contact.ageRange,
+                    onChange: (event) =>
+                      updateContact('ageRange', event.target.value),
+                  }}
+                  populationGroupInput={{
+                    value: contact.populationGroup,
+                    onChange: (event) =>
+                      updateContact('populationGroup', event.target.value),
+                  }}
+                  errors={fieldErrors}
                 />
 
                 <details className={styles.additional}>
@@ -783,9 +852,7 @@ export function StaffNewRequestPage() {
                       id="requester-institution"
                       label="Institución"
                       value={contact.institution}
-                      onChange={(value) =>
-                        updateContact('institution', value)
-                      }
+                      onChange={(value) => updateContact('institution', value)}
                       error={fieldErrors.institution}
                       autoComplete="organization"
                       maxLength={150}
@@ -799,10 +866,7 @@ export function StaffNewRequestPage() {
                         id="requester-document-type"
                         value={contact.documentType}
                         onChange={(event) =>
-                          updateContact(
-                            'documentType',
-                            event.target.value,
-                          )
+                          updateContact('documentType', event.target.value)
                         }
                         aria-invalid={
                           fieldErrors.documentType ? true : undefined
@@ -877,8 +941,8 @@ export function StaffNewRequestPage() {
                 </ul>
               ) : (
                 <p className={styles.emptyMaterials}>
-                  Aún no ha elegido materiales. Búsquelos en el archivo y
-                  pulse «Solicitar» o «Registrar solicitud».
+                  Aún no ha elegido materiales. Búsquelos en el archivo y pulse
+                  «Solicitar» o «Registrar solicitud».
                 </p>
               )}
               {fieldErrors.materials ? (
@@ -922,8 +986,8 @@ export function StaffNewRequestPage() {
                   rows={4}
                 />
                 <p className={styles.hint} id="staff-request-reason-hint">
-                  Describa qué necesita consultar. Mínimo{' '}
-                  {REASON_MIN_LENGTH} caracteres.
+                  Describa qué necesita consultar. Mínimo {REASON_MIN_LENGTH}{' '}
+                  caracteres.
                 </p>
                 {fieldErrors.reason ? (
                   <p

@@ -62,7 +62,10 @@ function renderPage(
           path="/personal/solicitudes/nueva"
           element={<StaffNewRequestPage />}
         />
-        <Route path="/personal/materiales" element={<p>Estado del material</p>} />
+        <Route
+          path="/personal/materiales"
+          element={<p>Estado del material</p>}
+        />
         <Route path="/materiales" element={<p>Buscador de material</p>} />
         <Route path="/login" element={<p>Pantalla de login</p>} />
       </Routes>
@@ -83,6 +86,13 @@ async function fillRequest(
   reason = 'Consulta para una investigación histórica',
   date = '2026-12-15',
 ) {
+  const municipality = screen.queryByLabelText('Municipio o distrito');
+  if (municipality) {
+    fireEvent.change(municipality, { target: { value: 'Barranquilla' } });
+    fireEvent.change(screen.getByLabelText('Rango de edad'), {
+      target: { value: '18-28' },
+    });
+  }
   await user.type(screen.getByLabelText(/Motivo de la consulta/), reason);
   fireEvent.change(screen.getByLabelText(/Fecha deseada/), {
     target: { value: date },
@@ -103,17 +113,18 @@ describe('StaffNewRequestPage', () => {
   it('does not include its own material search', () => {
     render(renderPage());
 
-    expect(screen.getByRole('heading', { name: 'Ficha de solicitud' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Ficha de solicitud' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByLabelText('Buscar en el archivo'),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByPlaceholderText('Título, autor o código'),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Cambiar materiales' })).toHaveAttribute(
-      'href',
-      '/personal/materiales',
-    );
+    expect(
+      screen.getByRole('link', { name: 'Cambiar materiales' }),
+    ).toHaveAttribute('href', '/personal/materiales');
   });
 
   it('shows the materials that arrive from the search screen', () => {
@@ -133,9 +144,7 @@ describe('StaffNewRequestPage', () => {
     expect(await screen.findByText('Encontrado')).toBeInTheDocument();
     expect(screen.getByText('Ana María Pérez Gómez')).toBeInTheDocument();
     expect(screen.getByText('ana@example.com')).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText(/Primer nombre/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Primer nombre/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Primer apellido/)).not.toBeInTheDocument();
   });
 
@@ -161,7 +170,9 @@ describe('StaffNewRequestPage', () => {
     await lookUp(user);
     await screen.findByText('Encontrado');
     await fillRequest(user);
-    await user.click(screen.getByRole('button', { name: 'Registrar solicitud' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar solicitud' }),
+    );
 
     await screen.findByText(CREATED.trackingCode);
     const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
@@ -185,14 +196,21 @@ describe('StaffNewRequestPage', () => {
     await screen.findByText('Nuevo solicitante');
     await user.type(screen.getByLabelText(/Primer nombre/), 'Luis');
     await user.type(screen.getByLabelText(/Primer apellido/), 'Rojas');
-    await user.type(screen.getByLabelText('Teléfono de contacto'), '3000000000');
+    await user.type(
+      screen.getByLabelText('Teléfono de contacto'),
+      '3000000000',
+    );
     await fillRequest(user);
-    await user.click(screen.getByRole('button', { name: 'Registrar solicitud' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar solicitud' }),
+    );
 
     await screen.findByText(CREATED.trackingCode);
     const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
     expect(body.requester).toMatchObject({
+      municipality: 'Barranquilla',
+      ageRange: '18-28',
       email: 'nuevo@example.com',
       firstName: 'Luis',
       lastName: 'Rojas',
@@ -216,7 +234,9 @@ describe('StaffNewRequestPage', () => {
     await lookUp(user);
     await screen.findByText('Encontrado');
     await fillRequest(user, undefined, '2026-11-15');
-    await user.click(screen.getByRole('button', { name: 'Registrar solicitud' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar solicitud' }),
+    );
 
     expect(await screen.findByText(message)).toBeInTheDocument();
     const dateInput = screen.getByLabelText(/Fecha deseada/);
@@ -250,7 +270,9 @@ describe('StaffNewRequestPage', () => {
     await user.type(screen.getByLabelText(/Primer nombre/), 'Luis1');
     await user.type(screen.getByLabelText(/Primer apellido/), 'Rojas');
     await fillRequest(user);
-    await user.click(screen.getByRole('button', { name: 'Registrar solicitud' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar solicitud' }),
+    );
 
     expect(
       await screen.findByText('El nombre solo admite letras.'),
@@ -271,7 +293,9 @@ describe('StaffNewRequestPage', () => {
     await lookUp(user);
     await screen.findByText('Encontrado');
     await fillRequest(user);
-    await user.click(screen.getByRole('button', { name: 'Registrar solicitud' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar solicitud' }),
+    );
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       CREATED.trackingCode,
@@ -297,7 +321,9 @@ describe('StaffNewRequestPage', () => {
     await lookUp(user);
     await screen.findByText('Encontrado');
     await fillRequest(user);
-    await user.click(screen.getByRole('button', { name: 'Registrar solicitud' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar solicitud' }),
+    );
 
     expect(
       await screen.findByText(

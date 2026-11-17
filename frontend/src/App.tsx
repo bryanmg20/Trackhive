@@ -15,6 +15,7 @@ import { AppointmentsCalendarPage } from './features/requests/AppointmentsCalend
 import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestsListPage } from './features/requests/RequestsListPage';
 import { ROUTES } from './routes';
+import { ProfilePage } from './features/profile/ProfilePage';
 
 function HomeRedirect() {
   const role = readSessionRole();
@@ -27,6 +28,7 @@ function App() {
       <Route path={ROUTES.register} element={<RegisterPage />} />
       <Route path={ROUTES.login} element={<LoginPage />} />
       <Route element={<AuthenticatedRoute />}>
+        <Route path={ROUTES.profile} element={<ProfilePage />} />
         <Route path={ROUTES.materials} element={<MaterialSearchPage />} />
       </Route>
       <Route element={<ProtectedRoute />}>
@@ -37,10 +39,7 @@ function App() {
         <Route path={ROUTES.staffMaterials} element={<StaffMaterialsPage />} />
         <Route path={ROUTES.requests} element={<RequestsListPage />} />
         <Route path={ROUTES.requestDetail} element={<RequestDetailPage />} />
-        <Route
-          path={ROUTES.calendar}
-          element={<AppointmentsCalendarPage />}
-        />
+        <Route path={ROUTES.calendar} element={<AppointmentsCalendarPage />} />
         <Route
           path={ROUTES.staffNewRequest}
           element={<StaffNewRequestPage />}

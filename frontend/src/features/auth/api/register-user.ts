@@ -1,4 +1,7 @@
 export interface RegisterUserInput {
+  municipality: string;
+  ageRange: string;
+  populationGroup?: string;
   firstName: string;
   // Optional: left out of the body when the person does not give one
   middleName?: string;
@@ -75,9 +78,7 @@ async function readErrorBody(response: Response): Promise<ErrorBody> {
     if (isRecord(body)) {
       return {
         code:
-          typeof body.code === 'string'
-            ? body.code
-            : `HTTP_${response.status}`,
+          typeof body.code === 'string' ? body.code : `HTTP_${response.status}`,
         message: typeof body.message === 'string' ? body.message : '',
         details: readDetails(body.details),
       };

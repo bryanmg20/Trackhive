@@ -1,9 +1,14 @@
 import type { User } from '../../../users/domain/entities/user.entity';
 import { RequesterNameRequiredError } from '../errors/requester-name-required.error';
+import {
+  Characterization,
+  type CharacterizationData,
+} from '../value-objects/characterization';
+import { CURRENT_PRIVACY_POLICY_VERSION } from '../../../users/domain/policies/privacy-policy';
 
 // The consent the requester gives when they register (HU-31). The visitors
 // the staff registers accept it in person, so it is recorded the same way
-const PRIVACY_POLICY_VERSION = '1.0';
+const PRIVACY_POLICY_VERSION = CURRENT_PRIVACY_POLICY_VERSION;
 
 export interface RequesterProps {
   id: string;
@@ -22,10 +27,17 @@ export interface RequesterProps {
   acceptsDataProcessing: boolean;
   consentedAt: Date;
   privacyPolicyVersion: string;
+  // Nullable for accounts and visitors registered before HU-73.
+  municipality?: string | null;
+  ageRange?: string | null;
+  populationGroup?: string | null;
 }
 
 /** The contact data of a visitor the staff registers (HU-10). */
 export interface RequesterContactData {
+  municipality?: string;
+  ageRange?: string;
+  populationGroup?: string | null;
   email: string;
   firstName?: string;
   middleName?: string | null;
@@ -50,6 +62,11 @@ export class Requester {
     return this.props.userId;
   }
 
+  withCharacterization(data: CharacterizationData): Requester {
+    const characterization = new Characterization(data);
+    return new Requester({ ...this.props, ...characterization });
+  }
+
   /** The requester of a user account, with the same four names (issue #96). */
   static fromUser(
     user: Pick<
@@ -60,7 +77,10 @@ export class Requester {
       | 'lastName'
       | 'secondLastName'
       | 'email'
-    >,
+    > & {
+      privacyPolicyAcceptedAt?: Date | null;
+      privacyPolicyVersion?: string | null;
+    },
     id: string,
     now: Date = new Date(),
   ): Requester {
@@ -78,8 +98,8 @@ export class Requester {
       documentType: null,
       documentNumber: null,
       acceptsDataProcessing: true,
-      consentedAt: now,
-      privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+      consentedAt: user.privacyPolicyAcceptedAt ?? now,
+      privacyPolicyVersion: user.privacyPolicyVersion ?? PRIVACY_POLICY_VERSION,
     });
   }
 
@@ -110,6 +130,10 @@ export class Requester {
       acceptsDataProcessing: true,
       consentedAt: now,
       privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+    }).withCharacterization({
+      municipality: contact.municipality ?? '',
+      ageRange: contact.ageRange ?? '',
+      populationGroup: contact.populationGroup,
     });
   }
 }
