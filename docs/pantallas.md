@@ -1,6 +1,6 @@
 # Pantallas principales de Trackhive
 
-**HU-46 · Versión 1.0 · 17 de noviembre de 2026**
+**HU-46 · Versión 2.0 · 17 de noviembre de 2026**
 
 **Estado: borradores preparados; revisión y validación de G6 pendientes.** El
 equipo indicó que todavía no hay comentarios de G6 sobre estas pantallas. No
@@ -19,18 +19,35 @@ tamaño completo, junto con su archivo editable.
 
 ## Cómo ver y editar los bocetos
 
-Cada pantalla tiene una vista SVG incluida y un archivo `.excalidraw` editable.
-Para editar: descargar el archivo, abrir [Excalidraw](https://excalidraw.com/),
-seleccionar **Abrir** e importar el archivo. No hace falta una cuenta de Figma,
-un enlace privado ni instalar dependencias nuevas en el proyecto.
+Cada pantalla incluye una vista PNG y un SVG vectorial importable en Figma.
+Para revisarla, abrir el PNG; para trabajar en Figma, arrastrar el SVG al lienzo
+o usar la opción de importar. El archivo original de referencia se conserva en
+[Figma: CLENA – Dashboard (paleta adaptada)](https://www.figma.com/design/2ZPymk8udllKrGQ9J16jui/Sin-t%C3%ADtulo?node-id=5-2).
 
-Las vistas previas y las escenas se generan juntas con
-`node docs/tools/generar-wireframes.mjs`. El inventario de archivos está en
-[`wireframes/manifest.json`](wireframes/manifest.json). Las escenas siguen el
-[formato JSON de Excalidraw](https://plus.excalidraw.com/docs/sdk/codebase/json-schema).
-El generador reproduce esta versión base y sobrescribe sus archivos: antes de
-regenerar, trasladar al generador los cambios manuales acordados o conservar
-la edición de Excalidraw y exportar su vista previa actualizada.
+### Identidad visual adoptada
+
+Los quince bocetos usan la referencia confirmada por el equipo: fondo crema
+`#F4F0E8`, superficies blancas, texto carbón `#171717`, amarillo `#F5C400`,
+ocre `#D8B477`, verde azulado `#A9C7C5` y terracota `#A96F55`. Se emplea
+Inter, navegación lateral oscura, selección amarilla, tarjetas redondeadas,
+sombras suaves, campos con borde ocre y encabezados oscuros de tabla. Login y
+registro conservan una composición sin navegación de sesión.
+
+La identidad visual se adapta a los procesos de consulta actuales de Trackhive:
+no se sustituyen sus estados por el proceso de adquisiciones de la referencia.
+Las fotografías de la ciudad **todavía no se han proporcionado**. Hay espacios
+reservados claramente rotulados en cabeceras, acceso y navegación; no se usan
+fotografías de terceros ni imágenes inventadas como sustituto.
+
+Los PNG se renderizan con Inter local. La fuente y su licencia oficial se
+incluyen en `wireframes/assets/`; los SVG la referencian y declaran Arial como
+alternativa cuando un visor no carga fuentes externas.
+
+Para regenerar: `node docs/tools/generar-wireframes.mjs`, seguido de
+`node docs/tools/verificar-wireframes.mjs --render`. El inventario está en
+[`wireframes/manifest.json`](wireframes/manifest.json). Las modificaciones
+reproducibles se hacen en el generador y en `wireframe-theme.mjs`; conservar
+aparte las ediciones manuales de Figma antes de regenerar las vistas locales.
 
 ## Mapa de pantallas y roles
 
@@ -108,17 +125,17 @@ flowchart TD
 
 ### WF-01 Inicio de sesión
 
-![Wireframe de inicio de sesión](wireframes/wf-01-inicio-sesion.svg)
+![Wireframe de inicio de sesión](wireframes/wf-01-inicio-sesion.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-01-inicio-sesion.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-01-inicio-sesion.svg).
 Correo, contraseña con mostrar/ocultar, error de credenciales, acceso a registro
 y destino según rol. El error conserva el correo y devuelve el foco al mensaje.
 
 ### WF-02 Registro público
 
-![Wireframe de registro público](wireframes/wf-02-registro.svg)
+![Wireframe de registro público](wireframes/wf-02-registro.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-02-registro.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-02-registro.svg).
 Cuatro campos de nombre, correo, contraseña y confirmación. Municipio/distrito y
 rango de edad obligatorios; grupo poblacional opcional, con las once opciones
 en mayúsculas y sin numeración, incluida «PREFIERO NO RESPONDER». Aviso de
@@ -128,9 +145,9 @@ La finalidad pendiente de confirmar con CLENA se mantiene en
 
 ### WF-03 Mi perfil
 
-![Wireframe de mi perfil](wireframes/wf-03-mi-perfil.svg)
+![Wireframe de mi perfil](wireframes/wf-03-mi-perfil.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-03-mi-perfil.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-03-mi-perfil.svg).
 Identidad de la cuenta en lectura y caracterización precargada editable.
 Municipio, rango y grupo se guardan con confirmación; si falla, no se borra lo
 escrito. Los valores históricos vacíos pueden completarse aquí. No se propone
@@ -138,9 +155,9 @@ cambiar rol, contraseña o correo desde esta pantalla.
 
 ### WF-04 Búsqueda de material pública
 
-![Wireframe de búsqueda pública de material](wireframes/wf-04-busqueda-material.svg)
+![Wireframe de búsqueda pública de material](wireframes/wf-04-busqueda-material.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-04-busqueda-material.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-04-busqueda-material.svg).
 Buscador, filtros por tipo/colección/estado, orden, paginación y selección de
 materiales para WF-07. HU-140 agrega el indicador: con copia, el público solo
 ve **«DISPONIBLE EN DIGITAL»**, sin nombre de archivo. Sin copia, se indica
@@ -148,9 +165,9 @@ ve **«DISPONIBLE EN DIGITAL»**, sin nombre de archivo. Sin copia, se indica
 
 ### WF-05 Formulario de material
 
-![Wireframe del formulario de material](wireframes/wf-05-formulario-material.svg)
+![Wireframe del formulario de material](wireframes/wf-05-formulario-material.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-05-formulario-material.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-05-formulario-material.svg).
 Propuesta de alta: código, título, tipo, autor opcional, colección, depósito,
 estantería, caja y estado inicial. Para periódicos, publicación y editorial
 opcionales. Guardar vuelve a WF-15; cancelar no guarda. Mostrar código duplicado
@@ -158,18 +175,18 @@ y campos inválidos. La definición final de campos y edición depende de HU-06/
 
 ### WF-06 Mis solicitudes
 
-![Wireframe de mis solicitudes](wireframes/wf-06-mis-solicitudes.svg)
+![Wireframe de mis solicitudes](wireframes/wf-06-mis-solicitudes.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-06-mis-solicitudes.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-06-mis-solicitudes.svg).
 Radicado, material, fecha deseada, estado, modalidad, filtros y páginas. El motivo
 de rechazo es visible al solicitante; no se muestran notas internas. La lista
 vacía ofrece buscar material. No enlaza al detalle reservado al personal.
 
 ### WF-07 Radicar solicitud
 
-![Wireframe de radicar solicitud](wireframes/wf-07-radicar-solicitud.svg)
+![Wireframe de radicar solicitud](wireframes/wf-07-radicar-solicitud.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-07-radicar-solicitud.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-07-radicar-solicitud.svg).
 Resumen de materiales, motivo, fecha deseada y modalidad presencial/digital.
 La fecha exige diez días hábiles de anticipación y atención de lunes a sábado.
 El comprobante muestra el radicado y acceso a WF-06. No se repiten los datos del
@@ -177,9 +194,9 @@ perfil; un error conserva el formulario.
 
 ### WF-08 Registro de solicitud por personal
 
-![Wireframe de registro de solicitud por personal](wireframes/wf-08-solicitud-personal.svg)
+![Wireframe de registro de solicitud por personal](wireframes/wf-08-solicitud-personal.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-08-solicitud-personal.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-08-solicitud-personal.svg).
 Dos pasos en la misma pantalla: buscar al solicitante por correo y completar la
 solicitud. Encontrado: reutilizar sus datos. Nuevo: recoger nombres y
 caracterización una sola vez; los datos adicionales siguen siendo opcionales.
@@ -188,9 +205,9 @@ y permitir registrar otra solicitud sin perder la selección de material.
 
 ### WF-09 Listado de solicitudes del personal
 
-![Wireframe del listado de solicitudes del personal](wireframes/wf-09-listado-personal.svg)
+![Wireframe del listado de solicitudes del personal](wireframes/wf-09-listado-personal.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-09-listado-personal.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-09-listado-personal.svg).
 Filtros por estado, material, solicitante y fechas; orden, páginas y radicado
 enlazado a WF-10. El acceso de visitante lleva a WF-08. HU-141: consulta cada
 30 segundos y al volver a la pestaña; no consulta oculta, conserva filtros,
@@ -199,9 +216,9 @@ inicial, error, sin resultados y recuperación de la conexión.
 
 ### WF-10 Detalle y cambio de estado
 
-![Wireframe de detalle y cambio de estado de solicitud](wireframes/wf-10-detalle-solicitud.svg)
+![Wireframe de detalle y cambio de estado de solicitud](wireframes/wf-10-detalle-solicitud.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-10-detalle-solicitud.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-10-detalle-solicitud.svg).
 Solicitante, material, fechas, modalidad y acciones permitidas. Se muestran
 **dos variantes separadas**: EN_BUSQUEDA con rechazo motivado y DISPONIBLE
 presencial con agendamiento. No son acciones simultáneas de una solicitud.
@@ -217,9 +234,9 @@ archivos. La confirmación del cambio conserva responsable/fecha y comunica un
 
 ### WF-11 Calendario
 
-![Wireframe del calendario de citas](wireframes/wf-11-calendario.svg)
+![Wireframe del calendario de citas](wireframes/wf-11-calendario.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-11-calendario.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-11-calendario.svg).
 Navegación mensual, filtro por material y listado del día con enlace a WF-10.
 Las citas son por día completo; domingos cerrados. El horario depende del día,
 sin selector de franja horaria. Reprogramar/cancelar corresponde a HU-21 y no
@@ -227,9 +244,9 @@ se presenta como acción ya implementada.
 
 ### WF-12 Gestión de usuarios del personal
 
-![Wireframe de gestión de usuarios del personal](wireframes/wf-12-gestion-usuarios.svg)
+![Wireframe de gestión de usuarios del personal](wireframes/wf-12-gestion-usuarios.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-12-gestion-usuarios.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-12-gestion-usuarios.svg).
 Propuesta para ADMIN: buscar, crear, editar, activar y desactivar personal.
 Mostrar nombre, correo, rol y estado; confirmar la desactivación sin borrar el
 historial de solicitudes. La credencial inicial y los campos definitivos deben
@@ -237,9 +254,9 @@ acordarse en HU-05; el boceto no autoriza promocionar roles arbitrariamente.
 
 ### WF-13 Capacidad de la sala
 
-![Wireframe de capacidad de la sala](wireframes/wf-13-capacidad-sala.svg)
+![Wireframe de capacidad de la sala](wireframes/wf-13-capacidad-sala.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-13-capacidad-sala.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-13-capacidad-sala.svg).
 Propuesta para ADMIN: límite diario positivo, guardar y enlace a calendario.
 El valor 20 es ilustrativo. Falta acordar capacidad real, si hay excepciones por
 fecha y la regla ante reservas existentes. No cancelar citas silenciosamente
@@ -247,9 +264,9 @@ al cambiar la capacidad. Estas decisiones se validan con G6 y en HU-20.1.
 
 ### WF-14 Sincronización con Everything
 
-![Wireframe de sincronización con Everything](wireframes/wf-14-sincronizacion-everything.svg)
+![Wireframe de sincronización con Everything](wireframes/wf-14-sincronizacion-everything.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-14-sincronizacion-everything.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-14-sincronizacion-everything.svg).
 Según los criterios de HU-138 suministrados para esta tarea:
 
 - Solo ADMIN; PERSONAL y PUBLICO reciben 403 al llamar al endpoint.
@@ -266,9 +283,9 @@ issue de wireframes no implementa la integración ni cambia D-17 de arquitectura
 
 ### WF-15 Material para el personal
 
-![Wireframe de material para el personal](wireframes/wf-15-material-personal.svg)
+![Wireframe de material para el personal](wireframes/wf-15-material-personal.png)
 
-[Abrir o descargar editable Excalidraw](wireframes/wf-15-material-personal.excalidraw).
+[Abrir SVG para importar en Figma](wireframes/wf-15-material-personal.svg).
 Variante de WF-04: controles de disponibilidad y selección hacia WF-08; alta
 de material propuesta hacia WF-05. HU-140 muestra **«COPIA DIGITAL: SÍ / NO»**,
 solo el nombre del archivo cuando existe y avisos de código duplicado o inválido.
@@ -317,7 +334,7 @@ Preguntas propuestas para la sesión:
 6. ¿Qué capacidad real tiene la sala y cómo se tratarán reservas existentes?
 
 Al recibir comentarios: registrar fecha, autor y texto o enlace al comentario
-del issue; ajustar los `.excalidraw` y su vista; indicar versión y decisión.
+del issue; ajustar los SVG o la versión en Figma y sus vistas PNG; indicar versión y decisión.
 Solo registrar «validado por G6» cuando exista evidencia explícita.
 
 ## Comprobación de los archivos
@@ -327,8 +344,7 @@ node docs/tools/generar-wireframes.mjs
 node docs/tools/verificar-wireframes.mjs
 ```
 
-La comprobación valida inventario, enlaces, estructura de las escenas y límites
-del lienzo. Con las dependencias habituales del frontend y Chromium instalados,
+La comprobación valida el inventario, los enlaces y las vistas SVG y PNG. Con las dependencias habituales del frontend y Chromium instalados,
 también renderiza los SVG, revisa sus textos y deja una hoja de contacto local:
 
 ```bash

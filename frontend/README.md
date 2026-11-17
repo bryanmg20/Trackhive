@@ -218,7 +218,7 @@ deja el estado como estaba.
   `PrivacyConsent.tsx`. **Pendiente:** el backend aún no recibe ni guarda la
   aceptación, la fecha y la versión.
 - **HU-46:** el [mapa de pantallas y wireframes](../docs/pantallas.md) incluye
-  vistas SVG y archivos Excalidraw editables. Son borradores de referencia;
+  vistas PNG y archivos SVG importables en Figma. Son borradores de referencia;
   la revisión y validación con G6 están pendientes y no bloquean otras HU.
 - **HU-48 no disponible:** `/login` es un marcador temporal; al registrarse se
   redirige allí con un aviso y el correo registrado.
