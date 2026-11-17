@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/policies/privacy-policy';
 import { CreateUserDto } from './create-user.dto';
 
 const validDto = (overrides: Partial<CreateUserDto> = {}): CreateUserDto =>
@@ -48,12 +49,14 @@ describe('CreateUserDto', () => {
 describe('CreateUserDto transforms', () => {
   const fromBody = (overrides: Record<string, unknown> = {}) =>
     plainToInstance(CreateUserDto, {
+      municipality: 'Barranquilla',
+      ageRange: '18-28',
       firstName: 'Ana',
       lastName: 'Pérez',
       email: 'ana@mail.com',
       password: 'secreto123',
       acceptedPrivacy: true,
-      privacyPolicyVersion: '1.0',
+      privacyPolicyVersion: CURRENT_PRIVACY_POLICY_VERSION,
       ...overrides,
     });
 
@@ -61,13 +64,13 @@ describe('CreateUserDto transforms', () => {
     const dto = fromBody({
       firstName: '  Ana ',
       lastName: ' Pérez  ',
-      privacyPolicyVersion: ' 1.0 ',
+      privacyPolicyVersion: ` ${CURRENT_PRIVACY_POLICY_VERSION} `,
     });
 
     await expect(validate(dto)).resolves.toEqual([]);
     expect(dto.firstName).toBe('Ana');
     expect(dto.lastName).toBe('Pérez');
-    expect(dto.privacyPolicyVersion).toBe('1.0');
+    expect(dto.privacyPolicyVersion).toBe(CURRENT_PRIVACY_POLICY_VERSION);
   });
 
   it('rejects a required name sent blank', async () => {
