@@ -3,6 +3,9 @@ import { Requester } from '../../domain/entities/requester.entity';
 
 /** A row of the requesters table. */
 export interface RequesterRow {
+  municipality?: string | null;
+  ageRange?: string | null;
+  populationGroup?: string | null;
   id: string;
   userId: string | null;
   firstName: string;
@@ -24,6 +27,9 @@ export interface RequesterRow {
 export class PrismaRequesterMapper {
   static toDomain(model: RequesterRow): Requester {
     return new Requester({
+      municipality: model.municipality ?? null,
+      ageRange: model.ageRange ?? null,
+      populationGroup: model.populationGroup ?? null,
       id: model.id,
       userId: model.userId,
       firstName: model.firstName,
@@ -46,5 +52,13 @@ export class PrismaRequesterMapper {
     requester: Requester,
   ): Prisma.RequesterModelUncheckedCreateInput {
     return { ...requester.props };
+  }
+
+  static toCharacterizationUpdate(requester: Requester) {
+    return {
+      municipality: requester.props.municipality ?? null,
+      ageRange: requester.props.ageRange ?? null,
+      populationGroup: requester.props.populationGroup ?? null,
+    };
   }
 }

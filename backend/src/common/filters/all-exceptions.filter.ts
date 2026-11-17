@@ -37,6 +37,7 @@ const CODE_BY_STATUS: Record<number, string> = {
  * otherwise it is returned as a 500 and logged.
  */
 const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
+  INVALID_CHARACTERIZATION: HttpStatus.BAD_REQUEST,
   INVALID_EMAIL: HttpStatus.BAD_REQUEST,
   INVALID_NAME: HttpStatus.BAD_REQUEST,
   INVALID_PASSWORD_HASH: HttpStatus.BAD_REQUEST,

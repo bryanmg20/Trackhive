@@ -6,8 +6,8 @@
  * verifican. Esta versión se envía junto con la aceptación y el backend la
  * guarda con la fecha del registro.
  */
-export const PRIVACY_POLICY_VERSION = '1.0';
+export const PRIVACY_POLICY_VERSION = '1.1';
 
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '7 de noviembre de 2026';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '16 de noviembre de 2026';
 
 export const PRIVACY_CONTACT_EMAIL = 'labdigital@clena.org';

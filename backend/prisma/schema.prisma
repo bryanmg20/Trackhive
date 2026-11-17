@@ -92,6 +92,9 @@ model MaterialModel {
 }
 
 model RequesterModel {
+  municipality          String?            @db.VarChar(120)
+  ageRange              String?            @map("age_range") @db.VarChar(5)
+  populationGroup       String?            @map("population_group") @db.VarChar(80)
   id                    String             @id @db.Uuid
   userId                String?            @unique @map("user_id") @db.Uuid
   documentType          String?            @map("document_type") @db.VarChar(5)

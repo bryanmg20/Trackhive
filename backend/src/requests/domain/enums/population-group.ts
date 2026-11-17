@@ -1,0 +1,15 @@
+/** Catalog supplied by the CLENA attendance form (HU-73). */
+export const POPULATION_GROUPS = [
+  'COMUNIDADES_NEGRAS_PALENQUERAS',
+  'PUEBLOS_INDIGENAS',
+  'DISCAPACIDAD',
+  'MIGRANTE',
+  'PUEBLOS_ROM',
+  'VICTIMAS_DEL_CONFLICTO',
+  'COMUNIDADES_RURALES',
+  'MADRES_CABEZA_DE_FAMILIA',
+  'PADRES_CABEZA_DE_FAMILIA',
+  'LGBTIQ_PLUS',
+  'PREFIERO_NO_RESPONDER',
+] as const;
+export type PopulationGroup = (typeof POPULATION_GROUPS)[number];

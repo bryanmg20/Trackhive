@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { characterizationSchema } from '../../profile/characterization';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -21,6 +22,7 @@ const optionalName = (label: string) =>
 
 export const registerSchema = z
   .object({
+    ...characterizationSchema.shape,
     firstName: requiredName('Escriba su primer nombre.', 'El primer nombre'),
     middleName: optionalName('El segundo nombre'),
     lastName: requiredName('Escriba su primer apellido.', 'El primer apellido'),

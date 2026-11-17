@@ -4,6 +4,14 @@
 
 ## 1. Introducción
 
+HU-73 incorpora `Characterization`, un objeto de valor del solicitante con
+municipio o distrito, rango de edad y grupo poblacional opcional. Se recoge al
+registrar la cuenta o al crear un visitante en mostrador, y se reutiliza en sus
+solicitudes. El titular puede consultarlo y editarlo en «Mi perfil». No se
+agregan estos datos a la entidad solicitud ni se solicitan por cada visita.
+Los solicitantes anteriores pueden conservar valores vacíos hasta completar su
+perfil. El catálogo y la justificación están en [datos-personales.md](datos-personales.md).
+
 Trackhive es el sistema con el que el CLENA recibe las solicitudes de consulta de su archivo, sigue su estado, controla la disponibilidad del material y agenda las citas de consulta.
 
 Este documento fija el lenguaje común del equipo y del CLENA: qué entidades existen, qué reglas cumplen, qué palabras usamos y qué acciones del negocio hace el sistema. Es la base de la capa de dominio del backend (`backend/src/*/domain/`).

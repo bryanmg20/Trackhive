@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import { NAME_MAX_LENGTH } from '../../domain/value-objects/person-name';
 import { CURRENT_PRIVACY_POLICY_VERSION } from '../../domain/policies/privacy-policy';
+import { CharacterizationDto } from '../../../requests/application/dto/characterization.dto';
 
 const trimText = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -30,7 +31,7 @@ const trimOptionalText = ({ value }: { value: unknown }): unknown => {
 const normalizeEmail = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
 
-export class CreateUserDto {
+export class CreateUserDto extends CharacterizationDto {
   @ApiProperty({
     description: 'Primer nombre',
     example: 'Ana',

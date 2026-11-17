@@ -22,7 +22,7 @@ pnpm test     # Vitest + Testing Library
 pnpm build    # tsc -b && vite build
 pnpm exec playwright install chromium  # una sola vez, para las pruebas e2e
 pnpm test:e2e # Playwright: cada ruta de ROUTES a 360 px
-pnpm test:e2e:docker # Con Docker activo: polling real a través de localhost:8080
+pnpm test:e2e:docker # Con Docker activo: pruebas de integración a través de localhost:8080
 ```
 
 ## Rutas
@@ -31,6 +31,7 @@ pnpm test:e2e:docker # Con Docker activo: polling real a través de localhost:80
 | -------------------------------- | ---------------------------------------------------------- | ---------------- |
 | `/registro`                      | Registro de investigadores                                 | Público          |
 | `/login`                         | Inicio de sesión                                           | Público          |
+| `/mi-perfil`                     | Consultar y editar caracterización (HU-73)                  | Cualquier rol autenticado |
 | `/materiales`                    | Buscador de material (HU-7.1); el personal va a `/personal/materiales` | `PUBLICO`        |
 | `/solicitudes/nueva`             | Solicitud del usuario público (HU-10)                      | `PUBLICO`        |
 | `/mis-solicitudes`               | Mis solicitudes: estado de cada una (HU-11)                | `PUBLICO`        |
@@ -47,6 +48,36 @@ a `/registro`.
 
 ## API
 
+### Caracterización y perfil (HU-73)
+
+El registro público solicita municipio o distrito y rango de edad una sola vez.
+Grupo poblacional es opcional y usa las once opciones del formato del CLENA,
+en mayúsculas y sin numeración. El personal recoge los mismos datos al registrar
+un visitante nuevo y los reutiliza en sus siguientes solicitudes.
+
+«Mi perfil» (`/mi-perfil`) está disponible para todos los roles autenticados.
+Carga y guarda la caracterización mediante `GET` y `PATCH /api/v1/users/me/profile`.
+Los solicitantes anteriores pueden completar sus campos vacíos desde esa
+pantalla. Las solicitudes públicas no vuelven a pedirlos.
+
+Verificación con API y base de datos reales a través de Nginx:
+
+```bash
+# Desde la raíz, usando el .env existente y la semilla de demostración:
+docker compose up -d --build
+cd frontend
+pnpm exec playwright test --config playwright.docker.config.ts
+```
+
+La prueba crea una cuenta pública ficticia, un visitante y solicitudes locales.
+Usa `personal1@example.com` con contraseña `1`, o `SEED_DEMO_PASSWORD` del proceso.
+Comprueba registro, precarga, edición persistida, reutilización sin repetir los
+campos y 401 sin token. Deja una captura de «Mi perfil» en `test-results/`.
+El catálogo y la finalidad pendiente de confirmar con CLENA están en
+[`docs/datos-personales.md`](../docs/datos-personales.md).
+
+### Actualización automática de solicitudes (HU-12.1, #141)
+
 El listado del personal (`/solicitudes`, #141) se actualiza cada 30 segundos
 mientras la pestaña está visible, y al volver a la pestaña o enfocar la ventana.
 Las consultas conservan los filtros aplicados, el orden y la página actual;
@@ -54,11 +85,12 @@ la tabla permanece visible durante la actualización, sin restablecer el scroll.
 Si falla la conexión, se conservan los últimos resultados y se vuelve a intentar
 en la siguiente actualización. No se usan WebSocket ni SSE.
 
-La prueba `test:e2e:docker` requiere la semilla de demostración (`RUN_SEED=true`),
-al menos dos páginas de solicitudes y Chromium instalado. Usa
-`personal1@example.com`, con contraseña `1` o la variable `SEED_DEMO_PASSWORD`
-del proceso que ejecuta la prueba. Crea una solicitud ficticia en la base local
-y comprueba una actualización real de 30 segundos, sin simular la API.
+La prueba de polling de `test:e2e:docker` requiere la semilla de demostración
+(`RUN_SEED=true`), al menos dos páginas de solicitudes y Chromium instalado.
+Usa `personal1@example.com`, con contraseña `1` o la variable
+`SEED_DEMO_PASSWORD` del proceso que ejecuta la prueba. Crea una solicitud
+ficticia en la base local y comprueba una actualización real de 30 segundos,
+sin simular la API.
 
 En desarrollo, Vite reenvía las peticiones `/api` a `http://localhost:3000`
 (ver `vite.config.ts`). En el despliegue con Docker, nginx reenvía `/api/`,
@@ -76,17 +108,22 @@ El registro consume `POST /api/v1/users` con este cuerpo:
   "lastName": "Pérez",
   "secondLastName": "Gómez",
   "email": "ana@mail.com",
-  "password": "secret123"
+  "password": "secret123",
+  "municipality": "Barranquilla",
+  "ageRange": "18-28",
+  "populationGroup": "PREFIERO_NO_RESPONDER",
+  "acceptedPrivacy": true,
+  "privacyPolicyVersion": "1.1"
 }
 ```
 
 `middleName` y `secondLastName` son opcionales: si quedan vacíos en el
 formulario, no se envían. Cada nombre admite hasta 40 caracteres.
 
-La confirmación de contraseña es solo del cliente y no se envía. La casilla del
-aviso de privacidad también se valida en el cliente y tampoco se envía: el
-backend todavía no persiste el consentimiento. El aviso vigente es la versión
-`1.0`, con fecha de vigencia 7 de noviembre de 2026 (ver
+La confirmación de contraseña es solo del cliente y no se envía. La aceptación
+del aviso y su versión se validan en cliente y servidor; el backend guarda la
+fecha de aceptación. El aviso vigente es la versión
+`1.1`, con fecha de vigencia 16 de noviembre de 2026 (ver
 `src/features/auth/register/privacy-policy.ts`). Se espera `201` en éxito; los
 errores usan el formato uniforme del backend
 (`{ statusCode, code, message, details?, timestamp, path }`). Los `details`

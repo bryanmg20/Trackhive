@@ -3,29 +3,26 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../routes';
-import {
-  RegisterApiError,
-  registerUser,
-} from '../api/register-user';
+import { RegisterApiError, registerUser } from '../api/register-user';
 import { AuthLayout } from '../components/AuthLayout';
 import { TextField } from '../components/TextField';
 import { PrivacyConsent } from './PrivacyConsent';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy';
-import {
-  registerSchema,
-  type RegisterFormValues,
-} from './register-schema';
+import { registerSchema, type RegisterFormValues } from './register-schema';
 import styles from './RegisterPage.module.css';
+import { CharacterizationFields } from '../../profile/CharacterizationFields';
 
 const REDIRECT_DELAY_MS = 4000;
 const DUPLICATE_EMAIL_MESSAGE =
   'Ya existe una cuenta con este correo. Inicie sesión.';
 const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
-const GENERIC_ERROR_MESSAGE =
-  'No pudimos crear su cuenta. Inténtelo de nuevo.';
+const GENERIC_ERROR_MESSAGE = 'No pudimos crear su cuenta. Inténtelo de nuevo.';
 
 const REGISTER_FIELDS = [
+  'municipality',
+  'ageRange',
+  'populationGroup',
   'firstName',
   'middleName',
   'lastName',
@@ -63,6 +60,9 @@ export function RegisterPage({
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      municipality: '',
+      ageRange: '',
+      populationGroup: '',
       firstName: '',
       middleName: '',
       lastName: '',
@@ -107,6 +107,9 @@ export function RegisterPage({
 
     try {
       await registerUser({
+        municipality: values.municipality,
+        ageRange: values.ageRange,
+        populationGroup: values.populationGroup || undefined,
         firstName: values.firstName,
         // Blank optional names are left out of the request, not sent as ''
         middleName: values.middleName || undefined,
@@ -299,6 +302,17 @@ export function RegisterPage({
           autoComplete="new-password"
           error={errors.confirmPassword?.message}
           registration={register('confirmPassword')}
+        />
+
+        <CharacterizationFields
+          municipalityInput={register('municipality')}
+          ageRangeInput={register('ageRange')}
+          populationGroupInput={register('populationGroup')}
+          errors={{
+            municipality: errors.municipality?.message,
+            ageRange: errors.ageRange?.message,
+            populationGroup: errors.populationGroup?.message,
+          }}
         />
 
         <PrivacyConsent

@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto';
 import { Request } from '../../domain/entities/request.entity';
 import { RequestMaterialNotFoundError } from '../../domain/errors/request-material-not-found.error';
 import { RequesterEmailRequiredError } from '../../domain/errors/requester-email-required.error';
-import { RequesterNameRequiredError } from '../../domain/errors/requester-name-required.error';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import type { CreateRequestOnBehalfInput } from '../dto/create-request-on-behalf.input';
 import { CreateRequestResponseDto } from '../dto/create-request-response.dto';
@@ -40,12 +39,6 @@ export class CreateRequestOnBehalfUseCase {
     Request.assertCanBeCreated(input);
     if (!input.requester.email?.trim()) {
       throw new RequesterEmailRequiredError();
-    }
-    if (
-      !input.requester.userId &&
-      (!input.requester.firstName?.trim() || !input.requester.lastName?.trim())
-    ) {
-      throw new RequesterNameRequiredError();
     }
 
     const missing = await this.queries.findMissingMaterialIds(

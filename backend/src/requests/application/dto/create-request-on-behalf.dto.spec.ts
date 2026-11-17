@@ -24,7 +24,7 @@ describe('CreateRequestOnBehalfDto', () => {
     expect(errors.some((error) => error.property === 'requester')).toBe(true);
   });
 
-  it('requires names when there is no associated user', async () => {
+  it('allows email-only reuse; the domain requires names for genuinely new visitors', async () => {
     const dto = plainToInstance(CreateRequestOnBehalfDto, {
       ...base(),
       requester: {
@@ -34,12 +34,7 @@ describe('CreateRequestOnBehalfDto', () => {
 
     const errors = await validate(dto);
 
-    const requesterErrors = errors.find(
-      (error) => error.property === 'requester',
-    );
-    expect(requesterErrors?.children?.map((child) => child.property)).toEqual(
-      expect.arrayContaining(['firstName', 'lastName']),
-    );
+    expect(errors).toHaveLength(0);
   });
 
   it('accepts an associated user without repeating the names', async () => {

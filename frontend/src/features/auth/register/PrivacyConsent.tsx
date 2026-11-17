@@ -75,6 +75,20 @@ export function PrivacyConsent({ registration, error }: PrivacyConsentProps) {
                   </thead>
                   <tbody>
                     <tr>
+                      <th scope="row">Municipio o distrito y rango de edad</th>
+                      <td>
+                        Caracterizar a las personas atendidas por el CLENA, sin
+                        pedir dirección ni fecha de nacimiento.
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Grupo poblacional (opcional)</th>
+                      <td>
+                        Caracterización de las personas atendidas. Puede
+                        omitirlo o elegir «Prefiero no responder».
+                      </td>
+                    </tr>
+                    <tr>
                       <th scope="row">Primer nombre</th>
                       <td>
                         Identificarle y dirigirnos a usted en la atención.

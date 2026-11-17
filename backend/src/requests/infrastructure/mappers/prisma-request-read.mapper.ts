@@ -245,10 +245,16 @@ export class PrismaRequestReadMapper {
       | 'institution'
       | 'documentType'
       | 'documentNumber'
+      | 'municipality'
+      | 'ageRange'
+      | 'populationGroup'
     >,
   ): RequesterProfile {
     return {
       requesterId: requester.id,
+      municipality: requester.municipality ?? null,
+      ageRange: requester.ageRange ?? null,
+      populationGroup: requester.populationGroup ?? null,
       userId: requester.userId,
       firstName: requester.firstName,
       middleName: requester.middleName,

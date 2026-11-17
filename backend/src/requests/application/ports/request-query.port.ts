@@ -3,6 +3,9 @@ import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { RequestStatus } from '../../domain/enums/request-status';
 
 export interface RequesterProfile {
+  municipality?: string | null;
+  ageRange?: string | null;
+  populationGroup?: string | null;
   requesterId: string | null;
   userId: string | null;
   firstName: string;

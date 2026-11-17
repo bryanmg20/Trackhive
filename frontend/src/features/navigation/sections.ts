@@ -15,6 +15,11 @@ const STAFF_ROLES: readonly UserRole[] = ['PERSONAL', 'ADMIN'];
  */
 export const SECTIONS: readonly Section[] = [
   {
+    to: ROUTES.profile,
+    label: 'Mi perfil',
+    roles: ['PUBLICO', 'PERSONAL', 'ADMIN'],
+  },
+  {
     to: ROUTES.materials,
     label: 'Buscar material',
     roles: ['PUBLICO'],

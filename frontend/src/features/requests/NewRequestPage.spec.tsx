@@ -12,7 +12,9 @@ const MATERIAL = {
   title: 'Acta de fundación de la villa',
 };
 
-function renderPage(entry: string | { pathname: string; search: string; state?: unknown }) {
+function renderPage(
+  entry: string | { pathname: string; search: string; state?: unknown },
+) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
@@ -32,8 +34,19 @@ describe('NewRequestPage', () => {
   it('has no material search of its own', () => {
     renderPage(`/solicitudes/nueva?materiales=${MATERIAL.id}`);
 
-    expect(screen.queryByLabelText('Buscar en el archivo')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Buscar' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Buscar en el archivo'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Buscar' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Municipio o distrito'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Rango de edad')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Grupo poblacional (opcional)'),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the materials chosen in the search screen', () => {

@@ -4,6 +4,7 @@ import { EmailAlreadyExistsError } from '../../domain/errors/email-already-exist
 import { PrivacyConsentRequiredError } from '../../domain/errors/privacy-consent-required.error';
 import { IUserRepository } from '../../domain/repositories/user.repository';
 import type { IPasswordHasher } from '../ports/password-hasher.port';
+import type { Requester } from '../../../requests/domain/entities/requester.entity';
 
 class InMemoryUserRepository implements IUserRepository {
   private readonly users = new Map<string, User>();
@@ -30,8 +31,10 @@ class InMemoryUserRepository implements IUserRepository {
 }
 
 const consent = {
+  municipality: 'Barranquilla',
+  ageRange: '18-28',
   acceptedPrivacy: true,
-  privacyPolicyVersion: '1.0',
+  privacyPolicyVersion: '1.1',
 };
 
 describe('CreateUserUseCase', () => {
@@ -39,12 +42,18 @@ describe('CreateUserUseCase', () => {
   let hasher: IPasswordHasher;
   let useCase: CreateUserUseCase;
   let hash: jest.Mock<Promise<string>, [string]>;
+  let registeredRequester: Requester;
 
   beforeEach(() => {
     repository = new InMemoryUserRepository();
     hash = jest.fn((password: string) => Promise.resolve(`hashed:${password}`));
     hasher = { hash, verify: jest.fn() };
-    useCase = new CreateUserUseCase(repository, hasher);
+    useCase = new CreateUserUseCase(repository, hasher, {
+      save: async (user, requester) => {
+        await repository.save(user);
+        registeredRequester = requester;
+      },
+    });
   });
 
   it('hashes the password and creates a public account', async () => {
@@ -74,8 +83,14 @@ describe('CreateUserUseCase', () => {
     expect(saved?.passwordHash).toBe('hashed:secreto123');
     expect(saved?.passwordHash).not.toBe('secreto123');
     expect(saved?.role).toBe('PUBLICO');
+    expect(registeredRequester.props).toMatchObject({
+      userId: saved?.id,
+      municipality: 'Barranquilla',
+      ageRange: '18-28',
+      populationGroup: null,
+    });
     expect(saved?.privacyPolicyAcceptedAt).toBeInstanceOf(Date);
-    expect(saved?.privacyPolicyVersion).toBe('1.0');
+    expect(saved?.privacyPolicyVersion).toBe('1.1');
   });
 
   it('creates an account with only the required name fields', async () => {

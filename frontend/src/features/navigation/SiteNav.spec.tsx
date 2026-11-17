@@ -28,10 +28,7 @@ describe('SiteNav', () => {
   });
 
   it('shows only the public sections to a PUBLICO account', () => {
-    sessionStorage.setItem(
-      'trackhive.accessToken',
-      tokenWithRole('PUBLICO'),
-    );
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PUBLICO'));
 
     renderNav();
 
@@ -64,55 +61,48 @@ describe('SiteNav', () => {
   it.each(['PUBLICO', 'PERSONAL', 'ADMIN'])(
     'never offers the new request option to %s',
     (role) => {
-      sessionStorage.setItem(
-        'trackhive.accessToken',
-        tokenWithRole(role),
-      );
+      sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
 
       renderNav();
 
+      expect(screen.getByRole('link', { name: 'Mi perfil' })).toHaveAttribute(
+        'href',
+        '/mi-perfil',
+      );
       expect(
         screen.queryByRole('link', { name: 'Nueva solicitud' }),
       ).not.toBeInTheDocument();
     },
   );
 
-  it.each(['PERSONAL', 'ADMIN'])(
-    'shows the staff sections to %s',
-    (role) => {
-      sessionStorage.setItem(
-        'trackhive.accessToken',
-        tokenWithRole(role),
-      );
+  it.each(['PERSONAL', 'ADMIN'])('shows the staff sections to %s', (role) => {
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
 
-      renderNav();
+    renderNav();
 
-      expect(
-        screen.getByRole('link', { name: 'Solicitudes' }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('link', { name: 'Calendario' }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('link', { name: 'Material' }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('link', { name: 'Registrar solicitud' }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole('link', { name: 'Buscar material' }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole('link', { name: 'Nueva solicitud' }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole('link', { name: 'Mis solicitudes' }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Cerrar sesión' }),
-      ).toBeInTheDocument();
-    },
-  );
+    expect(
+      screen.getByRole('link', { name: 'Solicitudes' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Calendario' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Material' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Registrar solicitud' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Buscar material' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Nueva solicitud' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Mis solicitudes' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Cerrar sesión' }),
+    ).toBeInTheDocument();
+  });
 
   it('keeps the role when the access token is expired so it can be renewed', () => {
     sessionStorage.setItem(
@@ -137,14 +127,9 @@ describe('SiteNav', () => {
   });
 
   it('closes the session and returns to the login screen', async () => {
-    sessionStorage.setItem(
-      'trackhive.accessToken',
-      tokenWithRole('PUBLICO'),
-    );
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PUBLICO'));
     sessionStorage.setItem('trackhive.refreshToken', 'refresh');
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ status: 204 } as Response);
+    const fetchMock = vi.fn().mockResolvedValue({ status: 204 } as Response);
     vi.stubGlobal('fetch', fetchMock);
 
     render(
@@ -165,8 +150,6 @@ describe('SiteNav', () => {
       '/api/v1/auth/logout',
       expect.objectContaining({ method: 'POST' }),
     );
-    expect(
-      sessionStorage.getItem('trackhive.refreshToken'),
-    ).toBeNull();
+    expect(sessionStorage.getItem('trackhive.refreshToken')).toBeNull();
   });
 });

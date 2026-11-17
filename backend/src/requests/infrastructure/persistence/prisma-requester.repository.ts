@@ -25,8 +25,10 @@ export class PrismaRequesterRepository implements IRequesterRepository {
   }
 
   async save(requester: Requester): Promise<void> {
-    await this.prisma.requesterModel.create({
-      data: PrismaRequesterMapper.toPersistence(requester),
+    await this.prisma.requesterModel.upsert({
+      where: { id: requester.id },
+      create: PrismaRequesterMapper.toPersistence(requester),
+      update: PrismaRequesterMapper.toCharacterizationUpdate(requester),
     });
   }
 }

@@ -1,6 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RequesterResponseDto {
+  @ApiPropertyOptional({ nullable: true, type: String })
+  municipality: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  ageRange: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  populationGroup: string | null;
+
   @ApiPropertyOptional({
     description: 'Identificador del solicitante; null si solo existe la cuenta',
     example: '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f',
