@@ -23,12 +23,22 @@ import { PrismaTrackingCodeGenerator } from './infrastructure/persistence/prisma
 import { AppointmentController } from './presentation/controllers/appointment.controller';
 import { RequestController } from './presentation/controllers/request.controller';
 import { RequesterController } from './presentation/controllers/requester.controller';
+import { ProfileController } from './presentation/controllers/profile.controller';
+import { GetMyProfileUseCase } from './application/use-cases/get-my-profile.use-case';
+import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profile.use-case';
 
 @Module({
   // USER_REPOSITORY: the requester of a user account (HU-09, HU-10)
   imports: [UsersModule],
-  controllers: [RequestController, RequesterController, AppointmentController],
+  controllers: [
+    RequestController,
+    RequesterController,
+    AppointmentController,
+    ProfileController,
+  ],
   providers: [
+    GetMyProfileUseCase,
+    UpdateMyProfileUseCase,
     { provide: REQUEST_REPOSITORY, useClass: PrismaRequestRepository },
     { provide: REQUEST_QUERY_SERVICE, useClass: PrismaRequestQueryService },
     { provide: REQUESTER_REPOSITORY, useClass: PrismaRequesterRepository },

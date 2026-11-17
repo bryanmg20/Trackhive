@@ -30,6 +30,7 @@ pnpm test:e2e # Playwright: cada ruta de ROUTES a 360 px
 | -------------------------------- | ---------------------------------------------------------- | ---------------- |
 | `/registro`                      | Registro de investigadores                                 | Público          |
 | `/login`                         | Inicio de sesión                                           | Público          |
+| `/mi-perfil`                     | Consultar y editar caracterización (HU-73)                  | Cualquier rol autenticado |
 | `/materiales`                    | Buscador de material (HU-7.1); el personal va a `/personal/materiales` | `PUBLICO`        |
 | `/solicitudes/nueva`             | Solicitud del usuario público (HU-10)                      | `PUBLICO`        |
 | `/mis-solicitudes`               | Mis solicitudes: estado de cada una (HU-11)                | `PUBLICO`        |
@@ -45,6 +46,34 @@ ni `ADMIN`, redirigen a `/materiales` o a `/login`. Cualquier otra ruta redirige
 a `/registro`.
 
 ## API
+
+### Caracterización y perfil (HU-73)
+
+El registro público solicita municipio o distrito y rango de edad una sola vez.
+Grupo poblacional es opcional y usa las once opciones del formato del CLENA,
+en mayúsculas y sin numeración. El personal recoge los mismos datos al registrar
+un visitante nuevo y los reutiliza en sus siguientes solicitudes.
+
+«Mi perfil» (`/mi-perfil`) está disponible para todos los roles autenticados.
+Carga y guarda la caracterización mediante `GET` y `PATCH /api/v1/users/me/profile`.
+Los solicitantes anteriores pueden completar sus campos vacíos desde esa
+pantalla. Las solicitudes públicas no vuelven a pedirlos.
+
+Verificación con API y base de datos reales a través de Nginx:
+
+```bash
+# Desde la raíz, usando el .env existente y la semilla de demostración:
+docker compose up -d --build
+cd frontend
+pnpm exec playwright test --config playwright.docker.config.ts
+```
+
+La prueba crea una cuenta pública ficticia, un visitante y solicitudes locales.
+Usa `personal1@example.com` con contraseña `1`, o `SEED_DEMO_PASSWORD` del proceso.
+Comprueba registro, precarga, edición persistida, reutilización sin repetir los
+campos y 401 sin token. Deja una captura de «Mi perfil» en `test-results/`.
+El catálogo y la finalidad pendiente de confirmar con CLENA están en
+[`docs/datos-personales.md`](../docs/datos-personales.md).
 
 En desarrollo, Vite reenvía las peticiones `/api` a `http://localhost:3000`
 (ver `vite.config.ts`). En el despliegue con Docker, nginx reenvía `/api/`,
@@ -62,17 +91,22 @@ El registro consume `POST /api/v1/users` con este cuerpo:
   "lastName": "Pérez",
   "secondLastName": "Gómez",
   "email": "ana@mail.com",
-  "password": "secret123"
+  "password": "secret123",
+  "municipality": "Barranquilla",
+  "ageRange": "18-28",
+  "populationGroup": "PREFIERO_NO_RESPONDER",
+  "acceptedPrivacy": true,
+  "privacyPolicyVersion": "1.1"
 }
 ```
 
 `middleName` y `secondLastName` son opcionales: si quedan vacíos en el
 formulario, no se envían. Cada nombre admite hasta 40 caracteres.
 
-La confirmación de contraseña es solo del cliente y no se envía. La casilla del
-aviso de privacidad también se valida en el cliente y tampoco se envía: el
-backend todavía no persiste el consentimiento. El aviso vigente es la versión
-`1.0`, con fecha de vigencia 7 de noviembre de 2026 (ver
+La confirmación de contraseña es solo del cliente y no se envía. La aceptación
+del aviso y su versión se validan en cliente y servidor; el backend guarda la
+fecha de aceptación. El aviso vigente es la versión
+`1.1`, con fecha de vigencia 16 de noviembre de 2026 (ver
 `src/features/auth/register/privacy-policy.ts`). Se espera `201` en éxito; los
 errores usan el formato uniforme del backend
 (`{ statusCode, code, message, details?, timestamp, path }`). Los `details`

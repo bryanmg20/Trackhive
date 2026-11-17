@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { registerSchema } from './register-schema';
 
 const validValues = {
+  municipality: 'Barranquilla',
+  ageRange: '18-28',
   firstName: 'Ana',
   middleName: '',
   lastName: 'Pérez',
@@ -143,9 +145,9 @@ describe('registerSchema', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.path[0] === 'email')).toBe(
-        true,
-      );
+      expect(
+        result.error.issues.some((issue) => issue.path[0] === 'email'),
+      ).toBe(true);
     }
   });
 
@@ -161,7 +163,9 @@ describe('registerSchema', () => {
     if (!result.success) {
       expect(
         result.error.issues.some(
-          (issue) => issue.path[0] === 'password' && issue.message === 'Use al menos 8 caracteres.',
+          (issue) =>
+            issue.path[0] === 'password' &&
+            issue.message === 'Use al menos 8 caracteres.',
         ),
       ).toBe(true);
     }

@@ -18,6 +18,7 @@ interface RouteCase {
  * fails if a new route is added and this list is not updated.
  */
 const ROUTE_CASES: RouteCase[] = [
+  { name: 'mi perfil', path: ROUTES.profile, role: 'PUBLICO' },
   { name: 'registro', path: ROUTES.register, role: null },
   { name: 'login', path: ROUTES.login, role: null },
   { name: 'buscar material', path: ROUTES.materials, role: 'PUBLICO' },
@@ -192,6 +193,18 @@ async function mockApi(page: Page): Promise<void> {
         page: 1,
         limit: 10,
         total: 1,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/users/me/profile') {
+      await json({
+        firstName: 'Ana',
+        lastName: 'Pérez',
+        email: 'ana@example.com',
+        municipality: 'Barranquilla',
+        ageRange: '18-28',
+        populationGroup: null,
       });
       return;
     }

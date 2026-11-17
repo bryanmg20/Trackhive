@@ -109,6 +109,8 @@ describe('RequesterResolver', () => {
       const { resolver, save } = build();
 
       await resolver.forContact({
+        municipality: 'Barranquilla',
+        ageRange: '18-28',
         email: 'Visitante@Ejemplo.com',
         firstName: 'Visitante',
         lastName: 'Prueba',
@@ -128,6 +130,8 @@ describe('RequesterResolver', () => {
     it('reuses an existing requester found by email', async () => {
       const existing = Requester.fromContact(
         {
+          municipality: 'Barranquilla',
+          ageRange: '18-28',
           email: 'visitante@ejemplo.com',
           firstName: 'Visitante',
           lastName: 'Prueba',
@@ -138,8 +142,6 @@ describe('RequesterResolver', () => {
 
       const result = await resolver.forContact({
         email: 'visitante@ejemplo.com',
-        firstName: 'Otro',
-        lastName: 'Nombre',
       });
 
       expect(result.id).toBe('requester-existing');

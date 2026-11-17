@@ -1,4 +1,5 @@
 export const ROUTES = {
+  profile: '/mi-perfil',
   register: '/registro',
   login: '/login',
   newRequest: '/solicitudes/nueva',

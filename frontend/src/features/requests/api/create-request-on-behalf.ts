@@ -9,6 +9,9 @@ import {
 export type DeliveryMode = 'PRESENCIAL' | 'DIGITAL';
 
 export interface RequesterPayload {
+  municipality?: string;
+  ageRange?: string;
+  populationGroup?: string;
   email: string;
   userId?: string;
   firstName?: string;

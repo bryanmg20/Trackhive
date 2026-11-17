@@ -20,6 +20,8 @@ const validDate = () =>
 
 const VISITOR = Requester.fromContact(
   {
+    municipality: 'Barranquilla',
+    ageRange: '18-28',
     email: 'visitante@ejemplo.com',
     firstName: 'Visitante',
     lastName: 'Prueba',
@@ -145,6 +147,7 @@ describe('CreateRequestOnBehalfUseCase', () => {
   });
 
   it('rejects a new requester without names', async () => {
+    forContact.mockRejectedValueOnce(new RequesterNameRequiredError());
     const data = input();
     data.requester = { email: 'visitante@ejemplo.com' };
 

@@ -129,6 +129,8 @@ describe('Request registration (e2e)', () => {
   const onBehalfBody = () => ({
     ...validBody(),
     requester: {
+      municipality: 'Barranquilla',
+      ageRange: '18-28',
       email: 'visitante@ejemplo.com',
       firstName: 'Visitante',
       lastName: 'Prueba',
