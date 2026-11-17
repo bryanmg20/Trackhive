@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/** Integration against the real API through Nginx, after docker compose up. */
+/** Real API through Nginx. Run after `docker compose up -d --build`. */
 export default defineConfig({
   testDir: './e2e-docker',
   workers: 1,
@@ -8,6 +8,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:8080',
     ...devices['Desktop Chrome'],
+    viewport: { width: 1280, height: 720 },
     trace: 'retain-on-failure',
   },
 });
