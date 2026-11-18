@@ -3,6 +3,8 @@ node_modules/
 
 
 AGENTS.md
+CLAUDE.md
+.archify/
 #vscode
 .vscode/
 
@@ -28,10 +30,9 @@ Thumbs.db
 # Editores
 .vscode/
 .idea/
+.archify/
 
 # Datos y subidas locales
 uploads/
 pgdata/
 
-# Documento local de cambios (HU-37)
-CAMBIOS-HU-37.md

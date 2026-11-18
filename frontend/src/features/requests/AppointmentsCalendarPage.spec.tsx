@@ -6,6 +6,7 @@ import { StaffRoute } from '../auth/components/StaffRoute';
 import { AppointmentsCalendarPage } from './AppointmentsCalendarPage';
 
 const fetchMock = vi.fn();
+const occupancyMock = vi.fn();
 
 function tokenWithRole(role: string): string {
   const payload = btoa(
@@ -98,7 +99,27 @@ describe('AppointmentsCalendarPage', () => {
   beforeEach(() => {
     sessionStorage.clear();
     fetchMock.mockReset();
-    vi.stubGlobal('fetch', fetchMock);
+    occupancyMock.mockReset();
+    occupancyMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        dailyCapacity: 15,
+        days: [
+          {
+            date: '2026-11-20',
+            occupied: 3,
+            available: 12,
+            isFull: false,
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) =>
+      url.includes('/appointments/occupancy')
+        ? occupancyMock(url, init)
+        : fetchMock(url, init),
+    );
   });
 
   it.each(['PERSONAL', 'ADMIN'])(
@@ -302,6 +323,39 @@ describe('AppointmentsCalendarPage', () => {
     await user.click(screen.getByRole('button', { name: /mes anterior/i }));
     expect(
       screen.getByRole('region', { name: /calendario de noviembre de 2026/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows daily capacity badge and per-day occupancy count on the calendar', async () => {
+    occupancyMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        dailyCapacity: 20,
+        days: [
+          {
+            date: '2026-11-20',
+            occupied: 3,
+            available: 17,
+            isFull: false,
+          },
+        ],
+      }),
+    });
+    fetchMock.mockResolvedValue(page([appointmentItem()]));
+    renderPage('PERSONAL');
+
+    expect(
+      await screen.findByText('Capacidad diaria: 20 citas'),
+    ).toBeInTheDocument();
+    const calendar = screen.getByRole('region', {
+      name: /calendario de noviembre de 2026/i,
+    });
+    const day20 = calendar.querySelector('[data-date="2026-11-20"]');
+    expect(day20).not.toBeNull();
+    expect(within(day20 as HTMLElement).getByText('3/20')).toBeInTheDocument();
+    expect(
+      screen.getByText(/cerca del límite desde 16 citas/i),
     ).toBeInTheDocument();
   });
 

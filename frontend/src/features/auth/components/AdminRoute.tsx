@@ -3,10 +3,7 @@ import { ROUTES } from '../../../routes';
 import { HOME_BY_ROLE } from '../role-home';
 import { readSessionRole } from '../session';
 
-/**
- * Screens only for ADMIN (HU-05). Other roles go back to their home screen.
- * The backend checks the role too: hiding a screen is not a permission.
- */
+/** Screens exclusive to ADMIN. The backend checks the role too. */
 export function AdminRoute() {
   const role = readSessionRole();
 

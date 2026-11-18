@@ -7,9 +7,12 @@ import { InvalidAppointmentDateError } from '../../domain/errors/invalid-appoint
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
+import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
 import type { RequestStatus } from '../../domain/enums/request-status';
 import type { StatusChange } from '../../domain/value-objects/status-change';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
+import type { IRoomCapacityRepository } from '../../domain/repositories/room-capacity.repository';
+import type { RoomCapacityConfig } from '../../domain/value-objects/room-capacity';
 import type { SavedAppointment } from '../../domain/value-objects/saved-appointment';
 import type {
   RequestNotificationContext,
@@ -75,6 +78,8 @@ describe('ScheduleAppointmentUseCase', () => {
     Promise<SavedAppointment>,
     [StatusChange, Date, NotificationDraft | null]
   >;
+  let getCapacityConfig: jest.Mock<Promise<RoomCapacityConfig>, []>;
+  let countActiveAppointmentsOnDate: jest.Mock<Promise<number>, [Date]>;
   let useCase: ScheduleAppointmentUseCase;
 
   const CONTEXT: RequestNotificationContext = {
@@ -99,6 +104,17 @@ describe('ScheduleAppointmentUseCase', () => {
       Promise<SavedAppointment>,
       [StatusChange, Date, NotificationDraft | null]
     >((change, date) => Promise.resolve(savedFrom(change, date)));
+    getCapacityConfig = jest.fn<Promise<RoomCapacityConfig>, []>(() =>
+      Promise.resolve({
+        dailyCapacity: 15,
+        isDefault: true,
+        updatedAt: null,
+        updatedBy: null,
+      }),
+    );
+    countActiveAppointmentsOnDate = jest.fn<Promise<number>, [Date]>(() =>
+      Promise.resolve(0),
+    );
     const repository: IRequestRepository = {
       save: jest.fn(),
       findById,
@@ -115,8 +131,14 @@ describe('ScheduleAppointmentUseCase', () => {
       findNotificationContext: jest.fn(() => Promise.resolve(CONTEXT)),
       findSchedulingConflicts,
       findMissingMaterialIds: jest.fn(),
+      countActiveAppointmentsOnDate,
+      countActiveAppointmentsByDateRange: jest.fn(),
     };
-    useCase = new ScheduleAppointmentUseCase(repository, queries);
+    const roomCapacity: IRoomCapacityRepository = {
+      getConfig: getCapacityConfig,
+      saveDailyCapacity: jest.fn(),
+    };
+    useCase = new ScheduleAppointmentUseCase(repository, queries, roomCapacity);
   });
 
   const schedule = (date = '2026-11-20') =>
@@ -311,5 +333,40 @@ describe('ScheduleAppointmentUseCase', () => {
     saveAppointment.mockRejectedValue(new RequestStatusConflictError());
 
     await expect(schedule()).rejects.toThrow(RequestStatusConflictError);
+  });
+
+  describe('daily reading room capacity (HU-20.1)', () => {
+    it('allows scheduling the 15th appointment under the default capacity', async () => {
+      countActiveAppointmentsOnDate.mockResolvedValue(14);
+
+      const result = await schedule('2026-11-20');
+
+      expect(result.status).toBe('AGENDADA');
+      expect(saveAppointment).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects the 16th appointment when default capacity (15) is reached', async () => {
+      countActiveAppointmentsOnDate.mockResolvedValue(15);
+
+      await expect(schedule('2026-11-20')).rejects.toThrow(
+        RoomCapacityExceededError,
+      );
+      expect(saveAppointment).not.toHaveBeenCalled();
+    });
+
+    it('rejects when occupied appointments meet or exceed a lowered capacity', async () => {
+      getCapacityConfig.mockResolvedValue({
+        dailyCapacity: 3,
+        isDefault: false,
+        updatedAt: new Date('2026-11-18T00:00:00Z'),
+        updatedBy: null,
+      });
+      countActiveAppointmentsOnDate.mockResolvedValue(5);
+
+      await expect(schedule('2026-11-20')).rejects.toThrow(
+        'La sala de consulta alcanzó su capacidad máxima de 3 citas',
+      );
+      expect(saveAppointment).not.toHaveBeenCalled();
+    });
   });
 });

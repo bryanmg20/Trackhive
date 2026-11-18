@@ -10,16 +10,20 @@ function tokenWithRole(role: string): string {
   return `header.${payload}.signature`;
 }
 
-function renderAdminRoute() {
+function renderGuarded(role?: string, path = '/admin/capacidad-sala') {
+  if (role) {
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
+  }
   return render(
-    <MemoryRouter initialEntries={['/admin/usuarios']}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route element={<AdminRoute />}>
+          <Route path="/admin/capacidad-sala" element={<p>Capacidad sala</p>} />
           <Route path="/admin/usuarios" element={<h1>Usuarios</h1>} />
         </Route>
-        <Route path="/solicitudes" element={<p>Bandeja del personal</p>} />
-        <Route path="/materiales" element={<p>Pantalla de materiales</p>} />
-        <Route path="/login" element={<p>Pantalla de login</p>} />
+        <Route path="/solicitudes" element={<p>Bandeja de personal</p>} />
+        <Route path="/materiales" element={<p>Búsqueda pública</p>} />
+        <Route path="/login" element={<p>Inicio de sesión</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -30,33 +34,33 @@ describe('AdminRoute', () => {
     sessionStorage.clear();
   });
 
-  it('lets an ADMIN open the screen', () => {
-    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('ADMIN'));
+  it('lets ADMIN open the admin screen', () => {
+    renderGuarded('ADMIN');
 
-    renderAdminRoute();
+    expect(screen.getByText('Capacidad sala')).toBeInTheDocument();
+  });
+
+  it('lets ADMIN open the staff users screen', () => {
+    renderGuarded('ADMIN', '/admin/usuarios');
 
     expect(screen.getByRole('heading', { name: 'Usuarios' })).toBeInTheDocument();
   });
 
-  it('sends PERSONAL back to the requests inbox', () => {
-    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PERSONAL'));
+  it('redirects PERSONAL to staff requests', () => {
+    renderGuarded('PERSONAL');
 
-    renderAdminRoute();
-
-    expect(screen.getByText('Bandeja del personal')).toBeInTheDocument();
+    expect(screen.getByText('Bandeja de personal')).toBeInTheDocument();
   });
 
-  it('sends a public user back to the material search', () => {
-    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PUBLICO'));
+  it('redirects PUBLICO to public materials search', () => {
+    renderGuarded('PUBLICO');
 
-    renderAdminRoute();
-
-    expect(screen.getByText('Pantalla de materiales')).toBeInTheDocument();
+    expect(screen.getByText('Búsqueda pública')).toBeInTheDocument();
   });
 
-  it('sends a visitor without session to the login screen', () => {
-    renderAdminRoute();
+  it('redirects unauthenticated visitors to login', () => {
+    renderGuarded();
 
-    expect(screen.getByText('Pantalla de login')).toBeInTheDocument();
+    expect(screen.getByText('Inicio de sesión')).toBeInTheDocument();
   });
 });

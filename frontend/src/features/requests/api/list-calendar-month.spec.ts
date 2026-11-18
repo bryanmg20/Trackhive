@@ -47,8 +47,13 @@ describe('listCalendarMonth', () => {
 
   it('keeps occupancy independent of filters and excludes cancellations', async () => {
     list.mockResolvedValueOnce({
-      items: [item(1), item(2, 'CUMPLIDA'), item(3, 'CANCELADA')],
-      total: 3,
+      items: [
+        item(1),
+        item(2, 'CUMPLIDA'),
+        item(3, 'CANCELADA'),
+        item(4, 'NO_ASISTIO'),
+      ],
+      total: 4,
       page: 1,
       limit: 100,
     });

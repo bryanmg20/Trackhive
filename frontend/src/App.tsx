@@ -15,6 +15,7 @@ import { StaffMaterialsPage } from './features/materials/StaffMaterialsPage';
 import { AppointmentsCalendarPage } from './features/requests/AppointmentsCalendarPage';
 import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestsListPage } from './features/requests/RequestsListPage';
+import { RoomCapacityPage } from './features/requests/RoomCapacityPage';
 import { ROUTES } from './routes';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { StaffUsersPage } from './features/users/StaffUsersPage';
@@ -48,6 +49,10 @@ function App() {
         />
       </Route>
       <Route element={<AdminRoute />}>
+        <Route
+          path={ROUTES.adminRoomCapacity}
+          element={<RoomCapacityPage />}
+        />
         <Route path={ROUTES.staffUsers} element={<StaffUsersPage />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />

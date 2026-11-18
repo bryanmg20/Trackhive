@@ -58,6 +58,8 @@ export async function listCalendarMonth(
   ]);
   return {
     items: matches ?? all,
-    occupancy: all.filter((item) => item.status !== 'CANCELADA'),
+    occupancy: all.filter(
+      (item) => item.status !== 'CANCELADA' && item.status !== 'NO_ASISTIO',
+    ),
   };
 }

@@ -7,6 +7,12 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { Request } from '../../domain/entities/request.entity';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
+import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
+import {
+  ACTIVE_CAPACITY_APPOINTMENT_STATUSES,
+  DEFAULT_DAILY_ROOM_CAPACITY,
+  isRoomFull,
+} from '../../domain/policies/room-capacity';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import type { SavedAppointment } from '../../domain/value-objects/saved-appointment';
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
@@ -74,6 +80,10 @@ export class PrismaRequestRepository implements IRequestRepository {
     // The change to AGENDADA, its history row, its email and the appointment
     // are saved together or not at all
     return this.prisma.$transaction(async (tx) => {
+      // Serialize concurrent capacity checks for the same appointment day
+      // before any status change or appointment insert runs (HU-20.1, RN-19)
+      await this.assertDailyCapacityAvailable(tx, date);
+
       const statusChange = await this.applyStatusChange(
         tx,
         change,
@@ -109,6 +119,30 @@ export class PrismaRequestRepository implements IRequestRepository {
         statusChange,
       );
     });
+  }
+
+  private async assertDailyCapacityAvailable(
+    tx: Prisma.TransactionClient,
+    date: Date,
+  ): Promise<void> {
+    const lockKey = `appointment_capacity_${date.toISOString().slice(0, 10)}`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+
+    const config = await tx.readingRoomConfigModel.findUnique({
+      where: { id: 1 },
+      select: { dailyCapacity: true },
+    });
+    const dailyCapacity = config?.dailyCapacity ?? DEFAULT_DAILY_ROOM_CAPACITY;
+
+    const occupied = await tx.appointmentModel.count({
+      where: {
+        appointmentDate: date,
+        status: { in: [...ACTIVE_CAPACITY_APPOINTMENT_STATUSES] },
+      },
+    });
+    if (isRoomFull(occupied, dailyCapacity)) {
+      throw new RoomCapacityExceededError(date, dailyCapacity);
+    }
   }
 
   /**

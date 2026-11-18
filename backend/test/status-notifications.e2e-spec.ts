@@ -18,6 +18,7 @@ import type { RequestNotificationContext } from '../src/requests/application/por
 import {
   REQUEST_QUERY_SERVICE,
   REQUEST_REPOSITORY,
+  ROOM_CAPACITY_REPOSITORY,
 } from '../src/requests/application/tokens';
 import { Request } from '../src/requests/domain/entities/request.entity';
 import type { SavedStatusChange } from '../src/requests/domain/value-objects/saved-status-change';
@@ -113,6 +114,8 @@ describe('Status change emails (e2e)', () => {
       materials: [],
       bookedMaterials: [],
     }),
+    countActiveAppointmentsOnDate: jest.fn().mockResolvedValue(0),
+    countActiveAppointmentsByDateRange: jest.fn().mockResolvedValue([]),
   };
 
   const changeStatus = (body: object) =>
@@ -135,6 +138,16 @@ describe('Status change emails (e2e)', () => {
       .useValue(repository)
       .overrideProvider(REQUEST_QUERY_SERVICE)
       .useValue(repository)
+      .overrideProvider(ROOM_CAPACITY_REPOSITORY)
+      .useValue({
+        getConfig: jest.fn().mockResolvedValue({
+          dailyCapacity: 15,
+          isDefault: true,
+          updatedAt: null,
+          updatedBy: null,
+        }),
+        saveDailyCapacity: jest.fn(),
+      })
       .overrideProvider(NOTIFICATION_QUEUE)
       .useValue(outbox)
       .overrideProvider(MAIL_SENDER)

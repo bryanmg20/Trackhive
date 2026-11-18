@@ -45,6 +45,11 @@ export const SECTIONS: readonly Section[] = [
     roles: STAFF_ROLES,
   },
   {
+    to: ROUTES.adminRoomCapacity,
+    label: 'Capacidad sala',
+    roles: ['ADMIN'],
+  },
+  {
     to: ROUTES.staffUsers,
     label: 'Usuarios',
     roles: ['ADMIN'],

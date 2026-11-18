@@ -1,6 +1,7 @@
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
 
 export interface RequesterProfile {
   municipality?: string | null;
@@ -295,4 +296,13 @@ export interface IRequestQueryService {
 
   /** The ids of this list that are not a material of the catalog (RN-04). */
   findMissingMaterialIds(materialIds: readonly string[]): Promise<string[]>;
+
+  /** Active appointments (PROGRAMADA or CUMPLIDA) on a UTC date-only day. */
+  countActiveAppointmentsOnDate(date: Date): Promise<number>;
+
+  /** Active appointment counts grouped by day for a UTC date-only range. */
+  countActiveAppointmentsByDateRange(
+    from: Date,
+    to: Date,
+  ): Promise<DayOccupancyCount[]>;
 }

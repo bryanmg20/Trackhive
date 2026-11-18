@@ -42,6 +42,11 @@ const ROUTE_CASES: RouteCase[] = [
     path: ROUTES.staffNewRequest,
     role: 'PERSONAL',
   },
+  {
+    name: 'capacidad de la sala',
+    path: ROUTES.adminRoomCapacity,
+    role: 'ADMIN',
+  },
 ];
 
 /** A JWT the frontend can decode; the backend signature is never checked here. */
@@ -282,6 +287,31 @@ async function mockApi(page: Page): Promise<void> {
         page: 1,
         limit: 10,
         total: 1,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/appointments/capacity') {
+      await json({
+        dailyCapacity: 15,
+        isDefault: true,
+        updatedAt: null,
+        updatedBy: null,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/appointments/occupancy') {
+      await json({
+        dailyCapacity: 15,
+        days: [
+          {
+            date: '2026-11-15',
+            occupied: 1,
+            available: 14,
+            isFull: false,
+          },
+        ],
       });
       return;
     }

@@ -99,6 +99,15 @@ describe('SiteNav', () => {
     expect(
       screen.queryByRole('link', { name: 'Mis solicitudes' }),
     ).not.toBeInTheDocument();
+    if (role === 'ADMIN') {
+      expect(
+        screen.getByRole('link', { name: 'Capacidad sala' }),
+      ).toHaveAttribute('href', '/admin/capacidad-sala');
+    } else {
+      expect(
+        screen.queryByRole('link', { name: 'Capacidad sala' }),
+      ).not.toBeInTheDocument();
+    }
     expect(
       screen.getByRole('button', { name: 'Cerrar sesión' }),
     ).toBeInTheDocument();

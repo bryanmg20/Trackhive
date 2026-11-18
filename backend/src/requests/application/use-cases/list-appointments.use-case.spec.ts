@@ -75,6 +75,8 @@ describe('ListAppointmentsUseCase', () => {
       findNotificationContext: jest.fn(),
       findSchedulingConflicts: jest.fn(),
       findMissingMaterialIds: jest.fn(),
+      countActiveAppointmentsOnDate: jest.fn(),
+      countActiveAppointmentsByDateRange: jest.fn(),
     });
   });
 

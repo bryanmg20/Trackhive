@@ -5,6 +5,7 @@ import {
   REQUEST_QUERY_SERVICE,
   REQUEST_REPOSITORY,
   REQUESTER_REPOSITORY,
+  ROOM_CAPACITY_REPOSITORY,
   TRACKING_CODE_GENERATOR,
 } from './application/tokens';
 import { ChangeRequestStatusUseCase } from './application/use-cases/change-request-status.use-case';
@@ -13,13 +14,17 @@ import { CreateRequestUseCase } from './application/use-cases/create-request.use
 import { FindRequesterByEmailUseCase } from './application/use-cases/find-requester-by-email.use-case';
 import { GetRequestDetailUseCase } from './application/use-cases/get-request-detail.use-case';
 import { GetRequestHistoryUseCase } from './application/use-cases/get-request-history.use-case';
+import { GetRoomCapacityUseCase } from './application/use-cases/get-room-capacity.use-case';
+import { GetRoomOccupancyUseCase } from './application/use-cases/get-room-occupancy.use-case';
 import { ListAppointmentsUseCase } from './application/use-cases/list-appointments.use-case';
 import { ListMyRequestsUseCase } from './application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from './application/use-cases/list-requests.use-case';
 import { ScheduleAppointmentUseCase } from './application/use-cases/schedule-appointment.use-case';
+import { UpdateRoomCapacityUseCase } from './application/use-cases/update-room-capacity.use-case';
 import { PrismaRequestQueryService } from './infrastructure/persistence/prisma-request-query.service';
 import { PrismaRequestRepository } from './infrastructure/persistence/prisma-request.repository';
 import { PrismaRequesterRepository } from './infrastructure/persistence/prisma-requester.repository';
+import { PrismaRoomCapacityRepository } from './infrastructure/persistence/prisma-room-capacity.repository';
 import { PrismaTrackingCodeGenerator } from './infrastructure/persistence/prisma-tracking-code.generator';
 import { AppointmentController } from './presentation/controllers/appointment.controller';
 import { RequestController } from './presentation/controllers/request.controller';
@@ -43,6 +48,10 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     { provide: REQUEST_REPOSITORY, useClass: PrismaRequestRepository },
     { provide: REQUEST_QUERY_SERVICE, useClass: PrismaRequestQueryService },
     { provide: REQUESTER_REPOSITORY, useClass: PrismaRequesterRepository },
+    {
+      provide: ROOM_CAPACITY_REPOSITORY,
+      useClass: PrismaRoomCapacityRepository,
+    },
     { provide: TRACKING_CODE_GENERATOR, useClass: PrismaTrackingCodeGenerator },
     RequesterResolver,
     CreateRequestUseCase,
@@ -50,6 +59,9 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     FindRequesterByEmailUseCase,
     ListRequestsUseCase,
     ListAppointmentsUseCase,
+    GetRoomCapacityUseCase,
+    UpdateRoomCapacityUseCase,
+    GetRoomOccupancyUseCase,
     GetRequestDetailUseCase,
     GetRequestHistoryUseCase,
     ListMyRequestsUseCase,

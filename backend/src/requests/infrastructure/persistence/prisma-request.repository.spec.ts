@@ -4,6 +4,7 @@ import type { PrismaService } from '../../../prisma/prisma.service';
 import { Request } from '../../domain/entities/request.entity';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
+import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
 import type { StatusChange } from '../../domain/value-objects/status-change';
 import { PrismaRequestRepository } from './prisma-request.repository';
 
@@ -147,6 +148,10 @@ describe('PrismaRequestRepository', () => {
     // Simulated interactive transaction: the callback receives the client `tx`
     const buildTransaction = (updatedRows = 1) => {
       const tx = {
+        $executeRaw: jest.fn().mockResolvedValue(1),
+        readingRoomConfigModel: {
+          findUnique: jest.fn().mockResolvedValue(null),
+        },
         requestModel: {
           updateMany: jest.fn().mockResolvedValue({ count: updatedRows }),
         },
@@ -453,6 +458,10 @@ describe('PrismaRequestRepository', () => {
 
     const buildTransaction = (updatedRows = 1) => {
       const tx = {
+        $executeRaw: jest.fn().mockResolvedValue(1),
+        readingRoomConfigModel: {
+          findUnique: jest.fn().mockResolvedValue(null),
+        },
         requestModel: {
           updateMany: jest.fn().mockResolvedValue({ count: updatedRows }),
           findUniqueOrThrow: jest.fn().mockResolvedValue({
@@ -474,6 +483,7 @@ describe('PrismaRequestRepository', () => {
             ),
         },
         appointmentModel: {
+          count: jest.fn().mockResolvedValue(0),
           create: jest.fn().mockResolvedValue({
             id: 'appointment-1',
             appointmentDate: DATE,
@@ -654,6 +664,21 @@ describe('PrismaRequestRepository', () => {
       await expect(
         repository.saveAppointment(CHANGE, DATE, null),
       ).rejects.toThrow(Prisma.PrismaClientKnownRequestError);
+    });
+
+    it('rejects under the advisory lock when the room reaches capacity', async () => {
+      const { tx, repository } = buildTransaction();
+      tx.readingRoomConfigModel.findUnique.mockResolvedValue({
+        dailyCapacity: 2,
+      });
+      tx.appointmentModel.count.mockResolvedValue(2);
+
+      await expect(
+        repository.saveAppointment(CHANGE, DATE, null),
+      ).rejects.toThrow(RoomCapacityExceededError);
+      expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+      expect(tx.requestModel.updateMany).not.toHaveBeenCalled();
+      expect(tx.appointmentModel.create).not.toHaveBeenCalled();
     });
   });
 });

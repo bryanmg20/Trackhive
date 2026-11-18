@@ -20,6 +20,8 @@ import type {
 } from './api/list-appointments';
 import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
 import type { SortOrder } from './api/list-requests';
+import { getRoomOccupancy } from './api/room-capacity';
+import type { RoomOccupancy } from './api/room-capacity';
 import styles from './AppointmentsCalendarPage.module.css';
 import { listCalendarMonth } from './api/list-calendar-month';
 import listStyles from './RequestsListPage.module.css';
@@ -202,6 +204,10 @@ export function AppointmentsCalendarPage() {
     data?: Awaited<ReturnType<typeof listCalendarMonth>>;
     error?: string;
   } | null>(null);
+  const [occupancyState, setOccupancyState] = useState<{
+    rangeKey: string;
+    data: RoomOccupancy;
+  } | null>(null);
   const [params, setParams] = useState<ListAppointmentsParams>({
     sort: 'appointmentDate',
     order: 'asc',
@@ -315,6 +321,9 @@ export function AppointmentsCalendarPage() {
       : currentBogotaYearMonth());
 
   const calendarDays = buildCalendarDays(activeMonth);
+  const firstVisibleDate = calendarDays[0]?.isoDate ?? '';
+  const lastVisibleDate = calendarDays[calendarDays.length - 1]?.isoDate ?? '';
+  const occupancyRangeKey = `${firstVisibleDate}:${lastVisibleDate}`;
   const monthFrom = calendarDays[0].isoDate;
   const monthTo = calendarDays[calendarDays.length - 1].isoDate;
   const monthKey = JSON.stringify({ params, monthFrom, monthTo });
@@ -350,6 +359,33 @@ export function AppointmentsCalendarPage() {
     return () => dialog.close();
   }, [expandedDate]);
 
+  useEffect(() => {
+    if (!firstVisibleDate || !lastVisibleDate) return;
+    let ignore = false;
+    getRoomOccupancy(firstVisibleDate, lastVisibleDate)
+      .then((data) => {
+        if (!ignore) {
+          setOccupancyState({
+            rangeKey: occupancyRangeKey,
+            data,
+          });
+        }
+      })
+      .catch(() => {
+        if (!ignore) setOccupancyState(null);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [firstVisibleDate, lastVisibleDate, occupancyRangeKey]);
+
+  const activeOccupancy =
+    occupancyState?.rangeKey === occupancyRangeKey ? occupancyState.data : null;
+  const dailyCapacity = activeOccupancy?.dailyCapacity ?? DAILY_CAPACITY;
+  const nearCapacityThreshold = Math.ceil(dailyCapacity * 0.8);
+  const apiOccupancyByDate = new Map<string, number>(
+    (activeOccupancy?.days ?? []).map((day) => [day.date, day.occupied]),
+  );
   const monthData =
     monthResponse?.key === monthKey ? monthResponse.data : undefined;
   const appointmentsByDate = new Map<string, AppointmentListItem[]>();
@@ -560,6 +596,11 @@ export function AppointmentsCalendarPage() {
             >
               Mes actual
             </button>
+            {activeOccupancy ? (
+              <span className={styles.capacityBadge}>
+                Capacidad diaria: {activeOccupancy.dailyCapacity} citas
+              </span>
+            ) : null}
           </div>
 
           <div aria-live="polite" aria-busy={isLoading}>
@@ -628,11 +669,14 @@ export function AppointmentsCalendarPage() {
                 ))}
                 {calendarDays.map((day) => {
                   const dayItems = appointmentsByDate.get(day.isoDate) ?? [];
-                  const occupied = occupancyByDate.get(day.isoDate) ?? 0;
+                  const occupied = Math.max(
+                    apiOccupancyByDate.get(day.isoDate) ?? 0,
+                    occupancyByDate.get(day.isoDate) ?? 0,
+                  );
                   const capacityState =
-                    occupied >= DAILY_CAPACITY
+                    occupied >= dailyCapacity
                       ? 'full'
-                      : occupied >= DAILY_CAPACITY * 0.8
+                      : occupied >= nearCapacityThreshold
                         ? 'near'
                         : 'available';
                   return (
@@ -663,9 +707,9 @@ export function AppointmentsCalendarPage() {
                       <span
                         className={styles.occupancy}
                         data-capacity={capacityState}
-                        aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${DAILY_CAPACITY}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
+                        aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${dailyCapacity}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
                       >
-                        {occupied}/{DAILY_CAPACITY}
+                        {occupied}/{dailyCapacity}
                         {capacityState === 'full'
                           ? ' · Límite'
                           : capacityState === 'near'
@@ -709,8 +753,9 @@ export function AppointmentsCalendarPage() {
               </div>
 
               <p className={searchStyles.hint}>
-                Capacidad diaria provisional: 15. Ocupación sin filtros, excluye
-                citas canceladas. Cerca del límite desde 12 citas.
+                Capacidad diaria: {dailyCapacity}. Ocupación sin filtros,
+                excluye citas canceladas y no asistidas. Cerca del límite desde{' '}
+                {nearCapacityThreshold} citas.
               </p>
 
               {expandedDate ? (

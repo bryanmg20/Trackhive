@@ -32,8 +32,9 @@ model UserModel {
   createdRequests         RequestModel[]       @relation("RequestCreatedBy")
   assignedRequests        RequestModel[]       @relation("RequestAssignee")
   materialStatusChanges   MaterialModel[]      @relation("MaterialStatusChangedBy")
-  requestStatusChanges    StatusHistoryModel[]
-  scheduledAppointments   AppointmentModel[]
+  requestStatusChanges     StatusHistoryModel[]
+  scheduledAppointments    AppointmentModel[]
+  readingRoomConfigUpdates ReadingRoomConfigModel[] @relation("ReadingRoomConfigUpdatedBy")
 
   @@map("users")
 }
@@ -283,4 +284,16 @@ model NotificationModel {
   @@index([deliveryStatus, scheduledAt])
   @@index([requestId])
   @@map("notifications")
+}
+
+// Singleton configuration for the reading room daily appointment capacity
+// (HU-20.1, RN-19). When absent, the application uses the default (15/day)
+model ReadingRoomConfigModel {
+  id            Int        @id @default(1)
+  dailyCapacity Int        @map("daily_capacity")
+  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedById   String?    @map("updated_by_id") @db.Uuid
+  updatedBy     UserModel? @relation("ReadingRoomConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@map("reading_room_config")
 }
