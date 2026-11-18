@@ -69,7 +69,12 @@ function page(items: unknown[], total = items.length, pageNumber = 1) {
 }
 
 function lastUrl(): URL {
-  const calls = fetchMock.mock.calls;
+  // Monthly data is loaded independently of the existing paginated listing.
+  const calls = fetchMock.mock.calls.filter(
+    ([url]) =>
+      new URL(url as string, 'http://localhost').searchParams.get('limit') ===
+      '20',
+  );
   return new URL(calls[calls.length - 1][0] as string, 'http://localhost');
 }
 
@@ -213,9 +218,7 @@ describe('AppointmentsCalendarPage', () => {
     expect(
       within(detailSection).getByText('Universidad del Norte'),
     ).toBeInTheDocument();
-    expect(
-      within(detailSection).getByText('CC 123456789'),
-    ).toBeInTheDocument();
+    expect(within(detailSection).getByText('CC 123456789')).toBeInTheDocument();
     expect(within(detailSection).getByText('Ana Gómez')).toBeInTheDocument();
     expect(
       within(detailSection).getByText('Ubicación: D-01 · E-01 · C-001'),
@@ -276,14 +279,20 @@ describe('AppointmentsCalendarPage', () => {
 
   it('supports sorting and pagination', async () => {
     const user = userEvent.setup();
-    fetchMock.mockResolvedValue(page([appointmentItem()], 45));
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        page(
+          [appointmentItem()],
+          new URL(url, 'http://localhost').searchParams.get('limit') === '20'
+            ? 45
+            : 1,
+        ),
+      ),
+    );
     renderPage('PERSONAL');
     await screen.findByText('Página 1 de 3');
 
-    await user.selectOptions(
-      screen.getByLabelText('Ordenar por'),
-      'createdAt',
-    );
+    await user.selectOptions(screen.getByLabelText('Ordenar por'), 'createdAt');
     await user.selectOptions(screen.getByLabelText('Dirección'), 'desc');
 
     await waitFor(() => {
@@ -318,7 +327,13 @@ describe('AppointmentsCalendarPage', () => {
   });
 
   it('shows daily capacity badge and per-day occupancy count on the calendar', async () => {
-    fetchMock.mockResolvedValue(page([appointmentItem()]));
+    fetchMock.mockResolvedValue(
+      page([
+        appointmentItem({ id: 'appointment-1' }),
+        appointmentItem({ id: 'appointment-2' }),
+        appointmentItem({ id: 'appointment-3' }),
+      ]),
+    );
     renderPage('PERSONAL');
 
     expect(
@@ -330,7 +345,64 @@ describe('AppointmentsCalendarPage', () => {
     const day20 = calendar.querySelector('[data-date="2026-11-20"]');
     expect(day20).not.toBeNull();
     expect(
-      within(day20 as HTMLElement).getByText('3/15'),
+      within(day20 as HTMLElement).getAllByText('3/15').length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('announces near and full capacity and labels the complete daily list', async () => {
+    const items = Array.from({ length: 27 }, (_, index) =>
+      appointmentItem({
+        id: `appointment-${index}`,
+        date: index < 15 ? '2026-11-20' : '2026-11-21',
+      }),
+    );
+    fetchMock.mockResolvedValue(page(items));
+    renderPage('PERSONAL');
+    const calendar = await screen.findByRole('region', {
+      name: /calendario de noviembre de 2026/i,
+    });
+    expect(
+      within(calendar).getByLabelText(
+        /viernes 20\/11\/2026: ocupación 15 de 15, capacidad alcanzada/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(calendar).getByLabelText(
+        /sábado 21\/11\/2026: ocupación 12 de 15, cerca del límite/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(calendar).getByRole('button', {
+        name: /ver las 15 citas del viernes 20\/11\/2026; 12 más/i,
+      }),
+    ).toHaveTextContent('+12 más');
+  });
+
+  it('reports an incomplete monthly load and allows retrying instead of showing partial occupancy', async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    fetchMock.mockImplementation((url: string) => {
+      if (
+        new URL(url, 'http://localhost').searchParams.get('limit') === '100' &&
+        fail
+      ) {
+        return Promise.reject(new Error('Network unavailable'));
+      }
+      return Promise.resolve(page([appointmentItem()]));
+    });
+    renderPage('PERSONAL');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos cargar la agenda completa',
+    );
+    expect(
+      screen.queryByRole('region', { name: /calendario de noviembre/i }),
+    ).not.toBeInTheDocument();
+    fail = false;
+    await user.click(
+      screen.getByRole('button', { name: 'Reintentar cargar agenda' }),
+    );
+    expect(
+      await screen.findByRole('region', { name: /calendario de noviembre/i }),
     ).toBeInTheDocument();
   });
 });

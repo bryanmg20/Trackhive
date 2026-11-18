@@ -10,15 +10,16 @@ function tokenWithRole(role: string): string {
   return `header.${payload}.signature`;
 }
 
-function renderGuarded(role?: string) {
+function renderGuarded(role?: string, path = '/admin/capacidad-sala') {
   if (role) {
     sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
   }
   return render(
-    <MemoryRouter initialEntries={['/admin/capacidad-sala']}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route element={<AdminRoute />}>
           <Route path="/admin/capacidad-sala" element={<p>Capacidad sala</p>} />
+          <Route path="/admin/usuarios" element={<h1>Usuarios</h1>} />
         </Route>
         <Route path="/solicitudes" element={<p>Bandeja de personal</p>} />
         <Route path="/materiales" element={<p>Búsqueda pública</p>} />
@@ -37,6 +38,12 @@ describe('AdminRoute', () => {
     renderGuarded('ADMIN');
 
     expect(screen.getByText('Capacidad sala')).toBeInTheDocument();
+  });
+
+  it('lets ADMIN open the staff users screen', () => {
+    renderGuarded('ADMIN', '/admin/usuarios');
+
+    expect(screen.getByRole('heading', { name: 'Usuarios' })).toBeInTheDocument();
   });
 
   it('redirects PERSONAL to staff requests', () => {

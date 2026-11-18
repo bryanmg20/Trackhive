@@ -39,11 +39,14 @@ pnpm test:e2e:docker # Con Docker activo: pruebas de integración a través de l
 | `/personal/solicitudes/nueva`    | Registrar solicitud a nombre de un visitante (HU-93)       | `PERSONAL`/`ADMIN` |
 | `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
 | `/solicitudes/:id`               | Detalle de una solicitud, cambio de estado y agendar cita (HU-13, HU-15, HU-18) | `PERSONAL`/`ADMIN` |
+| `/admin/usuarios`                | Gestión de usuarios del personal: crear, editar, desactivar y activar (HU-05) | `ADMIN`          |
 
 Las rutas del usuario público viven dentro de `ProtectedRoute`; cualquier otro
 rol o una sesión vencida redirige a `/login`. Las rutas de personal viven dentro
 de `StaffRoute`; si el rol no es `PERSONAL`
-ni `ADMIN`, redirigen a `/materiales` o a `/login`. Cualquier otra ruta redirige
+ni `ADMIN`, redirigen a `/materiales` o a `/login`. Las rutas de administración
+viven dentro de `AdminRoute`: un `PERSONAL` vuelve a `/solicitudes`, un
+`PUBLICO` a `/materiales` y sin sesión a `/login`. Cualquier otra ruta redirige
 a `/registro`.
 
 ## API
@@ -206,6 +209,33 @@ hora de Bogotá sin volver a cargar la solicitud. Un `409` (transición no
 permitida u otra persona la cambió primero) muestra el mensaje del backend y
 deja el estado como estaba.
 
+### Gestión de usuarios del personal (HU-05)
+
+`/admin/usuarios` solo la abre `ADMIN`, y el menú muestra «Usuarios» solo a ese
+rol. Ocultarla no es un permiso: el backend responde `403` a `PERSONAL` y a
+`PUBLICO` en los tres endpoints.
+
+- **Listado:** `GET /api/v1/users/staff` con `q` (nombre o correo), `role`
+  (`PERSONAL` o `ADMIN`), `active` (`true` o `false`), `sort` (`lastName`,
+  `firstName`, `email`, `role`, `createdAt`), `order`, `page` y `limit`. Por
+  defecto ordena por apellido ascendente, con 10 cuentas por página.
+- **Crear:** «Crear cuenta del personal» abre el formulario y llama a
+  `POST /api/v1/users/staff` con los cuatro campos del nombre, el correo y la
+  contraseña inicial (mínimo 8 caracteres). No se envía rol: el backend crea
+  siempre una cuenta `PERSONAL` activa. El administrador le entrega la
+  contraseña a la persona por un canal seguro.
+- **Editar:** cambia nombres y correo con `PATCH /api/v1/users/staff/:id`. El
+  rol y la contraseña no se editan: ninguna cuenta pasa de `PERSONAL` a
+  `ADMIN`.
+- **Desactivar y activar:** «Desactivar» pide confirmación y envía
+  `{ active: false }`; «Activar» envía `{ active: true }` sin confirmar. Una
+  cuenta desactivada conserva sus solicitudes y su historial.
+
+Los errores del backend se muestran tal como llegan: los de validación junto a
+cada campo y los demás en la tarjeta (por ejemplo, `409 EMAIL_ALREADY_EXISTS` o
+`409 CANNOT_CHANGE_OWN_ACCESS` cuando el administrador intenta desactivar su
+propia cuenta).
+
 ## Estado y alcance
 
 - **HU-01 integrado:** el `POST /api/v1/users` acepta `firstName`,
@@ -259,6 +289,47 @@ deja el estado como estaba.
   desplazamiento horizontal y pasar la prueba e2e de `ROUTES`.
 
 ## Pruebas
+
+### Calendario legible (HU-142)
+
+El mes muestra hasta tres citas por día y «+N más» abre un diálogo con todas
+las citas de ese día que coinciden con los filtros. Se abre con Enter o
+Espacio, mantiene el foco dentro del diálogo y se cierra con Escape o «Cerrar».
+Las filas del mes conservan su altura. Hasta 900 px se presenta una agenda
+agrupada por fecha, con todas las citas visibles.
+
+Cada día indica su ocupación respecto a la capacidad provisional de 15
+(pendiente de HU-20.1, #74). Desde 12 se avisa «Cerca del límite» y desde 15,
+«Límite». La ocupación excluye canceladas y no depende de los filtros; la lista
+de citas sí los respeta. Se recorren las páginas de `/api/v1/appointments`
+para cargar los días de la cuadrícula completos, incluidos los días contiguos
+de otros meses. Un error de carga permite reintentar y evita mostrar cifras
+parciales.
+
+Para verificar:
+
+```bash
+pnpm test -- --pool=threads --maxWorkers=2
+pnpm lint
+pnpm build
+pnpm test:e2e
+```
+
+Desde la raíz, iniciar `docker compose up -d --build`. Después, desde
+`frontend`, ejecutar:
+
+```bash
+pnpm test:e2e:docker calendar.spec.ts
+```
+
+Esta última prueba usa `http://localhost:8080`, la API real a través de nginx
+y la cuenta demo `personal1@example.com`. Requiere el seed y la contraseña
+`SEED_DEMO_PASSWORD` (por defecto local `1`). Crea cuatro solicitudes y sus
+citas en una fecha futura; conserva los registros para revisión manual y
+adjunta sus identificadores al reporte. Guarda capturas del mes, del diálogo
+y de la agenda móvil en `test-results/`. Las pruebas del navegador también
+comprueban días de 12 y 15 citas, altura uniforme, navegación con teclado y
+ausencia de desplazamiento horizontal a 360 px.
 
 `pnpm test` ejecuta Vitest con jsdom y Testing Library. Las pruebas de la
 pantalla cubren etiquetas, errores por campo que conservan lo escrito,

@@ -10,9 +10,9 @@ import {
   ACCOUNT_REGISTRATION,
   USER_REPOSITORY,
 } from '../src/users/application/tokens';
-import { User } from '../src/users/domain/entities/user.entity';
-import { IUserRepository } from '../src/users/domain/repositories/user.repository';
+import type { User } from '../src/users/domain/entities/user.entity';
 import { InMemoryRefreshTokenRepository } from './fakes/in-memory-refresh-token.repository';
+import { InMemoryUserRepository } from './fakes/in-memory-user.repository';
 
 interface CreatedUserBody {
   id: string;
@@ -31,30 +31,6 @@ interface ErrorBody {
   details?: Array<{ field: string; messages: string[] }>;
   timestamp: string;
   path: string;
-}
-
-class InMemoryUserRepository implements IUserRepository {
-  private readonly users = new Map<string, User>();
-
-  save(user: User): Promise<void> {
-    this.users.set(user.id, user);
-    return Promise.resolve();
-  }
-
-  findAll(): Promise<User[]> {
-    return Promise.resolve([...this.users.values()]);
-  }
-
-  findById(id: string): Promise<User | null> {
-    return Promise.resolve(this.users.get(id) ?? null);
-  }
-
-  findByEmail(email: string): Promise<User | null> {
-    const user = [...this.users.values()].find(
-      (candidate) => candidate.email === email,
-    );
-    return Promise.resolve(user ?? null);
-  }
 }
 
 const validRegistration = (email = 'ana@trackhive.test') => ({

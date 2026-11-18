@@ -71,7 +71,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  min-height: 6.75rem;
+  height: 18rem;
+  min-width: 0;
   padding: 0.45rem;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -165,6 +166,76 @@
 
 .eventButton:hover {
   background: var(--paper);
+}
+
+.calendarGrid .eventButton {
+  height: 3rem;
+  padding: 0.2rem 0.3rem;
+  gap: 0.1rem;
+  overflow: hidden;
+}
+
+.calendarGrid .eventMaterial {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.calendarGrid .eventDate,
+.calendarGrid .eventRequester {
+  display: none;
+}
+
+.extraEvent,
+.mobileDate {
+  display: none;
+}
+
+.moreButton {
+  min-height: 2.5rem;
+  margin-top: auto;
+  border: 1px solid var(--gold-text);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.occupancy {
+  font-size: 0.7rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
+.occupancy[data-capacity='near'] {
+  background: #fff1bf;
+  color: #604600;
+}
+.occupancy[data-capacity='full'] {
+  background: #ffe0dc;
+  color: #852719;
+  font-weight: 700;
+}
+
+.dayDialog {
+  width: min(36rem, calc(100% - 2rem));
+  max-height: 85dvh;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+.dayDialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.dayDialog form {
+  margin: 1rem 0;
 }
 
 .eventButton[aria-pressed='true'] {
@@ -324,7 +395,35 @@
 
 @media (max-width: 900px) {
   .calendarGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dayCell {
+    height: auto;
+    min-height: 5rem;
+  }
+  .calendarGrid .eventButton {
+    height: auto;
+    overflow: visible;
+  }
+  .calendarGrid .eventMaterial {
+    display: block;
+    overflow: visible;
+    white-space: normal;
+  }
+  .calendarGrid .eventDate,
+  .calendarGrid .eventRequester {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .extraEvent,
+  .mobileDate {
+    display: block;
+  }
+  .desktopDate,
+  .moreButton {
+    display: none;
   }
 
   .weekdayHeader {

@@ -1,0 +1,194 @@
+.createRow {
+  margin-top: 0.75rem;
+}
+
+.createButton {
+  cursor: pointer;
+}
+
+.confirmation {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--gold-text);
+  background: var(--success-surface);
+  color: var(--ink);
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+}
+
+.panelTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.panelTitle:focus {
+  outline: none;
+}
+
+.panelText {
+  margin: 0;
+  color: var(--ink);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.field label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+}
+
+.fieldLabel {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+
+.fixedValue {
+  margin: 0;
+  padding: 0.6rem 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--seal);
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--seal-dark);
+  font-size: 0.85rem;
+}
+
+.actions,
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions {
+  gap: 0.75rem;
+}
+
+.secondary,
+.danger {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.danger {
+  border-color: var(--seal);
+  background: var(--seal);
+  color: var(--surface-strong);
+}
+
+.danger:hover {
+  background: var(--seal-dark);
+}
+
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.email {
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--line);
+  background: var(--error-surface);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.badge[data-active='true'] {
+  background: var(--success-surface);
+}
+
+.clearButton {
+  align-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gold-text);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  color: var(--ink);
+}
+
+.createButton:focus-visible,
+.secondary:focus-visible,
+.danger:focus-visible,
+.clearButton:focus-visible,
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: 3px solid var(--gold-text);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .createButton {
+    width: 100%;
+  }
+}

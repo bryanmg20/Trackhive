@@ -36,6 +36,7 @@ const ROUTE_CASES: RouteCase[] = [
     role: 'PERSONAL',
   },
   { name: 'calendario', path: ROUTES.calendar, role: 'PERSONAL' },
+  { name: 'usuarios del personal', path: ROUTES.staffUsers, role: 'ADMIN' },
   {
     name: 'ficha de solicitud',
     path: ROUTES.staffNewRequest,
@@ -182,6 +183,18 @@ const appointment = {
   ],
 };
 
+// HU-05: long names and emails must wrap inside the staff accounts table
+const staffUser = {
+  id: 'user-1',
+  firstName: 'María Fernanda',
+  middleName: 'de los Ángeles',
+  lastName: 'Rodríguez',
+  secondLastName: 'Valderrama',
+  email: 'funcionaria.con.correo.institucional.largo@clena.org',
+  role: 'PERSONAL',
+  active: true,
+};
+
 // HU-17: long names and comments must wrap inside the timeline
 const requestHistory = {
   requestId: REQUEST_ID,
@@ -299,6 +312,16 @@ async function mockApi(page: Page): Promise<void> {
             isFull: false,
           },
         ],
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/users/staff') {
+      await json({
+        items: [staffUser, { ...staffUser, id: 'user-2', active: false }],
+        page: 1,
+        limit: 10,
+        total: 2,
       });
       return;
     }

@@ -1,13 +1,20 @@
+import { CannotChangeOwnAccessError } from '../errors/cannot-change-own-access.error';
 import { InvalidEmailError } from '../errors/invalid-email.error';
 import { InvalidPasswordHashError } from '../errors/invalid-password-hash.error';
 import { InvalidPrivacyConsentError } from '../errors/invalid-privacy-consent.error';
 import { InvalidRoleError } from '../errors/invalid-role.error';
+import { InvalidStaffRoleError } from '../errors/invalid-staff-role.error';
 import { optionalName, requiredName } from '../value-objects/person-name';
-import { isUserRole, UserRole } from '../enums/user-role';
+import { isStaffRole, isUserRole, UserRole } from '../enums/user-role';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LENGTH = 160;
 const PASSWORD_HASH_MAX_LENGTH = 255;
+
+/** A field that was not sent (undefined) keeps its current value. */
+function changedOrCurrent<T>(value: T | undefined, current: T): T {
+  return value === undefined ? current : value;
+}
 
 export interface UserProps {
   id: string;
@@ -22,6 +29,34 @@ export interface UserProps {
   // Public registrations always set both; seeded/admin accounts may have none
   privacyPolicyAcceptedAt?: Date | null;
   privacyPolicyVersion?: string | null;
+}
+
+/**
+ * A new staff account that an administrator creates (HU-05). There is no
+ * role: the administrator only creates PERSONAL accounts.
+ */
+export interface NewStaffUserProps {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  secondLastName?: string | null;
+  email: string;
+  passwordHash: string;
+}
+
+/**
+ * What an administrator can change in a staff account (HU-05). A field left
+ * undefined keeps its value; null clears an optional name. The role is not
+ * here: no account can be changed from PERSONAL to ADMIN.
+ */
+export interface StaffAccountChanges {
+  firstName?: string;
+  middleName?: string | null;
+  lastName?: string;
+  secondLastName?: string | null;
+  email?: string;
+  active?: boolean;
 }
 
 export class User {
@@ -79,5 +114,58 @@ export class User {
     this.active = props.active;
     this.privacyPolicyAcceptedAt = privacyPolicyAcceptedAt;
     this.privacyPolicyVersion = privacyPolicyVersion;
+  }
+
+  /**
+   * A staff account created by an administrator (HU-05). It is always
+   * PERSONAL: the administrator does not create ADMIN accounts. It starts
+   * active, so it can sign in right away, and records no privacy consent:
+   * that belongs to public registrations (D-19).
+   */
+  static createStaff(props: NewStaffUserProps): User {
+    return new User({
+      ...props,
+      role: 'PERSONAL',
+      active: true,
+      privacyPolicyAcceptedAt: null,
+      privacyPolicyVersion: null,
+    });
+  }
+
+  /** PERSONAL and ADMIN accounts; PUBLICO accounts are not staff. */
+  isStaff(): boolean {
+    return isStaffRole(this.role);
+  }
+
+  /**
+   * Returns a copy with the changes an administrator makes to a staff
+   * account (HU-05): names, email and whether it is active. The role never
+   * changes. `changedBy` is the administrator: they cannot deactivate their
+   * own account.
+   */
+  updateStaffAccount(changes: StaffAccountChanges, changedBy: string): User {
+    const active = changedOrCurrent(changes.active, this.active);
+
+    // A public account is not managed by the administrator
+    if (!this.isStaff()) {
+      throw new InvalidStaffRoleError();
+    }
+    if (changedBy === this.id && !active) {
+      throw new CannotChangeOwnAccessError();
+    }
+
+    // The constructor validates the new names and email
+    return new User({
+      ...this,
+      firstName: changedOrCurrent(changes.firstName, this.firstName),
+      middleName: changedOrCurrent(changes.middleName, this.middleName),
+      lastName: changedOrCurrent(changes.lastName, this.lastName),
+      secondLastName: changedOrCurrent(
+        changes.secondLastName,
+        this.secondLastName,
+      ),
+      email: changedOrCurrent(changes.email, this.email),
+      active,
+    });
   }
 }

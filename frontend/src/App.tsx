@@ -1,8 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './features/auth/login/LoginPage';
 import { RegisterPage } from './features/auth/register/RegisterPage';
-import { AuthenticatedRoute } from './features/auth/components/AuthenticatedRoute';
 import { AdminRoute } from './features/auth/components/AdminRoute';
+import { AuthenticatedRoute } from './features/auth/components/AuthenticatedRoute';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { StaffRoute } from './features/auth/components/StaffRoute';
 import { HOME_BY_ROLE } from './features/auth/role-home';
@@ -18,6 +18,7 @@ import { RequestsListPage } from './features/requests/RequestsListPage';
 import { RoomCapacityPage } from './features/requests/RoomCapacityPage';
 import { ROUTES } from './routes';
 import { ProfilePage } from './features/profile/ProfilePage';
+import { StaffUsersPage } from './features/users/StaffUsersPage';
 
 function HomeRedirect() {
   const role = readSessionRole();
@@ -52,6 +53,7 @@ function App() {
           path={ROUTES.adminRoomCapacity}
           element={<RoomCapacityPage />}
         />
+        <Route path={ROUTES.staffUsers} element={<StaffUsersPage />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />
     </Routes>
