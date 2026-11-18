@@ -217,8 +217,9 @@ deja el estado como estaba.
   en `src/features/auth/register/privacy-policy.ts` y
   `PrivacyConsent.tsx`. **Pendiente:** el backend aún no recibe ni guarda la
   aceptación, la fecha y la versión.
-- **HU-46 no disponible:** el wireframe no está en `docs/`, así que el diseño
-  se derivó de los criterios de aceptación y de los tokens actuales del repo.
+- **HU-46:** el [mapa de pantallas y wireframes](../docs/pantallas.md) incluye
+  vistas PNG y archivos SVG importables en Figma. Son borradores de referencia;
+  la revisión y validación con G6 están pendientes y no bloquean otras HU.
 - **HU-48 no disponible:** `/login` es un marcador temporal; al registrarse se
   redirige allí con un aviso y el correo registrado.
 - **HU-93 integrado:** la pantalla de mostrador permite buscar al solicitante,

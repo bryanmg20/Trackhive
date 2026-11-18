@@ -314,6 +314,10 @@ Trackhive/
 
 ## Documentación
 
+El [mapa de pantallas y wireframes](docs/pantallas.md) incluye los roles,
+la navegación y los bocetos SVG y PNG de HU-46. Son borradores de
+referencia con revisión y validación de G6 pendientes.
+
 | Documento | Contenido |
 |---|---|
 | [`docs/arquitectura.md`](docs/arquitectura.md) / [`docs/arquitectura.pdf`](docs/arquitectura.pdf) | Arquitectura C4, estructura del código y decisiones técnicas. |
