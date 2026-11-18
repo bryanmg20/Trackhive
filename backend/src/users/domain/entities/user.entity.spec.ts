@@ -1,9 +1,16 @@
-import { User, UserProps } from './user.entity';
+import {
+  NewStaffUserProps,
+  StaffAccountChanges,
+  User,
+  UserProps,
+} from './user.entity';
+import { CannotChangeOwnAccessError } from '../errors/cannot-change-own-access.error';
 import { InvalidEmailError } from '../errors/invalid-email.error';
 import { InvalidNameError } from '../errors/invalid-name.error';
 import { InvalidPasswordHashError } from '../errors/invalid-password-hash.error';
 import { InvalidPrivacyConsentError } from '../errors/invalid-privacy-consent.error';
 import { InvalidRoleError } from '../errors/invalid-role.error';
+import { InvalidStaffRoleError } from '../errors/invalid-staff-role.error';
 import { UserRole } from '../enums/user-role';
 
 const validProps = (): UserProps => ({
@@ -150,5 +157,156 @@ describe('User', () => {
           privacyPolicyVersion: '1.0',
         }),
     ).toThrow(InvalidPrivacyConsentError);
+  });
+});
+
+describe('User staff accounts (HU-05)', () => {
+  const ADMIN_ID = 'admin-1';
+
+  const newStaff = (overrides: Partial<NewStaffUserProps> = {}) =>
+    User.createStaff({
+      id: 'staff-1',
+      firstName: 'Laura',
+      lastName: 'Gómez',
+      email: 'laura@clena.org',
+      passwordHash: '$argon2id$hash',
+      ...overrides,
+    });
+
+  const adminAccount = (id: string) =>
+    new User({ ...validProps(), id, role: 'ADMIN' });
+
+  describe('createStaff', () => {
+    it('creates an active PERSONAL account without a privacy consent', () => {
+      const user = newStaff({ email: '  LAURA@CLENA.ORG ' });
+
+      expect(user.role).toBe('PERSONAL');
+      expect(user.active).toBe(true);
+      expect(user.isStaff()).toBe(true);
+      expect(user.email).toBe('laura@clena.org');
+      expect(user.privacyPolicyAcceptedAt).toBeNull();
+      expect(user.privacyPolicyVersion).toBeNull();
+    });
+
+    it('always creates PERSONAL, even if a role is slipped in', () => {
+      const user = newStaff({ role: 'ADMIN' } as Partial<NewStaffUserProps>);
+
+      expect(user.role).toBe('PERSONAL');
+    });
+
+    it('validates the names and the email like any account', () => {
+      expect(() => newStaff({ firstName: ' ' })).toThrow(InvalidNameError);
+      expect(() => newStaff({ email: 'no-es-correo' })).toThrow(
+        InvalidEmailError,
+      );
+    });
+  });
+
+  describe('isStaff', () => {
+    it('is false for a public account', () => {
+      expect(new User(validProps()).isStaff()).toBe(false);
+    });
+  });
+
+  describe('updateStaffAccount', () => {
+    it('changes the names and email that are sent, never the role', () => {
+      const user = newStaff({ middleName: 'Sofía' });
+
+      const updated = user.updateStaffAccount(
+        {
+          firstName: ' Laura ',
+          middleName: null,
+          lastName: 'Gómez',
+          secondLastName: 'Ríos',
+          email: 'LAURA.GOMEZ@clena.org',
+        },
+        ADMIN_ID,
+      );
+
+      expect(updated).toMatchObject({
+        id: 'staff-1',
+        firstName: 'Laura',
+        middleName: null,
+        secondLastName: 'Ríos',
+        email: 'laura.gomez@clena.org',
+        role: 'PERSONAL',
+        active: true,
+        passwordHash: '$argon2id$hash',
+      });
+    });
+
+    it('ignores a role slipped into the changes: PERSONAL is never promoted', () => {
+      const updated = newStaff().updateStaffAccount(
+        { role: 'ADMIN' } as StaffAccountChanges,
+        ADMIN_ID,
+      );
+
+      expect(updated.role).toBe('PERSONAL');
+    });
+
+    it('keeps every field that is not sent', () => {
+      const user = newStaff({ middleName: 'Sofía', secondLastName: 'Ríos' });
+
+      const updated = user.updateStaffAccount({}, ADMIN_ID);
+
+      expect(updated).toEqual(user);
+    });
+
+    it('deactivates and reactivates another account without changing the original', () => {
+      const user = newStaff();
+
+      const deactivated = user.updateStaffAccount({ active: false }, ADMIN_ID);
+      const reactivated = deactivated.updateStaffAccount(
+        { active: true },
+        ADMIN_ID,
+      );
+
+      expect(deactivated.active).toBe(false);
+      expect(reactivated.active).toBe(true);
+      // The entity is immutable: the change returns a copy
+      expect(user.active).toBe(true);
+    });
+
+    it('does not manage a public account', () => {
+      const publicUser = new User(validProps());
+
+      expect(() =>
+        publicUser.updateStaffAccount({ active: false }, ADMIN_ID),
+      ).toThrow(InvalidStaffRoleError);
+    });
+
+    it('does not let an administrator deactivate their own account', () => {
+      expect(() =>
+        adminAccount(ADMIN_ID).updateStaffAccount({ active: false }, ADMIN_ID),
+      ).toThrow(CannotChangeOwnAccessError);
+    });
+
+    it('lets an administrator edit their own names and email', () => {
+      const updated = adminAccount(ADMIN_ID).updateStaffAccount(
+        { firstName: 'Lucía', email: 'lucia@clena.org', active: true },
+        ADMIN_ID,
+      );
+
+      expect(updated).toMatchObject({
+        firstName: 'Lucía',
+        email: 'lucia@clena.org',
+        role: 'ADMIN',
+        active: true,
+      });
+    });
+
+    it('rejects a required name sent empty and an invalid email', () => {
+      const user = newStaff();
+
+      expect(() =>
+        user.updateStaffAccount(
+          { lastName: null as unknown as string },
+          ADMIN_ID,
+        ),
+      ).toThrow('El primer apellido es obligatorio');
+      expect(() =>
+        user.updateStaffAccount({ email: 'sin-arroba' }, ADMIN_ID),
+      ).toThrow(InvalidEmailError);
+    });
   });
 });
