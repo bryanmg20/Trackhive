@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { requestDetailPath, ROUTES } from '../../routes';
@@ -18,15 +18,15 @@ import type {
   AppointmentStatus,
   ListAppointmentsParams,
 } from './api/list-appointments';
-import {
-  REQUEST_STATUS_LABELS,
-  RequestsApiError,
-} from './api/list-requests';
+import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
 import type { SortOrder } from './api/list-requests';
 import styles from './AppointmentsCalendarPage.module.css';
+import { listCalendarMonth } from './api/list-calendar-month';
 import listStyles from './RequestsListPage.module.css';
 
 const PAGE_SIZE = 20;
+const DAILY_CAPACITY = 15;
+const PREVIEW_COUNT = 3;
 const FORM_ID = 'appointment-search';
 const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
@@ -166,6 +166,7 @@ function AppointmentCardButton({
     <button
       type="button"
       className={styles.eventButton}
+      aria-label={`${formatDate(item.date)} · ${item.request.trackingCode} · ${materialSummary} · ${item.requester.name} · ${APPOINTMENT_STATUS_LABELS[item.status]}`}
       aria-pressed={selected}
       onClick={() => onSelect(item.id)}
     >
@@ -193,6 +194,14 @@ export function AppointmentsCalendarPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [manualMonth, setManualMonth] = useState<YearMonth | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [monthAttempt, setMonthAttempt] = useState(0);
+  const dayDialog = useRef<HTMLDialogElement>(null);
+  const [monthResponse, setMonthResponse] = useState<{
+    key: string;
+    data?: Awaited<ReturnType<typeof listCalendarMonth>>;
+    error?: string;
+  } | null>(null);
   const [params, setParams] = useState<ListAppointmentsParams>({
     sort: 'appointmentDate',
     order: 'asc',
@@ -284,12 +293,12 @@ export function AppointmentsCalendarPage() {
 
   const hasFilters = Boolean(
     params.status ||
-      params.from ||
-      params.to ||
-      params.requester ||
-      params.material ||
-      requester ||
-      material,
+    params.from ||
+    params.to ||
+    params.requester ||
+    params.material ||
+    requester ||
+    material,
   );
   const isLoading = response?.params !== params;
   const result = isLoading ? null : response.page;
@@ -306,12 +315,54 @@ export function AppointmentsCalendarPage() {
       : currentBogotaYearMonth());
 
   const calendarDays = buildCalendarDays(activeMonth);
+  const monthFrom = calendarDays[0].isoDate;
+  const monthTo = calendarDays[calendarDays.length - 1].isoDate;
+  const monthKey = JSON.stringify({ params, monthFrom, monthTo });
+
+  useEffect(() => {
+    if (isLoading || !result) return;
+    let ignore = false;
+    const query = JSON.parse(monthKey) as {
+      params: ListAppointmentsParams;
+      monthFrom: string;
+      monthTo: string;
+    };
+    listCalendarMonth(query.params, query.monthFrom, query.monthTo)
+      .then((data) => {
+        if (!ignore) setMonthResponse({ key: monthKey, data });
+      })
+      .catch(() => {
+        if (!ignore)
+          setMonthResponse({
+            key: monthKey,
+            error: 'No pudimos cargar la agenda completa. Inténtelo de nuevo.',
+          });
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [monthKey, isLoading, result, monthAttempt]);
+
+  useEffect(() => {
+    const dialog = dayDialog.current;
+    if (!expandedDate || !dialog) return;
+    dialog.showModal();
+    return () => dialog.close();
+  }, [expandedDate]);
+
+  const monthData =
+    monthResponse?.key === monthKey ? monthResponse.data : undefined;
   const appointmentsByDate = new Map<string, AppointmentListItem[]>();
-  for (const item of result?.items ?? []) {
+  for (const item of monthData?.items ?? []) {
     const key = item.date.slice(0, 10);
     const list = appointmentsByDate.get(key) ?? [];
     list.push(item);
     appointmentsByDate.set(key, list);
+  }
+  const occupancyByDate = new Map<string, number>();
+  for (const item of monthData?.occupancy ?? []) {
+    const key = item.date.slice(0, 10);
+    occupancyByDate.set(key, (occupancyByDate.get(key) ?? 0) + 1);
   }
 
   const visibleDates = new Set(calendarDays.map((day) => day.isoDate));
@@ -320,7 +371,9 @@ export function AppointmentsCalendarPage() {
   );
 
   const selectedAppointment =
-    (result?.items ?? []).find((item) => item.id === selectedId) ?? null;
+    [...(monthData?.items ?? []), ...(result?.items ?? [])].find(
+      (item) => item.id === selectedId,
+    ) ?? null;
 
   return (
     <AppLayout>
@@ -446,10 +499,7 @@ export function AppointmentsCalendarPage() {
           aria-labelledby="appointments-results"
         >
           <div className={searchStyles.resultsHeader}>
-            <h2
-              id="appointments-results"
-              className={searchStyles.sectionTitle}
-            >
+            <h2 id="appointments-results" className={searchStyles.sectionTitle}>
               {result ? `${result.total} citas` : 'Citas'}
             </h2>
             <div className={searchStyles.sortRow}>
@@ -513,9 +563,7 @@ export function AppointmentsCalendarPage() {
           </div>
 
           <div aria-live="polite" aria-busy={isLoading}>
-            {isLoading ? (
-              <p className={searchStyles.muted}>Cargando…</p>
-            ) : null}
+            {isLoading ? <p className={searchStyles.muted}>Cargando…</p> : null}
 
             {error ? (
               <div className={searchStyles.error} role="alert">
@@ -542,7 +590,31 @@ export function AppointmentsCalendarPage() {
             ) : null}
           </div>
 
-          {result && result.items.length > 0 ? (
+          {result && !monthData ? (
+            <div>
+              <p
+                role={
+                  monthResponse?.key === monthKey && monthResponse.error
+                    ? 'alert'
+                    : 'status'
+                }
+              >
+                {monthResponse?.key === monthKey && monthResponse.error
+                  ? monthResponse.error
+                  : 'Cargando agenda completa…'}
+              </p>
+              {monthResponse?.key === monthKey && monthResponse.error ? (
+                <button
+                  type="button"
+                  className={styles.navButton}
+                  onClick={() => setMonthAttempt((attempt) => attempt + 1)}
+                >
+                  Reintentar cargar agenda
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {result && monthData ? (
             <>
               <div
                 className={styles.calendarGrid}
@@ -556,6 +628,13 @@ export function AppointmentsCalendarPage() {
                 ))}
                 {calendarDays.map((day) => {
                   const dayItems = appointmentsByDate.get(day.isoDate) ?? [];
+                  const occupied = occupancyByDate.get(day.isoDate) ?? 0;
+                  const capacityState =
+                    occupied >= DAILY_CAPACITY
+                      ? 'full'
+                      : occupied >= DAILY_CAPACITY * 0.8
+                        ? 'near'
+                        : 'available';
                   return (
                     <div
                       key={day.isoDate}
@@ -570,16 +649,40 @@ export function AppointmentsCalendarPage() {
                     >
                       <div className={styles.dayHeader}>
                         <span className={styles.dayNumber}>
-                          {day.dayNumber}
+                          <span className={styles.desktopDate}>
+                            {day.dayNumber}
+                          </span>
+                          <span className={styles.mobileDate}>
+                            {formatFullDay(day.isoDate)}
+                          </span>
                         </span>
                         {day.isSunday ? (
                           <span className={styles.sundayTag}>Cerrado</span>
                         ) : null}
                       </div>
+                      <span
+                        className={styles.occupancy}
+                        data-capacity={capacityState}
+                        aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${DAILY_CAPACITY}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
+                      >
+                        {occupied}/{DAILY_CAPACITY}
+                        {capacityState === 'full'
+                          ? ' · Límite'
+                          : capacityState === 'near'
+                            ? ' · Cerca del límite'
+                            : ''}
+                      </span>
                       {dayItems.length > 0 ? (
                         <ul className={styles.dayEvents}>
-                          {dayItems.map((item) => (
-                            <li key={item.id}>
+                          {dayItems.map((item, index) => (
+                            <li
+                              key={item.id}
+                              className={
+                                index >= PREVIEW_COUNT
+                                  ? styles.extraEvent
+                                  : undefined
+                              }
+                            >
                               <AppointmentCardButton
                                 item={item}
                                 selected={selectedId === item.id}
@@ -589,10 +692,77 @@ export function AppointmentsCalendarPage() {
                           ))}
                         </ul>
                       ) : null}
+                      {dayItems.length > PREVIEW_COUNT ? (
+                        <button
+                          type="button"
+                          className={styles.moreButton}
+                          aria-haspopup="dialog"
+                          aria-label={`Ver las ${dayItems.length} citas del ${formatFullDay(day.isoDate)}; ${dayItems.length - PREVIEW_COUNT} más`}
+                          onClick={() => setExpandedDate(day.isoDate)}
+                        >
+                          +{dayItems.length - PREVIEW_COUNT} más
+                        </button>
+                      ) : null}
                     </div>
                   );
                 })}
               </div>
+
+              <p className={searchStyles.hint}>
+                Capacidad diaria provisional: 15. Ocupación sin filtros, excluye
+                citas canceladas. Cerca del límite desde 12 citas.
+              </p>
+
+              {expandedDate ? (
+                <dialog
+                  ref={dayDialog}
+                  className={styles.dayDialog}
+                  aria-labelledby="day-agenda-title"
+                  onClose={() => setExpandedDate(null)}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Tab') return;
+                    const buttons =
+                      event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                        'button',
+                      );
+                    const first = buttons[0];
+                    const last = buttons[buttons.length - 1];
+                    if (event.shiftKey && document.activeElement === first) {
+                      event.preventDefault();
+                      last?.focus();
+                    } else if (
+                      !event.shiftKey &&
+                      document.activeElement === last
+                    ) {
+                      event.preventDefault();
+                      first?.focus();
+                    }
+                  }}
+                >
+                  <h2 id="day-agenda-title">
+                    Citas del {formatFullDay(expandedDate)}
+                  </h2>
+                  <form method="dialog">
+                    <button className={styles.navButton}>Cerrar</button>
+                  </form>
+                  <ul className={styles.dayEvents}>
+                    {(appointmentsByDate.get(expandedDate) ?? []).map(
+                      (item) => (
+                        <li key={item.id}>
+                          <AppointmentCardButton
+                            item={item}
+                            selected={selectedId === item.id}
+                            onSelect={(id) => {
+                              setSelectedId(id);
+                              dayDialog.current?.close();
+                            }}
+                          />
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                </dialog>
+              ) : null}
 
               {otherMonthItems.length > 0 ? (
                 <div className={styles.agendaSection}>
@@ -631,11 +801,7 @@ export function AppointmentsCalendarPage() {
                         className={styles.badge}
                         data-status={selectedAppointment.status}
                       >
-                        {
-                          APPOINTMENT_STATUS_LABELS[
-                            selectedAppointment.status
-                          ]
-                        }
+                        {APPOINTMENT_STATUS_LABELS[selectedAppointment.status]}
                       </span>
                     </div>
                     <Link
@@ -655,13 +821,8 @@ export function AppointmentsCalendarPage() {
                       <dt>Horario de atención</dt>
                       <dd>
                         De{' '}
-                        {formatHour(
-                          selectedAppointment.serviceHours.opensAt,
-                        )}{' '}
-                        a{' '}
-                        {formatHour(
-                          selectedAppointment.serviceHours.closesAt,
-                        )}
+                        {formatHour(selectedAppointment.serviceHours.opensAt)} a{' '}
+                        {formatHour(selectedAppointment.serviceHours.closesAt)}
                       </dd>
                     </div>
                     <div className={styles.detailField}>
@@ -754,10 +915,7 @@ export function AppointmentsCalendarPage() {
                 </section>
               ) : null}
 
-              <nav
-                className={searchStyles.pagination}
-                aria-label="Paginación"
-              >
+              <nav className={searchStyles.pagination} aria-label="Paginación">
                 <button
                   type="button"
                   onClick={() => goToPage(params.page - 1)}

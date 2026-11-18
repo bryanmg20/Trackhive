@@ -260,6 +260,47 @@ deja el estado como estaba.
 
 ## Pruebas
 
+### Calendario legible (HU-142)
+
+El mes muestra hasta tres citas por día y «+N más» abre un diálogo con todas
+las citas de ese día que coinciden con los filtros. Se abre con Enter o
+Espacio, mantiene el foco dentro del diálogo y se cierra con Escape o «Cerrar».
+Las filas del mes conservan su altura. Hasta 900 px se presenta una agenda
+agrupada por fecha, con todas las citas visibles.
+
+Cada día indica su ocupación respecto a la capacidad provisional de 15
+(pendiente de HU-20.1, #74). Desde 12 se avisa «Cerca del límite» y desde 15,
+«Límite». La ocupación excluye canceladas y no depende de los filtros; la lista
+de citas sí los respeta. Se recorren las páginas de `/api/v1/appointments`
+para cargar los días de la cuadrícula completos, incluidos los días contiguos
+de otros meses. Un error de carga permite reintentar y evita mostrar cifras
+parciales.
+
+Para verificar:
+
+```bash
+pnpm test -- --pool=threads --maxWorkers=2
+pnpm lint
+pnpm build
+pnpm test:e2e
+```
+
+Desde la raíz, iniciar `docker compose up -d --build`. Después, desde
+`frontend`, ejecutar:
+
+```bash
+pnpm test:e2e:docker calendar.spec.ts
+```
+
+Esta última prueba usa `http://localhost:8080`, la API real a través de nginx
+y la cuenta demo `personal1@example.com`. Requiere el seed y la contraseña
+`SEED_DEMO_PASSWORD` (por defecto local `1`). Crea cuatro solicitudes y sus
+citas en una fecha futura; conserva los registros para revisión manual y
+adjunta sus identificadores al reporte. Guarda capturas del mes, del diálogo
+y de la agenda móvil en `test-results/`. Las pruebas del navegador también
+comprueban días de 12 y 15 citas, altura uniforme, navegación con teclado y
+ausencia de desplazamiento horizontal a 360 px.
+
 `pnpm test` ejecuta Vitest con jsdom y Testing Library. Las pruebas de la
 pantalla cubren etiquetas, errores por campo que conservan lo escrito,
 contraseñas que no coinciden, aviso de privacidad obligatorio con versión
