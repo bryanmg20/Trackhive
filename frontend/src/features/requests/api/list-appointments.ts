@@ -5,6 +5,7 @@ import {
   RequestsApiError,
 } from './list-requests';
 import type { RequestStatus, SortOrder } from './list-requests';
+import type { MaterialLocation } from '../material-location';
 
 export const APPOINTMENT_STATUSES = [
   'PROGRAMADA',
@@ -29,11 +30,8 @@ export interface AppointmentMaterialItem {
   catalogCode: string;
   title: string;
   materialType: string;
-  location: {
-    depot: string;
-    shelf: string;
-    box: string;
-  };
+  // null when the material has no physical location (HU-134)
+  location: MaterialLocation | null;
 }
 
 export interface AppointmentListItem {

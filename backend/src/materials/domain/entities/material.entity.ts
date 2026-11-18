@@ -1,9 +1,12 @@
+import { InvalidMaterialSourceError } from '../errors/invalid-material-source.error';
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
+import { isMaterialSource, MaterialSource } from '../enums/material-source';
 import { isMaterialStatus, MaterialStatus } from '../enums/material-status';
 import { isMaterialType, MaterialType } from '../enums/material-type';
 
-// Physical location in the archive. Never shown to the PUBLICO role
+// Physical location in the archive. Never shown to the PUBLICO role.
+// It goes whole or not at all: a material from Everything may lack it (HU-134)
 export interface MaterialLocation {
   depot: string;
   shelf: string;
@@ -20,8 +23,13 @@ export interface MaterialProps {
   // Periodicals only (HU-06)
   publicationDate: Date | null;
   publisher: string | null;
-  location: MaterialLocation;
+  location: MaterialLocation | null;
   status: MaterialStatus;
+  // HU-134. Defaults: MANUAL, without digital copy and never seen by a sync
+  source?: MaterialSource;
+  // Full path of the digital copy; internal, never sent by the API
+  digitalPath?: string | null;
+  lastSeenAt?: Date | null;
   // Last status change (HU-08); null while it was never changed
   statusChangedAt?: Date | null;
   statusChangedBy?: string | null;
@@ -39,8 +47,11 @@ export class Material {
   public readonly collection: string;
   public readonly publicationDate: Date | null;
   public readonly publisher: string | null;
-  public readonly location: MaterialLocation;
+  public readonly location: MaterialLocation | null;
   public readonly status: MaterialStatus;
+  public readonly source: MaterialSource;
+  public readonly digitalPath: string | null;
+  public readonly lastSeenAt: Date | null;
   public readonly statusChangedAt: Date | null;
   public readonly statusChangedBy: string | null;
   public readonly statusChangeReason: string | null;
@@ -54,6 +65,10 @@ export class Material {
     if (!isMaterialStatus(props.status)) {
       throw new InvalidMaterialStatusError();
     }
+    const source = props.source ?? 'MANUAL';
+    if (!isMaterialSource(source)) {
+      throw new InvalidMaterialSourceError();
+    }
 
     this.id = props.id;
     this.catalogCode = props.catalogCode;
@@ -65,6 +80,9 @@ export class Material {
     this.publisher = props.publisher;
     this.location = props.location;
     this.status = props.status;
+    this.source = source;
+    this.digitalPath = props.digitalPath ?? null;
+    this.lastSeenAt = props.lastSeenAt ?? null;
     this.statusChangedAt = props.statusChangedAt ?? null;
     this.statusChangedBy = props.statusChangedBy ?? null;
     this.statusChangeReason = props.statusChangeReason ?? null;

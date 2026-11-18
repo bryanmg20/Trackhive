@@ -6,6 +6,7 @@ import type {
 } from '../../materials/api/search-materials';
 import { RequestsApiError } from './list-requests';
 import type { RequestStatus } from './list-requests';
+import type { MaterialLocation } from '../material-location';
 
 export interface RequestDetailMaterial {
   id: string;
@@ -15,7 +16,8 @@ export interface RequestDetailMaterial {
   author: string | null;
   collection: string;
   status: MaterialStatus;
-  location: { depot: string; shelf: string; box: string };
+  // null when the material has no physical location (HU-134)
+  location: MaterialLocation | null;
   itemStatus: string;
 }
 

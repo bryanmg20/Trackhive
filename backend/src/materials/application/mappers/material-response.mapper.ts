@@ -23,7 +23,8 @@ export class MaterialResponseMapper {
       status: material.status,
     };
     if (includeLocation) {
-      dto.location = { ...material.location };
+      // null when the material has no physical location (HU-134)
+      dto.location = material.location ? { ...material.location } : null;
     }
     return dto;
   }

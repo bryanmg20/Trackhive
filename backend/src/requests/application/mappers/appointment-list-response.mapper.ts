@@ -45,11 +45,16 @@ export class AppointmentListResponseMapper {
         catalogCode: material.catalogCode,
         title: material.title,
         materialType: material.materialType,
-        location: {
-          depot: material.depot,
-          shelf: material.shelf,
-          box: material.box,
-        },
+        location:
+          material.depot !== null &&
+          material.shelf !== null &&
+          material.box !== null
+            ? {
+                depot: material.depot,
+                shelf: material.shelf,
+                box: material.box,
+              }
+            : null,
       })),
     };
   }

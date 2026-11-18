@@ -68,10 +68,19 @@ model MaterialModel {
   // Periodicals only (HU-06). Nullable: some historic periodicals lack them
   publicationDate    DateTime?                  @map("publication_date") @db.Date
   publisher          String?                    @db.VarChar(150)
-  // Physical location. Never shown to the PUBLICO role
-  depot              String                     @db.VarChar(40)
-  shelf              String                     @db.VarChar(40)
-  box                String                     @db.VarChar(40)
+  // Physical location. Never shown to the PUBLICO role. Optional (HU-134):
+  // a material from Everything may not have it. The three go together
+  // (CHECK in the migration): all with a value or all NULL
+  depot              String?                    @db.VarChar(40)
+  shelf              String?                    @db.VarChar(40)
+  box                String?                    @db.VarChar(40)
+  // Allowed values (CHECK in the migration): MANUAL, EVERYTHING (HU-134)
+  source             String                     @default("MANUAL") @db.VarChar(20)
+  // Full path of the digital copy, as Everything reports it. Internal use:
+  // the API never sends it. NULL = no digital copy (HU-134)
+  digitalPath        String?                    @map("digital_path") @db.VarChar(1024)
+  // Last time a sync saw the file in Everything (HU-134)
+  lastSeenAt         DateTime?                  @map("last_seen_at") @db.Timestamptz
   // Allowed values (CHECK in the migration): DISPONIBLE, EN_USO, EN_RESTAURACION, NO_CONSULTABLE
   status             String                     @db.VarChar(20)
   // Last status change (HU-08). Null while the status was never changed
@@ -296,4 +305,22 @@ model ReadingRoomConfigModel {
   updatedBy     UserModel? @relation("ReadingRoomConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
   @@map("reading_room_config")
+}
+
+// One run of the Everything sync (HU-134, HU-137). Only one run can be
+// EN_CURSO at a time (partial unique index in the migration)
+model SyncRunModel {
+  id           String    @id @db.Uuid
+  startedAt    DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  // NULL while the run is EN_CURSO (CHECK in the migration)
+  finishedAt   DateTime? @map("finished_at") @db.Timestamptz
+  // Allowed values (CHECK in the migration): EN_CURSO, OK, ERROR
+  status       String    @default("EN_CURSO") @db.VarChar(10)
+  // Files Everything returned in the run
+  filesCount   Int       @default(0) @map("files_count")
+  // Only when status = ERROR (CHECK in the migration)
+  errorMessage String?   @map("error_message") @db.VarChar(1000)
+
+  @@index([startedAt(sort: Desc)])
+  @@map("sync_runs")
 }

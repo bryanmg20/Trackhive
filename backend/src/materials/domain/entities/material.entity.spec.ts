@@ -1,5 +1,7 @@
+import { InvalidMaterialSourceError } from '../errors/invalid-material-source.error';
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
+import type { MaterialSource } from '../enums/material-source';
 import type { MaterialStatus } from '../enums/material-status';
 import type { MaterialType } from '../enums/material-type';
 import { Material } from './material.entity';
@@ -77,5 +79,54 @@ describe('Material', () => {
 
   it('exposes a stable error code for an invalid material type', () => {
     expect(new InvalidMaterialTypeError().code).toBe('INVALID_MATERIAL_TYPE');
+  });
+
+  it('is MANUAL and without digital copy when the source is not given (HU-134)', () => {
+    const material = buildMaterial();
+
+    expect(material.source).toBe('MANUAL');
+    expect(material.digitalPath).toBeNull();
+    expect(material.lastSeenAt).toBeNull();
+  });
+
+  it('accepts a material from Everything without physical location', () => {
+    const seenAt = new Date('2026-11-18T05:00:00Z');
+    const material = new Material({
+      ...buildMaterial(),
+      location: null,
+      source: 'EVERYTHING',
+      digitalPath: 'D:\\Digitalizados\\M245.pdf',
+      lastSeenAt: seenAt,
+    });
+
+    expect(material.location).toBeNull();
+    expect(material.source).toBe('EVERYTHING');
+    expect(material.digitalPath).toBe('D:\\Digitalizados\\M245.pdf');
+    expect(material.lastSeenAt).toEqual(seenAt);
+  });
+
+  it('keeps the source and the digital copy when the status changes', () => {
+    const material = new Material({
+      ...buildMaterial(),
+      source: 'EVERYTHING',
+      digitalPath: 'D:\\Digitalizados\\M245.pdf',
+    });
+
+    const changed = material.changeStatus('EN_USO', 'user-1', null);
+
+    expect(changed.source).toBe('EVERYTHING');
+    expect(changed.digitalPath).toBe('D:\\Digitalizados\\M245.pdf');
+  });
+
+  it('rejects a source that does not exist', () => {
+    const props = {
+      ...buildMaterial(),
+      source: 'EXCEL' as MaterialSource,
+    };
+
+    expect(() => new Material(props)).toThrow(InvalidMaterialSourceError);
+    expect(new InvalidMaterialSourceError().code).toBe(
+      'INVALID_MATERIAL_SOURCE',
+    );
   });
 });
