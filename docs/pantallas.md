@@ -69,7 +69,7 @@ es orientativo y no constituye un contrato de API o de navegación.
 | WF-09 | Listado de solicitudes del personal | PERSONAL, ADMIN | `/solicitudes` | HU-12, HU-141 · existente | [Vista y editable](#wf-09-listado-de-solicitudes-del-personal) |
 | WF-10 | Detalle y cambio de estado | PERSONAL, ADMIN | `/solicitudes/:id` | HU-13, HU-15, HU-16, HU-18 · existente; HU-140 propuesto | [Vista y editable](#wf-10-detalle-y-cambio-de-estado) |
 | WF-11 | Calendario | PERSONAL, ADMIN | `/calendario` | HU-19 · existente | [Vista y editable](#wf-11-calendario) |
-| WF-12 | Gestión de usuarios del personal | ADMIN | `/admin/usuarios` **propuesta** | HU-05 · propuesta | [Vista y editable](#wf-12-gestión-de-usuarios-del-personal) |
+| WF-12 | Gestión de usuarios del personal | ADMIN | `/admin/usuarios` | HU-05 · existente | [Vista y editable](#wf-12-gestión-de-usuarios-del-personal) |
 | WF-13 | Capacidad de la sala | ADMIN | `/admin/capacidad-sala` **propuesta** | HU-20.1 · propuesta | [Vista y editable](#wf-13-capacidad-de-la-sala) |
 | WF-14 | Sincronización con Everything | ADMIN | `/admin/sincronizacion` **propuesta** | HU-138; depende de HU-137 · propuesta | [Vista y editable](#wf-14-sincronización-con-everything) |
 | WF-15 | Material para el personal | PERSONAL, ADMIN | `/personal/materiales` | HU-08, HU-109 · existente; HU-06 y HU-140 propuestos | [Vista y editable](#wf-15-material-para-el-personal) |
@@ -251,6 +251,14 @@ Propuesta para ADMIN: buscar, crear, editar, activar y desactivar personal.
 Mostrar nombre, correo, rol y estado; confirmar la desactivación sin borrar el
 historial de solicitudes. La credencial inicial y los campos definitivos deben
 acordarse en HU-05; el boceto no autoriza promocionar roles arbitrariamente.
+
+**Implementada en HU-05.** El administrador define una contraseña inicial
+(mínimo 8 caracteres) y se la entrega a la persona. Los campos son los cuatro
+del nombre y el correo; la contraseña no se edita después. Las cuentas nuevas
+siempre tienen rol `PERSONAL` y el rol no se edita, así que ninguna cuenta pasa
+a `ADMIN`. Una cuenta pública no se gestiona aquí. El administrador no puede
+desactivar su propia cuenta. La desactivación se confirma y conserva las
+solicitudes y el historial.
 
 ### WF-13 Capacidad de la sala
 
