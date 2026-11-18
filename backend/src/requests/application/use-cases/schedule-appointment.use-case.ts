@@ -5,12 +5,19 @@ import { toAppointmentDay } from '../../domain/value-objects/appointment-date';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { MaterialNotAvailableError } from '../../domain/errors/material-not-available.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
+import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
 import { blocksScheduling } from '../../domain/policies/material-availability';
+import { isRoomFull } from '../../domain/policies/room-capacity';
+import type { IRoomCapacityRepository } from '../../domain/repositories/room-capacity.repository';
 import { ScheduleAppointmentResponseDto } from '../dto/schedule-appointment-response.dto';
 import { buildStatusChangeEmail } from '../services/status-change-email';
 import { ScheduleAppointmentResponseMapper } from '../mappers/schedule-appointment-response.mapper';
 import type { IRequestQueryService } from '../ports/request-query.port';
-import { REQUEST_QUERY_SERVICE, REQUEST_REPOSITORY } from '../tokens';
+import {
+  REQUEST_QUERY_SERVICE,
+  REQUEST_REPOSITORY,
+  ROOM_CAPACITY_REPOSITORY,
+} from '../tokens';
 
 /**
  * «Agendar cita de consulta» (HU-18). The appointment is a whole day, without
@@ -28,6 +35,8 @@ export class ScheduleAppointmentUseCase {
     @Inject(REQUEST_REPOSITORY) private readonly repository: IRequestRepository,
     @Inject(REQUEST_QUERY_SERVICE)
     private readonly queries: IRequestQueryService,
+    @Inject(ROOM_CAPACITY_REPOSITORY)
+    private readonly roomCapacity: IRoomCapacityRepository,
   ) {}
 
   async execute(
@@ -60,6 +69,20 @@ export class ScheduleAppointmentUseCase {
     }
     if (conflicts.bookedMaterials.length > 0) {
       throw new MaterialAlreadyBookedError(conflicts.bookedMaterials);
+    }
+
+    // HU-20.1 (RN-19): reject before writing if the reading room is already
+    // at capacity for that day. The repository re-checks under a transaction
+    // lock to prevent concurrent requests from exceeding the limit
+    const [capacityConfig, occupiedSlots] = await Promise.all([
+      this.roomCapacity.getConfig(),
+      this.queries.countActiveAppointmentsOnDate(day.date),
+    ]);
+    if (isRoomFull(occupiedSlots, capacityConfig.dailyCapacity)) {
+      throw new RoomCapacityExceededError(
+        day.date,
+        capacityConfig.dailyCapacity,
+      );
     }
 
     // HU-23: the requester learns the day and the service hours by email

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { ACTIVE_CAPACITY_APPOINTMENT_STATUSES } from '../../domain/policies/room-capacity';
+import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
 import type {
   AppointmentListCriteria,
   AppointmentListResult,
@@ -254,5 +256,33 @@ export class PrismaRequestQueryService implements IRequestQueryService {
       });
     }
     return and.length > 0 ? { AND: and } : {};
+  }
+
+  async countActiveAppointmentsOnDate(date: Date): Promise<number> {
+    return this.prisma.appointmentModel.count({
+      where: {
+        appointmentDate: date,
+        status: { in: [...ACTIVE_CAPACITY_APPOINTMENT_STATUSES] },
+      },
+    });
+  }
+
+  async countActiveAppointmentsByDateRange(
+    from: Date,
+    to: Date,
+  ): Promise<DayOccupancyCount[]> {
+    const rows = await this.prisma.appointmentModel.groupBy({
+      by: ['appointmentDate'],
+      where: {
+        appointmentDate: { gte: from, lte: to },
+        status: { in: [...ACTIVE_CAPACITY_APPOINTMENT_STATUSES] },
+      },
+      _count: { _all: true },
+      orderBy: { appointmentDate: 'asc' },
+    });
+    return rows.map((row) => ({
+      date: row.appointmentDate.toISOString().slice(0, 10),
+      occupied: row._count._all,
+    }));
   }
 }

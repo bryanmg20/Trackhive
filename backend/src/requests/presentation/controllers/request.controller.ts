@@ -331,8 +331,9 @@ export class RequestController {
       'La solicitud no está DISPONIBLE o su entrega es digital ' +
       '(INVALID_STATUS_TRANSITION), u otra persona cambió el estado primero ' +
       '(REQUEST_STATUS_CONFLICT), o un material de la solicitud ya tiene ' +
-      'cita ese día (MATERIAL_ALREADY_BOOKED) o está en restauración o no ' +
-      'consultable (MATERIAL_NOT_AVAILABLE) (HU-20)',
+      'cita ese día (MATERIAL_ALREADY_BOOKED), está en restauración o no ' +
+      'consultable (MATERIAL_NOT_AVAILABLE) (HU-20), o la sala alcanzó su ' +
+      'capacidad diaria de citas (ROOM_CAPACITY_EXCEEDED) (HU-20.1)',
     type: ErrorResponseDto,
   })
   @ApiInternalServerErrorResponse({
