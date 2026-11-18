@@ -10,6 +10,7 @@ export const ROUTES = {
   requests: '/solicitudes',
   requestDetail: '/solicitudes/:id',
   calendar: '/calendario',
+  adminRoomCapacity: '/admin/capacidad-sala',
 } as const;
 
 export function requestDetailPath(id: string): string {

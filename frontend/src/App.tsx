@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './features/auth/login/LoginPage';
 import { RegisterPage } from './features/auth/register/RegisterPage';
 import { AuthenticatedRoute } from './features/auth/components/AuthenticatedRoute';
+import { AdminRoute } from './features/auth/components/AdminRoute';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { StaffRoute } from './features/auth/components/StaffRoute';
 import { HOME_BY_ROLE } from './features/auth/role-home';
@@ -14,6 +15,7 @@ import { StaffMaterialsPage } from './features/materials/StaffMaterialsPage';
 import { AppointmentsCalendarPage } from './features/requests/AppointmentsCalendarPage';
 import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestsListPage } from './features/requests/RequestsListPage';
+import { RoomCapacityPage } from './features/requests/RoomCapacityPage';
 import { ROUTES } from './routes';
 import { ProfilePage } from './features/profile/ProfilePage';
 
@@ -43,6 +45,12 @@ function App() {
         <Route
           path={ROUTES.staffNewRequest}
           element={<StaffNewRequestPage />}
+        />
+      </Route>
+      <Route element={<AdminRoute />}>
+        <Route
+          path={ROUTES.adminRoomCapacity}
+          element={<RoomCapacityPage />}
         />
       </Route>
       <Route path="*" element={<HomeRedirect />} />

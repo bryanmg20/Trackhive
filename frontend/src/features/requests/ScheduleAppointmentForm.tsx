@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import type { RequestDetail } from './api/get-request';
 import { RequestsApiError } from './api/list-requests';
+import { getRoomOccupancy } from './api/room-capacity';
+import type { DayOccupancy } from './api/room-capacity';
 import { scheduleAppointment } from './api/schedule-appointment';
 import type {
   Appointment,
@@ -32,6 +34,22 @@ function formatDay(isoDate: string): string {
 /** "08:00" -> "8:00". */
 function formatHour(time: string): string {
   return time.replace(/^0/, '');
+}
+
+function isServiceDay(isoDate: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return false;
+  const parsed = new Date(`${isoDate}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === isoDate &&
+    parsed.getUTCDay() !== 0
+  );
+}
+
+interface DayAvailability {
+  date: string;
+  dailyCapacity: number;
+  day: DayOccupancy;
 }
 
 interface SaveError {
@@ -99,11 +117,43 @@ export function ScheduleAppointmentForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<SaveError | null>(null);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [availability, setAvailability] = useState<DayAvailability | null>(
+    null,
+  );
 
   const canSchedule = request.allowedTransitions.includes('AGENDADA');
+
+  useEffect(() => {
+    if (!canSchedule || !isServiceDay(date)) {
+      return;
+    }
+    let ignore = false;
+    getRoomOccupancy(date, date)
+      .then((result) => {
+        if (ignore) return;
+        const day = result.days[0];
+        if (day) {
+          setAvailability({
+            date,
+            dailyCapacity: result.dailyCapacity,
+            day,
+          });
+        }
+      })
+      .catch(() => {
+        if (!ignore) setAvailability(null);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [canSchedule, date]);
+
   if (!canSchedule && !appointment) {
     return null;
   }
+
+  const dayAvailability =
+    availability && availability.date === date ? availability : null;
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -161,6 +211,20 @@ export function ScheduleAppointmentForm({
               La cita es por día, sin hora: lunes a viernes de 8:00 a 17:00 y
               sábados de 9:00 a 13:00. Los domingos no hay atención.
             </span>
+            {dayAvailability ? (
+              <p
+                className={
+                  dayAvailability.day.isFull
+                    ? styles.occupancyFull
+                    : styles.occupancy
+                }
+                aria-live="polite"
+              >
+                {dayAvailability.day.isFull
+                  ? `La sala alcanzó su capacidad diaria (${dayAvailability.day.occupied} de ${dayAvailability.dailyCapacity} citas).`
+                  : `Ocupación del día: ${dayAvailability.day.occupied} de ${dayAvailability.dailyCapacity} citas (${dayAvailability.day.available} disponibles).`}
+              </p>
+            ) : null}
           </div>
 
           {error ? (

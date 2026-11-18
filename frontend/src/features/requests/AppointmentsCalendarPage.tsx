@@ -23,6 +23,8 @@ import {
   RequestsApiError,
 } from './api/list-requests';
 import type { SortOrder } from './api/list-requests';
+import { getRoomOccupancy } from './api/room-capacity';
+import type { DayOccupancy, RoomOccupancy } from './api/room-capacity';
 import styles from './AppointmentsCalendarPage.module.css';
 import listStyles from './RequestsListPage.module.css';
 
@@ -200,6 +202,10 @@ export function AppointmentsCalendarPage() {
     limit: PAGE_SIZE,
   });
   const [response, setResponse] = useState<ListResponse | null>(null);
+  const [occupancyState, setOccupancyState] = useState<{
+    rangeKey: string;
+    data: RoomOccupancy;
+  } | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -306,6 +312,36 @@ export function AppointmentsCalendarPage() {
       : currentBogotaYearMonth());
 
   const calendarDays = buildCalendarDays(activeMonth);
+  const firstVisibleDate = calendarDays[0]?.isoDate ?? '';
+  const lastVisibleDate = calendarDays[calendarDays.length - 1]?.isoDate ?? '';
+  const occupancyRangeKey = `${firstVisibleDate}:${lastVisibleDate}`;
+
+  useEffect(() => {
+    if (!firstVisibleDate || !lastVisibleDate) return;
+    let ignore = false;
+    getRoomOccupancy(firstVisibleDate, lastVisibleDate)
+      .then((data) => {
+        if (!ignore) {
+          setOccupancyState({
+            rangeKey: `${firstVisibleDate}:${lastVisibleDate}`,
+            data,
+          });
+        }
+      })
+      .catch(() => {
+        if (!ignore) setOccupancyState(null);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [firstVisibleDate, lastVisibleDate]);
+
+  const activeOccupancy =
+    occupancyState?.rangeKey === occupancyRangeKey ? occupancyState.data : null;
+  const occupancyByDate = new Map<string, DayOccupancy>(
+    (activeOccupancy?.days ?? []).map((day) => [day.date, day]),
+  );
+
   const appointmentsByDate = new Map<string, AppointmentListItem[]>();
   for (const item of result?.items ?? []) {
     const key = item.date.slice(0, 10);
@@ -510,6 +546,11 @@ export function AppointmentsCalendarPage() {
             >
               Mes actual
             </button>
+            {activeOccupancy ? (
+              <span className={styles.capacityBadge}>
+                Capacidad diaria: {activeOccupancy.dailyCapacity} citas
+              </span>
+            ) : null}
           </div>
 
           <div aria-live="polite" aria-busy={isLoading}>
@@ -574,6 +615,18 @@ export function AppointmentsCalendarPage() {
                         </span>
                         {day.isSunday ? (
                           <span className={styles.sundayTag}>Cerrado</span>
+                        ) : activeOccupancy ? (
+                          <span
+                            className={
+                              occupancyByDate.get(day.isoDate)?.isFull
+                                ? styles.occupancyTagFull
+                                : styles.occupancyTag
+                            }
+                            title={`${occupancyByDate.get(day.isoDate)?.occupied ?? 0} de ${activeOccupancy.dailyCapacity} citas`}
+                          >
+                            {occupancyByDate.get(day.isoDate)?.occupied ?? 0}/
+                            {activeOccupancy.dailyCapacity}
+                          </span>
                         ) : null}
                       </div>
                       {dayItems.length > 0 ? (

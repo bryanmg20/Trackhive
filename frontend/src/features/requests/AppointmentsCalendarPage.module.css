@@ -107,6 +107,36 @@
   color: var(--muted);
 }
 
+.capacityBadge {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.occupancyTag,
+.occupancyTagFull {
+  padding: 0.08rem 0.32rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.occupancyTag {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.occupancyTagFull {
+  border: 1px solid var(--seal);
+  background: var(--error-surface, var(--paper));
+  color: var(--seal);
+}
+
 .dayEvents {
   display: flex;
   flex-direction: column;
