@@ -381,6 +381,85 @@ describe('Request', () => {
     });
   });
 
+  describe('rescheduleAppointment and cancelAppointment (HU-21)', () => {
+    const NOW = new Date('2026-11-18T15:30:00.000Z');
+
+    it('reschedules an AGENDADA request, keeping it AGENDADA and recording the history change', () => {
+      const request = buildRequest('AGENDADA', 'PRESENCIAL');
+
+      const change = request.rescheduleAppointment(
+        'staff-1',
+        '  Cita reprogramada del 2026-11-20 al 2026-11-24  ',
+        NOW,
+      );
+
+      expect(request.status).toBe('AGENDADA');
+      expect(change).toEqual({
+        requestId: '1',
+        previousStatus: 'AGENDADA',
+        newStatus: 'AGENDADA',
+        changedBy: 'staff-1',
+        changedAt: NOW,
+        comment: 'Cita reprogramada del 2026-11-20 al 2026-11-24',
+        rejectionReason: null,
+        attendedAt: null,
+        closedAt: null,
+        appointmentOutcome: null,
+      });
+      expect(Object.isFrozen(change)).toBe(true);
+    });
+
+    it.each(REQUEST_STATUSES.filter((status) => status !== 'AGENDADA'))(
+      'rejects rescheduling a request in %s',
+      (status) => {
+        const request = buildRequest(status, 'PRESENCIAL');
+
+        expect(() =>
+          request.rescheduleAppointment('staff-1', 'Cambio'),
+        ).toThrow(InvalidStatusTransitionError);
+        expect(request.status).toBe(status);
+      },
+    );
+
+    it('cancels an AGENDADA request, returning it to DISPONIBLE with CANCELADA outcome', () => {
+      const request = buildRequest('AGENDADA', 'PRESENCIAL');
+
+      const change = request.cancelAppointment(
+        'staff-1',
+        '  Cita cancelada  ',
+        NOW,
+      );
+
+      expect(request.status).toBe('DISPONIBLE');
+      expect(request.allowedTransitions).toEqual(['AGENDADA', 'CERRADA']);
+      expect(change).toEqual({
+        requestId: '1',
+        previousStatus: 'AGENDADA',
+        newStatus: 'DISPONIBLE',
+        changedBy: 'staff-1',
+        changedAt: NOW,
+        comment: 'Cita cancelada',
+        rejectionReason: null,
+        attendedAt: null,
+        closedAt: null,
+        appointmentOutcome: 'CANCELADA',
+      });
+      expect(Object.isFrozen(change)).toBe(true);
+    });
+
+    it.each(REQUEST_STATUSES.filter((status) => status !== 'AGENDADA'))(
+      'rejects cancelling an appointment when the request is in %s',
+      (status) => {
+        const request = buildRequest(status, 'PRESENCIAL');
+
+        expect(() => request.cancelAppointment('staff-1')).toThrow(
+          InvalidStatusTransitionError,
+        );
+        expect(request.status).toBe(status);
+      },
+    );
+  });
+
   describe('changeStatus to RECHAZADA (HU-16)', () => {
     it.each<RequestStatus>(['RECIBIDA', 'EN_BUSQUEDA'])(
       'rejects a %s request and keeps the reason for the requester',

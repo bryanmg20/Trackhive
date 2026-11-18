@@ -5,6 +5,8 @@ import type { NotificationDraft } from '../../../notifications/domain/value-obje
 import { PrismaNotificationMapper } from '../../../notifications/infrastructure/mappers/prisma-notification.mapper';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Request } from '../../domain/entities/request.entity';
+import { AppointmentNotFoundError } from '../../domain/errors/appointment-not-found.error';
+import { AppointmentNotScheduledError } from '../../domain/errors/appointment-not-scheduled.error';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
@@ -14,13 +16,39 @@ import {
   isRoomFull,
 } from '../../domain/policies/room-capacity';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
-import type { SavedAppointment } from '../../domain/value-objects/saved-appointment';
+import type {
+  SavedAppointment,
+  SavedCancelledAppointment,
+  StoredAppointment,
+} from '../../domain/value-objects/saved-appointment';
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
 import type { StatusChange } from '../../domain/value-objects/status-change';
 import { PrismaAppointmentMapper } from '../mappers/prisma-appointment.mapper';
 import { PrismaRequestMapper } from '../mappers/prisma-request.mapper';
 import { PrismaStatusHistoryMapper } from '../mappers/prisma-status-history.mapper';
 import { findSchedulingConflicts } from './scheduling-conflicts.query';
+
+const SAVED_APPOINTMENT_SELECT = {
+  id: true,
+  appointmentDate: true,
+  requester: {
+    select: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      secondLastName: true,
+    },
+  },
+  materials: {
+    select: {
+      material: {
+        select: { id: true, catalogCode: true, title: true },
+      },
+    },
+    orderBy: { material: { catalogCode: 'asc' } },
+  },
+} satisfies Prisma.AppointmentModelSelect;
 
 /** Saves and loads the Request entity (R3). */
 @Injectable()
@@ -39,6 +67,21 @@ export class PrismaRequestRepository implements IRequestRepository {
       include: { items: { select: { materialId: true } } },
     });
     return model ? PrismaRequestMapper.toDomain(model) : null;
+  }
+
+  async findAppointmentById(id: string): Promise<StoredAppointment | null> {
+    const model = await this.prisma.appointmentModel.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        appointmentDate: true,
+        status: true,
+        request: {
+          include: { items: { select: { materialId: true } } },
+        },
+      },
+    });
+    return model ? PrismaAppointmentMapper.toStoredAppointment(model) : null;
   }
 
   async saveStatusChange(
@@ -119,6 +162,137 @@ export class PrismaRequestRepository implements IRequestRepository {
         statusChange,
       );
     });
+  }
+
+  async rescheduleAppointment(
+    appointmentId: string,
+    change: StatusChange,
+    date: Date,
+    notification: NotificationDraft | null,
+  ): Promise<SavedAppointment> {
+    return this.prisma.$transaction(async (tx) => {
+      await this.assertDailyCapacityAvailable(tx, date);
+
+      const { count } = await tx.appointmentModel.updateMany({
+        where: { id: appointmentId, status: 'PROGRAMADA' },
+        data: PrismaAppointmentMapper.toRescheduled(date, change.changedBy),
+      });
+      if (count === 0) {
+        throw new AppointmentNotScheduledError();
+      }
+
+      const request = await tx.requestModel.findUniqueOrThrow({
+        where: { id: change.requestId },
+        select: {
+          items: {
+            select: {
+              material: { select: { catalogCode: true, title: true } },
+            },
+          },
+        },
+      });
+
+      await this.updateBookedMaterialsDate(tx, {
+        appointmentId,
+        requestId: change.requestId,
+        date,
+        materials: request.items.map(({ material }) => material),
+      });
+
+      const statusChange = await this.applyStatusChange(
+        tx,
+        change,
+        notification,
+      );
+
+      const appointment = await tx.appointmentModel.findUniqueOrThrow({
+        where: { id: appointmentId },
+        select: SAVED_APPOINTMENT_SELECT,
+      });
+
+      return PrismaAppointmentMapper.toSavedAppointment(
+        appointment,
+        statusChange,
+      );
+    });
+  }
+
+  async cancelAppointment(
+    appointmentId: string,
+    change: StatusChange,
+    notification: NotificationDraft | null,
+  ): Promise<SavedCancelledAppointment> {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.appointmentModel.findUnique({
+        where: { id: appointmentId },
+        select: { id: true, appointmentDate: true },
+      });
+      if (!current) {
+        throw new AppointmentNotFoundError();
+      }
+
+      const { count } = await tx.appointmentModel.updateMany({
+        where: { id: appointmentId, status: 'PROGRAMADA' },
+        data: PrismaAppointmentMapper.toSettled('CANCELADA'),
+      });
+      if (count === 0) {
+        throw new AppointmentNotScheduledError();
+      }
+
+      await tx.appointmentMaterialModel.updateMany({
+        where: { appointmentId, bookedDate: { not: null } },
+        data: PrismaAppointmentMapper.toBookingReleased(),
+      });
+
+      const statusChange = await this.applyStatusChange(
+        tx,
+        change,
+        notification,
+      );
+
+      return PrismaAppointmentMapper.toSavedCancelledAppointment(
+        current,
+        statusChange,
+      );
+    });
+  }
+
+  private async updateBookedMaterialsDate(
+    tx: Prisma.TransactionClient,
+    input: {
+      appointmentId: string;
+      requestId: string;
+      date: Date;
+      materials: { catalogCode: string; title: string }[];
+    },
+  ): Promise<void> {
+    try {
+      await tx.appointmentMaterialModel.updateMany({
+        where: { appointmentId: input.appointmentId },
+        data: PrismaAppointmentMapper.toMaterialBookedDate(input.date),
+      });
+    } catch (error) {
+      if (!(
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )) {
+        throw error;
+      }
+      const taken = await findSchedulingConflicts(
+        this.prisma,
+        input.requestId,
+        input.date,
+      );
+      throw new MaterialAlreadyBookedError(
+        taken.bookedMaterials.length > 0
+          ? taken.bookedMaterials
+          : input.materials.map(({ catalogCode, title }) => ({
+              catalogCode,
+              title,
+              date: input.date,
+            })),
+      );
+    }
   }
 
   private async assertDailyCapacityAvailable(

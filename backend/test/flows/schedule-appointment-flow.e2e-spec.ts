@@ -289,4 +289,119 @@ describe('Appointment scheduling flow, HU-18 (e2e, PostgreSQL)', () => {
       appointment: { date: day },
     });
   });
+
+  it('reschedules an appointment to another day, re-validates availability and records it in history (HU-21)', async () => {
+    const material = await createMaterial(e2e.prisma);
+    const originalDay = serviceDay(10);
+    const busyDay = serviceDay(11);
+    const freeDay = serviceDay(12);
+
+    const first = await availableRequest([material.id]);
+    const scheduled = await schedule(first.id, originalDay).expect(201);
+    const appointmentId = (scheduled.body as { appointment: { id: string } })
+      .appointment.id;
+
+    // Another request books the same material on busyDay
+    const second = await availableRequest([material.id]);
+    await schedule(second.id, busyDay).expect(201);
+
+    // Rescheduling to busyDay fails availability check (409 MATERIAL_ALREADY_BOOKED)
+    const conflict = await request(e2e.server)
+      .patch(`${API}/appointments/${appointmentId}/reschedule`)
+      .set('Authorization', bearer(staff))
+      .send({ date: busyDay })
+      .expect(409);
+    expect((conflict.body as ErrorBody).code).toBe('MATERIAL_ALREADY_BOOKED');
+
+    // Rescheduling to freeDay succeeds, frees originalDay and records in status_history
+    const rescheduled = await request(e2e.server)
+      .patch(`${API}/appointments/${appointmentId}/reschedule`)
+      .set('Authorization', bearer(staff))
+      .send({ date: freeDay })
+      .expect(200);
+
+    expect(rescheduled.body).toMatchObject({
+      id: first.id,
+      status: 'AGENDADA',
+      appointment: {
+        id: appointmentId,
+        date: freeDay,
+        status: 'PROGRAMADA',
+      },
+      statusChange: {
+        previousStatus: 'AGENDADA',
+        newStatus: 'AGENDADA',
+      },
+    });
+
+    const history = await historyOf(first.id);
+    expect(history[history.length - 1]).toMatchObject({
+      previousStatus: 'AGENDADA',
+      newStatus: 'AGENDADA',
+      userId: staff.userId,
+      comment: `Cita reprogramada del ${originalDay} al ${freeDay}`,
+    });
+
+    // originalDay is now free for another request with that material
+    const third = await availableRequest([material.id]);
+    await schedule(third.id, originalDay).expect(201);
+  });
+
+  it('cancels an appointment, frees the material, returns the request to DISPONIBLE and records it in history (HU-21)', async () => {
+    const material = await createMaterial(e2e.prisma);
+    const day = serviceDay(15);
+    const created = await availableRequest([material.id]);
+    const scheduled = await schedule(created.id, day).expect(201);
+    const appointmentId = (scheduled.body as { appointment: { id: string } })
+      .appointment.id;
+
+    // Public user receives 403
+    await request(e2e.server)
+      .patch(`${API}/appointments/${appointmentId}/cancel`)
+      .set('Authorization', bearer(requester))
+      .send({})
+      .expect(403);
+
+    const cancelled = await request(e2e.server)
+      .patch(`${API}/appointments/${appointmentId}/cancel`)
+      .set('Authorization', bearer(staff))
+      .send({})
+      .expect(200);
+
+    expect(cancelled.body).toMatchObject({
+      id: created.id,
+      status: 'DISPONIBLE',
+      allowedTransitions: ['AGENDADA', 'CERRADA'],
+      appointment: {
+        id: appointmentId,
+        date: day,
+        status: 'CANCELADA',
+      },
+      statusChange: {
+        previousStatus: 'AGENDADA',
+        newStatus: 'DISPONIBLE',
+      },
+    });
+
+    const stored = await e2e.prisma.requestModel.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(stored.status).toBe('DISPONIBLE');
+
+    const [appointment] = await appointmentsOf(created.id);
+    expect(appointment.status).toBe('CANCELADA');
+    expect(appointment.materials[0].bookedDate).toBeNull();
+
+    const history = await historyOf(created.id);
+    expect(history[history.length - 1]).toMatchObject({
+      previousStatus: 'AGENDADA',
+      newStatus: 'DISPONIBLE',
+      userId: staff.userId,
+      comment: `Cita del ${day} cancelada`,
+    });
+
+    // Another request can now book that material on the same day
+    const other = await availableRequest([material.id]);
+    await schedule(other.id, day).expect(201);
+  });
 });

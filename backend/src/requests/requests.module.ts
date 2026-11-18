@@ -8,6 +8,7 @@ import {
   ROOM_CAPACITY_REPOSITORY,
   TRACKING_CODE_GENERATOR,
 } from './application/tokens';
+import { CancelAppointmentUseCase } from './application/use-cases/cancel-appointment.use-case';
 import { ChangeRequestStatusUseCase } from './application/use-cases/change-request-status.use-case';
 import { CreateRequestOnBehalfUseCase } from './application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from './application/use-cases/create-request.use-case';
@@ -19,6 +20,7 @@ import { GetRoomOccupancyUseCase } from './application/use-cases/get-room-occupa
 import { ListAppointmentsUseCase } from './application/use-cases/list-appointments.use-case';
 import { ListMyRequestsUseCase } from './application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from './application/use-cases/list-requests.use-case';
+import { RescheduleAppointmentUseCase } from './application/use-cases/reschedule-appointment.use-case';
 import { ScheduleAppointmentUseCase } from './application/use-cases/schedule-appointment.use-case';
 import { UpdateRoomCapacityUseCase } from './application/use-cases/update-room-capacity.use-case';
 import { PrismaRequestQueryService } from './infrastructure/persistence/prisma-request-query.service';
@@ -67,6 +69,8 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     ListMyRequestsUseCase,
     ChangeRequestStatusUseCase,
     ScheduleAppointmentUseCase,
+    RescheduleAppointmentUseCase,
+    CancelAppointmentUseCase,
   ],
 })
 export class RequestsModule {}

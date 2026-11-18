@@ -681,4 +681,192 @@ describe('PrismaRequestRepository', () => {
       expect(tx.appointmentModel.create).not.toHaveBeenCalled();
     });
   });
+
+  describe('rescheduleAppointment and cancelAppointment (HU-21)', () => {
+    const CHANGED_AT = new Date('2026-11-18T15:30:00.000Z');
+    const NEW_DATE = new Date('2026-11-24T00:00:00.000Z');
+    const STAFF = {
+      id: 'staff-1',
+      firstName: 'Ana',
+      middleName: null,
+      lastName: 'Gómez',
+      secondLastName: null,
+    };
+    const REQUESTER = {
+      id: 'requester-1',
+      firstName: 'Juan',
+      middleName: null,
+      lastName: 'Pérez',
+      secondLastName: null,
+    };
+    const MATERIALS = [
+      { id: 'material-1', catalogCode: 'AHB-001', title: 'Actas de 1890' },
+    ];
+
+    const RESCHEDULE_CHANGE: StatusChange = {
+      requestId: 'request-1',
+      previousStatus: 'AGENDADA',
+      newStatus: 'AGENDADA',
+      changedBy: 'staff-1',
+      changedAt: CHANGED_AT,
+      attendedAt: null,
+      closedAt: null,
+      appointmentOutcome: null,
+      comment: 'Cita reprogramada del 2026-11-20 al 2026-11-24',
+      rejectionReason: null,
+    };
+
+    const CANCEL_CHANGE: StatusChange = {
+      requestId: 'request-1',
+      previousStatus: 'AGENDADA',
+      newStatus: 'DISPONIBLE',
+      changedBy: 'staff-1',
+      changedAt: CHANGED_AT,
+      attendedAt: null,
+      closedAt: null,
+      appointmentOutcome: 'CANCELADA',
+      comment: 'Cita del 2026-11-20 cancelada',
+      rejectionReason: null,
+    };
+
+    it('updates the appointment date, booked materials, history and email in one transaction on reschedule', async () => {
+      const tx = {
+        $executeRaw: jest.fn().mockResolvedValue(1),
+        readingRoomConfigModel: {
+          findUnique: jest.fn().mockResolvedValue(null),
+        },
+        requestModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: jest.fn().mockResolvedValue({
+            items: MATERIALS.map((material) => ({
+              material: {
+                catalogCode: material.catalogCode,
+                title: material.title,
+              },
+            })),
+          }),
+        },
+        statusHistoryModel: {
+          create: jest
+            .fn()
+            .mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+              Promise.resolve({ id: BigInt(10), ...data, user: STAFF }),
+            ),
+        },
+        appointmentModel: {
+          count: jest.fn().mockResolvedValue(0),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: jest.fn().mockResolvedValue({
+            id: 'appointment-1',
+            appointmentDate: NEW_DATE,
+            requester: REQUESTER,
+            materials: MATERIALS.map((material) => ({ material })),
+          }),
+        },
+        appointmentMaterialModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        notificationModel: {
+          create: jest.fn().mockResolvedValue({}),
+        },
+      };
+      const prisma = {
+        $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+          callback(tx),
+        ),
+      };
+      const repository = new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      );
+
+      const saved = await repository.rescheduleAppointment(
+        'appointment-1',
+        RESCHEDULE_CHANGE,
+        NEW_DATE,
+        null,
+      );
+
+      expect(tx.appointmentModel.updateMany).toHaveBeenCalledWith({
+        where: { id: 'appointment-1', status: 'PROGRAMADA' },
+        data: { appointmentDate: NEW_DATE, scheduledById: 'staff-1' },
+      });
+      expect(tx.appointmentMaterialModel.updateMany).toHaveBeenCalledWith({
+        where: { appointmentId: 'appointment-1' },
+        data: { bookedDate: NEW_DATE },
+      });
+      expect(saved.date).toEqual(NEW_DATE);
+      expect(saved.statusChange).toMatchObject({
+        previousStatus: 'AGENDADA',
+        newStatus: 'AGENDADA',
+        comment: 'Cita reprogramada del 2026-11-20 al 2026-11-24',
+      });
+    });
+
+    it('marks the appointment CANCELADA, frees bookedDate and moves request to DISPONIBLE on cancel', async () => {
+      const OLD_DATE = new Date('2026-11-20T00:00:00.000Z');
+      const tx = {
+        requestModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        statusHistoryModel: {
+          create: jest
+            .fn()
+            .mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+              Promise.resolve({ id: BigInt(11), ...data, user: STAFF }),
+            ),
+        },
+        appointmentModel: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'appointment-1',
+            appointmentDate: OLD_DATE,
+          }),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        appointmentMaterialModel: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        notificationModel: {
+          create: jest.fn().mockResolvedValue({}),
+        },
+      };
+      const prisma = {
+        $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+          callback(tx),
+        ),
+      };
+      const repository = new PrismaRequestRepository(
+        prisma as unknown as PrismaService,
+      );
+
+      const saved = await repository.cancelAppointment(
+        'appointment-1',
+        CANCEL_CHANGE,
+        null,
+      );
+
+      expect(tx.appointmentModel.updateMany).toHaveBeenCalledWith({
+        where: { id: 'appointment-1', status: 'PROGRAMADA' },
+        data: { status: 'CANCELADA' },
+      });
+      expect(tx.appointmentMaterialModel.updateMany).toHaveBeenCalledWith({
+        where: {
+          appointmentId: 'appointment-1',
+          bookedDate: { not: null },
+        },
+        data: { bookedDate: null },
+      });
+      expect(saved).toEqual({
+        id: 'appointment-1',
+        date: OLD_DATE,
+        status: 'CANCELADA',
+        statusChange: {
+          previousStatus: 'AGENDADA',
+          newStatus: 'DISPONIBLE',
+          changedAt: CHANGED_AT,
+          comment: 'Cita del 2026-11-20 cancelada',
+          changedBy: STAFF,
+        },
+      });
+    });
+  });
 });

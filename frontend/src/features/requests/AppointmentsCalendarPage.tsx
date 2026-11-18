@@ -22,6 +22,10 @@ import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
 import type { SortOrder } from './api/list-requests';
 import { getRoomOccupancy } from './api/room-capacity';
 import type { RoomOccupancy } from './api/room-capacity';
+import {
+  cancelAppointment,
+  rescheduleAppointment,
+} from './api/manage-appointment';
 import styles from './AppointmentsCalendarPage.module.css';
 import { formatMaterialLocation } from './material-location';
 import { listCalendarMonth } from './api/list-calendar-month';
@@ -199,6 +203,19 @@ export function AppointmentsCalendarPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [monthAttempt, setMonthAttempt] = useState(0);
+  const [occupancyAttempt, setOccupancyAttempt] = useState(0);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [actionComment, setActionComment] = useState('');
+  const [rescheduling, setRescheduling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [actionError, setActionError] = useState<{
+    message: string;
+    sessionExpired: boolean;
+  } | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [patchedById, setPatchedById] = useState<
+    Record<string, Partial<AppointmentListItem>>
+  >({});
   const dayDialog = useRef<HTMLDialogElement>(null);
   const [monthResponse, setMonthResponse] = useState<{
     key: string;
@@ -378,7 +395,124 @@ export function AppointmentsCalendarPage() {
     return () => {
       ignore = true;
     };
-  }, [firstVisibleDate, lastVisibleDate, occupancyRangeKey]);
+  }, [firstVisibleDate, lastVisibleDate, occupancyRangeKey, occupancyAttempt]);
+
+  function selectAppointment(id: string) {
+    setSelectedId(id);
+    setRescheduleDate('');
+    setActionComment('');
+    setActionError(null);
+    setActionNotice(null);
+  }
+
+  function toActionError(caught: unknown): {
+    message: string;
+    sessionExpired: boolean;
+  } {
+    if (!(caught instanceof RequestsApiError)) {
+      return { message: NETWORK_ERROR_MESSAGE, sessionExpired: false };
+    }
+    if (caught.status === 401) {
+      return {
+        message: 'Su sesión no es válida o venció. Inicie sesión de nuevo.',
+        sessionExpired: true,
+      };
+    }
+    if (caught.status === 403) {
+      return {
+        message: 'No tiene permiso para modificar citas.',
+        sessionExpired: false,
+      };
+    }
+    return { message: caught.message, sessionExpired: false };
+  }
+
+  function patchStoredAppointment(
+    appointmentId: string,
+    patch: Partial<AppointmentListItem>,
+  ) {
+    setPatchedById((current) => ({
+      ...current,
+      [appointmentId]: {
+        ...current[appointmentId],
+        ...patch,
+      },
+    }));
+    setOccupancyAttempt((attempt) => attempt + 1);
+  }
+
+  async function handleReschedule(
+    event: FormEvent<HTMLFormElement>,
+    appointment: AppointmentListItem,
+  ) {
+    event.preventDefault();
+    if (!rescheduleDate) {
+      setActionError({
+        message: 'Elija la nueva fecha de la cita.',
+        sessionExpired: false,
+      });
+      return;
+    }
+    setRescheduling(true);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      const result = await rescheduleAppointment({
+        appointmentId: appointment.id,
+        date: rescheduleDate,
+        comment: actionComment.trim() || undefined,
+      });
+      patchStoredAppointment(appointment.id, {
+        date: result.appointment.date,
+        serviceHours: result.appointment.serviceHours,
+        status: result.appointment.status,
+        request: {
+          ...appointment.request,
+          status: result.status,
+        },
+      });
+      setRescheduleDate('');
+      setActionComment('');
+      setActionNotice(
+        `Cita reprogramada para el ${formatFullDay(result.appointment.date)}. El cambio quedó en el historial.`,
+      );
+    } catch (caught: unknown) {
+      setActionError(toActionError(caught));
+    } finally {
+      setRescheduling(false);
+    }
+  }
+
+  async function handleCancel(appointment: AppointmentListItem) {
+    setCancelling(true);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      const result = await cancelAppointment({
+        appointmentId: appointment.id,
+        comment: actionComment.trim() || undefined,
+      });
+      patchStoredAppointment(appointment.id, {
+        status: 'CANCELADA',
+        request: {
+          ...appointment.request,
+          status: result.status,
+        },
+      });
+      setRescheduleDate('');
+      setActionComment('');
+      setActionNotice(
+        'Cita cancelada. El material quedó libre, la solicitud volvió a Disponible y el cambio quedó en el historial.',
+      );
+    } catch (caught: unknown) {
+      setActionError(toActionError(caught));
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  const applyPatch = (item: AppointmentListItem): AppointmentListItem =>
+    patchedById[item.id] ? { ...item, ...patchedById[item.id] } : item;
 
   const activeOccupancy =
     occupancyState?.rangeKey === occupancyRangeKey ? occupancyState.data : null;
@@ -389,26 +523,32 @@ export function AppointmentsCalendarPage() {
   );
   const monthData =
     monthResponse?.key === monthKey ? monthResponse.data : undefined;
+  const patchedMonthItems = (monthData?.items ?? []).map(applyPatch);
+  const patchedResultItems = (result?.items ?? []).map(applyPatch);
   const appointmentsByDate = new Map<string, AppointmentListItem[]>();
-  for (const item of monthData?.items ?? []) {
+  for (const item of patchedMonthItems) {
     const key = item.date.slice(0, 10);
     const list = appointmentsByDate.get(key) ?? [];
     list.push(item);
     appointmentsByDate.set(key, list);
   }
   const occupancyByDate = new Map<string, number>();
-  for (const item of monthData?.occupancy ?? []) {
+  for (const rawItem of monthData?.occupancy ?? []) {
+    const item = applyPatch(rawItem);
+    if (item.status !== 'PROGRAMADA' && item.status !== 'CUMPLIDA') {
+      continue;
+    }
     const key = item.date.slice(0, 10);
     occupancyByDate.set(key, (occupancyByDate.get(key) ?? 0) + 1);
   }
 
   const visibleDates = new Set(calendarDays.map((day) => day.isoDate));
-  const otherMonthItems = (result?.items ?? []).filter(
+  const otherMonthItems = patchedResultItems.filter(
     (item) => !visibleDates.has(item.date.slice(0, 10)),
   );
 
   const selectedAppointment =
-    [...(monthData?.items ?? []), ...(result?.items ?? [])].find(
+    [...patchedMonthItems, ...patchedResultItems].find(
       (item) => item.id === selectedId,
     ) ?? null;
 
@@ -731,7 +871,7 @@ export function AppointmentsCalendarPage() {
                               <AppointmentCardButton
                                 item={item}
                                 selected={selectedId === item.id}
-                                onSelect={setSelectedId}
+                                onSelect={selectAppointment}
                               />
                             </li>
                           ))}
@@ -799,7 +939,7 @@ export function AppointmentsCalendarPage() {
                             item={item}
                             selected={selectedId === item.id}
                             onSelect={(id) => {
-                              setSelectedId(id);
+                              selectAppointment(id);
                               dayDialog.current?.close();
                             }}
                           />
@@ -821,7 +961,7 @@ export function AppointmentsCalendarPage() {
                         <AppointmentCardButton
                           item={item}
                           selected={selectedId === item.id}
-                          onSelect={setSelectedId}
+                          onSelect={selectAppointment}
                         />
                       </li>
                     ))}
@@ -956,6 +1096,83 @@ export function AppointmentsCalendarPage() {
                       ))}
                     </ul>
                   </div>
+
+                  {actionNotice ? (
+                    <p className={styles.actionNotice} role="status">
+                      {actionNotice}
+                    </p>
+                  ) : null}
+
+                  {actionError ? (
+                    <div className={searchStyles.error} role="alert">
+                      <p>{actionError.message}</p>
+                      {actionError.sessionExpired ? (
+                        <Link to={ROUTES.login}>Iniciar sesión</Link>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {selectedAppointment.status === 'PROGRAMADA' ? (
+                    <form
+                      className={styles.manageSection}
+                      aria-label="Reprogramar o cancelar cita"
+                      onSubmit={(event) =>
+                        void handleReschedule(event, selectedAppointment)
+                      }
+                      noValidate
+                    >
+                      <h4 className={styles.manageTitle}>
+                        Reprogramar o cancelar cita
+                      </h4>
+                      <div className={styles.manageFields}>
+                        <div className={styles.manageField}>
+                          <label htmlFor="reschedule-date">
+                            Nueva fecha de la cita
+                          </label>
+                          <input
+                            id="reschedule-date"
+                            type="date"
+                            value={rescheduleDate}
+                            onChange={(event) =>
+                              setRescheduleDate(event.target.value)
+                            }
+                          />
+                        </div>
+                        <div className={styles.manageField}>
+                          <label htmlFor="appointment-action-comment">
+                            Observación (opcional)
+                          </label>
+                          <input
+                            id="appointment-action-comment"
+                            type="text"
+                            maxLength={500}
+                            value={actionComment}
+                            onChange={(event) =>
+                              setActionComment(event.target.value)
+                            }
+                            placeholder="Motivo del cambio o cancelación"
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.manageActions}>
+                        <button
+                          className={searchStyles.primary}
+                          type="submit"
+                          disabled={rescheduling || cancelling}
+                        >
+                          {rescheduling ? 'Reprogramando…' : 'Reprogramar cita'}
+                        </button>
+                        <button
+                          className={styles.cancelButton}
+                          type="button"
+                          disabled={rescheduling || cancelling}
+                          onClick={() => void handleCancel(selectedAppointment)}
+                        >
+                          {cancelling ? 'Cancelando…' : 'Cancelar cita'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
                 </section>
               ) : null}
 

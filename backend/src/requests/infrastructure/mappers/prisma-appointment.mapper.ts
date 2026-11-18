@@ -1,7 +1,14 @@
 import type { Prisma } from '@prisma/client';
-import type { SavedAppointment } from '../../domain/value-objects/saved-appointment';
+import { isAppointmentStatus } from '../../domain/enums/appointment-status';
+import type {
+  SavedAppointment,
+  SavedCancelledAppointment,
+  StoredAppointment,
+} from '../../domain/value-objects/saved-appointment';
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
 import type { StatusChange } from '../../domain/value-objects/status-change';
+import { PrismaRequestMapper } from './prisma-request.mapper';
+import type { RequestEntityRow } from './prisma-request.mapper';
 
 /** A new appointment of a request, with every material of the request. */
 export interface NewAppointment {
@@ -12,6 +19,14 @@ export interface NewAppointment {
   // UTC midnight of the day
   date: Date;
   materialIds: string[];
+}
+
+/** An appointment loaded with its request row (HU-21). */
+export interface StoredAppointmentRow {
+  id: string;
+  appointmentDate: Date;
+  status: string;
+  request: RequestEntityRow;
 }
 
 /** An appointment just inserted, with the names to show (HU-18). */
@@ -30,6 +45,18 @@ export interface InsertedAppointmentRow {
 
 /** Translates between the appointments tables and the appointment records. */
 export class PrismaAppointmentMapper {
+  static toStoredAppointment(row: StoredAppointmentRow): StoredAppointment {
+    if (!isAppointmentStatus(row.status)) {
+      throw new Error(`Appointment ${row.id} has an invalid stored status`);
+    }
+    return {
+      id: row.id,
+      date: row.appointmentDate,
+      status: row.status,
+      request: PrismaRequestMapper.toDomain(row.request),
+    };
+  }
+
   /** A PROGRAMADA appointment that books each material for the day (HU-20). */
   static toPersistence(
     appointment: NewAppointment,
@@ -62,6 +89,33 @@ export class PrismaAppointmentMapper {
       materials: row.materials.map(({ material }) => material),
       statusChange,
     };
+  }
+
+  static toSavedCancelledAppointment(
+    row: { id: string; appointmentDate: Date },
+    statusChange: SavedStatusChange,
+  ): SavedCancelledAppointment {
+    return {
+      id: row.id,
+      date: row.appointmentDate,
+      status: 'CANCELADA',
+      statusChange,
+    };
+  }
+
+  /** Moves a PROGRAMADA appointment to a new date (HU-21). */
+  static toRescheduled(
+    date: Date,
+    scheduledById: string,
+  ): Prisma.AppointmentModelUncheckedUpdateManyInput {
+    return { appointmentDate: date, scheduledById };
+  }
+
+  /** Updates the booked day of the materials of a rescheduled appointment (HU-21). */
+  static toMaterialBookedDate(
+    date: Date,
+  ): Prisma.AppointmentMaterialModelUpdateManyMutationInput {
+    return { bookedDate: date };
   }
 
   /** How the change settled the appointment (StatusChange.appointmentOutcome). */
