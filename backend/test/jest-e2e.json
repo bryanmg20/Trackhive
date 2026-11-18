@@ -7,5 +7,6 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "globalSetup": "<rootDir>/setup/global-setup.ts",
-  "setupFiles": ["<rootDir>/setup/use-e2e-database.ts"]
+  "setupFiles": ["<rootDir>/setup/use-e2e-database.ts"],
+  "maxWorkers": 1
 }

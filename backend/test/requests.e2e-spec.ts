@@ -15,6 +15,7 @@ import {
   REQUEST_QUERY_SERVICE,
   REQUEST_REPOSITORY,
   REQUESTER_REPOSITORY,
+  ROOM_CAPACITY_REPOSITORY,
   TRACKING_CODE_GENERATOR,
 } from '../src/requests/application/tokens';
 import {
@@ -74,6 +75,8 @@ describe('Request registration (e2e)', () => {
       materials: [],
       bookedMaterials: [],
     }),
+    countActiveAppointmentsOnDate: jest.fn().mockResolvedValue(0),
+    countActiveAppointmentsByDateRange: jest.fn().mockResolvedValue([]),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
@@ -156,6 +159,16 @@ describe('Request registration (e2e)', () => {
       .useValue(repository)
       .overrideProvider(REQUESTER_REPOSITORY)
       .useValue(requesters)
+      .overrideProvider(ROOM_CAPACITY_REPOSITORY)
+      .useValue({
+        getConfig: jest.fn().mockResolvedValue({
+          dailyCapacity: 15,
+          isDefault: true,
+          updatedAt: null,
+          updatedBy: null,
+        }),
+        saveDailyCapacity: jest.fn(),
+      })
       .overrideProvider(USER_REPOSITORY)
       .useValue(users)
       .overrideProvider(TRACKING_CODE_GENERATOR)

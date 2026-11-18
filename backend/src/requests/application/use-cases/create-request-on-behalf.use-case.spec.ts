@@ -51,6 +51,8 @@ describe('CreateRequestOnBehalfUseCase', () => {
     findNotificationContext: jest.fn(),
     findSchedulingConflicts: jest.fn(),
     findMissingMaterialIds,
+    countActiveAppointmentsOnDate: jest.fn(),
+    countActiveAppointmentsByDateRange: jest.fn(),
   };
   const forContact = jest.fn(() => Promise.resolve(VISITOR));
   const useCase = new CreateRequestOnBehalfUseCase(

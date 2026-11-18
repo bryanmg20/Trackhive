@@ -29,6 +29,8 @@ describe('FindRequesterByEmailUseCase', () => {
       findNotificationContext: jest.fn(),
       findSchedulingConflicts: jest.fn(),
       findMissingMaterialIds: jest.fn(),
+      countActiveAppointmentsOnDate: jest.fn(),
+      countActiveAppointmentsByDateRange: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 
@@ -55,6 +57,8 @@ describe('FindRequesterByEmailUseCase', () => {
       findNotificationContext: jest.fn(),
       findSchedulingConflicts: jest.fn(),
       findMissingMaterialIds: jest.fn(),
+      countActiveAppointmentsOnDate: jest.fn(),
+      countActiveAppointmentsByDateRange: jest.fn(),
     };
     const useCase = new FindRequesterByEmailUseCase(repository);
 

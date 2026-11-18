@@ -86,6 +86,8 @@ describe('ChangeRequestStatusUseCase', () => {
       findNotificationContext,
       findSchedulingConflicts: jest.fn(),
       findMissingMaterialIds: jest.fn(),
+      countActiveAppointmentsOnDate: jest.fn(),
+      countActiveAppointmentsByDateRange: jest.fn(),
     };
     useCase = new ChangeRequestStatusUseCase(repository, queries);
   });

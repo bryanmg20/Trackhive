@@ -12,21 +12,24 @@ import { resolveE2eDatabaseUrl } from './e2e-database-url';
 export default function globalSetup(): void {
   const databaseUrl = resolveE2eDatabaseUrl();
   const backendDir = join(__dirname, '..', '..');
-  const prisma = join(
-    backendDir,
-    'node_modules',
-    '.bin',
-    process.platform === 'win32' ? 'prisma.cmd' : 'prisma',
-  );
+  const prismaCli = require.resolve('prisma/build/index.js', {
+    paths: [backendDir],
+  });
 
   execFileSync(
-    prisma,
-    ['migrate', 'reset', '--force', '--skip-seed', '--skip-generate'],
+    process.execPath,
+    [
+      prismaCli,
+      'migrate',
+      'reset',
+      '--force',
+      '--skip-seed',
+      '--skip-generate',
+    ],
     {
       cwd: backendDir,
       env: { ...process.env, DATABASE_URL: databaseUrl },
       stdio: 'pipe',
-      shell: process.platform === 'win32',
     },
   );
 }

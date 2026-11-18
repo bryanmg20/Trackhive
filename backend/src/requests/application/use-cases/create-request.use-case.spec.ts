@@ -48,6 +48,8 @@ const build = () => {
     findNotificationContext: jest.fn(),
     findSchedulingConflicts: jest.fn(),
     findMissingMaterialIds,
+    countActiveAppointmentsOnDate: jest.fn(),
+    countActiveAppointmentsByDateRange: jest.fn(),
   };
   const forUser = jest.fn(() => Promise.resolve(REQUESTER));
   const resolver = { forUser } as unknown as RequesterResolver;
