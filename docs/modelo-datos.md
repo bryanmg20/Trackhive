@@ -488,6 +488,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261114100000_material_day_booking` | HU-20 | `booked_date` y el índice único contra dobles reservas |
 | `20261118030000_create_reading_room_config` | HU-20.1 | Tabla singleton `reading_room_config` para la capacidad diaria |
 | `20261118120000_material_digital_copy` | HU-134 | Ubicación física opcional, `source`, `digital_path` y `last_seen_at` en `materials`, y la tabla `sync_runs` |
+| `20261118150000_allow_reschedule_status_history` | HU-21 | Permite registrar la reprogramación de una cita (`AGENDADA → AGENDADA`) en `status_history` |
 
 **Semillas:**
 
