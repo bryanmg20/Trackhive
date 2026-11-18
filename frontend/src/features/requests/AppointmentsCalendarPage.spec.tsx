@@ -348,7 +348,7 @@ describe('AppointmentsCalendarPage', () => {
     expect(
       await screen.findByText('Capacidad diaria: 20 citas'),
     ).toBeInTheDocument();
-    const calendar = screen.getByRole('region', {
+    const calendar = await screen.findByRole('region', {
       name: /calendario de noviembre de 2026/i,
     });
     const day20 = calendar.querySelector('[data-date="2026-11-20"]');
@@ -414,5 +414,154 @@ describe('AppointmentsCalendarPage', () => {
     expect(
       await screen.findByRole('region', { name: /calendario de noviembre/i }),
     ).toBeInTheDocument();
+  });
+
+  it('lets staff reschedule a selected appointment from the calendar (HU-21)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH' && url.includes('/reschedule')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: '00000000-0000-4000-8000-000000000001',
+            status: 'AGENDADA',
+            allowedTransitions: ['DISPONIBLE', 'ATENDIDA'],
+            appointment: {
+              id: '00000000-0000-4000-8000-000000000010',
+              date: '2026-11-24',
+              serviceHours: { opensAt: '08:00', closesAt: '17:00' },
+              status: 'PROGRAMADA',
+              requester: { id: 'requester-1', name: 'Juan Carlos Pérez' },
+              materials: [],
+            },
+            statusChange: {
+              previousStatus: 'AGENDADA',
+              newStatus: 'AGENDADA',
+              changedAt: '2026-11-18T15:00:00.000Z',
+              changedBy: { id: 'staff-1', name: 'Ana Gómez' },
+              comment: 'Cita reprogramada del 2026-11-20 al 2026-11-24',
+            },
+          }),
+        });
+      }
+      return Promise.resolve(page([appointmentItem()]));
+    });
+
+    renderPage('PERSONAL');
+
+    const appointmentButton = await screen.findByRole('button', {
+      name: /acta de fundación de la villa/i,
+    });
+    await user.click(appointmentButton);
+
+    const detailSection = await screen.findByRole('region', {
+      name: /detalle de la cita · SOL-2026-00001/i,
+    });
+    await user.type(
+      within(detailSection).getByLabelText('Nueva fecha de la cita'),
+      '2026-11-24',
+    );
+    await user.click(
+      within(detailSection).getByRole('button', { name: 'Reprogramar cita' }),
+    );
+
+    expect(await within(detailSection).findByRole('status')).toHaveTextContent(
+      /cita reprogramada para el martes 24\/11\/2026/i,
+    );
+    expect(
+      within(detailSection).getByText('martes 24/11/2026'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the availability conflict error on the calendar screen when rescheduling fails (HU-21)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH' && url.includes('/reschedule')) {
+        return Promise.resolve({
+          ok: false,
+          status: 409,
+          json: async () => ({
+            statusCode: 409,
+            code: 'MATERIAL_ALREADY_BOOKED',
+            message:
+              'El material «Acta de fundación de la villa» (TH-DOC-0001) ya tiene cita el martes, 24 de noviembre de 2026 (solicitud SOL-2026-00008).',
+          }),
+        });
+      }
+      return Promise.resolve(page([appointmentItem()]));
+    });
+
+    renderPage('PERSONAL');
+
+    const appointmentButton = await screen.findByRole('button', {
+      name: /acta de fundación de la villa/i,
+    });
+    await user.click(appointmentButton);
+
+    const detailSection = await screen.findByRole('region', {
+      name: /detalle de la cita · SOL-2026-00001/i,
+    });
+    await user.type(
+      within(detailSection).getByLabelText('Nueva fecha de la cita'),
+      '2026-11-24',
+    );
+    await user.click(
+      within(detailSection).getByRole('button', { name: 'Reprogramar cita' }),
+    );
+
+    expect(await within(detailSection).findByRole('alert')).toHaveTextContent(
+      /ya tiene cita el martes, 24 de noviembre de 2026/i,
+    );
+  });
+
+  it('lets staff cancel a selected appointment from the calendar and updates its status (HU-21)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH' && url.includes('/cancel')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: '00000000-0000-4000-8000-000000000001',
+            status: 'DISPONIBLE',
+            allowedTransitions: ['AGENDADA', 'CERRADA'],
+            appointment: {
+              id: '00000000-0000-4000-8000-000000000010',
+              date: '2026-11-20',
+              status: 'CANCELADA',
+            },
+            statusChange: {
+              previousStatus: 'AGENDADA',
+              newStatus: 'DISPONIBLE',
+              changedAt: '2026-11-18T15:00:00.000Z',
+              changedBy: { id: 'staff-1', name: 'Ana Gómez' },
+              comment: 'Cita del 2026-11-20 cancelada',
+            },
+          }),
+        });
+      }
+      return Promise.resolve(page([appointmentItem()]));
+    });
+
+    renderPage('PERSONAL');
+
+    const appointmentButton = await screen.findByRole('button', {
+      name: /acta de fundación de la villa/i,
+    });
+    await user.click(appointmentButton);
+
+    const detailSection = await screen.findByRole('region', {
+      name: /detalle de la cita · SOL-2026-00001/i,
+    });
+    await user.click(
+      within(detailSection).getByRole('button', { name: 'Cancelar cita' }),
+    );
+
+    expect(await within(detailSection).findByRole('status')).toHaveTextContent(
+      /cita cancelada\. el material quedó libre, la solicitud volvió a disponible/i,
+    );
+    expect(within(detailSection).getByText('Cancelada')).toBeInTheDocument();
+    expect(within(detailSection).getByText('Disponible')).toBeInTheDocument();
   });
 });
