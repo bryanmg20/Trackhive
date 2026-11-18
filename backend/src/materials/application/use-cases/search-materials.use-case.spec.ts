@@ -59,6 +59,26 @@ describe('SearchMaterialsUseCase', () => {
     },
   );
 
+  it('sends location null to the staff when the material has none, and never the digital path (HU-134)', async () => {
+    search.mockResolvedValue({
+      items: [
+        new Material({
+          ...buildMaterial(),
+          location: null,
+          source: 'EVERYTHING',
+          digitalPath: 'D:\\Digitalizados\\M245.pdf',
+        }),
+      ],
+      total: 1,
+    });
+
+    const result = await useCase.execute({ viewerRole: 'PERSONAL' });
+
+    expect(result.items[0].location).toBeNull();
+    expect(result.items[0]).not.toHaveProperty('digitalPath');
+    expect(result.items[0]).not.toHaveProperty('source');
+  });
+
   it('uses page 1, 20 per page and title ascending by default', async () => {
     const result = await useCase.execute({ viewerRole: 'PUBLICO' });
 

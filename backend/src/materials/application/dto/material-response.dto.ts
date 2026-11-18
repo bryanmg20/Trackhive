@@ -72,10 +72,11 @@ export class MaterialResponseDto {
 
   @ApiPropertyOptional({
     description:
-      'Ubicación física. Solo se envía a los roles PERSONAL y ADMIN; nunca al rol PUBLICO',
+      'Ubicación física. Solo se envía a los roles PERSONAL y ADMIN; nunca al rol PUBLICO. null si el material no la tiene registrada (por ejemplo, uno que llegó de Everything)',
     type: MaterialLocationDto,
+    nullable: true,
   })
-  location?: MaterialLocationDto;
+  location?: MaterialLocationDto | null;
 }
 
 export class PaginatedMaterialsResponseDto {

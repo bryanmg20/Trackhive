@@ -45,9 +45,12 @@ erDiagram
     varchar collection "max 120"
     date publication_date "NULL"
     varchar publisher "max 150; NULL"
-    varchar depot "max 40"
-    varchar shelf "max 40"
-    varchar box "max 40"
+    varchar depot "max 40; NULL"
+    varchar shelf "max 40; NULL"
+    varchar box "max 40; NULL"
+    varchar source "max 20"
+    varchar digital_path "max 1024; NULL"
+    timestamptz last_seen_at "NULL"
     varchar status "max 20"
     timestamptz status_changed_at "NULL"
     uuid status_changed_by FK "NULL"
@@ -158,6 +161,14 @@ erDiagram
     timestamptz updated_at
     uuid updated_by_id FK "NULL"
   }
+  sync_runs {
+    uuid id PK
+    timestamptz started_at
+    timestamptz finished_at "NULL"
+    varchar status "max 10"
+    int files_count "CHECK >= 0"
+    varchar error_message "max 1000; NULL"
+  }
   users ||--o{ refresh_tokens : sesiones
   users |o--o| requesters : cuenta
   users |o--o{ materials : cambia_estado
@@ -178,7 +189,7 @@ erDiagram
   users |o--o{ reading_room_config : configura
 ```
 
-**Figura 1.** Diagrama ER actualizado para HU-73, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
+**Figura 1.** Diagrama ER actualizado para HU-134, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
 
 | Relación | Cardinalidad | Clave foránea |
 |---|---|---|
@@ -279,7 +290,7 @@ catálogo y finalidades pendientes se documentan en [datos-personales.md](datos-
 
 ### materials
 
-Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó las tres columnas `status_change*`.
+Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó las tres columnas `status_change*`. HU-134 (migración `20261118120000_material_digital_copy`) volvió opcional la ubicación física y agregó `source`, `digital_path` y `last_seen_at` para la copia digital que trae la sincronización con Everything.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -291,7 +302,10 @@ Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó la
 | collection | varchar(120) | IDX trigram | Colección o tema |
 | publication_date | date | NULL | Solo periódicos |
 | publisher | varchar(150) | NULL | Empresa editora; solo periódicos |
-| depot, shelf, box | varchar(40) | | Ubicación física. Nunca se muestra al rol `PUBLICO` |
+| depot, shelf, box | varchar(40) | NULL, CHECK | Ubicación física. Nunca se muestra al rol `PUBLICO`. Van las tres o ninguna (`materials_location_check`): un material que llega de Everything puede no tenerla |
+| source | varchar(20) | CHECK, DEFAULT `MANUAL` | `MANUAL` (registrado por el personal) o `EVERYTHING` (traído por la sincronización, HU-137). Los materiales previos a HU-134 quedaron en `MANUAL` |
+| digital_path | varchar(1024) | NULL, CHECK no vacío | Ruta completa de la copia digital, tal como la da Everything. Uso interno: la API nunca la envía. `NULL` = sin copia digital |
+| last_seen_at | timestamptz | NULL | Última vez que una sincronización vio el archivo. `NULL` si nunca lo vio |
 | status | varchar(20) | CHECK | `DISPONIBLE`, `EN_USO`, `EN_RESTAURACION`, `NO_CONSULTABLE` |
 | status_changed_at | timestamptz | NULL | Fecha del último cambio de estado. `NULL` si nunca se cambió |
 | status_changed_by | uuid | FK → users, NULL | Responsable del último cambio de estado |
@@ -400,6 +414,21 @@ Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla 
 | sent_at | timestamptz | NULL, CHECK | Tiene valor si, y solo si, `delivery_status = 'ENVIADA'` |
 | created_at | timestamptz | | |
 
+### sync_runs
+
+Creada en HU-134 (migración `20261118120000_material_digital_copy`). Cada fila es una corrida de la sincronización con Everything (HU-137), lanzada por el job periódico o por el botón «Sincronizar ahora» (HU-138).
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| id | uuid | PK | |
+| started_at | timestamptz | DEFAULT now(), IDX | Inicio de la corrida |
+| finished_at | timestamptz | NULL, CHECK | Fin. `NULL` si, y solo si, la corrida está `EN_CURSO`; nunca antes de `started_at` |
+| status | varchar(10) | CHECK, DEFAULT `EN_CURSO` | `EN_CURSO`, `OK`, `ERROR` |
+| files_count | int | DEFAULT 0, CHECK ≥ 0 | Archivos que devolvió Everything en la corrida |
+| error_message | varchar(1000) | NULL, CHECK | Motivo del error. Tiene valor si, y solo si, `status = 'ERROR'` |
+
+Un índice único parcial (`sync_runs_single_running_idx`, sobre `status = 'EN_CURSO'`) impide que haya dos corridas a la vez, aunque el job y el botón arranquen una al mismo tiempo.
+
 ## 4. Índices
 
 Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, porque PostgreSQL no lo hace. Los índices GIN trigram usan la extensión `pg_trgm` y permiten buscar con `ILIKE '%texto%'` sin recorrer toda la tabla (D-16).
@@ -432,6 +461,8 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | notifications | (delivery_status, scheduled_at) | El proceso de envío busca los correos pendientes cuya hora llegó |
 | notifications | request_id | Correos de una solicitud |
 | notifications | status_history_id (UK) | Un cambio de estado dispara a lo sumo un correo |
+| sync_runs | started_at DESC | Última corrida, para el estado de la sincronización (HU-138) |
+| sync_runs | Único parcial `WHERE status = 'EN_CURSO'` | Una sola sincronización a la vez (HU-137) |
 
 ## 5. Migraciones y datos semilla
 
@@ -456,11 +487,12 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261113000000_create_notifications` | HU-23 | Tabla `notifications` |
 | `20261114100000_material_day_booking` | HU-20 | `booked_date` y el índice único contra dobles reservas |
 | `20261118030000_create_reading_room_config` | HU-20.1 | Tabla singleton `reading_room_config` para la capacidad diaria |
+| `20261118120000_material_digital_copy` | HU-134 | Ubicación física opcional, `source`, `digital_path` y `last_seen_at` en `materials`, y la tabla `sync_runs` |
 
 **Semillas:**
 
 - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
-- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos), 30 materiales, 12 solicitudes repartidas en los 7 estados y 4 citas.
+- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos), 34 materiales (30 manuales y 4 de Everything: 3 con copia digital y 1 solo de referencia; 3 de ellos sin ubicación física), 12 solicitudes repartidas en los 7 estados y 4 citas.
 - Las contraseñas salen de variables de entorno (`SEED_ADMIN_PASSWORD`, `SEED_DEMO_PASSWORD`).
 - Datos **ficticios**, con correos `@example.com`. No se usan datos reales del CLENA sin autorización escrita.
 

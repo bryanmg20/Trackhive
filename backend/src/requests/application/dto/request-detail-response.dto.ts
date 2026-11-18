@@ -60,8 +60,12 @@ export class RequestDetailMaterialDto {
   @ApiProperty({ description: 'Estado del material', example: 'DISPONIBLE' })
   status: string;
 
-  @ApiProperty({ type: RequestDetailLocationDto })
-  location: RequestDetailLocationDto;
+  @ApiProperty({
+    description: 'Ubicación física; null si el material no la tiene (HU-134)',
+    type: RequestDetailLocationDto,
+    nullable: true,
+  })
+  location: RequestDetailLocationDto | null;
 
   @ApiProperty({
     description: 'Resultado de la búsqueda de este material en la solicitud',

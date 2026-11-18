@@ -105,7 +105,8 @@ export interface RequestDetail {
     author: string | null;
     collection: string;
     status: string;
-    location: { depot: string; shelf: string; box: string };
+    // null when the material has no physical location (HU-134)
+    location: { depot: string; shelf: string; box: string } | null;
     itemStatus: string;
   }[];
 }
@@ -233,9 +234,10 @@ export interface AppointmentListItem {
     catalogCode: string;
     title: string;
     materialType: string;
-    depot: string;
-    shelf: string;
-    box: string;
+    // The physical location goes whole or not at all (HU-134)
+    depot: string | null;
+    shelf: string | null;
+    box: string | null;
   }[];
 }
 

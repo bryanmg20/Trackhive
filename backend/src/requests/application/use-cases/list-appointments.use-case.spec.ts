@@ -171,6 +171,31 @@ describe('ListAppointmentsUseCase', () => {
     });
   });
 
+  it('sends location null for a material without physical location (HU-134)', async () => {
+    listAppointments.mockResolvedValue({
+      items: [
+        buildItem({
+          materials: [
+            {
+              id: 'material-2',
+              catalogCode: '986115 M245',
+              title: 'Historia del puerto fluvial',
+              materialType: 'OTRO',
+              depot: null,
+              shelf: null,
+              box: null,
+            },
+          ],
+        }),
+      ],
+      total: 1,
+    });
+
+    const result = await useCase.execute({ page: 1, limit: 10 });
+
+    expect(result.items[0].materials[0].location).toBeNull();
+  });
+
   it('computes the Saturday service hours for a Saturday appointment', async () => {
     listAppointments.mockResolvedValue({
       items: [

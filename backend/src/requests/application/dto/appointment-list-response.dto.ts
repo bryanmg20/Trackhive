@@ -31,8 +31,12 @@ export class AppointmentListMaterialDto {
   @ApiProperty({ example: 'DOCUMENTO' })
   materialType: string;
 
-  @ApiProperty({ type: AppointmentLocationDto })
-  location: AppointmentLocationDto;
+  @ApiProperty({
+    description: 'Ubicación física; null si el material no la tiene (HU-134)',
+    type: AppointmentLocationDto,
+    nullable: true,
+  })
+  location: AppointmentLocationDto | null;
 }
 
 export class AppointmentListRequestDto {

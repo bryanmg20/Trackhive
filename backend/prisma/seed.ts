@@ -84,10 +84,16 @@ type SeedMaterial = {
   // Periodicals only
   publicationDate?: string;
   publisher?: string;
-  depot: string;
-  shelf: string;
-  box: string;
+  // Physical location: the three or none (HU-134)
+  location?: { depot: string; shelf: string; box: string };
+  // HU-134. Default MANUAL, without digital copy
+  source?: 'MANUAL' | 'EVERYTHING';
+  // Full path of the digital copy, as Everything would report it
+  digitalPath?: string;
 };
+
+// Fictitious root of the scanned copies (not the real CLENA path)
+const DIGITAL_ROOT = 'D:\\Digitalizados\\Fondo - Libros y Revistas';
 
 // Fictitious archive material: every type and status, some without author
 const MATERIALS: SeedMaterial[] = [
@@ -99,9 +105,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Cabildo de la Villa',
     collection: 'Actas del Cabildo',
     status: 'DISPONIBLE',
-    depot: 'D-01',
-    shelf: 'E-01',
-    box: 'C-001',
+    location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
   },
   {
     catalogCode: 'TH-DOC-0002',
@@ -110,9 +114,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Cabildo de la Villa',
     collection: 'Actas del Cabildo',
     status: 'DISPONIBLE',
-    depot: 'D-01',
-    shelf: 'E-01',
-    box: 'C-002',
+    location: { depot: 'D-01', shelf: 'E-01', box: 'C-002' },
   },
   {
     catalogCode: 'TH-DOC-0003',
@@ -121,9 +123,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Cabildo de la Villa',
     collection: 'Actas del Cabildo',
     status: 'EN_USO',
-    depot: 'D-01',
-    shelf: 'E-01',
-    box: 'C-003',
+    location: { depot: 'D-01', shelf: 'E-01', box: 'C-003' },
   },
   {
     catalogCode: 'TH-DOC-0004',
@@ -132,9 +132,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Junta de Estadística',
     collection: 'Censos y padrones',
     status: 'DISPONIBLE',
-    depot: 'D-01',
-    shelf: 'E-02',
-    box: 'C-010',
+    location: { depot: 'D-01', shelf: 'E-02', box: 'C-010' },
   },
   {
     catalogCode: 'TH-DOC-0005',
@@ -143,9 +141,7 @@ const MATERIALS: SeedMaterial[] = [
     author: null,
     collection: 'Censos y padrones',
     status: 'EN_RESTAURACION',
-    depot: 'D-01',
-    shelf: 'E-02',
-    box: 'C-011',
+    location: { depot: 'D-01', shelf: 'E-02', box: 'C-011' },
   },
   {
     catalogCode: 'TH-DOC-0006',
@@ -154,9 +150,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Lucía Restrepo Arango',
     collection: 'Correspondencia oficial',
     status: 'DISPONIBLE',
-    depot: 'D-01',
-    shelf: 'E-03',
-    box: 'C-020',
+    location: { depot: 'D-01', shelf: 'E-03', box: 'C-020' },
   },
   {
     catalogCode: 'TH-DOC-0007',
@@ -165,9 +159,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Tomás Vélez Ochoa',
     collection: 'Correspondencia oficial',
     status: 'NO_CONSULTABLE',
-    depot: 'D-01',
-    shelf: 'E-03',
-    box: 'C-021',
+    location: { depot: 'D-01', shelf: 'E-03', box: 'C-021' },
   },
   {
     catalogCode: 'TH-DOC-0008',
@@ -176,9 +168,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Secretaría de Obras',
     collection: 'Obras públicas',
     status: 'DISPONIBLE',
-    depot: 'D-02',
-    shelf: 'E-01',
-    box: 'C-030',
+    location: { depot: 'D-02', shelf: 'E-01', box: 'C-030' },
   },
   {
     catalogCode: 'TH-DOC-0009',
@@ -187,9 +177,7 @@ const MATERIALS: SeedMaterial[] = [
     author: null,
     collection: 'Obras públicas',
     status: 'EN_USO',
-    depot: 'D-02',
-    shelf: 'E-01',
-    box: 'C-031',
+    location: { depot: 'D-02', shelf: 'E-01', box: 'C-031' },
   },
   {
     catalogCode: 'TH-DOC-0010',
@@ -198,9 +186,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Tesorería Municipal',
     collection: 'Hacienda municipal',
     status: 'DISPONIBLE',
-    depot: 'D-02',
-    shelf: 'E-02',
-    box: 'C-040',
+    location: { depot: 'D-02', shelf: 'E-02', box: 'C-040' },
   },
   {
     catalogCode: 'TH-DOC-0011',
@@ -209,9 +195,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Tesorería Municipal',
     collection: 'Hacienda municipal',
     status: 'EN_RESTAURACION',
-    depot: 'D-02',
-    shelf: 'E-02',
-    box: 'C-041',
+    location: { depot: 'D-02', shelf: 'E-02', box: 'C-041' },
   },
   {
     catalogCode: 'TH-DOC-0012',
@@ -220,9 +204,7 @@ const MATERIALS: SeedMaterial[] = [
     author: null,
     collection: 'Correspondencia oficial',
     status: 'DISPONIBLE',
-    depot: 'D-01',
-    shelf: 'E-03',
-    box: 'C-022',
+    location: { depot: 'D-01', shelf: 'E-03', box: 'C-022' },
   },
   // Periodicals
   {
@@ -234,9 +216,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'DISPONIBLE',
     publicationDate: '1915-03-21',
     publisher: 'Imprenta del Valle',
-    depot: 'D-03',
-    shelf: 'E-01',
-    box: 'C-100',
+    location: { depot: 'D-03', shelf: 'E-01', box: 'C-100' },
   },
   {
     catalogCode: 'TH-PER-0002',
@@ -247,9 +227,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'EN_USO',
     publicationDate: '1916-03-18',
     publisher: 'Imprenta del Valle',
-    depot: 'D-03',
-    shelf: 'E-01',
-    box: 'C-101',
+    location: { depot: 'D-03', shelf: 'E-01', box: 'C-101' },
   },
   {
     catalogCode: 'TH-PER-0003',
@@ -260,9 +238,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'DISPONIBLE',
     publicationDate: '1922-08-07',
     publisher: 'Editorial Mercantil',
-    depot: 'D-03',
-    shelf: 'E-01',
-    box: 'C-102',
+    location: { depot: 'D-03', shelf: 'E-01', box: 'C-102' },
   },
   {
     catalogCode: 'TH-PER-0004',
@@ -273,9 +249,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'EN_RESTAURACION',
     publicationDate: '1923-12-15',
     publisher: 'Editorial Mercantil',
-    depot: 'D-03',
-    shelf: 'E-02',
-    box: 'C-103',
+    location: { depot: 'D-03', shelf: 'E-02', box: 'C-103' },
   },
   {
     catalogCode: 'TH-PER-0005',
@@ -286,9 +260,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'DISPONIBLE',
     publicationDate: '1930-01-02',
     publisher: 'Imprenta Municipal',
-    depot: 'D-03',
-    shelf: 'E-03',
-    box: 'C-110',
+    location: { depot: 'D-03', shelf: 'E-03', box: 'C-110' },
   },
   {
     catalogCode: 'TH-PER-0006',
@@ -299,9 +271,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'NO_CONSULTABLE',
     publicationDate: '1931-01-05',
     publisher: 'Imprenta Municipal',
-    depot: 'D-03',
-    shelf: 'E-03',
-    box: 'C-111',
+    location: { depot: 'D-03', shelf: 'E-03', box: 'C-111' },
   },
   {
     catalogCode: 'TH-PER-0007',
@@ -312,9 +282,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'DISPONIBLE',
     publicationDate: '1928-05-01',
     publisher: 'Talleres El Eco',
-    depot: 'D-03',
-    shelf: 'E-02',
-    box: 'C-104',
+    location: { depot: 'D-03', shelf: 'E-02', box: 'C-104' },
   },
   {
     catalogCode: 'TH-PER-0008',
@@ -325,9 +293,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'EN_USO',
     publicationDate: '1940-10-12',
     publisher: 'Casa de la Cultura',
-    depot: 'D-03',
-    shelf: 'E-03',
-    box: 'C-112',
+    location: { depot: 'D-03', shelf: 'E-03', box: 'C-112' },
   },
   // Notarial protocols
   {
@@ -337,9 +303,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Notaría Primera',
     collection: 'Notaría Primera',
     status: 'DISPONIBLE',
-    depot: 'D-04',
-    shelf: 'E-01',
-    box: 'C-200',
+    location: { depot: 'D-04', shelf: 'E-01', box: 'C-200' },
   },
   {
     catalogCode: 'TH-NOT-0002',
@@ -348,9 +312,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Notaría Primera',
     collection: 'Notaría Primera',
     status: 'EN_RESTAURACION',
-    depot: 'D-04',
-    shelf: 'E-01',
-    box: 'C-201',
+    location: { depot: 'D-04', shelf: 'E-01', box: 'C-201' },
   },
   {
     catalogCode: 'TH-NOT-0003',
@@ -359,9 +321,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Notaría Primera',
     collection: 'Notaría Primera',
     status: 'DISPONIBLE',
-    depot: 'D-04',
-    shelf: 'E-01',
-    box: 'C-202',
+    location: { depot: 'D-04', shelf: 'E-01', box: 'C-202' },
   },
   {
     catalogCode: 'TH-NOT-0004',
@@ -370,9 +330,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Notaría Segunda',
     collection: 'Notaría Segunda',
     status: 'EN_USO',
-    depot: 'D-04',
-    shelf: 'E-02',
-    box: 'C-210',
+    location: { depot: 'D-04', shelf: 'E-02', box: 'C-210' },
   },
   {
     catalogCode: 'TH-NOT-0005',
@@ -381,9 +339,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Notaría Segunda',
     collection: 'Notaría Segunda',
     status: 'NO_CONSULTABLE',
-    depot: 'D-04',
-    shelf: 'E-02',
-    box: 'C-211',
+    location: { depot: 'D-04', shelf: 'E-02', box: 'C-211' },
   },
   {
     catalogCode: 'TH-NOT-0006',
@@ -392,9 +348,7 @@ const MATERIALS: SeedMaterial[] = [
     author: null,
     collection: 'Notaría Segunda',
     status: 'DISPONIBLE',
-    depot: 'D-04',
-    shelf: 'E-02',
-    box: 'C-212',
+    location: { depot: 'D-04', shelf: 'E-02', box: 'C-212' },
   },
   {
     catalogCode: 'TH-NOT-0007',
@@ -403,9 +357,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Notaría Primera',
     collection: 'Notaría Primera',
     status: 'DISPONIBLE',
-    depot: 'D-04',
-    shelf: 'E-01',
-    box: 'C-203',
+    location: { depot: 'D-04', shelf: 'E-01', box: 'C-203' },
   },
   // Other
   {
@@ -415,9 +367,7 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Estudio Fotográfico Gómez',
     collection: 'Fotografía histórica',
     status: 'DISPONIBLE',
-    depot: 'D-05',
-    shelf: 'E-01',
-    box: 'C-300',
+    location: { depot: 'D-05', shelf: 'E-01', box: 'C-300' },
   },
   {
     catalogCode: 'TH-OTR-0002',
@@ -426,9 +376,7 @@ const MATERIALS: SeedMaterial[] = [
     author: null,
     collection: 'Cartografía',
     status: 'EN_RESTAURACION',
-    depot: 'D-05',
-    shelf: 'E-02',
-    box: 'C-310',
+    location: { depot: 'D-05', shelf: 'E-02', box: 'C-310' },
   },
   {
     catalogCode: 'TH-OTR-0003',
@@ -437,9 +385,51 @@ const MATERIALS: SeedMaterial[] = [
     author: 'Casa de la Cultura',
     collection: 'Fotografía histórica',
     status: 'NO_CONSULTABLE',
-    depot: 'D-05',
-    shelf: 'E-01',
-    box: 'C-301',
+    location: { depot: 'D-05', shelf: 'E-01', box: 'C-301' },
+  },
+  // From the Everything sync (HU-134): with and without digital copy, and
+  // most of them without a physical location
+  {
+    catalogCode: '986115 M245',
+    title: 'Historia del puerto fluvial',
+    materialType: 'OTRO',
+    author: 'Ana Martínez Rojas',
+    collection: 'Libros y Revistas',
+    status: 'DISPONIBLE',
+    source: 'EVERYTHING',
+    digitalPath: `${DIGITAL_ROOT}\\#LB - 986115 M245 - Historia del puerto fluvial - Ana Martinez Rojas\\M245.pdf`,
+  },
+  {
+    catalogCode: '986115 S812B',
+    title: 'Crónicas del barrio Abajo - 1920-1950',
+    materialType: 'OTRO',
+    author: 'Luis Sarmiento',
+    collection: 'Libros y Revistas',
+    status: 'DISPONIBLE',
+    source: 'EVERYTHING',
+    digitalPath: `${DIGITAL_ROOT}\\#LB - 986115 S812B - Cronicas del barrio Abajo - 1920-1950 - Luis Sarmiento\\S812B.pdf`,
+  },
+  {
+    catalogCode: '38454 P438',
+    title: 'La radio en la costa',
+    materialType: 'OTRO',
+    author: 'Marta Pérez',
+    collection: 'Libros y Revistas',
+    status: 'EN_RESTAURACION',
+    // Digital copy and also a known physical location
+    location: { depot: 'D-06', shelf: 'E-01', box: 'C-400' },
+    source: 'EVERYTHING',
+    digitalPath: `${DIGITAL_ROOT}\\#LB - 38454 P438 - La radio en la costa - Marta Perez\\P438.tif`,
+  },
+  {
+    catalogCode: '986115 G210',
+    title: 'Guía de calles de 1960',
+    materialType: 'OTRO',
+    author: null,
+    collection: 'Libros y Revistas',
+    status: 'DISPONIBLE',
+    // Only a reference in Everything: no scanned file yet
+    source: 'EVERYTHING',
   },
 ];
 
@@ -716,11 +706,26 @@ async function main() {
       });
     }
 
-    for (const { publicationDate, publisher, ...material } of MATERIALS) {
+    // Everything materials count as seen by a sync at seed time
+    const seenAt = new Date();
+    for (const {
+      publicationDate,
+      publisher,
+      location,
+      source = 'MANUAL',
+      digitalPath,
+      ...material
+    } of MATERIALS) {
       const data = {
         ...material,
         publicationDate: publicationDate ? new Date(publicationDate) : null,
         publisher: publisher ?? null,
+        depot: location?.depot ?? null,
+        shelf: location?.shelf ?? null,
+        box: location?.box ?? null,
+        source,
+        digitalPath: digitalPath ?? null,
+        lastSeenAt: source === 'EVERYTHING' ? seenAt : null,
       };
       // Upsert by catalog code: running the seed again does not duplicate material
       await prisma.materialModel.upsert({

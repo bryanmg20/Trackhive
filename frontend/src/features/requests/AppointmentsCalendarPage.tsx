@@ -23,6 +23,7 @@ import type { SortOrder } from './api/list-requests';
 import { getRoomOccupancy } from './api/room-capacity';
 import type { RoomOccupancy } from './api/room-capacity';
 import styles from './AppointmentsCalendarPage.module.css';
+import { formatMaterialLocation } from './material-location';
 import { listCalendarMonth } from './api/list-calendar-month';
 import listStyles from './RequestsListPage.module.css';
 
@@ -949,9 +950,7 @@ export function AppointmentsCalendarPage() {
                             ] ?? materialItem.materialType}
                           </span>
                           <span className={styles.detailMeta}>
-                            Ubicación: {materialItem.location.depot} ·{' '}
-                            {materialItem.location.shelf} ·{' '}
-                            {materialItem.location.box}
+                            {formatMaterialLocation(materialItem.location)}
                           </span>
                         </li>
                       ))}

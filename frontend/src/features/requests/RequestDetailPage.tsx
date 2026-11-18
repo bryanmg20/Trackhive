@@ -15,6 +15,7 @@ import { ChangeRequestStatusForm } from './ChangeRequestStatusForm';
 import styles from './RequestDetailPage.module.css';
 import { RequestHistory } from './RequestHistory';
 import { ScheduleAppointmentForm } from './ScheduleAppointmentForm';
+import { formatMaterialLocation } from './material-location';
 
 const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
@@ -288,8 +289,7 @@ export function RequestDetailPage() {
                       {MATERIAL_STATUS_LABELS[material.status]}
                     </span>
                     <span className={styles.meta}>
-                      Ubicación: {material.location.depot} ·{' '}
-                      {material.location.shelf} · {material.location.box}
+                      {formatMaterialLocation(material.location)}
                     </span>
                     <span>
                       Búsqueda:{' '}
