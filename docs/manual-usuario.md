@@ -40,6 +40,33 @@ Si el servidor de correo falla, el cambio de estado se guarda igual y el correo 
 
 ## 7. Gestión de usuarios
 
+Solo el administrador ve la opción **Usuarios** en el menú. Ahí están las
+cuentas del personal del CLENA (rol Personal o Administrador). Las cuentas de
+los usuarios públicos no aparecen.
+
+**Buscar.** Escriba un nombre, un apellido o un correo y pulse «Buscar». Con
+los filtros de la izquierda puede ver solo un rol o solo las cuentas activas o
+desactivadas. «Ordenar por» cambia el orden: apellido, nombre, correo, rol o
+fecha de creación.
+
+**Crear una cuenta.** Pulse «Crear cuenta del personal» y llene el primer
+nombre, el primer apellido, el correo y una contraseña inicial de al menos 8
+caracteres. El segundo nombre y el segundo apellido son opcionales. La cuenta
+se crea siempre con rol Personal, queda activa y la persona puede iniciar
+sesión de inmediato con ese correo y esa contraseña. Entréguele la contraseña
+por un canal seguro. Si el correo ya tiene una cuenta, el sistema no crea otra.
+
+**Editar una cuenta.** Pulse «Editar» en la fila para cambiar los nombres o el
+correo. El rol y la contraseña no se cambian desde aquí: una cuenta de personal
+no puede pasar a administrador.
+
+**Desactivar una cuenta.** Pulse «Desactivar» y confirme. La persona ya no
+puede iniciar sesión. Las solicitudes que registró y su historial se conservan.
+Si ya tenía la sesión abierta, la pierde a más tardar en 15 minutos. Para
+devolverle el acceso, pulse «Activar».
+
+No puede desactivar su propia cuenta.
+
 ## 8. Protección de datos personales
 
 (Aviso de privacidad, consentimiento y eliminación de cuenta.)

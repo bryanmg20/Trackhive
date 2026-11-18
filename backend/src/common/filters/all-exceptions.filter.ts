@@ -45,6 +45,11 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   INVALID_ROLE: HttpStatus.BAD_REQUEST,
   PRIVACY_CONSENT_REQUIRED: HttpStatus.BAD_REQUEST,
   EMAIL_ALREADY_EXISTS: HttpStatus.CONFLICT,
+  // Staff accounts management (HU-05)
+  INVALID_STAFF_ROLE: HttpStatus.BAD_REQUEST,
+  STAFF_USER_NOT_FOUND: HttpStatus.NOT_FOUND,
+  // An administrator cannot lock themselves out
+  CANNOT_CHANGE_OWN_ACCESS: HttpStatus.CONFLICT,
   INVALID_CREDENTIALS: HttpStatus.UNAUTHORIZED,
   INVALID_REFRESH_TOKEN: HttpStatus.UNAUTHORIZED,
   INVALID_REQUEST_STATUS: HttpStatus.BAD_REQUEST,

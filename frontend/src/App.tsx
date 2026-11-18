@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './features/auth/login/LoginPage';
 import { RegisterPage } from './features/auth/register/RegisterPage';
+import { AdminRoute } from './features/auth/components/AdminRoute';
 import { AuthenticatedRoute } from './features/auth/components/AuthenticatedRoute';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { StaffRoute } from './features/auth/components/StaffRoute';
@@ -16,6 +17,7 @@ import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestsListPage } from './features/requests/RequestsListPage';
 import { ROUTES } from './routes';
 import { ProfilePage } from './features/profile/ProfilePage';
+import { StaffUsersPage } from './features/users/StaffUsersPage';
 
 function HomeRedirect() {
   const role = readSessionRole();
@@ -44,6 +46,9 @@ function App() {
           path={ROUTES.staffNewRequest}
           element={<StaffNewRequestPage />}
         />
+      </Route>
+      <Route element={<AdminRoute />}>
+        <Route path={ROUTES.staffUsers} element={<StaffUsersPage />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />
     </Routes>

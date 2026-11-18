@@ -39,11 +39,14 @@ pnpm test:e2e:docker # Con Docker activo: pruebas de integración a través de l
 | `/personal/solicitudes/nueva`    | Registrar solicitud a nombre de un visitante (HU-93)       | `PERSONAL`/`ADMIN` |
 | `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
 | `/solicitudes/:id`               | Detalle de una solicitud, cambio de estado y agendar cita (HU-13, HU-15, HU-18) | `PERSONAL`/`ADMIN` |
+| `/admin/usuarios`                | Gestión de usuarios del personal: crear, editar, desactivar y activar (HU-05) | `ADMIN`          |
 
 Las rutas del usuario público viven dentro de `ProtectedRoute`; cualquier otro
 rol o una sesión vencida redirige a `/login`. Las rutas de personal viven dentro
 de `StaffRoute`; si el rol no es `PERSONAL`
-ni `ADMIN`, redirigen a `/materiales` o a `/login`. Cualquier otra ruta redirige
+ni `ADMIN`, redirigen a `/materiales` o a `/login`. Las rutas de administración
+viven dentro de `AdminRoute`: un `PERSONAL` vuelve a `/solicitudes`, un
+`PUBLICO` a `/materiales` y sin sesión a `/login`. Cualquier otra ruta redirige
 a `/registro`.
 
 ## API
@@ -205,6 +208,33 @@ con fecha, hora y responsable), que la pantalla muestra como confirmación en
 hora de Bogotá sin volver a cargar la solicitud. Un `409` (transición no
 permitida u otra persona la cambió primero) muestra el mensaje del backend y
 deja el estado como estaba.
+
+### Gestión de usuarios del personal (HU-05)
+
+`/admin/usuarios` solo la abre `ADMIN`, y el menú muestra «Usuarios» solo a ese
+rol. Ocultarla no es un permiso: el backend responde `403` a `PERSONAL` y a
+`PUBLICO` en los tres endpoints.
+
+- **Listado:** `GET /api/v1/users/staff` con `q` (nombre o correo), `role`
+  (`PERSONAL` o `ADMIN`), `active` (`true` o `false`), `sort` (`lastName`,
+  `firstName`, `email`, `role`, `createdAt`), `order`, `page` y `limit`. Por
+  defecto ordena por apellido ascendente, con 10 cuentas por página.
+- **Crear:** «Crear cuenta del personal» abre el formulario y llama a
+  `POST /api/v1/users/staff` con los cuatro campos del nombre, el correo y la
+  contraseña inicial (mínimo 8 caracteres). No se envía rol: el backend crea
+  siempre una cuenta `PERSONAL` activa. El administrador le entrega la
+  contraseña a la persona por un canal seguro.
+- **Editar:** cambia nombres y correo con `PATCH /api/v1/users/staff/:id`. El
+  rol y la contraseña no se editan: ninguna cuenta pasa de `PERSONAL` a
+  `ADMIN`.
+- **Desactivar y activar:** «Desactivar» pide confirmación y envía
+  `{ active: false }`; «Activar» envía `{ active: true }` sin confirmar. Una
+  cuenta desactivada conserva sus solicitudes y su historial.
+
+Los errores del backend se muestran tal como llegan: los de validación junto a
+cada campo y los demás en la tarjeta (por ejemplo, `409 EMAIL_ALREADY_EXISTS` o
+`409 CANNOT_CHANGE_OWN_ACCESS` cuando el administrador intenta desactivar su
+propia cuenta).
 
 ## Estado y alcance
 

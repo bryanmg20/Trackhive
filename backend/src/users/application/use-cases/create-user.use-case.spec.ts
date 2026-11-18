@@ -1,34 +1,9 @@
 import { CreateUserUseCase } from './create-user.use-case';
-import { User } from '../../domain/entities/user.entity';
 import { EmailAlreadyExistsError } from '../../domain/errors/email-already-exists.error';
 import { PrivacyConsentRequiredError } from '../../domain/errors/privacy-consent-required.error';
-import { IUserRepository } from '../../domain/repositories/user.repository';
 import type { IPasswordHasher } from '../ports/password-hasher.port';
 import type { Requester } from '../../../requests/domain/entities/requester.entity';
-
-class InMemoryUserRepository implements IUserRepository {
-  private readonly users = new Map<string, User>();
-
-  save(user: User): Promise<void> {
-    this.users.set(user.id, user);
-    return Promise.resolve();
-  }
-
-  findAll(): Promise<User[]> {
-    return Promise.resolve([...this.users.values()]);
-  }
-
-  findById(id: string): Promise<User | null> {
-    return Promise.resolve(this.users.get(id) ?? null);
-  }
-
-  findByEmail(email: string): Promise<User | null> {
-    const user = [...this.users.values()].find(
-      (candidate) => candidate.email === email,
-    );
-    return Promise.resolve(user ?? null);
-  }
-}
+import { InMemoryUserRepository } from '../../../../test/fakes/in-memory-user.repository';
 
 const consent = {
   municipality: 'Barranquilla',

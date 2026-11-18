@@ -104,6 +104,26 @@ describe('SiteNav', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the staff accounts section only to ADMIN (HU-05)', () => {
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('ADMIN'));
+    const { unmount } = renderNav();
+
+    expect(screen.getByRole('link', { name: 'Usuarios' })).toHaveAttribute(
+      'href',
+      '/admin/usuarios',
+    );
+    unmount();
+
+    for (const role of ['PERSONAL', 'PUBLICO']) {
+      sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
+      const view = renderNav();
+      expect(
+        screen.queryByRole('link', { name: 'Usuarios' }),
+      ).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it('keeps the role when the access token is expired so it can be renewed', () => {
     sessionStorage.setItem(
       'trackhive.accessToken',

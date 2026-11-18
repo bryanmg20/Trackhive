@@ -9,6 +9,9 @@ import { InvalidRefreshTokenError } from '../../auth/domain/errors/invalid-refre
 import { MailDeliveryFailedError } from '../../notifications/domain/errors/mail-delivery-failed.error';
 import { EmailAlreadyExistsError } from '../../users/domain/errors/email-already-exists.error';
 import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
+import { CannotChangeOwnAccessError } from '../../users/domain/errors/cannot-change-own-access.error';
+import { InvalidStaffRoleError } from '../../users/domain/errors/invalid-staff-role.error';
+import { StaffUserNotFoundError } from '../../users/domain/errors/staff-user-not-found.error';
 import { InvalidEmailError } from '../../users/domain/errors/invalid-email.error';
 import { InvalidRequestStatusError } from '../../requests/domain/errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../../requests/domain/errors/invalid-status-transition.error';
@@ -153,6 +156,22 @@ describe('AllExceptionsFilter', () => {
     expect(payload()).toMatchObject({
       code: 'USER_NOT_FOUND',
       message: 'El usuario no existe',
+    });
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new StaffUserNotFoundError(), HttpStatus.NOT_FOUND],
+    [new InvalidStaffRoleError(), HttpStatus.BAD_REQUEST],
+    [new CannotChangeOwnAccessError(), HttpStatus.CONFLICT],
+  ])('maps the staff accounts error %p (HU-05)', (error, expected) => {
+    run(error);
+
+    expect(status).toHaveBeenCalledWith(expected);
+    expect(payload()).toMatchObject({
+      statusCode: expected,
+      code: error.code,
+      message: error.message,
     });
     expect(logSpy).not.toHaveBeenCalled();
   });
