@@ -381,6 +381,11 @@ export function AppointmentsCalendarPage() {
 
   const activeOccupancy =
     occupancyState?.rangeKey === occupancyRangeKey ? occupancyState.data : null;
+  const dailyCapacity = activeOccupancy?.dailyCapacity ?? DAILY_CAPACITY;
+  const nearCapacityThreshold = Math.ceil(dailyCapacity * 0.8);
+  const apiOccupancyByDate = new Map<string, number>(
+    (activeOccupancy?.days ?? []).map((day) => [day.date, day.occupied]),
+  );
   const monthData =
     monthResponse?.key === monthKey ? monthResponse.data : undefined;
   const appointmentsByDate = new Map<string, AppointmentListItem[]>();
@@ -664,11 +669,14 @@ export function AppointmentsCalendarPage() {
                 ))}
                 {calendarDays.map((day) => {
                   const dayItems = appointmentsByDate.get(day.isoDate) ?? [];
-                  const occupied = occupancyByDate.get(day.isoDate) ?? 0;
+                  const occupied = Math.max(
+                    apiOccupancyByDate.get(day.isoDate) ?? 0,
+                    occupancyByDate.get(day.isoDate) ?? 0,
+                  );
                   const capacityState =
-                    occupied >= DAILY_CAPACITY
+                    occupied >= dailyCapacity
                       ? 'full'
-                      : occupied >= DAILY_CAPACITY * 0.8
+                      : occupied >= nearCapacityThreshold
                         ? 'near'
                         : 'available';
                   return (
@@ -694,26 +702,14 @@ export function AppointmentsCalendarPage() {
                         </span>
                         {day.isSunday ? (
                           <span className={styles.sundayTag}>Cerrado</span>
-                        ) : activeOccupancy ? (
-                          <span
-                            className={
-                              occupied >= activeOccupancy.dailyCapacity
-                                ? styles.occupancyTagFull
-                                : styles.occupancyTag
-                            }
-                            title={`${occupied} de ${activeOccupancy.dailyCapacity} citas`}
-                          >
-                            {occupied}/
-                            {activeOccupancy.dailyCapacity}
-                          </span>
                         ) : null}
                       </div>
                       <span
                         className={styles.occupancy}
                         data-capacity={capacityState}
-                        aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${DAILY_CAPACITY}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
+                        aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${dailyCapacity}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
                       >
-                        {occupied}/{DAILY_CAPACITY}
+                        {occupied}/{dailyCapacity}
                         {capacityState === 'full'
                           ? ' · Límite'
                           : capacityState === 'near'
@@ -757,8 +753,9 @@ export function AppointmentsCalendarPage() {
               </div>
 
               <p className={searchStyles.hint}>
-                Capacidad diaria provisional: 15. Ocupación sin filtros, excluye
-                citas canceladas. Cerca del límite desde 12 citas.
+                Capacidad diaria: {dailyCapacity}. Ocupación sin filtros,
+                excluye citas canceladas y no asistidas. Cerca del límite desde{' '}
+                {nearCapacityThreshold} citas.
               </p>
 
               {expandedDate ? (

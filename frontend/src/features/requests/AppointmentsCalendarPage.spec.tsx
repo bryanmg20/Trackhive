@@ -327,26 +327,36 @@ describe('AppointmentsCalendarPage', () => {
   });
 
   it('shows daily capacity badge and per-day occupancy count on the calendar', async () => {
-    fetchMock.mockResolvedValue(
-      page([
-        appointmentItem({ id: 'appointment-1' }),
-        appointmentItem({ id: 'appointment-2' }),
-        appointmentItem({ id: 'appointment-3' }),
-      ]),
-    );
+    occupancyMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        dailyCapacity: 20,
+        days: [
+          {
+            date: '2026-11-20',
+            occupied: 3,
+            available: 17,
+            isFull: false,
+          },
+        ],
+      }),
+    });
+    fetchMock.mockResolvedValue(page([appointmentItem()]));
     renderPage('PERSONAL');
 
     expect(
-      await screen.findByText('Capacidad diaria: 15 citas'),
+      await screen.findByText('Capacidad diaria: 20 citas'),
     ).toBeInTheDocument();
     const calendar = screen.getByRole('region', {
       name: /calendario de noviembre de 2026/i,
     });
     const day20 = calendar.querySelector('[data-date="2026-11-20"]');
     expect(day20).not.toBeNull();
+    expect(within(day20 as HTMLElement).getByText('3/20')).toBeInTheDocument();
     expect(
-      within(day20 as HTMLElement).getAllByText('3/15').length,
-    ).toBeGreaterThan(0);
+      screen.getByText(/cerca del límite desde 16 citas/i),
+    ).toBeInTheDocument();
   });
 
   it('announces near and full capacity and labels the complete daily list', async () => {
