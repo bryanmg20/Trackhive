@@ -126,7 +126,7 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | RN-16 | La cita es por día completo, de lunes a sábado: el CLENA no atiende los domingos. | HU-18 | Vigente |
 | RN-17 | Cuando la cita se cumple o el solicitante no asiste, el material queda libre para ese día. | HU-20 | Vigente |
 | RN-18 | Que un material esté en uso no impide agendarlo para otro día: «en uso» solo aplica el día en que está en la sala. Registrar cuándo sale a la sala y cuándo vuelve llega con HU-72. | HU-20 | Vigente |
-| RN-19 | La sala no recibe más citas en un día que su capacidad diaria. | HU-20.1 | Prevista |
+| RN-19 | La sala no recibe más citas en un día que su capacidad diaria (15 citas/día por defecto si no se ha configurado; cuentan `PROGRAMADA` y `CUMPLIDA`). | HU-20.1 | Vigente |
 | RN-20 | Una cita se puede reprogramar o cancelar; al cancelarla, el material queda libre. | HU-21 | Prevista |
 
 ### 5.3 Usuarios y datos personales
@@ -193,6 +193,7 @@ Uno por acción del negocio. Cada caso de uso es una clase con un método `execu
 | `ConsultarCalendario` | Ver las citas por mes y filtrar por material | Personal | HU-19 | `ListAppointmentsUseCase` |
 | `NotificarCambioEstado` | Enviar y reintentar los correos de cambio de estado | Sistema | HU-23 | `SendPendingNotificationsUseCase` |
 | `EnviarCorreoPrueba` | Comprobar la configuración del correo | Administrador | HU-22 | `SendTestEmailUseCase` |
+| `ConfigurarCapacidadSala` | Fijar cuántas citas recibe la sala por día | Administrador | HU-20.1 | `UpdateRoomCapacityUseCase` |
 
 Hay dos casos de uso técnicos que no son acciones del negocio: `GetHealthUseCase` (estado del servicio, HU-38) y `PurgeExpiredTokensUseCase` (limpieza diaria de sesiones vencidas, HU-3.1).
 
@@ -202,7 +203,6 @@ Hay dos casos de uso técnicos que no son acciones del negocio: `GetHealthUseCas
 |---|---|---|---|
 | `GestionarFuncionarios` | Crear, editar y desactivar cuentas del personal | Administrador | HU-05 |
 | `RegistrarMaterial` | Agregar material consultable al catálogo | Personal | HU-06 |
-| `ConfigurarCapacidadSala` | Fijar cuántas citas recibe la sala por día | Administrador | HU-20.1 |
 | `ReprogramarCita` | Mover la cita a otro día, sin dobles reservas | Personal | HU-21 |
 | `CancelarCita` | Cancelar la cita y liberar el material | Personal | HU-21 |
 | `GenerarReporteTiemposAtencion` | Medir cuánto tarda cada estado de la solicitud | Personal | HU-25 |

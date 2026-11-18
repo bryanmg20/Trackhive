@@ -152,6 +152,12 @@ erDiagram
     timestamptz sent_at "NULL"
     timestamptz created_at
   }
+  reading_room_config {
+    int id PK "CHECK = 1"
+    int daily_capacity "CHECK > 0"
+    timestamptz updated_at
+    uuid updated_by_id FK "NULL"
+  }
   users ||--o{ refresh_tokens : sesiones
   users |o--o| requesters : cuenta
   users |o--o{ materials : cambia_estado
@@ -169,6 +175,7 @@ erDiagram
   materials ||--o{ appointment_materials : reservado
   requests ||--o{ notifications : notifica
   status_history |o--o| notifications : genera
+  users |o--o{ reading_room_config : configura
 ```
 
 **Figura 1.** Diagrama ER actualizado para HU-73, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
@@ -191,6 +198,7 @@ erDiagram
 | materials – appointment_materials | 1 : 0..N | `appointment_materials.material_id` |
 | requests – notifications | 1 : 0..N | `notifications.request_id` |
 | status_history – notifications | 0..1 : 0..1 | `notifications.status_history_id` (única) |
+| users – reading_room_config | 0..1 : 0..N | `reading_room_config.updated_by_id` |
 
 Decisiones principales:
 
@@ -198,7 +206,7 @@ Decisiones principales:
 - `status_history` solo admite `INSERT`: un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`. Es la auditoría y la base del reporte de tiempos de atención.
 - `appointment_materials` tiene el índice único `(material_id, booked_date)`, así que la base de datos impide reservar el mismo material dos veces el mismo día (HU-20).
 - Ninguna FK borra en cascada: todas son `RESTRICT`, salvo `materials.status_changed_by`, que es `SET NULL` (si se borrara el usuario, el material pierde solo el responsable del último cambio). Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
-- No hay tabla de horario ni de capacidad de la sala. El horario de atención (lunes a viernes de 8:00 a 17:00, sábados de 9:00 a 13:00) está en el dominio (`backend/src/requests/domain/value-objects/appointment-date.ts`). La capacidad diaria configurable llega con HU-20.1.
+- No hay tabla de horario. El horario de atención (lunes a viernes de 8:00 a 17:00, sábados de 9:00 a 13:00) está en el dominio (`backend/src/requests/domain/value-objects/appointment-date.ts`). La capacidad diaria configurable de la sala se guarda en `reading_room_config` (HU-20.1; por defecto 15 citas/día si no hay fila).
 
 ## 3. Descripción de tablas
 
@@ -447,6 +455,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261112100000_create_appointments` | HU-18 | Tablas `appointments` y `appointment_materials` |
 | `20261113000000_create_notifications` | HU-23 | Tabla `notifications` |
 | `20261114100000_material_day_booking` | HU-20 | `booked_date` y el índice único contra dobles reservas |
+| `20261118030000_create_reading_room_config` | HU-20.1 | Tabla singleton `reading_room_config` para la capacidad diaria |
 
 **Semillas:**
 
