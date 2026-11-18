@@ -6,8 +6,10 @@ import { RequestDetailPage } from './RequestDetailPage';
 import { RequestsListPage } from './RequestsListPage';
 
 const fetchMock = vi.fn();
-// The history (HU-17) has its own mock, so the other calls keep their order
+// The history (HU-17) and occupancy (HU-20.1) have their own mocks, so the
+// other calls keep their order
 const historyMock = vi.fn();
+const occupancyMock = vi.fn();
 const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
 
 function history(entries: unknown[] = [registrationEntry()]) {
@@ -100,10 +102,28 @@ describe('RequestDetailPage', () => {
     sessionStorage.clear();
     fetchMock.mockReset();
     historyMock.mockReset();
+    occupancyMock.mockReset();
     historyMock.mockResolvedValue(ok(history()));
-    vi.stubGlobal('fetch', (url: string, init?: RequestInit) =>
-      url.endsWith('/history') ? historyMock(url, init) : fetchMock(url, init),
+    occupancyMock.mockResolvedValue(
+      ok({
+        dailyCapacity: 15,
+        days: [
+          {
+            date: '2026-12-01',
+            occupied: 2,
+            available: 13,
+            isFull: false,
+          },
+        ],
+      }),
     );
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      if (url.endsWith('/history')) return historyMock(url, init);
+      if (url.includes('/appointments/occupancy')) {
+        return occupancyMock(url, init);
+      }
+      return fetchMock(url, init);
+    });
   });
 
   describe('status history (HU-17)', () => {
@@ -1020,5 +1040,29 @@ describe('RequestDetailPage', () => {
         ).not.toBeInTheDocument();
       },
     );
+
+    it('shows daily room occupancy and warns when the selected day is full (HU-20.1)', async () => {
+      occupancyMock.mockResolvedValue(
+        ok({
+          dailyCapacity: 15,
+          days: [
+            {
+              date: '2026-12-01',
+              occupied: 15,
+              available: 0,
+              isFull: true,
+            },
+          ],
+        }),
+      );
+      await setup();
+
+      const section = screen.getByRole('region', { name: 'Agendar cita' });
+      expect(
+        await within(section).findByText(
+          'La sala alcanzó su capacidad diaria (15 de 15 citas).',
+        ),
+      ).toBeInTheDocument();
+    });
   });
 });
