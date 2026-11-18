@@ -19,10 +19,10 @@ export interface StatusChange {
   readonly attendedAt: Date | null;
   readonly closedAt: Date | null;
   // Leaving AGENDADA settles the PROGRAMADA appointment: CUMPLIDA when the
-  // requester attended (ATENDIDA), NO_ASISTIO when not (DISPONIBLE), and the
-  // day of its materials is free again (HU-20). Null for any other change
+  // requester attended (ATENDIDA), NO_ASISTIO when not (DISPONIBLE), or
+  // CANCELADA when cancelled by the staff (HU-20, HU-21). Null for any other change
   readonly appointmentOutcome: Extract<
     AppointmentStatus,
-    'CUMPLIDA' | 'NO_ASISTIO'
+    'CUMPLIDA' | 'NO_ASISTIO' | 'CANCELADA'
   > | null;
 }

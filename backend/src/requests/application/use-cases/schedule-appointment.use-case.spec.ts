@@ -118,8 +118,11 @@ describe('ScheduleAppointmentUseCase', () => {
     const repository: IRequestRepository = {
       save: jest.fn(),
       findById,
+      findAppointmentById: jest.fn(),
       saveStatusChange: jest.fn(),
       saveAppointment,
+      rescheduleAppointment: jest.fn(),
+      cancelAppointment: jest.fn(),
     };
     const queries: IRequestQueryService = {
       list: jest.fn(),

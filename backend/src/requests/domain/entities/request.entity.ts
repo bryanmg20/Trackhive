@@ -213,14 +213,63 @@ export class Request {
     return this.recordChange(previousStatus, scheduledBy, null, now);
   }
 
+  /**
+   * «Reprogramar cita» (HU-21): moves the scheduled appointment to another
+   * day. The request must already be AGENDADA with a presential delivery,
+   * stays in AGENDADA, and records the change in status_history.
+   */
+  rescheduleAppointment(
+    rescheduledBy: string,
+    comment?: string | null,
+    now: Date = new Date(),
+  ): StatusChange {
+    if (
+      this.currentStatus !== 'AGENDADA' ||
+      this.deliveryMode !== 'PRESENCIAL'
+    ) {
+      throw new InvalidStatusTransitionError(this.currentStatus, 'AGENDADA');
+    }
+    return this.recordChange('AGENDADA', rescheduledBy, comment, now, null);
+  }
+
+  /**
+   * «Cancelar cita» (HU-21): cancels the scheduled appointment, frees its
+   * materials and returns the request from AGENDADA to DISPONIBLE (HU-14).
+   */
+  cancelAppointment(
+    cancelledBy: string,
+    comment?: string | null,
+    now: Date = new Date(),
+  ): StatusChange {
+    if (this.currentStatus !== 'AGENDADA') {
+      throw new InvalidStatusTransitionError(this.currentStatus, 'DISPONIBLE');
+    }
+    const previousStatus = this.currentStatus;
+    this.markAvailable();
+    return this.recordChange(
+      previousStatus,
+      cancelledBy,
+      comment,
+      now,
+      'CANCELADA',
+    );
+  }
+
   private recordChange(
     previousStatus: RequestStatus,
     changedBy: string,
     comment: string | null | undefined,
     now: Date,
+    outcomeOverride?: StatusChange['appointmentOutcome'],
   ): StatusChange {
     const newStatus = this.currentStatus;
-    const leftAppointment = previousStatus === 'AGENDADA';
+    const leftAppointment =
+      previousStatus === 'AGENDADA' && newStatus !== 'AGENDADA';
+    const defaultOutcome: StatusChange['appointmentOutcome'] = leftAppointment
+      ? newStatus === 'ATENDIDA'
+        ? 'CUMPLIDA'
+        : 'NO_ASISTIO'
+      : null;
     return Object.freeze({
       requestId: this.id,
       previousStatus,
@@ -232,12 +281,9 @@ export class Request {
         newStatus === 'RECHAZADA' ? this.currentRejectionReason : null,
       attendedAt: newStatus === 'ATENDIDA' ? now : null,
       closedAt: newStatus === 'CERRADA' ? now : null,
-      // From AGENDADA only ATENDIDA (attended) and DISPONIBLE (did not) are allowed
-      appointmentOutcome: leftAppointment
-        ? newStatus === 'ATENDIDA'
-          ? 'CUMPLIDA'
-          : 'NO_ASISTIO'
-        : null,
+      // From AGENDADA only ATENDIDA (attended) and DISPONIBLE (did not / cancelled) are allowed
+      appointmentOutcome:
+        outcomeOverride !== undefined ? outcomeOverride : defaultOutcome,
     });
   }
 

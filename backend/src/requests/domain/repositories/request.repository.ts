@@ -1,6 +1,10 @@
 import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
 import type { Request } from '../entities/request.entity';
-import type { SavedAppointment } from '../value-objects/saved-appointment';
+import type {
+  SavedAppointment,
+  SavedCancelledAppointment,
+  StoredAppointment,
+} from '../value-objects/saved-appointment';
 import type { SavedStatusChange } from '../value-objects/saved-status-change';
 import type { StatusChange } from '../value-objects/status-change';
 
@@ -14,6 +18,9 @@ export interface IRequestRepository {
 
   /** The request as a domain entity, to apply its transition rules (HU-15). */
   findById(id: string): Promise<Request | null>;
+
+  /** An appointment with its request entity, to reschedule or cancel it (HU-21). */
+  findAppointmentById(id: string): Promise<StoredAppointment | null>;
 
   /**
    * Saves the new status and inserts its row in status_history in one
@@ -39,4 +46,28 @@ export interface IRequestRepository {
     date: Date,
     notification: NotificationDraft | null,
   ): Promise<SavedAppointment>;
+
+  /**
+   * Reschedules a PROGRAMADA appointment to `date` in one transaction (HU-21):
+   * checks room capacity, updates the appointment and its booked materials to
+   * the new day, inserts the status_history row and queues the email.
+   */
+  rescheduleAppointment(
+    appointmentId: string,
+    change: StatusChange,
+    date: Date,
+    notification: NotificationDraft | null,
+  ): Promise<SavedAppointment>;
+
+  /**
+   * Cancels a PROGRAMADA appointment in one transaction (HU-21): moves the
+   * request back to DISPONIBLE, marks the appointment CANCELADA, releases the
+   * booked day of its materials, inserts the status_history row and queues
+   * the email.
+   */
+  cancelAppointment(
+    appointmentId: string,
+    change: StatusChange,
+    notification: NotificationDraft | null,
+  ): Promise<SavedCancelledAppointment>;
 }

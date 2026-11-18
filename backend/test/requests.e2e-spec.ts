@@ -59,6 +59,7 @@ describe('Request registration (e2e)', () => {
     findHistory: jest.fn(),
     listByRequesterUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findById: jest.fn(),
+    findAppointmentById: jest.fn(),
     // HU-23: who receives the email of a status change and what it lists
     findNotificationContext: jest.fn().mockResolvedValue({
       trackingCode: 'SOL-2026-00042',
@@ -71,6 +72,8 @@ describe('Request registration (e2e)', () => {
     }),
     saveStatusChange: jest.fn(),
     saveAppointment: jest.fn(),
+    rescheduleAppointment: jest.fn(),
+    cancelAppointment: jest.fn(),
     findSchedulingConflicts: jest.fn().mockResolvedValue({
       materials: [],
       bookedMaterials: [],
@@ -1638,6 +1641,219 @@ describe('Request registration (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
         .expect(400);
       expect(repository.listAppointments).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('PATCH /appointments/:id/reschedule & /cancel (HU-21)', () => {
+    const APPOINTMENT_ID = '9b1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const REQUEST_ID = '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const reschedulePath = (id: string) =>
+      `${APPOINTMENTS_PATH}/${id}/reschedule`;
+    const cancelPath = (id: string) => `${APPOINTMENTS_PATH}/${id}/cancel`;
+
+    beforeEach(() => {
+      repository.findAppointmentById.mockReset();
+      repository.findAppointmentById.mockResolvedValue({
+        id: APPOINTMENT_ID,
+        date: new Date('2026-11-20T00:00:00.000Z'),
+        status: 'PROGRAMADA',
+        request: new Request({
+          id: REQUEST_ID,
+          status: 'AGENDADA',
+          deliveryMode: 'PRESENCIAL',
+        }),
+      });
+      repository.findSchedulingConflicts.mockReset();
+      repository.findSchedulingConflicts.mockResolvedValue({
+        materials: [
+          {
+            id: 'material-1',
+            catalogCode: 'AHB-001',
+            title: 'Actas de 1890',
+            status: 'DISPONIBLE',
+          },
+        ],
+        bookedMaterials: [],
+      });
+      repository.rescheduleAppointment.mockReset();
+      repository.rescheduleAppointment.mockImplementation(
+        (
+          _appointmentId: string,
+          change: StatusChange,
+          date: Date,
+        ): Promise<SavedAppointment> =>
+          Promise.resolve({
+            id: APPOINTMENT_ID,
+            date,
+            status: 'PROGRAMADA',
+            requester: {
+              id: 'requester-1',
+              firstName: 'Juan',
+              middleName: null,
+              lastName: 'Pérez',
+              secondLastName: null,
+            },
+            materials: [
+              { id: 'material-1', catalogCode: 'AHB-001', title: 'Actas' },
+            ],
+            statusChange: {
+              previousStatus: change.previousStatus,
+              newStatus: change.newStatus,
+              changedAt: change.changedAt,
+              comment: change.comment,
+              changedBy: {
+                id: change.changedBy,
+                firstName: 'Ana',
+                middleName: null,
+                lastName: 'Gómez',
+                secondLastName: null,
+              },
+            },
+          }),
+      );
+      repository.cancelAppointment.mockReset();
+      repository.cancelAppointment.mockImplementation(
+        (_appointmentId: string, change: StatusChange) =>
+          Promise.resolve({
+            id: APPOINTMENT_ID,
+            date: new Date('2026-11-20T00:00:00.000Z'),
+            status: 'CANCELADA',
+            statusChange: {
+              previousStatus: change.previousStatus,
+              newStatus: change.newStatus,
+              changedAt: change.changedAt,
+              comment: change.comment,
+              changedBy: {
+                id: change.changedBy,
+                firstName: 'Ana',
+                middleName: null,
+                lastName: 'Gómez',
+                secondLastName: null,
+              },
+            },
+          }),
+      );
+    });
+
+    it('rejects a PUBLICO user with 403 on reschedule and cancel (HU-04)', async () => {
+      const rescheduleRes = await request(server)
+        .patch(reschedulePath(APPOINTMENT_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({ date: '2026-11-24' })
+        .expect(403);
+      expect((rescheduleRes.body as ErrorBody).code).toBe('FORBIDDEN');
+
+      const cancelRes = await request(server)
+        .patch(cancelPath(APPOINTMENT_ID))
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({})
+        .expect(403);
+      expect((cancelRes.body as ErrorBody).code).toBe('FORBIDDEN');
+
+      expect(repository.rescheduleAppointment).not.toHaveBeenCalled();
+      expect(repository.cancelAppointment).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s reschedule a PROGRAMADA appointment to another day',
+      async (role) => {
+        const response = await request(server)
+          .patch(reschedulePath(APPOINTMENT_ID))
+          .set('Authorization', `Bearer ${accessToken(role, 'staff-1')}`)
+          .send({ date: '2026-11-24' })
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          id: REQUEST_ID,
+          status: 'AGENDADA',
+          appointment: {
+            id: APPOINTMENT_ID,
+            date: '2026-11-24',
+            status: 'PROGRAMADA',
+          },
+          statusChange: {
+            previousStatus: 'AGENDADA',
+            newStatus: 'AGENDADA',
+            comment: 'Cita reprogramada del 2026-11-20 al 2026-11-24',
+          },
+        });
+      },
+    );
+
+    it('answers 409 MATERIAL_ALREADY_BOOKED when the material is booked on the new day', async () => {
+      repository.findSchedulingConflicts.mockResolvedValueOnce({
+        materials: [
+          {
+            id: 'material-1',
+            catalogCode: 'AHB-001',
+            title: 'Actas de 1890',
+            status: 'DISPONIBLE',
+          },
+        ],
+        bookedMaterials: [
+          {
+            materialId: 'material-1',
+            catalogCode: 'AHB-001',
+            title: 'Actas de 1890',
+            date: new Date('2026-11-24T00:00:00.000Z'),
+            trackingCode: 'SOL-2026-00099',
+          },
+        ],
+      });
+
+      const response = await request(server)
+        .patch(reschedulePath(APPOINTMENT_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: '2026-11-24' })
+        .expect(409);
+
+      expect((response.body as ErrorBody).code).toBe('MATERIAL_ALREADY_BOOKED');
+      expect(repository.rescheduleAppointment).not.toHaveBeenCalled();
+    });
+
+    it.each<UserRole>(['PERSONAL', 'ADMIN'])(
+      'lets %s cancel a PROGRAMADA appointment and returns the request to DISPONIBLE',
+      async (role) => {
+        const response = await request(server)
+          .patch(cancelPath(APPOINTMENT_ID))
+          .set('Authorization', `Bearer ${accessToken(role, 'staff-1')}`)
+          .send({ comment: 'Cancelación de último momento' })
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          id: REQUEST_ID,
+          status: 'DISPONIBLE',
+          allowedTransitions: ['AGENDADA', 'CERRADA'],
+          appointment: {
+            id: APPOINTMENT_ID,
+            date: '2026-11-20',
+            status: 'CANCELADA',
+          },
+          statusChange: {
+            previousStatus: 'AGENDADA',
+            newStatus: 'DISPONIBLE',
+            comment: 'Cancelación de último momento',
+          },
+        });
+      },
+    );
+
+    it('answers 404 APPOINTMENT_NOT_FOUND when the appointment does not exist', async () => {
+      repository.findAppointmentById.mockResolvedValue(null);
+
+      const res1 = await request(server)
+        .patch(reschedulePath(APPOINTMENT_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ date: '2026-11-24' })
+        .expect(404);
+      expect((res1.body as ErrorBody).code).toBe('APPOINTMENT_NOT_FOUND');
+
+      const res2 = await request(server)
+        .patch(cancelPath(APPOINTMENT_ID))
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({})
+        .expect(404);
+      expect((res2.body as ErrorBody).code).toBe('APPOINTMENT_NOT_FOUND');
     });
   });
 });

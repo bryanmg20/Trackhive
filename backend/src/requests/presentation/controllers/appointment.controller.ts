@@ -1,11 +1,23 @@
-import { Body, Controller, Get, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Put,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -14,14 +26,20 @@ import { Roles } from '../../../auth/presentation/decorators/roles.decorator';
 import type { AuthenticatedUser } from '../../../auth/presentation/guards/authenticated-user';
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
 import { PaginatedAppointmentsResponseDto } from '../../application/dto/appointment-list-response.dto';
+import { CancelAppointmentResponseDto } from '../../application/dto/cancel-appointment-response.dto';
+import { CancelAppointmentDto } from '../../application/dto/cancel-appointment.dto';
 import { GetRoomOccupancyQueryDto } from '../../application/dto/get-room-occupancy-query.dto';
 import { ListAppointmentsQueryDto } from '../../application/dto/list-appointments-query.dto';
+import { RescheduleAppointmentDto } from '../../application/dto/reschedule-appointment.dto';
 import { RoomCapacityResponseDto } from '../../application/dto/room-capacity-response.dto';
 import { RoomOccupancyResponseDto } from '../../application/dto/room-occupancy-response.dto';
+import { ScheduleAppointmentResponseDto } from '../../application/dto/schedule-appointment-response.dto';
 import { UpdateRoomCapacityDto } from '../../application/dto/update-room-capacity.dto';
+import { CancelAppointmentUseCase } from '../../application/use-cases/cancel-appointment.use-case';
 import { GetRoomCapacityUseCase } from '../../application/use-cases/get-room-capacity.use-case';
 import { GetRoomOccupancyUseCase } from '../../application/use-cases/get-room-occupancy.use-case';
 import { ListAppointmentsUseCase } from '../../application/use-cases/list-appointments.use-case';
+import { RescheduleAppointmentUseCase } from '../../application/use-cases/reschedule-appointment.use-case';
 import { UpdateRoomCapacityUseCase } from '../../application/use-cases/update-room-capacity.use-case';
 
 @ApiTags('Appointments')
@@ -33,6 +51,8 @@ export class AppointmentController {
     private readonly getRoomCapacityUseCase: GetRoomCapacityUseCase,
     private readonly updateRoomCapacityUseCase: UpdateRoomCapacityUseCase,
     private readonly getRoomOccupancyUseCase: GetRoomOccupancyUseCase,
+    private readonly rescheduleAppointmentUseCase: RescheduleAppointmentUseCase,
+    private readonly cancelAppointmentUseCase: CancelAppointmentUseCase,
   ) {}
 
   @Get()
@@ -174,6 +194,118 @@ export class AppointmentController {
     return this.getRoomOccupancyUseCase.execute({
       from: query.from,
       to: query.to,
+    });
+  }
+
+  @Patch(':id/reschedule')
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Reprograma una cita programada a otro día',
+    description:
+      'Solo para PERSONAL y ADMIN (HU-21). Mueve una cita PROGRAMADA a otro ' +
+      'día hábil de atención (lunes a sábado), revalidando la disponibilidad ' +
+      'de los materiales de la solicitud (HU-20) y la capacidad diaria de la ' +
+      'sala (HU-20.1). El cambio queda en el historial de estados y se ' +
+      'notifica por correo al solicitante (HU-23).',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la cita' })
+  @ApiOkResponse({
+    description: 'Cita reprogramada y registro guardado en el historial',
+    type: ScheduleAppointmentResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Identificador o fecha inválidos, la fecha cae en domingo o es igual ' +
+      'a la fecha actual (INVALID_APPOINTMENT_DATE)',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden reprogramar una cita',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La cita no existe (APPOINTMENT_NOT_FOUND)',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'La cita no está PROGRAMADA (APPOINTMENT_NOT_SCHEDULED), un material ya ' +
+      'tiene cita ese día (MATERIAL_ALREADY_BOOKED) o no está disponible ' +
+      '(MATERIAL_NOT_AVAILABLE), o la sala alcanzó su capacidad diaria ' +
+      '(ROOM_CAPACITY_EXCEEDED)',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  reschedule(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: RescheduleAppointmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ScheduleAppointmentResponseDto> {
+    return this.rescheduleAppointmentUseCase.execute({
+      appointmentId: id,
+      date: body.date,
+      comment: body.comment,
+      userId: user.id,
+    });
+  }
+
+  @Patch(':id/cancel')
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Cancela una cita programada y libera el material',
+    description:
+      'Solo para PERSONAL y ADMIN (HU-21). Marca la cita como CANCELADA, ' +
+      'libera el día reservado de sus materiales y devuelve la solicitud a ' +
+      'DISPONIBLE (HU-14). El cambio queda en el historial y se notifica por ' +
+      'correo al solicitante (HU-23).',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la cita' })
+  @ApiOkResponse({
+    description: 'Cita cancelada y solicitud devuelta a DISPONIBLE',
+    type: CancelAppointmentResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Identificador o comentario inválidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden cancelar una cita',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La cita no existe (APPOINTMENT_NOT_FOUND)',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'La cita no está PROGRAMADA (APPOINTMENT_NOT_SCHEDULED) o la solicitud ' +
+      'ya no está AGENDADA (INVALID_STATUS_TRANSITION)',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  cancel(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: CancelAppointmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CancelAppointmentResponseDto> {
+    return this.cancelAppointmentUseCase.execute({
+      appointmentId: id,
+      comment: body.comment,
+      userId: user.id,
     });
   }
 }

@@ -31,8 +31,11 @@ const build = () => {
   const repository: IRequestRepository = {
     save,
     findById: jest.fn(),
+    findAppointmentById: jest.fn(),
     saveStatusChange: jest.fn(),
     saveAppointment: jest.fn(),
+    rescheduleAppointment: jest.fn(),
+    cancelAppointment: jest.fn(),
   };
   const findMissingMaterialIds = jest.fn<
     Promise<string[]>,
