@@ -75,6 +75,13 @@ if (process.argv.includes('--render')) {
       await page.locator('image').evaluateAll((elements) => Promise.all(elements.map((element) => {
         const image = new Image(); image.src = element.getAttribute('href'); return image.decode();
       })));
+      const brand = page.locator('[data-brand="institutional"]');
+      assert.equal(await brand.locator('rect').count(), 0, `${screen.id}: white logo container`);
+      const logos = await brand.locator('image').evaluateAll((elements) => elements.map((element) => ({
+        y: Number(element.getAttribute('y')), height: Number(element.getAttribute('height')),
+      })));
+      assert.equal(logos[0].y, logos[1].y, `${screen.id}: logos are vertically misaligned`);
+      assert.equal(logos[0].height, logos[1].height, `${screen.id}: logos have unequal visible heights`);
       if (screen.device === 'mobile') {
         const invalid = await page.locator('[data-control]').evaluateAll((controls) => controls.filter((control) => control.getBBox().height < 44).map((control) => control.outerHTML));
         assert.deepEqual(invalid, [], `${screen.id}: controls below 44 px`);

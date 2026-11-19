@@ -73,7 +73,9 @@ La numeración documental anterior era 2.0 por la adaptación a la paleta. **HU-
 
 ### Aplicación de marca y adaptación móvil
 
-Los PNG originales recibidos se conservan en [assets](wireframes/assets/LOGOS.md). La cabecera de escritorio usa las firmas horizontales; la móvil combina CLENA horizontal con el símbolo UN y el nombre de la universidad, sobre fondo blanco. No se recolorean, estiran ni redibujan los logos. Se ajustan composición, escala y márgenes a cada ancho. No se considera aprobada su aplicación institucional hasta la revisión real de G6.
+Los PNG originales recibidos se conservan en [assets](wireframes/assets/LOGOS.md). Ambas cabeceras usan las firmas horizontales originales, con transparencia y sin contenedor blanco. Se elimina únicamente el blanco mediante una máscara determinista; no se generan, recolorean ni redibujan las marcas. Los márgenes exteriores transparentes se recortan sin reescalar. Ambos logos comparten la misma altura visible y coordenada superior: **52 px en escritorio y 36 px en móvil**, conservando sus proporciones. Esta corrección sustituye la composición móvil anterior de símbolo UN con nombre escrito aparte. No se considera aprobada su aplicación institucional hasta la revisión real de G6.
+
+Si cambian los PNG originales, ejecutar primero `node docs/tools/preparar-logos.mjs`; la herramienta comprueba que ningún píxel conservado de las marcas cambie y registra las dimensiones en `wireframes/assets/logos.json`. Después se regeneran y verifican los bocetos con los comandos habituales.
 
 A 360 px: márgenes de 16 px, texto base de 14 px, controles de al menos 44 px, sin desplazamiento horizontal. El menú de sesión se representa cerrado; al implementarlo abrirá un panel con las opciones del rol que ya muestra el escritorio, cierre accesible y retorno de foco. En los buscadores se muestra el filtro desplegado para revisar sus campos. Las notas técnicas y los estados alternativos están separados al final del lienzo; no se convierten en instrucciones para los usuarios de la aplicación. Login y registro no muestran navegación de una sesión iniciada.
 

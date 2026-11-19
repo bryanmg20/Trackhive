@@ -188,8 +188,21 @@ export function createMobile({ screen, blocks, palette: p, escape: esc, brand })
 
 export function loadBrand(root) {
   const data = (name) => `data:image/png;base64,${fs.readFileSync(path.join(root, 'docs/wireframes/assets', name)).toString('base64')}`;
-  const logos = { clena: data('clena-horizontal.png'), university: data('uninorte-horizontal.png'), symbol: data('uninorte-simbolo.png') };
-  return (variant) => variant === 'mobile'
-    ? `<g data-brand="institutional"><rect width="360" height="84" fill="white"/><image data-logo="clena" href="${logos.clena}" x="12" y="13" width="150" height="55" preserveAspectRatio="xMidYMid meet"/><path d="M180 20v44" stroke="#E6D9C5"/><image data-logo="uninorte" href="${logos.symbol}" x="196" y="17" width="40" height="45" preserveAspectRatio="xMidYMid meet"/><text x="244" y="34" font-family="Inter,Arial,sans-serif" font-size="12" fill="#171717"><tspan x="244">Universidad</tspan><tspan x="244" dy="18">del Norte</tspan></text></g>`
-    : `<g data-brand="institutional"><rect x="48" y="12" width="520" height="88" rx="16" fill="white"/><image data-logo="clena" href="${logos.clena}" x="58" y="20" width="195" height="72" preserveAspectRatio="xMidYMid meet"/><path d="M278 30v50" stroke="#E6D9C5"/><image data-logo="uninorte" href="${logos.university}" x="298" y="18" width="250" height="80" preserveAspectRatio="xMidYMid meet"/></g>`;
+  const metrics = JSON.parse(fs.readFileSync(path.join(root, 'docs/wireframes/assets/logos.json'), 'utf8'));
+  const clena = metrics['clena-horizontal'];
+  const university = metrics['uninorte-horizontal'];
+  return (variant) => {
+    const mobile = variant === 'mobile';
+    const height = mobile ? 36 : 52;
+    const top = mobile ? 24 : 30;
+    const gap = mobile ? 24 : 28;
+    const clenaWidth = clena.width * height / clena.height;
+    const universityWidth = university.width * height / university.height;
+    const left = mobile ? (360 - clenaWidth - universityWidth - gap) / 2 : 64;
+    const universityLeft = left + clenaWidth + gap;
+    const divider = left + clenaWidth + gap / 2;
+    // Both files are cropped to visible alpha bounds: identical height and y
+    // now align the marks themselves, rather than unequal transparent margins.
+    return `<g data-brand="institutional" data-transparent="true"><image data-logo="clena" href="${data(clena.file)}" x="${left}" y="${top}" width="${clenaWidth}" height="${height}" preserveAspectRatio="xMidYMid meet"/><path d="M${divider} ${top}v${height}" stroke="#D8B477"/><image data-logo="uninorte" href="${data(university.file)}" x="${universityLeft}" y="${top}" width="${universityWidth}" height="${height}" preserveAspectRatio="xMidYMid meet"/></g>`;
+  };
 }
