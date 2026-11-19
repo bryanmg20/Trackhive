@@ -2,11 +2,14 @@ import { Logger } from '@nestjs/common';
 import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
 import { DeliveryMode } from '../../domain/enums/delivery-mode';
 import { Request } from '../../domain/entities/request.entity';
+import { AppointmentHasLoansError } from '../../domain/errors/appointment-has-loans.error';
+import { AppointmentHasUnreturnedMaterialsError } from '../../domain/errors/appointment-has-unreturned-materials.error';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
 import { RejectionReasonRequiredError } from '../../domain/errors/rejection-reason-required.error';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import { RequestStatus } from '../../domain/enums/request-status';
+import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
 import type { StatusChange } from '../../domain/value-objects/status-change';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
@@ -56,6 +59,10 @@ describe('ChangeRequestStatusUseCase', () => {
     Promise<SavedStatusChange>,
     [StatusChange, NotificationDraft | null]
   >;
+  let countScheduledAppointmentLoansByRequest: jest.Mock<
+    Promise<AppointmentLoanCounts>,
+    [string]
+  >;
   let useCase: ChangeRequestStatusUseCase;
 
   beforeEach(() => {
@@ -70,6 +77,9 @@ describe('ChangeRequestStatusUseCase', () => {
       Promise<SavedStatusChange>,
       [StatusChange, NotificationDraft | null]
     >((change) => Promise.resolve(savedFrom(change)));
+    countScheduledAppointmentLoansByRequest = jest.fn(() =>
+      Promise.resolve({ totalLoans: 0, openLoans: 0 }),
+    );
     const repository: IRequestRepository = {
       save: jest.fn(),
       findById,
@@ -91,6 +101,9 @@ describe('ChangeRequestStatusUseCase', () => {
       findMissingMaterialIds: jest.fn(),
       countActiveAppointmentsOnDate: jest.fn(),
       countActiveAppointmentsByDateRange: jest.fn(),
+      findMostRequestedMaterials: jest.fn(),
+      countAppointmentLoans: jest.fn(),
+      countScheduledAppointmentLoansByRequest,
     };
     useCase = new ChangeRequestStatusUseCase(repository, queries);
   });
@@ -253,6 +266,65 @@ describe('ChangeRequestStatusUseCase', () => {
     expect(saveStatusChange.mock.calls[0][0]).toMatchObject({
       previousStatus: 'AGENDADA',
       newStatus: 'DISPONIBLE',
+    });
+  });
+
+  describe('reading-room custody loan safeguards (HU-72)', () => {
+    it.each<AppointmentLoanCounts>([
+      { totalLoans: 1, openLoans: 0 },
+      { totalLoans: 2, openLoans: 1 },
+    ])(
+      'rejects AGENDADA -> DISPONIBLE (NO_ASISTIO) when the appointment has loans (%o) and does not call saveStatusChange',
+      async (loanCounts) => {
+        countScheduledAppointmentLoansByRequest.mockResolvedValue(loanCounts);
+
+        await expect(
+          useCase.execute({
+            requestId: 'request-1',
+            status: 'DISPONIBLE',
+            userId: 'staff-1',
+          }),
+        ).rejects.toThrow(AppointmentHasLoansError);
+        expect(countScheduledAppointmentLoansByRequest).toHaveBeenCalledWith(
+          'request-1',
+        );
+        expect(saveStatusChange).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects AGENDADA -> ATENDIDA (CUMPLIDA) when the appointment has unreturned materials and does not call saveStatusChange', async () => {
+      countScheduledAppointmentLoansByRequest.mockResolvedValue({
+        totalLoans: 2,
+        openLoans: 1,
+      });
+
+      await expect(
+        useCase.execute({
+          requestId: 'request-1',
+          status: 'ATENDIDA',
+          userId: 'staff-1',
+        }),
+      ).rejects.toThrow(AppointmentHasUnreturnedMaterialsError);
+      expect(countScheduledAppointmentLoansByRequest).toHaveBeenCalledWith(
+        'request-1',
+      );
+      expect(saveStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('allows AGENDADA -> ATENDIDA (CUMPLIDA) when all delivered materials have been returned', async () => {
+      countScheduledAppointmentLoansByRequest.mockResolvedValue({
+        totalLoans: 2,
+        openLoans: 0,
+      });
+
+      const result = await useCase.execute({
+        requestId: 'request-1',
+        status: 'ATENDIDA',
+        userId: 'staff-1',
+      });
+
+      expect(result.status).toBe('ATENDIDA');
+      expect(saveStatusChange).toHaveBeenCalledTimes(1);
     });
   });
 

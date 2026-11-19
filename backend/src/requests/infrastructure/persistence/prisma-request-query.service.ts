@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
 import { ACTIVE_CAPACITY_APPOINTMENT_STATUSES } from '../../domain/policies/room-capacity';
 import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
 import type {
@@ -324,5 +325,32 @@ export class PrismaRequestQueryService implements IRequestQueryService {
       ),
       totalRequests: Number(totals[0]?.total ?? 0),
     };
+  }
+
+  async countAppointmentLoans(
+    appointmentId: string,
+  ): Promise<AppointmentLoanCounts> {
+    const [totalLoans, openLoans] = await this.prisma.$transaction([
+      this.prisma.materialLoanModel.count({ where: { appointmentId } }),
+      this.prisma.materialLoanModel.count({
+        where: { appointmentId, returnedAt: null },
+      }),
+    ]);
+    return { totalLoans, openLoans };
+  }
+
+  async countScheduledAppointmentLoansByRequest(
+    requestId: string,
+  ): Promise<AppointmentLoanCounts> {
+    const where: Prisma.MaterialLoanModelWhereInput = {
+      appointment: { requestId, status: 'PROGRAMADA' },
+    };
+    const [totalLoans, openLoans] = await this.prisma.$transaction([
+      this.prisma.materialLoanModel.count({ where }),
+      this.prisma.materialLoanModel.count({
+        where: { ...where, returnedAt: null },
+      }),
+    ]);
+    return { totalLoans, openLoans };
   }
 }

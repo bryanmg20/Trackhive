@@ -673,4 +673,48 @@ describe('PrismaRequestQueryService', () => {
       });
     });
   });
+
+  describe('countAppointmentLoans & countScheduledAppointmentLoansByRequest (HU-72)', () => {
+    it('counts total and open loans of an appointment in one transaction', async () => {
+      const count = jest.fn().mockResolvedValueOnce(3).mockResolvedValueOnce(1);
+      const service = new PrismaRequestQueryService({
+        materialLoanModel: { count },
+        $transaction: jest.fn((ops: Promise<number>[]) => Promise.all(ops)),
+      } as unknown as PrismaService);
+
+      const result = await service.countAppointmentLoans('appointment-1');
+
+      expect(result).toEqual({ totalLoans: 3, openLoans: 1 });
+      expect(count).toHaveBeenNthCalledWith(1, {
+        where: { appointmentId: 'appointment-1' },
+      });
+      expect(count).toHaveBeenNthCalledWith(2, {
+        where: { appointmentId: 'appointment-1', returnedAt: null },
+      });
+    });
+
+    it('counts total and open loans of the PROGRAMADA appointment of a request', async () => {
+      const count = jest.fn().mockResolvedValueOnce(2).mockResolvedValueOnce(0);
+      const service = new PrismaRequestQueryService({
+        materialLoanModel: { count },
+        $transaction: jest.fn((ops: Promise<number>[]) => Promise.all(ops)),
+      } as unknown as PrismaService);
+
+      const result =
+        await service.countScheduledAppointmentLoansByRequest('request-1');
+
+      expect(result).toEqual({ totalLoans: 2, openLoans: 0 });
+      expect(count).toHaveBeenNthCalledWith(1, {
+        where: {
+          appointment: { requestId: 'request-1', status: 'PROGRAMADA' },
+        },
+      });
+      expect(count).toHaveBeenNthCalledWith(2, {
+        where: {
+          appointment: { requestId: 'request-1', status: 'PROGRAMADA' },
+          returnedAt: null,
+        },
+      });
+    });
+  });
 });

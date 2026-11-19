@@ -188,6 +188,14 @@ describe('Material delivery, return and history flow, HU-72 (e2e, PostgreSQL)', 
         expect(body.code).toBe('APPOINTMENT_HAS_UNRETURNED_MATERIALS');
       });
 
+    // Verify nothing was saved on the rejected ATENDIDA attempt
+    const historyAfterRejectedAttend =
+      await e2e.prisma.statusHistoryModel.count({ where: { requestId } });
+    const notificationsAfterRejectedAttend =
+      await e2e.prisma.notificationModel.count({ where: { requestId } });
+    expect(historyAfterRejectedAttend).toBe(4); // RECIBIDA, EN_BUSQUEDA, DISPONIBLE, AGENDADA
+    expect(notificationsAfterRejectedAttend).toBe(3);
+
     // 4. Register return (by another staff member) -> material returns to DISPONIBLE
     const returned = await request(e2e.server)
       .post(`${API}/materials/${material.id}/return`)
@@ -265,6 +273,23 @@ describe('Material delivery, return and history flow, HU-72 (e2e, PostgreSQL)', 
       .expect(({ body }: { body: { code: string } }) => {
         expect(body.code).toBe('APPOINTMENT_HAS_LOANS');
       });
+
+    // Verify none of the rejected cancel/reschedule/NO_ASISTIO attempts modified
+    // the appointment or added rows to status_history or notifications
+    const storedAppointment =
+      await e2e.prisma.appointmentModel.findUniqueOrThrow({
+        where: { id: appointmentId },
+      });
+    expect(storedAppointment.status).toBe('PROGRAMADA');
+    expect(storedAppointment.appointmentDate.toISOString().slice(0, 10)).toBe(
+      todayIso,
+    );
+    expect(
+      await e2e.prisma.statusHistoryModel.count({ where: { requestId } }),
+    ).toBe(4);
+    expect(
+      await e2e.prisma.notificationModel.count({ where: { requestId } }),
+    ).toBe(3);
 
     // 8. Once all materials are returned, marking the request ATENDIDA succeeds
     await changeStatus(e2e.server, staff, requestId, {

@@ -2,6 +2,7 @@ import type { NotificationDraft } from '../../../notifications/domain/value-obje
 import { Request } from '../../domain/entities/request.entity';
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import { AppointmentHasLoansError } from '../../domain/errors/appointment-has-loans.error';
 import { AppointmentNotFoundError } from '../../domain/errors/appointment-not-found.error';
 import { AppointmentNotScheduledError } from '../../domain/errors/appointment-not-scheduled.error';
 import { InvalidAppointmentDateError } from '../../domain/errors/invalid-appointment-date.error';
@@ -9,6 +10,7 @@ import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { MaterialNotAvailableError } from '../../domain/errors/material-not-available.error';
 import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
+import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import type { IRoomCapacityRepository } from '../../domain/repositories/room-capacity.repository';
 import type { RoomCapacityConfig } from '../../domain/value-objects/room-capacity';
@@ -94,6 +96,10 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
   >;
   let getCapacityConfig: jest.Mock<Promise<RoomCapacityConfig>, []>;
   let countActiveAppointmentsOnDate: jest.Mock<Promise<number>, [Date]>;
+  let countAppointmentLoans: jest.Mock<
+    Promise<AppointmentLoanCounts>,
+    [string]
+  >;
   let useCase: RescheduleAppointmentUseCase;
 
   const CONTEXT: RequestNotificationContext = {
@@ -121,6 +127,9 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
       }),
     );
     countActiveAppointmentsOnDate = jest.fn(() => Promise.resolve(0));
+    countAppointmentLoans = jest.fn(() =>
+      Promise.resolve({ totalLoans: 0, openLoans: 0 }),
+    );
 
     const repository: IRequestRepository = {
       save: jest.fn(),
@@ -143,6 +152,9 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
       findMissingMaterialIds: jest.fn(),
       countActiveAppointmentsOnDate,
       countActiveAppointmentsByDateRange: jest.fn(),
+      findMostRequestedMaterials: jest.fn(),
+      countAppointmentLoans,
+      countScheduledAppointmentLoansByRequest: jest.fn(),
     };
     const roomCapacity: IRoomCapacityRepository = {
       getConfig: getCapacityConfig,
@@ -331,4 +343,24 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
     ).rejects.toThrow(InvalidStatusTransitionError);
     expect(rescheduleAppointment).not.toHaveBeenCalled();
   });
+
+  it.each<AppointmentLoanCounts>([
+    { totalLoans: 1, openLoans: 0 },
+    { totalLoans: 2, openLoans: 1 },
+  ])(
+    'rejects rescheduling an appointment that already has material loans (%o) and does not call the repository (HU-72, RN-20)',
+    async (loanCounts) => {
+      countAppointmentLoans.mockResolvedValue(loanCounts);
+
+      await expect(
+        useCase.execute({
+          appointmentId: 'appointment-1',
+          date: '2026-11-24',
+          userId: 'staff-1',
+        }),
+      ).rejects.toThrow(AppointmentHasLoansError);
+      expect(countAppointmentLoans).toHaveBeenCalledWith('appointment-1');
+      expect(rescheduleAppointment).not.toHaveBeenCalled();
+    },
+  );
 });

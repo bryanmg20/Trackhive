@@ -2,9 +2,11 @@ import type { NotificationDraft } from '../../../notifications/domain/value-obje
 import { Request } from '../../domain/entities/request.entity';
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import { AppointmentHasLoansError } from '../../domain/errors/appointment-has-loans.error';
 import { AppointmentNotFoundError } from '../../domain/errors/appointment-not-found.error';
 import { AppointmentNotScheduledError } from '../../domain/errors/appointment-not-scheduled.error';
 import { InvalidStatusTransitionError } from '../../domain/errors/invalid-status-transition.error';
+import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import type {
   SavedCancelledAppointment,
@@ -60,6 +62,10 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
     Promise<SavedCancelledAppointment>,
     [string, StatusChange, NotificationDraft | null]
   >;
+  let countAppointmentLoans: jest.Mock<
+    Promise<AppointmentLoanCounts>,
+    [string]
+  >;
   let useCase: CancelAppointmentUseCase;
 
   const CONTEXT: RequestNotificationContext = {
@@ -76,6 +82,9 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
     findAppointmentById = jest.fn(() => Promise.resolve(storedAppointment()));
     cancelAppointment = jest.fn((_id, change) =>
       Promise.resolve(savedFrom(change)),
+    );
+    countAppointmentLoans = jest.fn(() =>
+      Promise.resolve({ totalLoans: 0, openLoans: 0 }),
     );
 
     const repository: IRequestRepository = {
@@ -99,6 +108,9 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
       findMissingMaterialIds: jest.fn(),
       countActiveAppointmentsOnDate: jest.fn(),
       countActiveAppointmentsByDateRange: jest.fn(),
+      findMostRequestedMaterials: jest.fn(),
+      countAppointmentLoans,
+      countScheduledAppointmentLoansByRequest: jest.fn(),
     };
     useCase = new CancelAppointmentUseCase(repository, queries);
   });
@@ -192,4 +204,23 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
     ).rejects.toThrow(InvalidStatusTransitionError);
     expect(cancelAppointment).not.toHaveBeenCalled();
   });
+
+  it.each<AppointmentLoanCounts>([
+    { totalLoans: 1, openLoans: 0 },
+    { totalLoans: 2, openLoans: 1 },
+  ])(
+    'rejects cancelling an appointment that already has material loans (%o) and does not call the repository (HU-72, RN-20)',
+    async (loanCounts) => {
+      countAppointmentLoans.mockResolvedValue(loanCounts);
+
+      await expect(
+        useCase.execute({
+          appointmentId: 'appointment-1',
+          userId: 'staff-1',
+        }),
+      ).rejects.toThrow(AppointmentHasLoansError);
+      expect(countAppointmentLoans).toHaveBeenCalledWith('appointment-1');
+      expect(cancelAppointment).not.toHaveBeenCalled();
+    },
+  );
 });

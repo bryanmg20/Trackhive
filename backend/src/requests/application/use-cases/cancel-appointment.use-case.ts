@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AppointmentNotFoundError } from '../../domain/errors/appointment-not-found.error';
 import { AppointmentNotScheduledError } from '../../domain/errors/appointment-not-scheduled.error';
+import { assertCanCancelOrRescheduleAppointment } from '../../domain/policies/appointment-loans';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import { CancelAppointmentResponseDto } from '../dto/cancel-appointment-response.dto';
 import type { CancelAppointmentInput } from '../dto/cancel-appointment.input';
@@ -38,6 +39,9 @@ export class CancelAppointmentUseCase {
     if (appointment.status !== 'PROGRAMADA') {
       throw new AppointmentNotScheduledError();
     }
+
+    const loanCounts = await this.queries.countAppointmentLoans(appointment.id);
+    assertCanCancelOrRescheduleAppointment(loanCounts);
 
     const appointmentDate = DateOnlyMapper.toDto(appointment.date);
     const defaultComment = `Cita del ${appointmentDate} cancelada`;

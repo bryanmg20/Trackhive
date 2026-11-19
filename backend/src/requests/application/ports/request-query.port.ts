@@ -1,6 +1,7 @@
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
 import type { ReportPeriod } from '../../domain/policies/report-period';
 import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
 
@@ -379,4 +380,20 @@ export interface IRequestQueryService {
   findMostRequestedMaterials(
     criteria: MostRequestedMaterialsCriteria,
   ): Promise<MostRequestedMaterialsResult>;
+
+  /**
+   * Total and open (`returned_at IS NULL`) material loans recorded for an
+   * appointment, used by the appointment-loans policy before cancelling or
+   * rescheduling (HU-21, HU-72, RN-20).
+   */
+  countAppointmentLoans(appointmentId: string): Promise<AppointmentLoanCounts>;
+
+  /**
+   * Total and open (`returned_at IS NULL`) material loans of the PROGRAMADA
+   * appointment of a request, used by the appointment-loans policy before
+   * settling the request as ATENDIDA or DISPONIBLE (HU-15, HU-72).
+   */
+  countScheduledAppointmentLoansByRequest(
+    requestId: string,
+  ): Promise<AppointmentLoanCounts>;
 }

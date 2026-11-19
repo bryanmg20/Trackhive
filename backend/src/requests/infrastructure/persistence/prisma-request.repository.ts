@@ -5,13 +5,15 @@ import type { NotificationDraft } from '../../../notifications/domain/value-obje
 import { PrismaNotificationMapper } from '../../../notifications/infrastructure/mappers/prisma-notification.mapper';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Request } from '../../domain/entities/request.entity';
-import { AppointmentHasLoansError } from '../../domain/errors/appointment-has-loans.error';
-import { AppointmentHasUnreturnedMaterialsError } from '../../domain/errors/appointment-has-unreturned-materials.error';
 import { AppointmentNotFoundError } from '../../domain/errors/appointment-not-found.error';
 import { AppointmentNotScheduledError } from '../../domain/errors/appointment-not-scheduled.error';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
+import {
+  assertCanCancelOrRescheduleAppointment,
+  assertCanSettleAppointmentOutcome,
+} from '../../domain/policies/appointment-loans';
 import {
   ACTIVE_CAPACITY_APPOINTMENT_STATUSES,
   DEFAULT_DAILY_ROOM_CAPACITY,
@@ -94,28 +96,32 @@ export class PrismaRequestRepository implements IRequestRepository {
     // The new status, its history row and its email are saved together or
     // not at all (D-08, D-10)
     return this.prisma.$transaction(async (tx) => {
-      // HU-72 safeguards before settling a PROGRAMADA appointment
+      // Atomic race-condition safety net: the business rule lives in
+      // domain/policies/appointment-loans and is checked first by
+      // ChangeRequestStatusUseCase; this re-check inside the transaction
+      // guards against a concurrent delivery arriving at the same instant.
       if (change.appointmentOutcome) {
         const scheduled = await tx.appointmentModel.findFirst({
           where: { requestId: change.requestId, status: 'PROGRAMADA' },
           select: { id: true },
         });
         if (scheduled) {
-          if (change.appointmentOutcome === 'NO_ASISTIO') {
-            const loansCount = await tx.materialLoanModel.count({
-              where: { appointmentId: scheduled.id },
-            });
-            if (loansCount > 0) {
-              throw new AppointmentHasLoansError();
-            }
-          } else if (change.appointmentOutcome === 'CUMPLIDA') {
-            const openLoansCount = await tx.materialLoanModel.count({
-              where: { appointmentId: scheduled.id, returnedAt: null },
-            });
-            if (openLoansCount > 0) {
-              throw new AppointmentHasUnreturnedMaterialsError();
-            }
-          }
+          const totalLoans =
+            change.appointmentOutcome === 'NO_ASISTIO'
+              ? await tx.materialLoanModel.count({
+                  where: { appointmentId: scheduled.id },
+                })
+              : 0;
+          const openLoans =
+            change.appointmentOutcome === 'CUMPLIDA'
+              ? await tx.materialLoanModel.count({
+                  where: { appointmentId: scheduled.id, returnedAt: null },
+                })
+              : 0;
+          assertCanSettleAppointmentOutcome(change.appointmentOutcome, {
+            totalLoans,
+            openLoans,
+          });
         }
       }
 
@@ -199,12 +205,13 @@ export class PrismaRequestRepository implements IRequestRepository {
     notification: NotificationDraft | null,
   ): Promise<SavedAppointment> {
     return this.prisma.$transaction(async (tx) => {
-      const loansCount = await tx.materialLoanModel.count({
+      // Atomic race-condition safety net: the rule lives in
+      // domain/policies/appointment-loans and is checked by
+      // RescheduleAppointmentUseCase before calling the repository.
+      const totalLoans = await tx.materialLoanModel.count({
         where: { appointmentId },
       });
-      if (loansCount > 0) {
-        throw new AppointmentHasLoansError();
-      }
+      assertCanCancelOrRescheduleAppointment({ totalLoans, openLoans: 0 });
 
       await this.assertDailyCapacityAvailable(tx, date);
 
@@ -266,12 +273,13 @@ export class PrismaRequestRepository implements IRequestRepository {
         throw new AppointmentNotFoundError();
       }
 
-      const loansCount = await tx.materialLoanModel.count({
+      // Atomic race-condition safety net: the rule lives in
+      // domain/policies/appointment-loans and is checked by
+      // CancelAppointmentUseCase before calling the repository.
+      const totalLoans = await tx.materialLoanModel.count({
         where: { appointmentId },
       });
-      if (loansCount > 0) {
-        throw new AppointmentHasLoansError();
-      }
+      assertCanCancelOrRescheduleAppointment({ totalLoans, openLoans: 0 });
 
       const { count } = await tx.appointmentModel.updateMany({
         where: { id: appointmentId, status: 'PROGRAMADA' },
