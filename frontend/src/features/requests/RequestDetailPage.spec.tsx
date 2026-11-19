@@ -1065,4 +1065,135 @@ describe('RequestDetailPage', () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe('reading room delivery and return (HU-72)', () => {
+    it('lets staff deliver a material for today appointment from the request detail', async () => {
+      const todayIso = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      const APPOINTMENT_ID = '00000000-0000-4000-8000-000000000099';
+      const MATERIAL_ID = '00000000-0000-4000-8000-000000000011';
+
+      const beforeDelivery = detail({
+        status: 'AGENDADA',
+        allowedTransitions: ['DISPONIBLE', 'ATENDIDA'],
+        activeAppointment: {
+          id: APPOINTMENT_ID,
+          date: todayIso,
+          serviceHours: { opensAt: '08:00', closesAt: '17:00' },
+          status: 'PROGRAMADA',
+          materials: [
+            {
+              id: MATERIAL_ID,
+              catalogCode: 'TH-DOC-0001',
+              title: 'Acta de fundación de la villa',
+              status: 'DISPONIBLE',
+              activeLoan: null,
+              lastLoan: null,
+            },
+          ],
+        },
+      });
+
+      const afterDelivery = detail({
+        status: 'AGENDADA',
+        allowedTransitions: ['DISPONIBLE', 'ATENDIDA'],
+        activeAppointment: {
+          id: APPOINTMENT_ID,
+          date: todayIso,
+          serviceHours: { opensAt: '08:00', closesAt: '17:00' },
+          status: 'PROGRAMADA',
+          materials: [
+            {
+              id: MATERIAL_ID,
+              catalogCode: 'TH-DOC-0001',
+              title: 'Acta de fundación de la villa',
+              status: 'EN_USO',
+              activeLoan: {
+                id: 'loan-1',
+                handedOverAt: '2026-11-19T14:30:00.000Z',
+                handedOverBy: { id: 'staff-1', name: 'Ana Gómez' },
+                deliveryNotes: 'Con guantes',
+                returnedAt: null,
+                returnedBy: null,
+                returnNotes: null,
+              },
+              lastLoan: {
+                id: 'loan-1',
+                handedOverAt: '2026-11-19T14:30:00.000Z',
+                handedOverBy: { id: 'staff-1', name: 'Ana Gómez' },
+                deliveryNotes: 'Con guantes',
+                returnedAt: null,
+                returnedBy: null,
+                returnNotes: null,
+              },
+            },
+          ],
+        },
+      });
+
+      let delivered = false;
+      fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+        if (init?.method === 'POST' && url.endsWith('/deliver')) {
+          delivered = true;
+          return Promise.resolve({
+            ok: true,
+            status: 201,
+            json: async () => ({
+              id: 'loan-1',
+              materialId: MATERIAL_ID,
+              materialCatalogCode: 'TH-DOC-0001',
+              materialTitle: 'Acta de fundación de la villa',
+              materialStatus: 'EN_USO',
+              appointment: {
+                id: APPOINTMENT_ID,
+                date: todayIso,
+                requestId: REQUEST_ID,
+                trackingCode: 'SOL-2026-00001',
+              },
+              requester: { id: 'req-1', name: 'Juan Carlos Pérez' },
+              handedOverAt: '2026-11-19T14:30:00.000Z',
+              handedOverBy: { id: 'staff-1', name: 'Ana Gómez' },
+              deliveryNotes: 'Con guantes',
+              returnedAt: null,
+              returnedBy: null,
+              returnNotes: null,
+            }),
+          });
+        }
+        return Promise.resolve(ok(delivered ? afterDelivery : beforeDelivery));
+      });
+
+      const { default: userEvent } =
+        await import('@testing-library/user-event');
+      const user = userEvent.setup();
+      renderAt(`/solicitudes/${REQUEST_ID}`, 'PERSONAL');
+
+      const deliverBtn = await screen.findByRole('button', {
+        name: /registrar entrega de acta de fundación de la villa/i,
+      });
+      await user.click(deliverBtn);
+
+      const dialog = screen.getByRole('dialog', {
+        name: /registrar entrega de material/i,
+      });
+      await user.type(
+        within(dialog).getByLabelText(/observaciones/i),
+        'Con guantes',
+      );
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Confirmar entrega' }),
+      );
+
+      expect(
+        await screen.findByRole('button', {
+          name: /registrar devolución de acta de fundación de la villa/i,
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/por Ana Gómez/)).toBeInTheDocument();
+    });
+  });
 });

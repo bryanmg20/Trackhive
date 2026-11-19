@@ -57,6 +57,21 @@
   cursor: pointer;
 }
 
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.returnButton {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--gold-text);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
 .nav {
   display: flex;
   gap: 1rem;

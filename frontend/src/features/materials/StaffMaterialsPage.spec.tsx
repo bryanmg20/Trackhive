@@ -176,7 +176,7 @@ describe('StaffMaterialsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('saves without a reason when the field is empty', async () => {
+  it('saves without a reason when the field is empty and omits EN_USO from manual options (HU-72)', async () => {
     const user = userEvent.setup();
     fetchMock.mockResolvedValueOnce(listResponse([material()]));
     renderPage('PERSONAL');
@@ -184,17 +184,163 @@ describe('StaffMaterialsPage', () => {
     await user.click(
       await screen.findByRole('button', { name: /cambiar estado de acta 1/i }),
     );
-    await user.selectOptions(screen.getByLabelText('Estado'), ['EN_USO']);
+    const select = screen.getByLabelText('Estado');
+    expect(
+      within(select).queryByRole('option', { name: 'En uso' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('radio', { name: 'En uso' }),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(select, ['NO_CONSULTABLE']);
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => material({ status: 'EN_USO' }),
+      json: async () => material({ status: 'NO_CONSULTABLE' }),
     });
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await screen.findByRole('status');
     const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toEqual({ status: 'EN_USO' });
+    expect(JSON.parse(init.body as string)).toEqual({
+      status: 'NO_CONSULTABLE',
+    });
+  });
+
+  it('shows Registrar devolución instead of Cambiar estado for EN_USO materials and records return (HU-72)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValueOnce(
+      listResponse([material({ status: 'EN_USO' })]),
+    );
+    renderPage('PERSONAL');
+
+    expect(await screen.findByText('Acta 1')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /cambiar estado de acta 1/i }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: /registrar devolución de acta 1/i }),
+    );
+    await user.type(
+      screen.getByLabelText(/observaciones/i),
+      'Devuelto completo',
+    );
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 'loan-1',
+        materialId: MATERIAL_ID,
+        materialCatalogCode: 'TH-DOC-0001',
+        materialTitle: 'Acta 1',
+        materialStatus: 'DISPONIBLE',
+        appointment: {
+          id: 'app-1',
+          date: '2026-11-19',
+          requestId: 'req-1',
+          trackingCode: 'SOL-2026-00001',
+        },
+        requester: { id: 'req-user', name: 'Juan Pérez' },
+        handedOverAt: '2026-11-19T14:00:00.000Z',
+        handedOverBy: { id: 'staff-1', name: 'Ana Gómez' },
+        deliveryNotes: null,
+        returnedAt: '2026-11-19T16:00:00.000Z',
+        returnedBy: { id: 'staff-2', name: 'Luis Díaz' },
+        returnNotes: 'Devuelto completo',
+      }),
+    });
+    await user.click(
+      screen.getByRole('button', { name: 'Confirmar devolución' }),
+    );
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /Devolución registrada para «Acta 1»/i,
+    );
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe(`/api/v1/materials/${MATERIAL_ID}/return`);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      notes: 'Devuelto completo',
+    });
+    expect(
+      within(screen.getByRole('table')).getByText('Disponible'),
+    ).toBeInTheDocument();
+  });
+
+  it('opens the custody history modal when Ver historial is clicked (HU-72)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValueOnce(listResponse([material()]));
+    renderPage('PERSONAL');
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        material: {
+          id: MATERIAL_ID,
+          catalogCode: 'TH-DOC-0001',
+          title: 'Acta 1',
+          status: 'DISPONIBLE',
+        },
+        lastLoan: {
+          id: 'loan-1',
+          materialId: MATERIAL_ID,
+          materialCatalogCode: 'TH-DOC-0001',
+          materialTitle: 'Acta 1',
+          materialStatus: 'DISPONIBLE',
+          appointment: {
+            id: 'app-1',
+            date: '2026-11-19',
+            requestId: 'req-1',
+            trackingCode: 'SOL-2026-00001',
+          },
+          requester: { id: 'req-user', name: 'Juan Pérez' },
+          handedOverAt: '2026-11-19T14:00:00.000Z',
+          handedOverBy: { id: 'staff-1', name: 'Ana Gómez' },
+          deliveryNotes: 'Con guantes',
+          returnedAt: '2026-11-19T16:00:00.000Z',
+          returnedBy: { id: 'staff-2', name: 'Luis Díaz' },
+          returnNotes: 'Sin novedad',
+        },
+        items: [
+          {
+            id: 'loan-1',
+            materialId: MATERIAL_ID,
+            materialCatalogCode: 'TH-DOC-0001',
+            materialTitle: 'Acta 1',
+            materialStatus: 'DISPONIBLE',
+            appointment: {
+              id: 'app-1',
+              date: '2026-11-19',
+              requestId: 'req-1',
+              trackingCode: 'SOL-2026-00001',
+            },
+            requester: { id: 'req-user', name: 'Juan Pérez' },
+            handedOverAt: '2026-11-19T14:00:00.000Z',
+            handedOverBy: { id: 'staff-1', name: 'Ana Gómez' },
+            deliveryNotes: 'Con guantes',
+            returnedAt: '2026-11-19T16:00:00.000Z',
+            returnedBy: { id: 'staff-2', name: 'Luis Díaz' },
+            returnNotes: 'Sin novedad',
+          },
+        ],
+        page: 1,
+        limit: 10,
+        total: 1,
+      }),
+    });
+
+    await user.click(
+      await screen.findByRole('button', { name: /ver historial de acta 1/i }),
+    );
+
+    const dialog = await screen.findByRole('dialog', {
+      name: /historial de custodia/i,
+    });
+    expect(within(dialog).getAllByText(/Juan Pérez/).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/Ana Gómez/).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/Luis Díaz/).length).toBeGreaterThan(0);
   });
 
   it('shows the error in the form and keeps the status when saving fails', async () => {
@@ -205,7 +351,9 @@ describe('StaffMaterialsPage', () => {
     await user.click(
       await screen.findByRole('button', { name: /cambiar estado de acta 1/i }),
     );
-    await user.selectOptions(screen.getByLabelText('Estado'), ['EN_USO']);
+    await user.selectOptions(screen.getByLabelText('Estado'), [
+      'NO_CONSULTABLE',
+    ]);
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 404,

@@ -4,6 +4,8 @@ import type {
   MaterialStatus,
   MaterialType,
 } from '../../materials/api/search-materials';
+import type { AppointmentMaterialLoanSummary } from '../../materials/api/material-loans';
+import type { AppointmentStatus } from './list-appointments';
 import { RequestsApiError } from './list-requests';
 import type { RequestStatus } from './list-requests';
 import type { MaterialLocation } from '../material-location';
@@ -19,6 +21,26 @@ export interface RequestDetailMaterial {
   // null when the material has no physical location (HU-134)
   location: MaterialLocation | null;
   itemStatus: string;
+}
+
+export interface RequestDetailAppointmentMaterial {
+  id: string;
+  catalogCode: string;
+  title: string;
+  status: MaterialStatus;
+  activeLoan: AppointmentMaterialLoanSummary | null;
+  lastLoan: AppointmentMaterialLoanSummary | null;
+}
+
+export interface RequestDetailActiveAppointment {
+  id: string;
+  date: string;
+  serviceHours: {
+    opensAt: string;
+    closesAt: string;
+  };
+  status: AppointmentStatus;
+  materials: RequestDetailAppointmentMaterial[];
 }
 
 export interface RequestDetail {
@@ -45,6 +67,7 @@ export interface RequestDetail {
     documentNumber: string | null;
   };
   materials: RequestDetailMaterial[];
+  activeAppointment?: RequestDetailActiveAppointment | null;
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
