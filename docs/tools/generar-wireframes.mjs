@@ -1,5 +1,5 @@
 /** Documentation-only wireframes using the CLENA Figma identity. */
-import { scene, title, note, field, button, box, text, area, panel, table, pagination, writeManifest } from './wireframe-theme.mjs';
+import { scene, title, note, field, button, box, text, area, panel, table, pagination, monthCalendar, writeManifest } from './wireframe-theme.mjs';
 
 scene('WF-01', 'inicio-sesion', 'Inicio de sesión', 'Sin sesión', '/login', 'Pantalla existente', () => {
   panel(350, 205, 580, 600, 'Acceso a Trackhive');
@@ -124,7 +124,8 @@ scene('WF-08', 'solicitud-personal', 'Registro por el personal', 'PERSONAL / ADM
   field(70, 320, 'Correo del solicitante *', 'visitante@example.com', 355);
   button(445, 346, 'Buscar', 140, true);
   note(70, 408, 'Encontrado: mostrar datos guardados, sin pedirlos otra vez. Nuevo: habilitar los campos siguientes.', 505);
-  field(70, 480, 'Primer nombre / primer apellido *', 'Ana / Pérez', 516);
+  field(70, 480, 'Primer nombre *', 'Ana', 245);
+  field(335, 480, 'Primer apellido *', 'Pérez', 250);
   field(70, 570, 'Municipio o distrito *', 'Barranquilla', 516);
   field(70, 660, 'Rango de edad *', '18–28', 245, true);
   field(335, 660, 'Grupo (opcional)', 'SIN SELECCIONAR', 250, true);
@@ -181,35 +182,22 @@ scene('WF-10', 'detalle-solicitud', 'Detalle y cambio de estado', 'PERSONAL / AD
   note(48, 892, 'Confirmar responsable y fecha del cambio. Cerrada / Rechazada: sin acciones. Conflicto 409: recargar detalle.');
 }, 'Son variantes de estado, no acciones simultáneas. Móvil: material y acciones apilados; rechazo con motivo.');
 
-scene('WF-11', 'calendario', 'Calendario de citas', 'PERSONAL / ADMIN', '/calendario', 'Existente · HU-19', () => {
+scene('WF-11', 'calendario', 'Calendario de citas', 'PERSONAL / ADMIN', '/calendario', 'Existente · HU-19 / HU-142 / HU-74', () => {
   title(48, 182, 'Calendario');
   button(48, 240, '< Mes anterior', 200);
   text(290, 250, 'DICIEMBRE 2026', 22, 350);
   button(660, 240, 'Mes siguiente >', 210);
   field(940, 215, 'Filtrar por material', 'Todos', 290, true);
-  const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-  for (let col = 0; col < 7; col++) {
-    box(48 + col * 120, 330, 120, 45, '#e9e9e9');
-    text(60 + col * 120, 342, days[col], 17, 96);
-    for (let row = 0; row < 5; row++) {
-      const x = 48 + col * 120; const y = 375 + row * 94;
-      const day = row * 7 + col;
-      box(x, y, 120, 94, col === 6 ? '#dedede' : day === 15 ? '#eeeeee' : '#ffffff');
-      if (day < 1 || day > 31) continue;
-      text(x + 10, y + 10, String(day), 16, 95);
-      if (col === 6) note(x + 10, y + 45, 'Cerrado', 98);
-      else if ((row + col) % 3 === 0 || day === 15) note(x + 10, y + 45, '2 citas', 98);
-    }
-  }
-  panel(920, 330, 312, 505, 'Día seleccionado');
-  text(940, 400, '15/12/2026', 21, 270);
-  text(940, 460, 'SOL-2026-001\nAna Pérez\nActas del cabildo', 17, 268);
-  button(940, 600, 'Ver solicitud WF-10', 270);
-  note(940, 680, 'Las citas son por día completo. La consulta se realiza durante el horario de atención.', 260);
-  note(48, 875, 'Agendar desde WF-10. Reprogramar / cancelar: propuestas de HU-21; no asumir que existen.');
-}, 'Móvil: mes compacto y lista del día debajo. Citas y estados también expresados con texto.');
+  monthCalendar();
+  panel(920, 330, 312, 505, 'Al pulsar +N más');
+  text(940, 400, '15/12/2026 · 12 citas', 20, 270);
+  text(940, 460, 'Lista completa en diálogo.\nAna · SOL-001\nLuis · SOL-002\nMarta · SOL-003\n… todas las citas del día.', 17, 268);
+  button(940, 650, 'Ver solicitud WF-10', 270);
+  note(940, 730, 'Enter / Espacio abre. Escape cierra y devuelve el foco al botón.', 260);
+  note(48, 955, 'Filas iguales. Cerca del límite: 80 %. Capacidad vigente desde la configuración (15 por defecto).');
+}, 'Móvil: agenda agrupada por día con todas las citas, sin cuadrícula reducida. Ocupación sin filtros; las canceladas no cuentan.');
 
-scene('WF-12', 'gestion-usuarios', 'Gestión de usuarios del personal', 'ADMIN', '/admin/usuarios (propuesta)', 'Propuesta · HU-05', () => {
+scene('WF-12', 'gestion-usuarios', 'Gestión de usuarios del personal', 'ADMIN', '/admin/usuarios', 'Existente · HU-05', () => {
   title(48, 182, 'Personal del CLENA');
   field(48, 245, 'Buscar por nombre o correo', '', 700);
   button(780, 271, 'Buscar', 180);
@@ -218,25 +206,31 @@ scene('WF-12', 'gestion-usuarios', 'Gestión de usuarios del personal', 'ADMIN',
     ['Ana Pérez', 'personal1@example.com', 'PERSONAL', 'Activo', 'Editar / Desactivar'],
     ['Luis Rojas', 'personal2@example.com', 'PERSONAL', 'Inactivo', 'Editar / Activar'],
   ], 86);
-  panel(48, 635, 735, 265, 'Crear / editar personal · formulario propuesto');
-  field(70, 699, 'Primer nombre / apellido *', 'Ana / Pérez', 688);
-  field(70, 794, 'Correo *', 'personal@example.com', 688);
-  panel(825, 635, 407, 265, 'Confirmación');
-  note(845, 705, '¿Desactivar esta cuenta? Conservar solicitudes y responsables históricos.', 365);
-  button(845, 820, 'Confirmar', 165, true);
-  button(1025, 820, 'Cancelar', 185);
-}, 'Solo ADMIN. Alta y credencial inicial por definir en HU-05. No proponer borrado de cuentas con historial.');
+  panel(48, 600, 735, 365, 'Crear / editar personal');
+  field(70, 661, 'Primer nombre *', 'Ana', 330);
+  field(424, 661, 'Segundo nombre (opcional)', '', 330);
+  field(70, 743, 'Primer apellido *', 'Pérez', 330);
+  field(424, 743, 'Segundo apellido (opcional)', '', 330);
+  field(70, 825, 'Correo *', 'personal@example.com', 330);
+  field(424, 825, 'Contraseña inicial * · solo al crear', '********', 330);
+  button(70, 909, 'Guardar personal', 300, true);
+  button(400, 909, 'Cancelar edición', 280);
+  panel(825, 600, 407, 365, 'Confirmación de desactivación');
+  note(845, 670, '¿Desactivar esta cuenta? Conservar solicitudes y responsables históricos. El administrador no puede desactivar su propia cuenta.', 365);
+  button(845, 860, 'Confirmar', 165, true);
+  button(1025, 860, 'Cancelar', 185);
+}, 'Solo ADMIN. Contraseña inicial: mínimo 8 caracteres, solo alta. Rol PERSONAL fijo. No gestionar cuentas públicas ni borrar historial.');
 
-scene('WF-13', 'capacidad-sala', 'Capacidad de la sala', 'ADMIN', '/admin/capacidad-sala (propuesta)', 'Propuesta · HU-20.1', () => {
+scene('WF-13', 'capacidad-sala', 'Capacidad de la sala', 'ADMIN', '/admin/capacidad-sala', 'Existente · HU-20.1 / HU-74', () => {
   title(180, 185, 'Capacidad diaria de la sala');
-  panel(180, 280, 920, 400, 'Configuración propuesta');
-  note(210, 350, 'Límite de citas por día de atención. El valor mostrado es un ejemplo, no una capacidad aprobada.', 850);
-  field(210, 445, 'Capacidad diaria * · entero positivo', '20', 860);
+  panel(180, 280, 920, 400, 'Capacidad diaria vigente');
+  note(210, 350, 'Límite configurable por día de atención. Valor inicial: 15. Mostrar confirmación tras guardar y conservar el valor si falla.', 850);
+  field(210, 445, 'Capacidad diaria * · entero positivo', '15', 860);
   button(210, 560, 'Guardar capacidad', 290, true);
   button(530, 560, 'Ver calendario WF-11', 330);
-  panel(180, 725, 920, 150, 'Decisiones para G6');
-  note(210, 785, 'Confirmar capacidad, permisos y regla ante reservas existentes. El cambio no debe cancelar citas silenciosamente.', 850);
-}, 'Móvil: una columna. Un mensaje explica validación y efecto del cambio; no implementar reglas no acordadas.');
+  panel(180, 725, 920, 150, 'Reglas de aplicación');
+  note(210, 785, 'Reducir el límite conserva las reservas existentes. Si un día iguala o supera el nuevo límite, se impiden nuevas citas.', 850);
+}, 'Móvil: una columna. Validar entero mayor que cero; indicar capacidad predeterminada o configurada. No cancelar citas existentes.');
 
 scene('WF-14', 'sincronizacion-everything', 'Sincronización con Everything', 'ADMIN', '/admin/sincronizacion (propuesta)', 'Propuesta · HU-138 · depende de HU-137', () => {
   title(48, 182, 'Sincronización con Everything');

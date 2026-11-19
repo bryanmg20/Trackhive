@@ -1,5 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
+  "issue": 152,
+  "designVersion": "HU-152 · segunda entrega de HU-46",
   "identity": "CLENA – Dashboard (paleta adaptada)",
   "figmaReference": "https://www.figma.com/design/2ZPymk8udllKrGQ9J16jui/Sin-t%C3%ADtulo?node-id=5-2",
   "status": "Borrador pendiente de revisión G6",
@@ -25,7 +27,12 @@
       "route": "/login",
       "state": "Pantalla existente",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-01-inicio-sesion-movil",
+        "width": 360,
+        "height": 1477
+      }
     },
     {
       "id": "WF-02",
@@ -35,7 +42,12 @@
       "route": "/registro",
       "state": "Existente · HU-73 integrada",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-02-registro-movil",
+        "width": 360,
+        "height": 2552
+      }
     },
     {
       "id": "WF-03",
@@ -45,7 +57,12 @@
       "route": "/mi-perfil",
       "state": "Pantalla existente · HU-73",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-03-mi-perfil-movil",
+        "width": 360,
+        "height": 1579
+      }
     },
     {
       "id": "WF-04",
@@ -55,7 +72,12 @@
       "route": "/materiales",
       "state": "Existente + propuesta HU-140",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-04-busqueda-material-movil",
+        "width": 360,
+        "height": 3203
+      }
     },
     {
       "id": "WF-05",
@@ -65,7 +87,12 @@
       "route": "/personal/materiales/nuevo (propuesta)",
       "state": "Propuesta · HU-06 / HU-49",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-05-formulario-material-movil",
+        "width": 360,
+        "height": 2341
+      }
     },
     {
       "id": "WF-06",
@@ -75,7 +102,12 @@
       "route": "/mis-solicitudes",
       "state": "Pantalla existente",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-06-mis-solicitudes-movil",
+        "width": 360,
+        "height": 2209
+      }
     },
     {
       "id": "WF-07",
@@ -85,7 +117,12 @@
       "route": "/solicitudes/nueva?materiales=…",
       "state": "Pantalla existente",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-07-radicar-solicitud-movil",
+        "width": 360,
+        "height": 1981
+      }
     },
     {
       "id": "WF-08",
@@ -95,7 +132,12 @@
       "route": "/personal/solicitudes/nueva?materiales=…",
       "state": "Pantalla existente · HU-10 / HU-73",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-08-solicitud-personal-movil",
+        "width": 360,
+        "height": 2640
+      }
     },
     {
       "id": "WF-09",
@@ -105,7 +147,12 @@
       "route": "/solicitudes",
       "state": "Existente · HU-12 / HU-141",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-09-listado-personal-movil",
+        "width": 360,
+        "height": 3417
+      }
     },
     {
       "id": "WF-10",
@@ -115,7 +162,12 @@
       "route": "/solicitudes/:id",
       "state": "Existente + propuesta HU-140",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-10-detalle-solicitud-movil",
+        "width": 360,
+        "height": 2458
+      }
     },
     {
       "id": "WF-11",
@@ -123,29 +175,44 @@
       "name": "Calendario de citas",
       "roles": "PERSONAL / ADMIN",
       "route": "/calendario",
-      "state": "Existente · HU-19",
+      "state": "Existente · HU-19 / HU-142 / HU-74",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-11-calendario-movil",
+        "width": 360,
+        "height": 3185
+      }
     },
     {
       "id": "WF-12",
       "file": "wf-12-gestion-usuarios",
       "name": "Gestión de usuarios del personal",
       "roles": "ADMIN",
-      "route": "/admin/usuarios (propuesta)",
-      "state": "Propuesta · HU-05",
+      "route": "/admin/usuarios",
+      "state": "Existente · HU-05",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-12-gestion-usuarios-movil",
+        "width": 360,
+        "height": 3051
+      }
     },
     {
       "id": "WF-13",
       "file": "wf-13-capacidad-sala",
       "name": "Capacidad de la sala",
       "roles": "ADMIN",
-      "route": "/admin/capacidad-sala (propuesta)",
-      "state": "Propuesta · HU-20.1",
+      "route": "/admin/capacidad-sala",
+      "state": "Existente · HU-20.1 / HU-74",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-13-capacidad-sala-movil",
+        "width": 360,
+        "height": 1557
+      }
     },
     {
       "id": "WF-14",
@@ -155,7 +222,12 @@
       "route": "/admin/sincronizacion (propuesta)",
       "state": "Propuesta · HU-138 · depende de HU-137",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-14-sincronizacion-everything-movil",
+        "width": 360,
+        "height": 2106
+      }
     },
     {
       "id": "WF-15",
@@ -165,7 +237,12 @@
       "route": "/personal/materiales",
       "state": "Existente + propuestas HU-06 / HU-140",
       "width": 1920,
-      "height": 1440
+      "height": 1440,
+      "mobile": {
+        "file": "wf-15-material-personal-movil",
+        "width": 360,
+        "height": 3400
+      }
     }
   ]
 }
