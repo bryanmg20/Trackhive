@@ -43,6 +43,11 @@ const ROUTE_CASES: RouteCase[] = [
     role: 'PERSONAL',
   },
   {
+    name: 'material más solicitado',
+    path: ROUTES.mostRequestedMaterials,
+    role: 'PERSONAL',
+  },
+  {
     name: 'capacidad de la sala',
     path: ROUTES.adminRoomCapacity,
     role: 'ADMIN',
@@ -310,6 +315,33 @@ async function mockApi(page: Page): Promise<void> {
             occupied: 1,
             available: 14,
             isFull: false,
+          },
+        ],
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/reports/most-requested-materials') {
+      await json({
+        from: null,
+        to: null,
+        totalRequests: 12,
+        items: [
+          {
+            rank: 1,
+            materialId: material.id,
+            catalogCode: material.catalogCode,
+            title: material.title,
+            materialType: material.materialType,
+            requestCount: 9,
+          },
+          {
+            rank: 2,
+            materialId: 'material-2',
+            catalogCode: 'CLENA-2026-0002',
+            title: 'Diario del Comercio',
+            materialType: 'PERIODICO',
+            requestCount: 3,
           },
         ],
       });

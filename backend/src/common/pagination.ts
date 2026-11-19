@@ -19,3 +19,7 @@ export const MAX_APPOINTMENT_PAGE_LIMIT = 100;
 /** Staff accounts listing (HU-05). */
 export const DEFAULT_USER_PAGE_LIMIT = 20;
 export const MAX_USER_PAGE_LIMIT = 100;
+
+/** Ranking of the most requested materials (HU-26). */
+export const DEFAULT_REPORT_RANKING_LIMIT = 10;
+export const MAX_REPORT_RANKING_LIMIT = 50;

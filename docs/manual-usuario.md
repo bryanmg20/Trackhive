@@ -36,7 +36,21 @@ Si el servidor de correo falla, el cambio de estado se guarda igual y el correo 
 
 ## 6. Reportes
 
-(Tiempos de atención y material más solicitado.)
+(Tiempos de atención: pendiente.)
+
+**Material más solicitado.** En el menú, **Reportes** abre el ranking de los
+materiales por número de solicitudes, del más pedido al menos pedido. Sirve
+para decidir qué material conservar o atender primero. Cuenta las solicitudes
+de cualquier estado, y una solicitud cuenta una sola vez por cada material que
+incluye. Los materiales con el mismo número de solicitudes comparten puesto.
+
+- Sin fechas, el ranking cuenta todo el historial. Con «Registradas desde» y
+  «Registradas hasta» y el botón «Aplicar fechas», solo cuenta las solicitudes
+  registradas en esos días (ambos incluidos, hora de Colombia). «Quitar fechas»
+  vuelve al historial completo.
+- «Mostrar» elige cuántos materiales ver: 10, 20 o 50.
+- Cada barra es proporcional al material más pedido, y al lado se lee el
+  número exacto de solicitudes.
 
 ## 7. Gestión de usuarios
 

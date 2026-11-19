@@ -19,6 +19,7 @@ import { RoomCapacityPage } from './features/requests/RoomCapacityPage';
 import { ROUTES } from './routes';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { StaffUsersPage } from './features/users/StaffUsersPage';
+import { MostRequestedMaterialsPage } from './features/reports/MostRequestedMaterialsPage';
 
 function HomeRedirect() {
   const role = readSessionRole();
@@ -46,6 +47,10 @@ function App() {
         <Route
           path={ROUTES.staffNewRequest}
           element={<StaffNewRequestPage />}
+        />
+        <Route
+          path={ROUTES.mostRequestedMaterials}
+          element={<MostRequestedMaterialsPage />}
         />
       </Route>
       <Route element={<AdminRoute />}>

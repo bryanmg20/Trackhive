@@ -1,6 +1,7 @@
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import type { ReportPeriod } from '../../domain/policies/report-period';
 import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
 
 export interface RequesterProfile {
@@ -246,6 +247,29 @@ export interface AppointmentListResult {
   total: number;
 }
 
+/** Which requests the ranking counts and how many materials it returns (HU-26). */
+export interface MostRequestedMaterialsCriteria {
+  // Bounds of registered_at: start included, end excluded
+  period: ReportPeriod;
+  limit: number;
+}
+
+/** A material of the ranking and the requests that include it (HU-26). */
+export interface MaterialRequestCount {
+  materialId: string;
+  catalogCode: string;
+  title: string;
+  materialType: string;
+  requestCount: number;
+}
+
+export interface MostRequestedMaterialsResult {
+  // Most requested first; ties by title
+  items: MaterialRequestCount[];
+  // Requests registered in the period, whatever their material
+  totalRequests: number;
+}
+
 /**
  * What the use cases read and that is not the Request entity (D-D): the
  * listings and the detail of the screens, the context of the email and the
@@ -307,4 +331,12 @@ export interface IRequestQueryService {
     from: Date,
     to: Date,
   ): Promise<DayOccupancyCount[]>;
+
+  /**
+   * The materials included in the most requests registered in the period,
+   * whatever their status (HU-26). A request counts once per material.
+   */
+  findMostRequestedMaterials(
+    criteria: MostRequestedMaterialsCriteria,
+  ): Promise<MostRequestedMaterialsResult>;
 }
