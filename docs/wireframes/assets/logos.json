@@ -1,0 +1,38 @@
+{
+  "clena-horizontal": {
+    "file": "clena-horizontal-transparente.png",
+    "width": 278,
+    "height": 61,
+    "crop": {
+      "left": 32,
+      "top": 19
+    },
+    "removed": 31234,
+    "preserved": 9059,
+    "changedBrandPixels": 0
+  },
+  "uninorte-horizontal": {
+    "file": "uninorte-horizontal-transparente.png",
+    "width": 2408,
+    "height": 654,
+    "crop": {
+      "left": 98,
+      "top": 98
+    },
+    "removed": 0,
+    "preserved": 589100,
+    "changedBrandPixels": 0
+  },
+  "uninorte-simbolo": {
+    "file": "uninorte-simbolo-transparente.png",
+    "width": 425,
+    "height": 468,
+    "crop": {
+      "left": 1,
+      "top": 0
+    },
+    "removed": 62118,
+    "preserved": 137718,
+    "changedBrandPixels": 0
+  }
+}

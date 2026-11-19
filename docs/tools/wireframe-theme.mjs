@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createMobile, loadBrand } from './wireframe-mobile.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const out = path.join(root, 'docs/wireframes');
@@ -11,7 +12,9 @@ export const screens = [];
 export const palette = { paper: '#F4F0E8', white: '#FFFFFF', ink: '#171717', yellow: '#F5C400', ochre: '#D8B477', teal: '#A9C7C5', clay: '#A96F55', line: '#E6D9C5', muted: '#68635B', hero: '#E9DCC5' };
 export const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char]);
 fs.mkdirSync(out, { recursive: true });
-let svg, current, firstTitle;
+let svg, current, firstTitle, mobileBlocks, capturing = false;
+const brand = loadBrand(root);
+const capture = (block) => { if (capturing) mobileBlocks.push(block); };
 
 function rect(x, y, w, h, fill = palette.white, radius = 24, stroke = 'none', shadow = false, dashed = false) {
   svg.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" fill="${fill}" stroke="${stroke}"${dashed ? ' stroke-dasharray="8 7"' : ''}${shadow ? ' filter="url(#card-shadow)"' : ''}/>`);
@@ -40,11 +43,13 @@ function coords(x, y, w = 0, h = 0) {
     w: w * sx, h: h * (login ? 1.05 : 1.12), sx };
 }
 export function text(x, y, value, size = 17, maxWidth = 1150) {
+  capture({ kind: 'text', value });
   const p = coords(x, y, maxWidth);
   label(p.x, p.y, value, size * 1.08, p.w);
 }
 export function title() { if (firstTitle) { firstTitle = false; return; } }
 export function note(x, y, value, w = 1150) {
+  capture({ kind: 'note', value });
   const p = coords(x, y, w);
   label(p.x, p.y, value, 16, p.w, palette.muted);
 }
@@ -54,12 +59,14 @@ export function box(x, y, w, h, fill = '#ffffff', dashed = false) {
   rect(p.x, p.y, p.w, p.h, colors[fill] ?? fill, 12, palette.line, false, dashed);
 }
 export function button(x, y, value, w = 210, primary = false) {
+  capture({ kind: 'button', value, primary });
   const p = coords(x, y, w, 46);
   const inactive = /inactivo|inactiva/.test(value);
   rect(p.x, p.y, p.w, p.h, inactive ? '#E9E5DE' : primary ? palette.yellow : palette.paper, 26, primary ? 'none' : palette.ochre);
   label(p.x + 18, p.y + 12, value, 17, p.w - 36, inactive ? palette.muted : palette.ink, primary ? 600 : 500);
 }
 export function field(x, y, name, value = '', w = 500, select = false) {
+  capture({ kind: 'field', name, value, select });
   const p = coords(x, y, w, 68);
   label(p.x, p.y, name, 17, p.w, palette.ink, 600);
   const inputY = p.y + 30;
@@ -68,18 +75,21 @@ export function field(x, y, name, value = '', w = 500, select = false) {
   if (select) svg.push(`<path d="M${p.x + p.w - 30} ${inputY + 20}l6 6 6-6" fill="none" stroke="${palette.ink}" stroke-width="2"/>`);
 }
 export function area(x, y, name, value, w = 500, h = 92) {
+  capture({ kind: 'area', name, value });
   const p = coords(x, y, w, h);
   label(p.x, p.y, name, 17, p.w, palette.ink, 600);
   rect(p.x, p.y + 30, p.w, p.h, palette.white, 16, palette.ochre);
   label(p.x + 15, p.y + 44, value, 17, p.w - 30, palette.muted);
 }
 export function panel(x, y, w, h, heading) {
+  capture({ kind: 'panel', value: heading.replace('Trackhive', 'CLENA') });
   const p = coords(x, y, w, h);
   rect(p.x, p.y, p.w, p.h, palette.white, 28, 'none', true);
   label(p.x + 22, p.y + 14, heading.replace('Trackhive', 'CLENA'), 21, p.w - 44, palette.ink, 600);
   svg.push(`<path d="M${p.x + 22} ${p.y + 55}h${p.w - 44}" stroke="${palette.line}"/>`);
 }
 export function table(x, y, widths, headings, rows, rowHeight = 76) {
+  capture({ kind: 'table', headings, rows });
   const total = widths.reduce((a, b) => a + b, 0);
   const p = coords(x, y, total, 48 + rows.length * rowHeight);
   rect(p.x - 16, p.y - 18, p.w + 32, p.h + 30, palette.white, 28, 'none', true);
@@ -109,9 +119,41 @@ export function table(x, y, widths, headings, rows, rowHeight = 76) {
   });
 }
 export function pagination(y = 820) {
+  capture({ kind: 'pagination' });
+  const wasCapturing = capturing;
+  capturing = false;
   button(770, y, '← Anterior', 130);
   text(921, y + 10, 'Página 1 de 3', 16, 170);
   button(1086, y, 'Siguiente →', 145);
+  capturing = wasCapturing;
+}
+
+/** Busy-day desktop reference, including HU-142 and configured room capacity. */
+export function monthCalendar() {
+  const left = 348, top = 500, cellWidth = 152, cellHeight = 124;
+  const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  weekdays.forEach((name, column) => {
+    rect(left + column * cellWidth, top, cellWidth, 40, palette.ink, 0);
+    label(left + column * cellWidth + 15, top + 9, name, 15, 120, palette.paper, 600);
+  });
+  for (let index = 0; index < 35; index++) {
+    const day = index;
+    const column = index % 7, row = Math.floor(index / 7);
+    const x = left + column * cellWidth, y = top + 40 + row * cellHeight;
+    rect(x, y, cellWidth, cellHeight, column === 6 ? '#E8E1D5' : palette.white, 0, palette.line);
+    if (day < 1 || day > 31) continue;
+    const count = day === 15 ? 12 : day === 16 ? 15 : day % 4 === 0 && column !== 6 ? 2 : 0;
+    label(x + 9, y + 5, String(day), 14, 34, palette.ink, 600);
+    const color = count >= 15 ? '#E8C7BA' : count >= 12 ? '#FBE69B' : '#DFEBE8';
+    rect(x + 51, y + 6, 91, 22, color, 11);
+    label(x + 58, y + 9, column === 6 ? 'Cerrado' : `${count}/15`, 11, 78, palette.ink, 600);
+    const names = ['Ana · SOL-001', 'Luis · SOL-002', 'Marta · SOL-003'];
+    names.slice(0, Math.min(count, 3)).forEach((name, position) => label(x + 9, y + 31 + position * 18, name, 11, 135));
+    if (count > 3) {
+      rect(x + 9, y + 91, 132, 26, palette.yellow, 13);
+      label(x + 20, y + 95, `+${count - 3} más`, 12, 110, palette.ink, 600);
+    }
+  }
 }
 
 function icon(x, y, type, color = palette.paper) {
@@ -142,9 +184,7 @@ const descriptions = {
 };
 function shell() {
   rect(0, 0, WIDTH, HEIGHT, palette.paper, 0);
-  label(64, 36, 'CLENA', 40, 160, palette.ink, 800);
-  rect(64, 91, 130, 6, palette.yellow, 3);
-  label(240, 39, 'Archivo Histórico\ndel Atlántico', 18, 240);
+  svg.push(brand('desktop'));
   const guest = current.roles === 'Sin sesión';
   if (guest) {
     label(1410, 49, 'Inicio de sesión', 18, 210, palette.ink, 600);
@@ -160,7 +200,7 @@ function shell() {
     const publicView = current.roles === 'PUBLICO' || current.id === 'WF-03';
     const items = publicView ? [['Inicio', 'home', 'WF-04'], ['Mis solicitudes', 'file', 'WF-06'], ['Mi perfil', 'user', 'WF-03']]
       : [['Solicitudes', 'file', ['WF-08', 'WF-09', 'WF-10']], ['Archivo', 'box', ['WF-05', 'WF-15']], ['Calendario', 'calendar', 'WF-11'], ['Mi perfil', 'user', 'WF-03']];
-    if (current.roles === 'ADMIN') items.push(['Usuarios', 'user', 'WF-12'], ['Capacidad sala', 'settings', 'WF-13'], ['Everything', 'settings', 'WF-14']);
+    if (current.roles === 'ADMIN') items.push(['Usuarios', 'user', 'WF-12'], ['Capacidad sala', 'settings', 'WF-13'], ['Everything *', 'settings', 'WF-14']);
     items.forEach(([name, glyph, ids], index) => {
       const active = Array.isArray(ids) ? ids.includes(current.id) : ids === current.id;
       const y = 190 + index * 85;
@@ -186,9 +226,11 @@ function shell() {
 }
 
 export function scene(id, slug, name, roles, route, state, draw, footer) {
-  current = { id, name, roles }; firstTitle = true; svg = [];
+  current = { id, name, roles }; firstTitle = true; svg = []; mobileBlocks = [];
   shell();
+  capturing = true;
   draw();
+  capturing = false;
   const left = roles === 'Sin sesión' ? 64 : 348;
   rect(left, 1230, WIDTH - left - 56, 150, '#ECE7DD', 22);
   label(left + 24, 1250, `${id} · ${name} · Borrador para revisión G6`, 17, WIDTH - left - 110, palette.ink, 600);
@@ -197,10 +239,13 @@ export function scene(id, slug, name, roles, route, state, draw, footer) {
   const file = `${id.toLowerCase()}-${slug}`;
   const defs = `<defs><style>@font-face{font-family:Inter;font-style:normal;font-weight:100 900;src:url('assets/InterVariable.woff2') format('woff2')}text{font-kerning:normal}</style><filter id="card-shadow" x="-15%" y="-15%" width="140%" height="150%"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#171717" flood-opacity="0.09"/></filter></defs>`;
   fs.writeFileSync(path.join(out, `${file}.svg`), `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-labelledby="title desc"><title id="title">${escape(id + ' ' + name)}</title><desc id="desc">${escape(roles + '. ' + state + '. Identidad CLENA. Fotografías pendientes. Borrador sin validación G6.')}</desc>${defs}${svg.join('')}</svg>\n`);
-  screens.push({ id, file, name, roles, route, state, width: WIDTH, height: HEIGHT });
+  const mobile = createMobile({ screen: { ...current, route, state, footer, description: descriptions[id] }, blocks: mobileBlocks, palette, escape, brand });
+  fs.writeFileSync(path.join(out, `${file}-movil.svg`), mobile.svg);
+  screens.push({ id, file, name, roles, route, state, width: WIDTH, height: HEIGHT,
+    mobile: { file: `${file}-movil`, width: mobile.width, height: mobile.height } });
 }
 
 export function writeManifest() {
-  fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ version: 2, identity: 'CLENA – Dashboard (paleta adaptada)', figmaReference: 'https://www.figma.com/design/2ZPymk8udllKrGQ9J16jui/Sin-t%C3%ADtulo?node-id=5-2', status: 'Borrador pendiente de revisión G6', photography: 'Espacios reservados; imágenes de la ciudad pendientes de entrega', palette, screens }, null, 2) + '\n');
-  console.log(`Generadas ${screens.length} vistas SVG con identidad CLENA.`);
+  fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ version: 3, issue: 152, designVersion: 'HU-152 · segunda entrega de HU-46', identity: 'CLENA – Dashboard (paleta adaptada)', figmaReference: 'https://www.figma.com/design/2ZPymk8udllKrGQ9J16jui/Sin-t%C3%ADtulo?node-id=5-2', status: 'Borrador pendiente de revisión G6', photography: 'Espacios reservados; imágenes de la ciudad pendientes de entrega', palette, screens }, null, 2) + '\n');
+  console.log(`Generadas ${screens.length} vistas de escritorio y ${screens.length} móviles de 360 px con identidad CLENA / Uninorte.`);
 }
