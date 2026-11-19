@@ -13,6 +13,7 @@ import { ChangeRequestStatusUseCase } from './application/use-cases/change-reque
 import { CreateRequestOnBehalfUseCase } from './application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from './application/use-cases/create-request.use-case';
 import { FindRequesterByEmailUseCase } from './application/use-cases/find-requester-by-email.use-case';
+import { GetMostRequestedMaterialsUseCase } from './application/use-cases/get-most-requested-materials.use-case';
 import { GetRequestDetailUseCase } from './application/use-cases/get-request-detail.use-case';
 import { GetRequestHistoryUseCase } from './application/use-cases/get-request-history.use-case';
 import { GetRoomCapacityUseCase } from './application/use-cases/get-room-capacity.use-case';
@@ -29,6 +30,7 @@ import { PrismaRequesterRepository } from './infrastructure/persistence/prisma-r
 import { PrismaRoomCapacityRepository } from './infrastructure/persistence/prisma-room-capacity.repository';
 import { PrismaTrackingCodeGenerator } from './infrastructure/persistence/prisma-tracking-code.generator';
 import { AppointmentController } from './presentation/controllers/appointment.controller';
+import { ReportController } from './presentation/controllers/report.controller';
 import { RequestController } from './presentation/controllers/request.controller';
 import { RequesterController } from './presentation/controllers/requester.controller';
 import { ProfileController } from './presentation/controllers/profile.controller';
@@ -43,6 +45,7 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     RequesterController,
     AppointmentController,
     ProfileController,
+    ReportController,
   ],
   providers: [
     GetMyProfileUseCase,
@@ -71,6 +74,7 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     ScheduleAppointmentUseCase,
     RescheduleAppointmentUseCase,
     CancelAppointmentUseCase,
+    GetMostRequestedMaterialsUseCase,
   ],
 })
 export class RequestsModule {}

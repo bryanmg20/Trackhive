@@ -87,6 +87,10 @@ describe('SiteNav', () => {
       screen.getByRole('link', { name: 'Calendario' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Material' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Reportes' })).toHaveAttribute(
+      'href',
+      '/reportes/material-mas-solicitado',
+    );
     expect(
       screen.queryByRole('link', { name: 'Registrar solicitud' }),
     ).not.toBeInTheDocument();

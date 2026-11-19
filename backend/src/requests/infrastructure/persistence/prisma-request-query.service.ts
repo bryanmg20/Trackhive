@@ -7,6 +7,8 @@ import type {
   AppointmentListCriteria,
   AppointmentListResult,
   IRequestQueryService,
+  MostRequestedMaterialsCriteria,
+  MostRequestedMaterialsResult,
   MyRequestListCriteria,
   RequestDetail,
   RequestHistory,
@@ -18,6 +20,7 @@ import type {
 } from '../../application/ports/request-query.port';
 import {
   APPOINTMENT_LIST_INCLUDE,
+  type MaterialRequestCountRow,
   PrismaRequestReadMapper,
   REQUEST_HISTORY_SELECT,
   REQUEST_WITH_REQUESTER_AND_MATERIALS,
@@ -284,5 +287,41 @@ export class PrismaRequestQueryService implements IRequestQueryService {
       date: row.appointmentDate.toISOString().slice(0, 10),
       occupied: row._count._all,
     }));
+  }
+
+  async findMostRequestedMaterials(
+    criteria: MostRequestedMaterialsCriteria,
+  ): Promise<MostRequestedMaterialsResult> {
+    const { start, end } = criteria.period;
+    const conditions = [
+      start ? Prisma.sql`r.registered_at >= ${start}` : null,
+      end ? Prisma.sql`r.registered_at < ${end}` : null,
+    ].filter((condition): condition is Prisma.Sql => condition !== null);
+    const where = conditions.length
+      ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
+      : Prisma.empty;
+
+    const [rows, totals] = await this.prisma.$transaction([
+      // request_items is unique per (request, material): one row = one request
+      this.prisma.$queryRaw<MaterialRequestCountRow[]>`
+        SELECT m.id AS material_id, m.catalog_code, m.title, m.material_type,
+               COUNT(*)::int AS request_count
+        FROM request_items ri
+        JOIN requests r ON r.id = ri.request_id
+        JOIN materials m ON m.id = ri.material_id
+        ${where}
+        GROUP BY m.id
+        ORDER BY request_count DESC, m.title ASC, m.id ASC
+        LIMIT ${criteria.limit}`,
+      this.prisma.$queryRaw<{ total: number }[]>`
+        SELECT COUNT(*)::int AS total FROM requests r ${where}`,
+    ]);
+
+    return {
+      items: rows.map((row) =>
+        PrismaRequestReadMapper.toMaterialRequestCount(row),
+      ),
+      totalRequests: Number(totals[0]?.total ?? 0),
+    };
   }
 }

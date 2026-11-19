@@ -5,6 +5,7 @@ import { isRequestStatus } from '../../domain/enums/request-status';
 import type {
   AppointmentListItem,
   MaterialDayBooking,
+  MaterialRequestCount,
   RequestDetail,
   RequesterProfile,
   RequestHistory,
@@ -18,6 +19,15 @@ export const REQUEST_WITH_REQUESTER_AND_MATERIALS = {
   requester: true,
   items: { include: { material: true } },
 } satisfies Prisma.RequestModelInclude;
+
+/** A row of the «Material más solicitado» query (HU-26). */
+export interface MaterialRequestCountRow {
+  material_id: string;
+  catalog_code: string;
+  title: string;
+  material_type: string;
+  request_count: number;
+}
 
 type RequestWithRequesterAndMaterials = Prisma.RequestModelGetPayload<{
   include: typeof REQUEST_WITH_REQUESTER_AND_MATERIALS;
@@ -94,6 +104,18 @@ export interface UserProfileRow {
 
 /** Translates the rows the query service reads into its read models (D-D). */
 export class PrismaRequestReadMapper {
+  static toMaterialRequestCount(
+    row: MaterialRequestCountRow,
+  ): MaterialRequestCount {
+    return {
+      materialId: row.material_id,
+      catalogCode: row.catalog_code,
+      title: row.title,
+      materialType: row.material_type,
+      requestCount: Number(row.request_count),
+    };
+  }
+
   static toListItem(model: RequestWithRequesterAndMaterials): RequestListItem {
     if (!isRequestStatus(model.status) || !isDeliveryMode(model.deliveryMode)) {
       throw new Error(`Request ${model.id} has an invalid stored value`);
