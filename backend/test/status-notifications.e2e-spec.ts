@@ -116,6 +116,12 @@ describe('Status change emails (e2e)', () => {
     }),
     countActiveAppointmentsOnDate: jest.fn().mockResolvedValue(0),
     countActiveAppointmentsByDateRange: jest.fn().mockResolvedValue([]),
+    countAppointmentLoans: jest
+      .fn()
+      .mockResolvedValue({ totalLoans: 0, openLoans: 0 }),
+    countScheduledAppointmentLoansByRequest: jest
+      .fn()
+      .mockResolvedValue({ totalLoans: 0, openLoans: 0 }),
   };
 
   const changeStatus = (body: object) =>
