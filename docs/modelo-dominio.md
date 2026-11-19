@@ -90,8 +90,8 @@ Leyenda: azul, estado intermedio; azul oscuro, cierre normal; rojo, rechazo; cí
 | `EN_BUSQUEDA` → `DISPONIBLE` | El personal localizó el material. |
 | `DISPONIBLE` → `AGENDADA` | La entrega es presencial. Solo se llega agendando la cita, no desde «Cambiar estado». |
 | `DISPONIBLE` → `ATENDIDA` | La entrega es digital. |
-| `AGENDADA` → `ATENDIDA` | La cita se cumplió: pasa a `CUMPLIDA` y el material queda libre ese día. |
-| `AGENDADA` → `DISPONIBLE` | El solicitante no asistió: la cita pasa a `NO_ASISTIO` y el material queda libre ese día. |
+| `AGENDADA` → `ATENDIDA` | La cita se cumplió: pasa a `CUMPLIDA` y el material queda libre ese día. Exige que ningún material entregado en la cita siga en uso (pendiente de devolución, HU-72). |
+| `AGENDADA` → `DISPONIBLE` | El solicitante no asistió: la cita pasa a `NO_ASISTIO` y el material queda libre ese día. Solo procede si la cita no tiene entregas de material registradas (HU-72). |
 | `DISPONIBLE` / `ATENDIDA` → `CERRADA` | Cierre manual por el personal. |
 
 Cualquier otra transición se rechaza con HTTP 409. `CERRADA` y `RECHAZADA` son estados finales. La regla vive en la entidad `Request` (`backend/src/requests/domain/entities/request.entity.ts`).
@@ -125,10 +125,10 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | RN-14 | Un material no puede reservarse dos veces el mismo día. | HU-20 | Vigente |
 | RN-15 | Solo se agenda cita a una solicitud disponible con entrega presencial, y solo puede tener una cita programada a la vez. | HU-18 | Vigente |
 | RN-16 | La cita es por día completo, de lunes a sábado: el CLENA no atiende los domingos. | HU-18 | Vigente |
-| RN-17 | Cuando la cita se cumple o el solicitante no asiste, el material queda libre para ese día. | HU-20 | Vigente |
+| RN-17 | Cuando la cita se cumple o el solicitante no asiste, el material queda libre para ese día. Una solicitud agendada no puede marcarse como atendida (`CUMPLIDA`) mientras algún material entregado en su cita siga en uso sin devolver (`APPOINTMENT_HAS_UNRETURNED_MATERIALS`). | HU-20, HU-72 | Vigente |
 | RN-18 | Que un material esté en uso no impide agendarlo para otro día: «en uso» solo aplica el día en que está en la sala y únicamente cambia mediante el registro de entrega (cita `PROGRAMADA` del día) y devolución; se excluye del cambio manual de estado (HU-72). | HU-20, HU-72 | Vigente |
 | RN-19 | La sala no recibe más citas en un día que su capacidad diaria (15 citas/día por defecto si no se ha configurado; cuentan `PROGRAMADA` y `CUMPLIDA`). | HU-20.1 | Vigente |
-| RN-20 | Una cita se puede reprogramar o cancelar; al cancelarla, el material queda libre. | HU-21 | Vigente |
+| RN-20 | Una cita programada sin entregas de material registradas se puede reprogramar o cancelar; al cancelarla, el material queda libre. Si la cita ya registra al menos una entrega en sala, no puede cancelarse, reprogramarse ni marcarse como inasistencia (`APPOINTMENT_HAS_LOANS`). | HU-21, HU-72 | Vigente |
 
 ### 5.3 Usuarios y datos personales
 
