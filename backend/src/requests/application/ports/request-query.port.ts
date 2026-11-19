@@ -74,6 +74,42 @@ export interface RequestListResult {
   total: number;
 }
 
+export interface AppointmentMaterialLoanSummary {
+  id: string;
+  handedOverAt: Date;
+  handedOverBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  };
+  deliveryNotes: string | null;
+  returnedAt: Date | null;
+  returnedBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  } | null;
+  returnNotes: string | null;
+}
+
+export interface RequestDetailActiveAppointment {
+  id: string;
+  appointmentDate: Date;
+  status: AppointmentStatus;
+  materials: {
+    id: string;
+    catalogCode: string;
+    title: string;
+    status: string;
+    activeLoan: AppointmentMaterialLoanSummary | null;
+    lastLoan: AppointmentMaterialLoanSummary | null;
+  }[];
+}
+
 export interface RequestDetail {
   id: string;
   trackingCode: string;
@@ -110,6 +146,7 @@ export interface RequestDetail {
     location: { depot: string; shelf: string; box: string } | null;
     itemStatus: string;
   }[];
+  activeAppointment?: RequestDetailActiveAppointment | null;
 }
 
 /** One row of status_history, with the name of who made the change (HU-17). */
@@ -235,10 +272,13 @@ export interface AppointmentListItem {
     catalogCode: string;
     title: string;
     materialType: string;
+    status?: string;
     // The physical location goes whole or not at all (HU-134)
     depot: string | null;
     shelf: string | null;
     box: string | null;
+    activeLoan?: AppointmentMaterialLoanSummary | null;
+    lastLoan?: AppointmentMaterialLoanSummary | null;
   }[];
 }
 

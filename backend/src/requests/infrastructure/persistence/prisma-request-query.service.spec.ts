@@ -346,7 +346,10 @@ describe('PrismaRequestQueryService', () => {
 
       expect(findUnique).toHaveBeenCalledWith({
         where: { id: 'request-1' },
-        include: { requester: true, items: { include: { material: true } } },
+        include: expect.objectContaining({
+          requester: true,
+          items: { include: { material: true } },
+        }) as unknown,
       });
       expect(detail).toMatchObject({
         trackingCode: 'SOL-2026-00001',

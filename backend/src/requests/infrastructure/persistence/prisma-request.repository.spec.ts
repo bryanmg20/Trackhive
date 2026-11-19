@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client';
 import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
 import type { PrismaService } from '../../../prisma/prisma.service';
 import { Request } from '../../domain/entities/request.entity';
+import { AppointmentHasLoansError } from '../../domain/errors/appointment-has-loans.error';
+import { AppointmentHasUnreturnedMaterialsError } from '../../domain/errors/appointment-has-unreturned-materials.error';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
@@ -163,10 +165,14 @@ describe('PrismaRequestRepository', () => {
             ),
         },
         appointmentModel: {
+          findFirst: jest.fn().mockResolvedValue({ id: 'appointment-1' }),
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
         appointmentMaterialModel: {
           updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        },
+        materialLoanModel: {
+          count: jest.fn().mockResolvedValue(0),
         },
         notificationModel: {
           create: jest.fn().mockResolvedValue({}),
@@ -418,6 +424,32 @@ describe('PrismaRequestRepository', () => {
 
       expect(tx.appointmentModel.updateMany).not.toHaveBeenCalled();
       expect(tx.appointmentMaterialModel.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects AGENDADA -> DISPONIBLE (NO_ASISTIO) if the appointment already has loans (HU-72)', async () => {
+      const { tx, repository } = buildTransaction();
+      tx.materialLoanModel.count.mockResolvedValue(1);
+
+      await expect(
+        repository.saveStatusChange(
+          buildChange({ previousStatus: 'AGENDADA', newStatus: 'DISPONIBLE' }),
+          null,
+        ),
+      ).rejects.toThrow(AppointmentHasLoansError);
+      expect(tx.requestModel.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects AGENDADA -> ATENDIDA if the appointment still has unreturned materials (HU-72)', async () => {
+      const { tx, repository } = buildTransaction();
+      tx.materialLoanModel.count.mockResolvedValue(1);
+
+      await expect(
+        repository.saveStatusChange(
+          buildChange({ previousStatus: 'AGENDADA', newStatus: 'ATENDIDA' }),
+          null,
+        ),
+      ).rejects.toThrow(AppointmentHasUnreturnedMaterialsError);
+      expect(tx.requestModel.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -766,6 +798,9 @@ describe('PrismaRequestRepository', () => {
         appointmentMaterialModel: {
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
+        materialLoanModel: {
+          count: jest.fn().mockResolvedValue(0),
+        },
         notificationModel: {
           create: jest.fn().mockResolvedValue({}),
         },
@@ -824,6 +859,9 @@ describe('PrismaRequestRepository', () => {
         },
         appointmentMaterialModel: {
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        materialLoanModel: {
+          count: jest.fn().mockResolvedValue(0),
         },
         notificationModel: {
           create: jest.fn().mockResolvedValue({}),

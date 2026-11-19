@@ -22,6 +22,7 @@ import {
   APPOINTMENT_LIST_INCLUDE,
   type MaterialRequestCountRow,
   PrismaRequestReadMapper,
+  REQUEST_DETAIL_INCLUDE,
   REQUEST_HISTORY_SELECT,
   REQUEST_WITH_REQUESTER_AND_MATERIALS,
 } from '../mappers/prisma-request-read.mapper';
@@ -111,7 +112,7 @@ export class PrismaRequestQueryService implements IRequestQueryService {
   async findDetail(id: string): Promise<RequestDetail | null> {
     const model = await this.prisma.requestModel.findUnique({
       where: { id },
-      include: REQUEST_WITH_REQUESTER_AND_MATERIALS,
+      include: REQUEST_DETAIL_INCLUDE,
     });
     return model ? PrismaRequestReadMapper.toDetail(model) : null;
   }

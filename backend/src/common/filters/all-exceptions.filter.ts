@@ -64,9 +64,16 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   REQUEST_NOT_FOUND: HttpStatus.NOT_FOUND,
   APPOINTMENT_NOT_FOUND: HttpStatus.NOT_FOUND,
   APPOINTMENT_NOT_SCHEDULED: HttpStatus.CONFLICT,
+  APPOINTMENT_NOT_TODAY: HttpStatus.CONFLICT,
+  APPOINTMENT_MATERIAL_NOT_FOUND: HttpStatus.NOT_FOUND,
+  APPOINTMENT_HAS_LOANS: HttpStatus.CONFLICT,
+  APPOINTMENT_HAS_UNRETURNED_MATERIALS: HttpStatus.CONFLICT,
   REQUEST_ACCESS_FORBIDDEN: HttpStatus.FORBIDDEN,
   MATERIAL_NOT_FOUND: HttpStatus.NOT_FOUND,
   INVALID_MATERIAL_STATUS: HttpStatus.BAD_REQUEST,
+  MATERIAL_STATUS_NOT_MANUAL: HttpStatus.BAD_REQUEST,
+  MATERIAL_IN_USE: HttpStatus.CONFLICT,
+  MATERIAL_NOT_IN_USE: HttpStatus.CONFLICT,
   // The material type is not one of the catalog. Today it only comes from a
   // stored row; with HU-06 it also comes from the data the staff sends, and
   // 400 is the answer for that, as for INVALID_MATERIAL_STATUS

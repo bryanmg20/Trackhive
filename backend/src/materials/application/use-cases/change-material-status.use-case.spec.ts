@@ -58,7 +58,7 @@ describe('ChangeMaterialStatusUseCase', () => {
   it('accepts a change without a reason', async () => {
     await useCase.execute({
       materialId: 'material-1',
-      status: 'EN_USO',
+      status: 'NO_CONSULTABLE',
       userId: 'user-1',
     });
 
@@ -86,7 +86,7 @@ describe('ChangeMaterialStatusUseCase', () => {
     await expect(
       useCase.execute({
         materialId: 'missing',
-        status: 'EN_USO',
+        status: 'EN_RESTAURACION',
         userId: 'user-1',
       }),
     ).rejects.toThrow(MaterialNotFoundError);

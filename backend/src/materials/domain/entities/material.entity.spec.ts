@@ -1,6 +1,8 @@
 import { InvalidMaterialSourceError } from '../errors/invalid-material-source.error';
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
+import { MaterialInUseError } from '../errors/material-in-use.error';
+import { MaterialStatusNotManualError } from '../errors/material-status-not-manual.error';
 import type { MaterialSource } from '../enums/material-source';
 import type { MaterialStatus } from '../enums/material-status';
 import type { MaterialType } from '../enums/material-type';
@@ -58,9 +60,28 @@ describe('Material.changeStatus', () => {
   });
 
   it('accepts a change without a reason', () => {
-    const changed = buildMaterial().changeStatus('EN_USO', 'user-1', null, now);
+    const changed = buildMaterial().changeStatus(
+      'EN_RESTAURACION',
+      'user-1',
+      null,
+      now,
+    );
 
     expect(changed.statusChangeReason).toBeNull();
+  });
+
+  it('rejects EN_USO as a manual target status (HU-72)', () => {
+    expect(() =>
+      buildMaterial().changeStatus('EN_USO', 'user-1', null, now),
+    ).toThrow(MaterialStatusNotManualError);
+  });
+
+  it('rejects changing a material that is currently EN_USO (HU-72)', () => {
+    const inUse = new Material({ ...buildMaterial(), status: 'EN_USO' });
+
+    expect(() => inUse.changeStatus('DISPONIBLE', 'user-1', null, now)).toThrow(
+      MaterialInUseError,
+    );
   });
 
   it('rejects a status that does not exist', () => {
@@ -112,7 +133,7 @@ describe('Material', () => {
       digitalPath: 'D:\\Digitalizados\\M245.pdf',
     });
 
-    const changed = material.changeStatus('EN_USO', 'user-1', null);
+    const changed = material.changeStatus('EN_RESTAURACION', 'user-1', null);
 
     expect(changed.source).toBe('EVERYTHING');
     expect(changed.digitalPath).toBe('D:\\Digitalizados\\M245.pdf');

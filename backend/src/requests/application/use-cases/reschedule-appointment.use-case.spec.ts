@@ -44,6 +44,7 @@ const storedAppointment = (
   id: 'appointment-1',
   date: new Date(`${date}T00:00:00.000Z`),
   status: appointmentStatus,
+  materialIds: ['material-1'],
   request: new Request({
     id: 'request-1',
     status: requestStatus,

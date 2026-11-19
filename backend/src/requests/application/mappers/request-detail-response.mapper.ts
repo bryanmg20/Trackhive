@@ -1,6 +1,8 @@
 import type { RequestStatus } from '../../domain/enums/request-status';
+import { toAppointmentDay } from '../../domain/value-objects/appointment-date';
 import { RequestDetailResponseDto } from '../dto/request-detail-response.dto';
 import type { RequestDetail } from '../ports/request-query.port';
+import { AppointmentListResponseMapper } from './appointment-list-response.mapper';
 import { DateOnlyMapper } from './date-only.mapper';
 import { PersonNameMapper } from './person-name.mapper';
 
@@ -11,6 +13,33 @@ export class RequestDetailResponseMapper {
     allowedTransitions: RequestStatus[],
   ): RequestDetailResponseDto {
     const { requester } = detail;
+    const activeAppointment = detail.activeAppointment
+      ? (() => {
+          const date = DateOnlyMapper.toDto(
+            detail.activeAppointment.appointmentDate,
+          );
+          const { serviceHours } = toAppointmentDay(date);
+          return {
+            id: detail.activeAppointment.id,
+            date,
+            serviceHours,
+            status: detail.activeAppointment.status,
+            materials: detail.activeAppointment.materials.map((material) => ({
+              id: material.id,
+              catalogCode: material.catalogCode,
+              title: material.title,
+              status: material.status,
+              activeLoan: AppointmentListResponseMapper.toLoanDto(
+                material.activeLoan,
+              ),
+              lastLoan: AppointmentListResponseMapper.toLoanDto(
+                material.lastLoan,
+              ),
+            })),
+          };
+        })()
+      : null;
+
     return {
       id: detail.id,
       trackingCode: detail.trackingCode,
@@ -36,6 +65,7 @@ export class RequestDetailResponseMapper {
         documentNumber: requester.documentNumber,
       },
       materials: detail.materials,
+      activeAppointment,
     };
   }
 }

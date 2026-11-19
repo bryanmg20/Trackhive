@@ -5,6 +5,8 @@ import type { NotificationDraft } from '../../../notifications/domain/value-obje
 import { PrismaNotificationMapper } from '../../../notifications/infrastructure/mappers/prisma-notification.mapper';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Request } from '../../domain/entities/request.entity';
+import { AppointmentHasLoansError } from '../../domain/errors/appointment-has-loans.error';
+import { AppointmentHasUnreturnedMaterialsError } from '../../domain/errors/appointment-has-unreturned-materials.error';
 import { AppointmentNotFoundError } from '../../domain/errors/appointment-not-found.error';
 import { AppointmentNotScheduledError } from '../../domain/errors/appointment-not-scheduled.error';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
@@ -76,6 +78,7 @@ export class PrismaRequestRepository implements IRequestRepository {
         id: true,
         appointmentDate: true,
         status: true,
+        materials: { select: { materialId: true } },
         request: {
           include: { items: { select: { materialId: true } } },
         },
@@ -91,6 +94,31 @@ export class PrismaRequestRepository implements IRequestRepository {
     // The new status, its history row and its email are saved together or
     // not at all (D-08, D-10)
     return this.prisma.$transaction(async (tx) => {
+      // HU-72 safeguards before settling a PROGRAMADA appointment
+      if (change.appointmentOutcome) {
+        const scheduled = await tx.appointmentModel.findFirst({
+          where: { requestId: change.requestId, status: 'PROGRAMADA' },
+          select: { id: true },
+        });
+        if (scheduled) {
+          if (change.appointmentOutcome === 'NO_ASISTIO') {
+            const loansCount = await tx.materialLoanModel.count({
+              where: { appointmentId: scheduled.id },
+            });
+            if (loansCount > 0) {
+              throw new AppointmentHasLoansError();
+            }
+          } else if (change.appointmentOutcome === 'CUMPLIDA') {
+            const openLoansCount = await tx.materialLoanModel.count({
+              where: { appointmentId: scheduled.id, returnedAt: null },
+            });
+            if (openLoansCount > 0) {
+              throw new AppointmentHasUnreturnedMaterialsError();
+            }
+          }
+        }
+      }
+
       const saved = await this.applyStatusChange(tx, change, notification);
 
       // The entity decided how the appointment ends (appointmentOutcome);
@@ -171,6 +199,13 @@ export class PrismaRequestRepository implements IRequestRepository {
     notification: NotificationDraft | null,
   ): Promise<SavedAppointment> {
     return this.prisma.$transaction(async (tx) => {
+      const loansCount = await tx.materialLoanModel.count({
+        where: { appointmentId },
+      });
+      if (loansCount > 0) {
+        throw new AppointmentHasLoansError();
+      }
+
       await this.assertDailyCapacityAvailable(tx, date);
 
       const { count } = await tx.appointmentModel.updateMany({
@@ -229,6 +264,13 @@ export class PrismaRequestRepository implements IRequestRepository {
       });
       if (!current) {
         throw new AppointmentNotFoundError();
+      }
+
+      const loansCount = await tx.materialLoanModel.count({
+        where: { appointmentId },
+      });
+      if (loansCount > 0) {
+        throw new AppointmentHasLoansError();
       }
 
       const { count } = await tx.appointmentModel.updateMany({

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MaterialsModule } from '../materials/materials.module';
 import { UsersModule } from '../users/users.module';
 import { RequesterResolver } from './application/services/requester-resolver';
 import {
@@ -10,6 +11,7 @@ import {
 } from './application/tokens';
 import { CancelAppointmentUseCase } from './application/use-cases/cancel-appointment.use-case';
 import { ChangeRequestStatusUseCase } from './application/use-cases/change-request-status.use-case';
+import { DeliverMaterialUseCase } from './application/use-cases/deliver-material.use-case';
 import { CreateRequestOnBehalfUseCase } from './application/use-cases/create-request-on-behalf.use-case';
 import { CreateRequestUseCase } from './application/use-cases/create-request.use-case';
 import { FindRequesterByEmailUseCase } from './application/use-cases/find-requester-by-email.use-case';
@@ -38,8 +40,9 @@ import { GetMyProfileUseCase } from './application/use-cases/get-my-profile.use-
 import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profile.use-case';
 
 @Module({
-  // USER_REPOSITORY: the requester of a user account (HU-09, HU-10)
-  imports: [UsersModule],
+  // USER_REPOSITORY: requester accounts (HU-09, HU-10);
+  // MATERIAL_LOAN_REPOSITORY: reading-room delivery (HU-72)
+  imports: [UsersModule, MaterialsModule],
   controllers: [
     RequestController,
     RequesterController,
@@ -74,6 +77,7 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     ScheduleAppointmentUseCase,
     RescheduleAppointmentUseCase,
     CancelAppointmentUseCase,
+    DeliverMaterialUseCase,
     GetMostRequestedMaterialsUseCase,
   ],
 })
