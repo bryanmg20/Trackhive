@@ -54,6 +54,7 @@ Un objeto de valor no tiene identidad propia: vale por su contenido y es inmutab
 | `DocumentoIdentidad` | Tipo (`CC`, `CE`, `TI`, `PAS`, `NIT`) más número. Único por persona. |
 | `NombrePersona` | Primer nombre y primer apellido obligatorios; segundo nombre y segundo apellido opcionales. Máximo 40 caracteres cada uno. Igual en `Usuario` y `Solicitante`. |
 | `Email` | Correo con formato válido. |
+| `ReferenciaMaterial` | Material que aún no está en el catálogo, descrito por escrito (HU-09.2): protocolo notarial con notaría, año (1500 al actual) y número de escritura, u otro material en texto libre (3 a 500 caracteres). Pendiente hasta que el personal le asocia el material del catálogo; entonces queda resuelta. Vive dentro de la Solicitud (`backend/src/requests/domain/value-objects/material-reference.ts`). |
 | `Consentimiento` | Aceptación del aviso de privacidad, con fecha y versión (Ley 1581 de 2012). |
 
 Los estados (`EstadoSolicitud`, `EstadoMaterial`, `EstadoCita`, `EstadoItem`, `EstadoEnvio`) y los tipos (`Rol`, `TipoMaterial`, `TipoSolicitud`, `ModalidadEntrega`, `TipoAcceso`, `TipoSolicitante`) son enumeraciones con valores cerrados.
@@ -63,7 +64,9 @@ Los estados (`EstadoSolicitud`, `EstadoMaterial`, `EstadoCita`, `EstadoItem`, `E
 | Relación | Cardinalidad |
 |---|---|
 | Solicitante – Solicitud | 1 : N |
-| Solicitud – ItemSolicitud (composición) | 1 : 1..N |
+| Solicitud – ItemSolicitud (composición) | 1 : 0..N (al menos un ítem o una referencia, RN-04) |
+| Solicitud – ReferenciaMaterial (composición) | 1 : 0..N (HU-09.2) |
+| Material – ReferenciaMaterial | 0..1 : N (el material asociado al resolverla) |
 | Material – ItemSolicitud | 1 : N (así una solicitud pide N materiales y un material está en N solicitudes) |
 | Solicitud – CambioEstado (composición) | 1 : 1..N (el registro inicial cuenta) |
 | Solicitud – Cita | 1 : N (solo una cita `PROGRAMADA` a la vez) |
@@ -107,7 +110,8 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | RN-01 | Toda solicitud recibe un número de radicado que no cambia y sirve para consultarla. | HU-09 | Vigente |
 | RN-02 | Nadie crea una cuenta sin aceptar el aviso de privacidad. Cuando el personal registra a alguien sin cuenta, hoy el sistema guarda la aceptación sin preguntarle: recogerla está pendiente. | HU-31 | Vigente |
 | RN-03 | La fecha en que se quiere consultar el material debe estar al menos 10 días hábiles adelante y no puede ser domingo. | HU-09 | Vigente |
-| RN-04 | Una solicitud debe pedir al menos un material del catálogo. | HU-09 | Vigente |
+| RN-04 | Una solicitud pide al menos un material del catálogo o una referencia escrita de uno que aún no está: un protocolo notarial por notaría, año y número de escritura, o cualquier otro material en texto libre. La regla vive en la entidad `Request`; sin materiales ni referencias se responde 400. | HU-09, HU-09.2 | Vigente |
+| RN-04.1 | Asociar el material del catálogo a una referencia escrita es opcional (normalmente el que trajo la sincronización tras digitalizarlo) y solo se hace mientras la solicitud está recibida o en búsqueda; queda en el historial con quién lo hizo y el material se suma a la solicitud. Una referencia sin material no bloquea nada: la solicitud pasa de en búsqueda a disponible, pero entonces el comentario es obligatorio y explica qué se entrega y cómo (400 `DELIVERY_COMMENT_REQUIRED` sin él). La cita se arma con los materiales de la solicitud, aunque sean cero. Rechazar sigue siendo decisión del personal. | HU-09.2 | Vigente |
 | RN-05 | El personal puede registrar una solicitud a nombre de quien llega en persona o escribe por correo; el solicitante debe tener un correo para recibir los avisos. | HU-10 | Vigente |
 | RN-06 | Una solicitud solo avanza por los pasos de la figura 2; no se puede saltar ni devolver a un paso anterior, salvo volver a disponible cuando el solicitante no asiste. | HU-14 | Vigente |
 | RN-07 | Una solicitud rechazada siempre lleva el motivo, porque el solicitante lo lee. | HU-16 | Vigente |
