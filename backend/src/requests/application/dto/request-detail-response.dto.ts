@@ -32,17 +32,6 @@ export class RequestDetailRequesterDto {
   documentNumber: string | null;
 }
 
-export class RequestDetailLocationDto {
-  @ApiProperty({ example: 'D-01' })
-  depot: string;
-
-  @ApiProperty({ example: 'E-12' })
-  shelf: string;
-
-  @ApiProperty({ example: 'C-034' })
-  box: string;
-}
-
 export class RequestDetailMaterialDto {
   @ApiProperty({ example: '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })
   id: string;
@@ -64,13 +53,6 @@ export class RequestDetailMaterialDto {
 
   @ApiProperty({ description: 'Estado del material', example: 'DISPONIBLE' })
   status: string;
-
-  @ApiProperty({
-    description: 'Ubicación física; null si el material no la tiene (HU-134)',
-    type: RequestDetailLocationDto,
-    nullable: true,
-  })
-  location: RequestDetailLocationDto | null;
 
   @ApiProperty({
     description: 'Resultado de la búsqueda de este material en la solicitud',

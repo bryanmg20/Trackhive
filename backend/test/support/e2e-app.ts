@@ -150,9 +150,6 @@ export async function createMaterial(
       title,
       materialType: 'DOCUMENTO',
       collection: 'Fondo del Concejo',
-      depot: 'D1',
-      shelf: 'E3',
-      box: 'C12',
       status: 'DISPONIBLE',
     },
   });

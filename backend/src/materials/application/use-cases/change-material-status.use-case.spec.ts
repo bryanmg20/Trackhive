@@ -13,7 +13,6 @@ const buildMaterial = (): Material =>
     collection: 'Actas del Cabildo',
     publicationDate: null,
     publisher: null,
-    location: { depot: 'D-01', shelf: 'E-12', box: 'C-034' },
     status: 'DISPONIBLE',
     createdAt: new Date('2026-11-08T00:00:00Z'),
     updatedAt: new Date('2026-11-08T00:00:00Z'),
@@ -43,7 +42,7 @@ describe('ChangeMaterialStatusUseCase', () => {
     await useCase.execute({
       materialId: 'material-1',
       status: 'EN_RESTAURACION',
-      reason: 'Humedad en la caja',
+      reason: 'Humedad en las hojas',
       userId: 'user-1',
     });
 
@@ -52,7 +51,7 @@ describe('ChangeMaterialStatusUseCase', () => {
     expect(saved.status).toBe('EN_RESTAURACION');
     expect(saved.statusChangedBy).toBe('user-1');
     expect(saved.statusChangedAt).toBeInstanceOf(Date);
-    expect(saved.statusChangeReason).toBe('Humedad en la caja');
+    expect(saved.statusChangeReason).toBe('Humedad en las hojas');
   });
 
   it('accepts a change without a reason', async () => {
@@ -65,7 +64,7 @@ describe('ChangeMaterialStatusUseCase', () => {
     expect(saveStatusChange.mock.calls[0][0].statusChangeReason).toBeNull();
   });
 
-  it('returns the material with its new status and its location', async () => {
+  it('returns the material with its new status and without a location', async () => {
     const result = await useCase.execute({
       materialId: 'material-1',
       status: 'NO_CONSULTABLE',
@@ -73,11 +72,7 @@ describe('ChangeMaterialStatusUseCase', () => {
     });
 
     expect(result.status).toBe('NO_CONSULTABLE');
-    expect(result.location).toEqual({
-      depot: 'D-01',
-      shelf: 'E-12',
-      box: 'C-034',
-    });
+    expect(result).not.toHaveProperty('location');
   });
 
   it('throws MaterialNotFoundError and saves nothing when it does not exist', async () => {

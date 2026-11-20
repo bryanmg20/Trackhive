@@ -27,7 +27,7 @@ export class ChangeMaterialStatusDto {
 
   @ApiPropertyOptional({
     description: 'Motivo del cambio (opcional)',
-    example: 'Humedad en la caja',
+    example: 'Humedad en las hojas',
     maxLength: MAX_STATUS_REASON_LENGTH,
   })
   @Transform(trimToUndefined)

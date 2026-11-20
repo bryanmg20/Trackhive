@@ -179,7 +179,6 @@ const requestDetail = {
       author: material.author,
       collection: material.collection,
       status: 'DISPONIBLE',
-      location: { depot: 'Depósito 1', shelf: 'Estante 12', box: 'Caja 4' },
       itemStatus: 'LOCALIZADO',
     },
   ],
@@ -228,7 +227,6 @@ const appointment = {
       catalogCode: material.catalogCode,
       title: material.title,
       materialType: 'DOCUMENTO',
-      location: { depot: 'Depósito 1', shelf: 'Estante 12', box: 'Caja 4' },
     },
   ],
 };

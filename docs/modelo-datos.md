@@ -45,9 +45,6 @@ erDiagram
     varchar collection "max 120"
     date publication_date "NULL"
     varchar publisher "max 150; NULL"
-    varchar depot "max 40; NULL"
-    varchar shelf "max 40; NULL"
-    varchar box "max 40; NULL"
     varchar source "max 20"
     varchar digital_path "max 1024; NULL"
     timestamptz last_seen_at "NULL"
@@ -110,7 +107,6 @@ erDiagram
     uuid request_id FK
     uuid material_id FK
     varchar item_status "max 15"
-    varchar access_type "max 10"
     text note "NULL"
   }
   request_references {
@@ -329,7 +325,7 @@ catálogo y finalidades pendientes se documentan en [datos-personales.md](datos-
 
 ### materials
 
-Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó las tres columnas `status_change*`. HU-134 (migración `20261118120000_material_digital_copy`) volvió opcional la ubicación física y agregó `source`, `digital_path` y `last_seen_at` para la copia digital que trae la sincronización con Everything.
+Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó las tres columnas `status_change*`. HU-134 (migración `20261118120000_material_digital_copy`) volvió opcional la ubicación física y agregó `source`, `digital_path` y `last_seen_at` para la copia digital que trae la sincronización con Everything. HU-165 (migración `20261120180000_drop_material_location_and_access_type`) quitó la ubicación física (`depot`, `shelf`, `box` y `materials_location_check`): el catálogo solo crece por la sincronización y el original se ubica por la convención de su código de catalogación (notaría, año y rango de escrituras).
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -341,7 +337,6 @@ Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó la
 | collection | varchar(120) | IDX trigram | Colección o tema |
 | publication_date | date | NULL | Solo periódicos |
 | publisher | varchar(150) | NULL | Empresa editora; solo periódicos |
-| depot, shelf, box | varchar(40) | NULL, CHECK | Ubicación física. Nunca se muestra al rol `PUBLICO`. Van las tres o ninguna (`materials_location_check`): un material que llega de Everything puede no tenerla |
 | source | varchar(20) | CHECK, DEFAULT `MANUAL` | `MANUAL` (registrado por el personal) o `EVERYTHING` (traído por la sincronización, HU-137). Los materiales previos a HU-134 quedaron en `MANUAL` |
 | digital_path | varchar(1024) | NULL, CHECK no vacío | Ruta completa de la copia digital, tal como la da Everything. Uso interno: la API nunca la envía. `NULL` = sin copia digital |
 | last_seen_at | timestamptz | NULL | Última vez que una sincronización vio el archivo. `NULL` si nunca lo vio |
@@ -381,7 +376,7 @@ Creada en HU-09 (migración `20261109000000_create_requests`).
 
 ### request_items
 
-Creada en HU-09 (migración `20261109000000_create_requests`).
+Creada en HU-09 (migración `20261109000000_create_requests`). HU-165 quitó `access_type`: siempre valía `FISICO` y nada la leía; la modalidad de entrega está en `requests.delivery_mode`.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -389,7 +384,6 @@ Creada en HU-09 (migración `20261109000000_create_requests`).
 | request_id | uuid | FK → requests, UK con material_id | Un material no se repite en la misma solicitud |
 | material_id | uuid | FK → materials, IDX | Base del reporte de material más solicitado |
 | item_status | varchar(15) | CHECK, DEFAULT `PENDIENTE` | `PENDIENTE`, `LOCALIZADO`, `NO_LOCALIZADO`, `NO_APTO` |
-| access_type | varchar(10) | CHECK, DEFAULT `FISICO` | `FISICO`, `DIGITAL` |
 | note | text | NULL | |
 
 ### request_references
@@ -576,11 +570,14 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261118150000_allow_reschedule_status_history` | HU-21 | Permite registrar la reprogramación de una cita (`AGENDADA → AGENDADA`) en `status_history` |
 | `20261119140000_create_material_loans` | HU-72 | Tabla `material_loans` para entregas, devoluciones e historial de custodia de materiales en sala |
 | `20261120120000_create_request_references` | HU-09.2 | Tabla `request_references` (referencias escritas de material no catalogado) y permite `RECIBIDA → RECIBIDA` y `EN_BUSQUEDA → EN_BUSQUEDA` en `status_history` al asociar su material |
+| `20261120180000_drop_material_location_and_access_type` | HU-165 | Quita la ubicación física (`depot`, `shelf`, `box` y su `CHECK`) de `materials` y `access_type` de `request_items` |
 
 **Semillas:**
 
 - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
-- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos), 34 materiales (30 manuales y 4 de Everything: 3 con copia digital y 1 cuya carpeta ya no aparece; 3 de ellos sin ubicación física). Los de Everything son protocolos notariales con los códigos, títulos y rutas de carpeta del árbol simulado de HU-133 (`dev/manifiesto.json`, por ejemplo `NOT1-1931-0001-0109`), 12 solicitudes repartidas en los 7 estados y 4 citas.
+- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos) y 34 materiales, todos con `source = EVERYTHING`, como si los hubiera traído la sincronización (HU-165). Usan los códigos, títulos, tipos, colecciones y rutas de carpeta hoja del árbol simulado de HU-133 (`dev/manifiesto.json`, por ejemplo `NOT1-1931-0001-0109`), así que una sincronización contra el mock los actualiza por su código y no los duplica. Son protocolos notariales, periódicos (uno con fecha de publicación y editora) y correspondencia, en los cuatro estados. Todos tienen `digital_path` salvo `NOT4-1956-0001-0180`, que no está en el árbol: representa un material cuya carpeta ya no aparece.
+- 15 solicitudes repartidas en los 7 estados; las digitales solo piden material con copia digital. Tres tienen referencias escritas (HU-09.2): una solo con referencias (protocolo notarial y texto libre, pendientes), una que mezcla material del catálogo con una referencia ya asociada al material que trajo la sincronización, y una disponible con una referencia sin material y el comentario de entrega obligatorio.
+- 4 citas y 3 préstamos en sala (HU-72): los dos materiales `EN_USO` tienen su préstamo abierto en la cita programada de `SOL-2026-90007`, y la cita cumplida de `SOL-2026-90010` tiene su préstamo devuelto.
 - Las contraseñas salen de variables de entorno (`SEED_ADMIN_PASSWORD`, `SEED_DEMO_PASSWORD`).
 - Datos **ficticios**, con correos `@example.com`. No se usan datos reales del CLENA sin autorización escrita.
 

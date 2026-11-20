@@ -123,7 +123,6 @@ export class PrismaRequestReferenceMapper {
       requestId: resolution.requestId,
       materialId: resolution.materialId,
       itemStatus: 'PENDIENTE',
-      accessType: 'FISICO',
     };
   }
 }

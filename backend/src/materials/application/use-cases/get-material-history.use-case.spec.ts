@@ -17,7 +17,6 @@ const MATERIAL = new Material({
   collection: 'Actas del Cabildo',
   publicationDate: null,
   publisher: null,
-  location: { depot: 'D-01', shelf: 'E-12', box: 'C-034' },
   status: 'DISPONIBLE',
   createdAt: new Date('2026-11-08T00:00:00Z'),
   updatedAt: new Date('2026-11-08T00:00:00Z'),

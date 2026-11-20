@@ -18,7 +18,6 @@ const buildMaterial = (): Material =>
     collection: 'Actas del Cabildo',
     publicationDate: null,
     publisher: null,
-    location: { depot: 'D-01', shelf: 'E-12', box: 'C-034' },
     status: 'DISPONIBLE',
     createdAt: new Date('2026-11-08T00:00:00Z'),
     updatedAt: new Date('2026-11-08T00:00:00Z'),
@@ -39,14 +38,14 @@ describe('Material.changeStatus', () => {
     const changed = buildMaterial().changeStatus(
       'EN_RESTAURACION',
       'user-1',
-      'Humedad en la caja',
+      'Humedad en las hojas',
       now,
     );
 
     expect(changed.status).toBe('EN_RESTAURACION');
     expect(changed.statusChangedBy).toBe('user-1');
     expect(changed.statusChangedAt).toEqual(now);
-    expect(changed.statusChangeReason).toBe('Humedad en la caja');
+    expect(changed.statusChangeReason).toBe('Humedad en las hojas');
     expect(changed.updatedAt).toEqual(now);
     expect(changed.catalogCode).toBe('AHM-DOC-0001');
   });
@@ -110,17 +109,16 @@ describe('Material', () => {
     expect(material.lastSeenAt).toBeNull();
   });
 
-  it('accepts a material from Everything without physical location', () => {
+  it('accepts a material from Everything with its digital copy', () => {
     const seenAt = new Date('2026-11-18T05:00:00Z');
     const material = new Material({
       ...buildMaterial(),
-      location: null,
       source: 'EVERYTHING',
       digitalPath: 'D:\\Digitalizados\\M245.pdf',
       lastSeenAt: seenAt,
     });
 
-    expect(material.location).toBeNull();
+    expect(material).not.toHaveProperty('location');
     expect(material.source).toBe('EVERYTHING');
     expect(material.digitalPath).toBe('D:\\Digitalizados\\M245.pdf');
     expect(material.lastSeenAt).toEqual(seenAt);

@@ -14,38 +14,47 @@ import {
 
 interface MaterialBody {
   catalogCode: string;
-  location?: { depot: string; shelf: string; box: string } | null;
 }
+
+// Root of the simulated tree of Everything (HU-133) and the fund of notaries
+const NOTARY_FUND =
+  'C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\' +
+  '1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +';
 
 /**
  * Digital copy in `materials` and the `sync_runs` log (HU-134) against
- * PostgreSQL: the defaults of the existing rows, the CHECKs that keep the
- * location whole, and the partial unique index that allows a single running
- * sync. The API never sends the path of the digital copy.
+ * PostgreSQL: the defaults of the existing rows, the CHECKs of the table and
+ * the partial unique index that allows a single running sync. The API never
+ * sends the path of the digital copy, and since #165 a material has no
+ * physical location.
  */
 describe('Material digital copy, HU-134 (e2e, PostgreSQL)', () => {
   let e2e: E2eApp;
   let staff: Session;
   let publicUser: Session;
 
-  /** A material as the Everything sync would save it: no physical location. */
+  /**
+   * A material as the Everything sync would save it from the simulated tree
+   * (HU-133): a notarial protocol whose digital copy is a leaf folder.
+   */
   const createEverythingMaterial = async () => {
     const id = randomUUID();
     const catalogCode = `E2E-EV-${id.slice(0, 8).toUpperCase()}`;
+    const digitalPath = `${NOTARY_FUND}\\1ra-1931 - Esc 0001-0109 - ${catalogCode}`;
     await e2e.prisma.materialModel.create({
       data: {
         id,
         catalogCode,
-        title: 'Crónicas del puerto',
-        materialType: 'OTRO',
-        collection: 'Libros y Revistas',
+        title: `1ra-1931 - Esc 0001-0109 - ${catalogCode}`,
+        materialType: 'PROTOCOLO_NOTARIAL',
+        collection: 'Notarías',
         status: 'DISPONIBLE',
         source: 'EVERYTHING',
-        digitalPath: `D:\\Digitalizados\\${catalogCode}\\copia.pdf`,
+        digitalPath,
         lastSeenAt: new Date(),
       },
     });
-    return { id, catalogCode };
+    return { id, catalogCode, digitalPath };
   };
 
   const searchByCode = async (session: Session, catalogCode: string) => {
@@ -87,33 +96,49 @@ describe('Material digital copy, HU-134 (e2e, PostgreSQL)', () => {
         source: 'MANUAL',
         digitalPath: null,
         lastSeenAt: null,
-        depot: 'D1',
-        shelf: 'E3',
-        box: 'C12',
       });
     });
 
-    it('sends location null to the staff for a material without location, and never the digital path', async () => {
-      const { catalogCode } = await createEverythingMaterial();
+    it('saves the leaf folder of the simulated tree as the digital copy, with no location columns (#165)', async () => {
+      const material = await createEverythingMaterial();
 
-      const found = await searchByCode(staff, catalogCode);
+      const stored = await e2e.prisma.materialModel.findUniqueOrThrow({
+        where: { id: material.id },
+      });
+      expect(stored).toMatchObject({
+        source: 'EVERYTHING',
+        collection: 'Notarías',
+        materialType: 'PROTOCOLO_NOTARIAL',
+        digitalPath: material.digitalPath,
+      });
+      // A folder, not a file of the folder
+      expect(stored.digitalPath).not.toMatch(/\.[a-z]{3,4}$/i);
 
-      expect(found).toBeDefined();
-      expect(found?.location).toBeNull();
-      expect(found).not.toHaveProperty('digitalPath');
+      const columns = await e2e.prisma.$queryRaw<{ column_name: string }[]>`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name IN ('materials', 'request_items')
+          AND column_name IN ('depot', 'shelf', 'box', 'access_type')`;
+      expect(columns).toEqual([]);
     });
 
-    it('sends no location at all to the PUBLICO role', async () => {
-      const { catalogCode } = await createEverythingMaterial();
+    it.each([
+      ['PERSONAL', () => staff],
+      ['PUBLICO', () => publicUser],
+    ])(
+      'sends %s neither a location nor the digital path',
+      async (_role, session) => {
+        const { catalogCode } = await createEverythingMaterial();
 
-      const found = await searchByCode(publicUser, catalogCode);
+        const found = await searchByCode(session(), catalogCode);
 
-      expect(found).toBeDefined();
-      expect(found).not.toHaveProperty('location');
-      expect(found).not.toHaveProperty('digitalPath');
-    });
+        expect(found).toBeDefined();
+        expect(found).not.toHaveProperty('location');
+        expect(found).not.toHaveProperty('digitalPath');
+      },
+    );
 
-    it('shows location null in the request detail of a material without location', async () => {
+    it('shows the material in the request detail without location, and saves its item without access type', async () => {
       const material = await createEverythingMaterial();
       const created = await submitRequest(e2e.server, publicUser, [
         material.id,
@@ -125,33 +150,23 @@ describe('Material digital copy, HU-134 (e2e, PostgreSQL)', () => {
         .expect(200);
 
       const { materials } = response.body as {
-        materials: Array<{ id: string; location: unknown }>;
+        materials: Array<Record<string, unknown>>;
       };
       expect(materials).toEqual([
-        expect.objectContaining({ id: material.id, location: null }),
+        expect.objectContaining({ id: material.id, itemStatus: 'PENDIENTE' }),
       ]);
-    });
+      expect(materials[0]).not.toHaveProperty('location');
+      expect(materials[0]).not.toHaveProperty('digitalPath');
 
-    it('rejects a half location and saves nothing', async () => {
-      const id = randomUUID();
-
-      await expect(
-        e2e.prisma.materialModel.create({
-          data: {
-            id,
-            catalogCode: `E2E-LOC-${id.slice(0, 8)}`,
-            title: 'Ubicación incompleta',
-            materialType: 'DOCUMENTO',
-            collection: 'Fondo del Concejo',
-            status: 'DISPONIBLE',
-            depot: 'D1',
-          },
-        }),
-      ).rejects.toThrow(/materials_location_check/);
-
-      expect(
-        await e2e.prisma.materialModel.findUnique({ where: { id } }),
-      ).toBeNull();
+      const items = await e2e.prisma.requestItemModel.findMany({
+        where: { requestId: created.id },
+      });
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        materialId: material.id,
+        itemStatus: 'PENDIENTE',
+      });
+      expect(items[0]).not.toHaveProperty('accessType');
     });
 
     it('rejects a source that is not MANUAL or EVERYTHING', async () => {

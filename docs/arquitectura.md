@@ -247,6 +247,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 | D-23 | Configuración por entorno validada al arrancar y logs estructurados | Parcial (faltan los logs en JSON) |
 | D-24 | Plataforma de despliegue | **Pendiente** |
 | D-25 | Estructura de Clean Architecture del curso, verificada en el CI | Implementada |
+| D-26 | El catálogo solo crece por la sincronización con *Everything*; el material no digitalizado vive como referencia escrita | Implementada en la semilla (la sincronización es HU-137) |
 
 ---
 
@@ -358,7 +359,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Alternativas:** lanzar `HttpException` desde los casos de uso.
 - **Justificación:** las `HttpException` pertenecen a NestJS y contaminarían el núcleo. Un `code` estable permite al frontend reaccionar por tipo de error sin depender del texto del mensaje.
 - **Consecuencias:** cada error nuevo requiere una línea en el mapeo; un error sin mapear devuelve 500 y se registra en logs.
-- **Criterio para los errores de validación del dominio:** los errores que dicen que un dato no es válido (`INVALID_MATERIAL_TYPE`, `INVALID_MATERIAL_STATUS`, `INVALID_NAME`…) responden 400, aunque hoy algunos solo puedan salir de una fila ya guardada. La entidad los lanza igual al crearse desde una petición (por ejemplo, al registrar material en HU-06), y ahí el error es del cliente. Un dato corrupto en la base es un caso excepcional que se investiga con el log del filtro.
+- **Criterio para los errores de validación del dominio:** los errores que dicen que un dato no es válido (`INVALID_MATERIAL_TYPE`, `INVALID_MATERIAL_STATUS`, `INVALID_NAME`…) responden 400, aunque hoy algunos solo puedan salir de una fila ya guardada. La entidad los lanza igual al crearse desde una petición (por ejemplo, al cambiar el estado de un material en HU-08 con un estado que no existe), y ahí el error es del cliente. Un dato corrupto en la base es un caso excepcional que se investiga con el log del filtro.
 
 ### D-15. API REST versionada con OpenAPI
 
@@ -376,10 +377,10 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 
 ### D-17. Sin integración automática con *Everything* ni lectura de buzón IMAP
 
-- **Decisión:** el personal busca en *Everything* como hoy y registra el resultado (disponibilidad y ubicación) en Trackhive. Las solicitudes entran por un formulario web público o las registra el personal; no se lee el buzón `labdigital@clena.org` de forma automática.
+- **Decisión:** el personal busca en *Everything* como hoy y registra el resultado (disponibilidad) en Trackhive. Las solicitudes entran por un formulario web público o las registra el personal; no se lee el buzón `labdigital@clena.org` de forma automática.
 - **Alternativas:** integrar con *Everything*; procesar correos entrantes por IMAP.
 - **Justificación:** la integración con *Everything* es técnicamente posible: el programa incluye un servidor HTTP opcional que responde las búsquedas en JSON (`?search=...&json=1`). No se hace ahora por tres razones. El alcance acordado con el CLENA es que Trackhive solo gestiona las solicitudes, y el enunciado no la exige. La API tendría que alcanzar por red el equipo Windows donde corre *Everything*, y eso depende de la plataforma de despliegue (D-24). Y ese servidor expone los nombres y rutas de los archivos del CLENA, así que habría que activarlo y protegerlo con usuario y contraseña. Leer el buzón añade riesgo (credenciales institucionales, correos con formato libre, datos personales no controlados) para un beneficio que el formulario público ya cubre.
-- **Consecuencias:** la integración con *Everything* se documenta como mejora futura: Trackhive podría consultarlo para sugerir al personal la ubicación del material, que hoy se escribe a mano. Antes hay que validarlo con el CLENA. El formulario web es la vía que reduce la lectura manual de correos que describió el personal.
+- **Consecuencias:** la integración con *Everything* se documenta como mejora futura: Trackhive podría consultarlo para saber qué material tiene copia digital. Antes hay que validarlo con el CLENA. El formulario web es la vía que reduce la lectura manual de correos que describió el personal.
 - **Sprint 2 (épica E11):** la integración con *Everything* se retoma para registrar las copias digitales. El entorno para desarrollarla sin el equipo del CLENA (documentos simulados, Everything portable, fixtures reales y mock) está en [everything-desarrollo.md](everything-desarrollo.md) (HU-133).
 
 ### D-18. Fechas en UTC y presentación en `America/Bogota`
@@ -477,3 +478,10 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
     - un contrato con métodos (declarado con `interface` o con `type`) en `domain/repositories/` o `application/ports/` no empieza con `I`;
     - un archivo de `infrastructure/persistence/` escribe un objeto `data` a mano o crea una entidad sin su mapeador (R8).
   - **Crear una solicitud** sigue el modelo del curso: el caso de uso arma la entidad con `Request.create()`, obtiene el radicado del puerto `ITrackingCodeGenerator`, resuelve el solicitante con `RequesterResolver` (entidad `Requester` e `IRequesterRepository`) y la guarda con `IRequestRepository.save()`.
+
+### D-26. El catálogo solo crece por la sincronización con *Everything*
+
+- **Decisión:** cada material del catálogo nace de su carpeta digitalizada, que trae la sincronización con *Everything* (HU-137); no hay registro manual de material (HU-06 y HU-6.1 se cerraron sin hacer). El material que todavía no está digitalizado se pide como referencia escrita (HU-09.2) y el personal le asocia el material cuando la sincronización lo trae (RN-04.1). El material no guarda ubicación física: su original se ubica por la convención del código de catalogación (notaría, año y rango de escrituras), y la entrega presencial, las citas en sala y los préstamos (HU-72) se mantienen.
+- **Alternativas:** mantener el formulario de alta de material (WF-05) junto a la sincronización; conservar el depósito, la estantería y la caja como datos opcionales.
+- **Justificación:** el CLENA no pidió la ubicación física (fue un supuesto del equipo en HU-07 y D-17) y nadie la podría llenar sin un formulario de alta. Dos vías de alta duplicarían materiales con códigos distintos para la misma carpeta. La referencia escrita ya cubre el material que aún no tiene carpeta.
+- **Consecuencias:** HU-165 quitó `depot`, `shelf`, `box` y `materials_location_check` de `materials`, y `access_type` de `request_items`, que siempre valía `FISICO`. RN-12 queda derogada. La semilla carga todo el material con `source = EVERYTHING` y las carpetas hoja de `dev/manifiesto.json` (HU-133), así que una sincronización contra el mock lo actualiza por su código y no lo duplica.

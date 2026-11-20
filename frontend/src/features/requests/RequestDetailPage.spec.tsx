@@ -75,7 +75,6 @@ function detail(overrides: Record<string, unknown> = {}) {
         author: null,
         collection: 'Actas del Cabildo',
         status: 'DISPONIBLE',
-        location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
         itemStatus: 'LOCALIZADO',
       },
     ],
@@ -148,7 +147,7 @@ describe('RequestDetailPage', () => {
               newStatus: 'EN_BUSQUEDA',
               changedAt: '2026-11-11T14:30:00.000Z',
               changedBy: 'Ana Gómez',
-              comment: 'Se busca en el depósito D-01',
+              comment: 'Se busca en la copia digital',
             },
           ]),
         ),
@@ -169,7 +168,7 @@ describe('RequestDetailPage', () => {
       expect(second).toHaveTextContent(/11\/11\/2026.*09:30/);
       expect(second).toHaveTextContent('Responsable: Ana Gómez');
       expect(second).toHaveTextContent(
-        'Observación: Se busca en el depósito D-01',
+        'Observación: Se busca en la copia digital',
       );
       expect(historyMock).toHaveBeenCalledWith(
         `/api/v1/requests/${REQUEST_ID}/history`,
@@ -244,9 +243,8 @@ describe('RequestDetailPage', () => {
         within(material).getByText('Acta de fundación de la villa'),
       ).toBeInTheDocument();
       expect(within(material).getByText(/TH-DOC-0001/)).toBeInTheDocument();
-      expect(
-        within(material).getByText(/D-01 · E-01 · C-001/),
-      ).toBeInTheDocument();
+      // The material has no physical location any more (#165)
+      expect(within(material).queryByText(/ubicación/i)).not.toBeInTheDocument();
     },
   );
 

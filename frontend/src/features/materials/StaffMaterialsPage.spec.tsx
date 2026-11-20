@@ -168,7 +168,7 @@ describe('StaffMaterialsPage', () => {
     await user.selectOptions(screen.getByLabelText('Estado'), [
       'EN_RESTAURACION',
     ]);
-    await user.type(screen.getByLabelText(/motivo/i), 'Humedad en la caja');
+    await user.type(screen.getByLabelText(/motivo/i), 'Humedad en las hojas');
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -184,7 +184,7 @@ describe('StaffMaterialsPage', () => {
     expect(init.method).toBe('PATCH');
     expect(JSON.parse(init.body as string)).toEqual({
       status: 'EN_RESTAURACION',
-      reason: 'Humedad en la caja',
+      reason: 'Humedad en las hojas',
     });
     expect(
       within(screen.getByRole('table')).getByText('En restauración'),

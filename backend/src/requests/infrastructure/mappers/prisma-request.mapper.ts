@@ -84,7 +84,6 @@ export class PrismaRequestMapper {
           id: itemId(),
           materialId,
           itemStatus: 'PENDIENTE',
-          accessType: 'FISICO',
         })),
       },
       references: {

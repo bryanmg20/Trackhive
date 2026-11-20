@@ -240,22 +240,6 @@ export class PrismaRequestReadMapper {
     };
   }
 
-  /**
-   * The physical location of a material, or null when it has none (HU-134).
-   * The CHECK of the table keeps the three columns together.
-   */
-  static toLocation(material: {
-    depot: string | null;
-    shelf: string | null;
-    box: string | null;
-  }): { depot: string; shelf: string; box: string } | null {
-    const { depot, shelf, box } = material;
-    if (depot === null || shelf === null || box === null) {
-      return null;
-    }
-    return { depot, shelf, box };
-  }
-
   static toHistory(model: RequestHistoryRow): RequestHistory {
     return {
       requestId: model.id,
@@ -392,7 +376,6 @@ export class PrismaRequestReadMapper {
         author: material.author,
         collection: material.collection,
         status: material.status,
-        location: PrismaRequestReadMapper.toLocation(material),
         itemStatus,
       })),
       references: model.references.map((row) =>
@@ -437,9 +420,6 @@ export class PrismaRequestReadMapper {
           title: material.title,
           materialType: material.materialType,
           status: material.status,
-          depot: material.depot,
-          shelf: material.shelf,
-          box: material.box,
           activeLoan: loans?.activeLoan ?? null,
           lastLoan: loans?.lastLoan ?? null,
         };

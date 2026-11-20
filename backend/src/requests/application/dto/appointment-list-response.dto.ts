@@ -7,17 +7,6 @@ import { REQUEST_STATUSES } from '../../domain/enums/request-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
 import { AppointmentServiceHoursDto } from './schedule-appointment-response.dto';
 
-export class AppointmentLocationDto {
-  @ApiProperty({ example: 'D-01' })
-  depot: string;
-
-  @ApiProperty({ example: 'E-01' })
-  shelf: string;
-
-  @ApiProperty({ example: 'C-001' })
-  box: string;
-}
-
 export class AppointmentLoanActorDto {
   @ApiProperty({ example: '2b1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })
   id: string;
@@ -67,13 +56,6 @@ export class AppointmentListMaterialDto {
     example: 'DISPONIBLE',
   })
   status: string;
-
-  @ApiProperty({
-    description: 'Ubicación física; null si el material no la tiene (HU-134)',
-    type: AppointmentLocationDto,
-    nullable: true,
-  })
-  location: AppointmentLocationDto | null;
 
   @ApiProperty({
     description:

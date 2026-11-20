@@ -49,11 +49,6 @@ function appointmentItem(overrides: Record<string, unknown> = {}) {
         catalogCode: 'TH-DOC-0001',
         title: 'Acta de fundación de la villa',
         materialType: 'DOCUMENTO',
-        location: {
-          depot: 'D-01',
-          shelf: 'E-01',
-          box: 'C-001',
-        },
       },
     ],
     ...overrides,
@@ -138,7 +133,6 @@ describe('AppointmentsCalendarPage', () => {
                 catalogCode: 'TH-DOC-0008',
                 title: 'Informe de obras públicas',
                 materialType: 'DOCUMENTO',
-                location: { depot: 'D-02', shelf: 'E-01', box: 'C-030' },
               },
             ],
           }),
@@ -221,8 +215,12 @@ describe('AppointmentsCalendarPage', () => {
     expect(within(detailSection).getByText('CC 123456789')).toBeInTheDocument();
     expect(within(detailSection).getByText('Ana Gómez')).toBeInTheDocument();
     expect(
-      within(detailSection).getByText('Ubicación: D-01 · E-01 · C-001'),
+      within(detailSection).getByText('Acta de fundación de la villa'),
     ).toBeInTheDocument();
+    // The material has no physical location any more (#165)
+    expect(
+      within(detailSection).queryByText(/ubicación/i),
+    ).not.toBeInTheDocument();
     expect(
       within(detailSection).getByRole('link', {
         name: /ver solicitud completa/i,

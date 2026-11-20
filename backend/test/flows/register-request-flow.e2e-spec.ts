@@ -108,7 +108,7 @@ describe('Request registration flow, HU-09 (e2e, PostgreSQL)', () => {
     );
   });
 
-  it('shows the staff the requester and the location of the material (HU-13)', async () => {
+  it('shows the staff the requester and the material, without a location (HU-13, #165)', async () => {
     const material = await createMaterial(e2e.prisma);
     const created = await submitRequest(e2e.server, requester, [material.id]);
     const staff = await signInStaffUser(e2e);
@@ -130,10 +130,13 @@ describe('Request registration flow, HU-09 (e2e, PostgreSQL)', () => {
         {
           id: material.id,
           catalogCode: material.catalogCode,
-          location: { depot: 'D1', shelf: 'E3', box: 'C12' },
         },
       ],
     });
+    const { materials } = response.body as {
+      materials: Array<Record<string, unknown>>;
+    };
+    expect(materials[0]).not.toHaveProperty('location');
   });
 
   it('gives every request its own tracking code from the sequence (RN-01)', async () => {

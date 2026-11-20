@@ -59,8 +59,7 @@ export class MaterialController {
     summary: 'Lista y busca material del archivo',
     description:
       'Devuelve el material paginado, con filtros por tipo, colección y ' +
-      'estado, búsqueda por texto y ordenamiento. La ubicación física solo ' +
-      'se incluye para los roles PERSONAL y ADMIN.',
+      'estado, búsqueda por texto y ordenamiento.',
   })
   @ApiOkResponse({
     description: 'Página de materiales',
@@ -80,13 +79,8 @@ export class MaterialController {
   })
   async search(
     @Query() query: SearchMaterialsQueryDto,
-    // JwtAuthGuard (global) always sets the user before reaching here
-    @CurrentUser() user: AuthenticatedUser,
   ): Promise<PaginatedMaterialsResponseDto> {
-    return this.searchMaterialsUseCase.execute({
-      ...query,
-      viewerRole: user.role,
-    });
+    return this.searchMaterialsUseCase.execute({ ...query });
   }
 
   @Patch(':id/status')

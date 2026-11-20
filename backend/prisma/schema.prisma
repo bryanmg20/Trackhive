@@ -71,12 +71,6 @@ model MaterialModel {
   // Periodicals only (HU-06). Nullable: some historic periodicals lack them
   publicationDate    DateTime?                  @map("publication_date") @db.Date
   publisher          String?                    @db.VarChar(150)
-  // Physical location. Never shown to the PUBLICO role. Optional (HU-134):
-  // a material from Everything may not have it. The three go together
-  // (CHECK in the migration): all with a value or all NULL
-  depot              String?                    @db.VarChar(40)
-  shelf              String?                    @db.VarChar(40)
-  box                String?                    @db.VarChar(40)
   // Allowed values (CHECK in the migration): MANUAL, EVERYTHING (HU-134)
   source             String                     @default("MANUAL") @db.VarChar(20)
   // Full path of the digital copy, as Everything reports it. Internal use:
@@ -189,7 +183,6 @@ model RequestItemModel {
   requestId  String        @map("request_id") @db.Uuid
   materialId String        @map("material_id") @db.Uuid
   itemStatus String        @default("PENDIENTE") @map("item_status") @db.VarChar(15)
-  accessType String        @default("FISICO") @map("access_type") @db.VarChar(10)
   note       String?
   request    RequestModel  @relation(fields: [requestId], references: [id], onDelete: Restrict)
   material   MaterialModel @relation(fields: [materialId], references: [id], onDelete: Restrict)

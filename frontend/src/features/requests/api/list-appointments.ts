@@ -5,7 +5,6 @@ import {
   RequestsApiError,
 } from './list-requests';
 import type { RequestStatus, SortOrder } from './list-requests';
-import type { MaterialLocation } from '../material-location';
 import type { AppointmentMaterialLoanSummary } from '../../materials/api/material-loans';
 import type { MaterialStatus } from '../../materials/api/search-materials';
 
@@ -33,8 +32,6 @@ export interface AppointmentMaterialItem {
   title: string;
   materialType: string;
   status?: MaterialStatus;
-  // null when the material has no physical location (HU-134)
-  location: MaterialLocation | null;
   activeLoan?: AppointmentMaterialLoanSummary | null;
   lastLoan?: AppointmentMaterialLoanSummary | null;
 }

@@ -6,9 +6,6 @@ import { MaterialResponseDto } from '../dto/material-response.dto';
 import { MaterialResponseMapper } from '../mappers/material-response.mapper';
 import { MATERIAL_REPOSITORY } from '../tokens';
 
-// Only staff can call this use case, so the location is always included
-const INCLUDE_LOCATION = true;
-
 @Injectable()
 export class ChangeMaterialStatusUseCase {
   constructor(
@@ -31,6 +28,6 @@ export class ChangeMaterialStatusUseCase {
     );
     await this.materialRepo.saveStatusChange(changed);
 
-    return MaterialResponseMapper.toDto(changed, INCLUDE_LOCATION);
+    return MaterialResponseMapper.toDto(changed);
   }
 }

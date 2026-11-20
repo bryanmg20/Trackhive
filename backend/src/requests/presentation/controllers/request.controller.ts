@@ -149,7 +149,7 @@ export class RequestController {
     summary: 'Detalle de una solicitud',
     description:
       'Devuelve la solicitud completa: datos del solicitante, material ' +
-      'pedido con su ubicación, motivo, fecha deseada y estado actual. ' +
+      'pedido y su estado, motivo, fecha deseada y estado actual. ' +
       'Solo para PERSONAL y ADMIN.',
   })
   @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
