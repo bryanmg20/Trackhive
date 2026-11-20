@@ -10,3 +10,5 @@
 **/*.log
 **/pgdata
 **/uploads
+dev/docs_simulados
+**/__pycache__

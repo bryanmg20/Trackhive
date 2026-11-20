@@ -40,6 +40,15 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:?Missing SMTP_FROM in .env}
+      # Everything HTTP server (E11). Only the URL changes between the mock
+      # (http://everything-mock:8081) and Everything on the host
+      # (http://host.docker.internal:<port>); docs/everything-desarrollo.md
+      EVERYTHING_URL: ${EVERYTHING_URL:-}
+      EVERYTHING_USER: ${EVERYTHING_USER:-trackhive}
+      EVERYTHING_PASSWORD: ${EVERYTHING_PASSWORD:-trackhive-dev}
+    extra_hosts:
+      # Docker Desktop defines host.docker.internal; on Linux it is added here
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:${BACKEND_PORT:?Missing BACKEND_PORT in .env}:3000"
     depends_on:
@@ -56,6 +65,23 @@ services:
     ports:
       - "127.0.0.1:8025:8025"
       - "127.0.0.1:1025:1025"
+
+  # Mock of the Everything HTTP server over the simulated documents (HU-133),
+  # for those without Windows. Starts only with the profile:
+  #   docker compose --profile everything up -d
+  everything-mock:
+    profiles: ["everything"]
+    networks:
+      - trackhive-network
+    build:
+      context: .
+      dockerfile: dev/everything-mock/Dockerfile
+    restart: unless-stopped
+    environment:
+      EVERYTHING_USER: ${EVERYTHING_USER:-trackhive}
+      EVERYTHING_PASSWORD: ${EVERYTHING_PASSWORD:-trackhive-dev}
+    ports:
+      - "127.0.0.1:${EVERYTHING_MOCK_PORT:-8081}:8081"
 
   frontend:
     networks:
