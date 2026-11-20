@@ -31,10 +31,10 @@ Leyenda: azul oscuro, raíz de agregado; azul, entidad interna de un agregado; o
 | Entidad | Qué es | Agregado |
 |---|---|---|
 | **Solicitud** | Pedido de consulta de material del archivo, identificado por un radicado. Guarda la modalidad de entrega, la fecha deseada, la fecha compromiso, el estado y, si se rechazó, el motivo. | Solicitud (raíz) |
-| **ItemSolicitud** | Cada material pedido en una solicitud, con el resultado de buscarlo y su tipo de acceso (físico o digital). | Solicitud |
+| **ItemSolicitud** | Cada material pedido en una solicitud, con el resultado de buscarlo. | Solicitud |
 | **CambioEstado** | Registro inmutable de un cambio de estado de la solicitud: estado anterior, estado nuevo, quién lo hizo, cuándo y comentario. | Solicitud |
 | **Solicitante** | Persona que pide la consulta. Puede no tener cuenta, si la solicitud la registró el personal. | Solicitante (raíz) |
-| **Material** | Pieza del acervo (documento, periódico, protocolo notarial u otro) con su ubicación física y su estado de disponibilidad. | Material (raíz) |
+| **Material** | Pieza del acervo (documento, periódico, protocolo notarial u otro) que trajo la sincronización con *Everything* desde su carpeta digitalizada, con su estado de disponibilidad. El original físico se ubica por la convención de su código de catalogación (notaría, año y rango de escrituras). | Material (raíz) |
 | **Cita** | Día completo en que el solicitante consulta el material en la sala, sin hora. | Cita (raíz) |
 | **ReservaMaterial** | Reserva de un material para el día de la cita. Se libera al cumplirse la cita o al registrar la inasistencia. | Cita |
 | **PréstamoMaterial** | Registro de entrega física y devolución de un material durante una cita en sala: quién lo entregó, cuándo, quién recibió la devolución, cuándo y observaciones opcionales (HU-72). | Material |
@@ -50,14 +50,13 @@ Un objeto de valor no tiene identidad propia: vale por su contenido y es inmutab
 | `CodigoRadicado` | Formato `SOL-AAAA-NNNNN`. Lo genera el sistema al registrar la solicitud y no cambia. |
 | `FechaDeseada` | Día `AAAA-MM-DD` al menos 10 días hábiles después de hoy (hora de Bogotá), de lunes a sábado. Los festivos cuentan como hábiles. |
 | `FechaCita` | Día `AAAA-MM-DD` de lunes a sábado. La cita es por día completo, sin hora: lunes a viernes de 8:00 a 17:00 y sábados de 9:00 a 13:00. |
-| `Ubicacion` | Depósito, estantería y caja donde está el material. |
 | `DocumentoIdentidad` | Tipo (`CC`, `CE`, `TI`, `PAS`, `NIT`) más número. Único por persona. |
 | `NombrePersona` | Primer nombre y primer apellido obligatorios; segundo nombre y segundo apellido opcionales. Máximo 40 caracteres cada uno. Igual en `Usuario` y `Solicitante`. |
 | `Email` | Correo con formato válido. |
 | `ReferenciaMaterial` | Material que aún no está en el catálogo, descrito por escrito (HU-09.2): protocolo notarial con notaría, año (1500 al actual) y número de escritura, u otro material en texto libre (3 a 500 caracteres). Pendiente hasta que el personal le asocia el material del catálogo; entonces queda resuelta. Vive dentro de la Solicitud (`backend/src/requests/domain/value-objects/material-reference.ts`). |
 | `Consentimiento` | Aceptación del aviso de privacidad, con fecha y versión (Ley 1581 de 2012). |
 
-Los estados (`EstadoSolicitud`, `EstadoMaterial`, `EstadoCita`, `EstadoItem`, `EstadoEnvio`) y los tipos (`Rol`, `TipoMaterial`, `TipoSolicitud`, `ModalidadEntrega`, `TipoAcceso`, `TipoSolicitante`) son enumeraciones con valores cerrados.
+Los estados (`EstadoSolicitud`, `EstadoMaterial`, `EstadoCita`, `EstadoItem`, `EstadoEnvio`) y los tipos (`Rol`, `TipoMaterial`, `TipoSolicitud`, `ModalidadEntrega`, `TipoSolicitante`) son enumeraciones con valores cerrados.
 
 ## 3. Relaciones
 
@@ -124,7 +123,7 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 
 | # | Regla | HU | Estado |
 |---|---|---|---|
-| RN-12 | La ubicación física del material (depósito, estantería y caja) solo la ve el personal. | HU-07 | Vigente |
+| RN-12 | ~~La ubicación física del material solo la ve el personal.~~ El material ya no guarda ubicación física: el catálogo solo crece por la sincronización y el original se ubica por su código de catalogación (HU-165). | HU-07 | Derogada |
 | RN-13 | Un material en restauración o no consultable no puede agendarse. | HU-20 | Vigente |
 | RN-14 | Un material no puede reservarse dos veces el mismo día. | HU-20 | Vigente |
 | RN-15 | Solo se agenda cita a una solicitud disponible con entrega presencial, y solo puede tener una cita programada a la vez. | HU-18 | Vigente |
@@ -169,7 +168,6 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | **Sala de consulta** | Lugar del CLENA donde el solicitante revisa el material el día de su cita. |
 | **Solicitante** | Persona que pide la consulta: investigador, estudiante, docente, ciudadano o entidad. |
 | **Solicitud** | Pedido de consulta de uno o más materiales del archivo. |
-| **Ubicación** | Depósito, estantería y caja donde se guarda el material. |
 | **Usuario público** | Persona registrada que hace sus propias solicitudes (rol `PUBLICO`). |
 
 ## 7. Casos de uso
@@ -212,7 +210,6 @@ Hay dos casos de uso técnicos que no son acciones del negocio: `GetHealthUseCas
 | Caso de uso | Acción del negocio | Actor | HU |
 |---|---|---|---|
 | `GestionarFuncionarios` | Crear, editar y desactivar cuentas del personal | Administrador | HU-05 |
-| `RegistrarMaterial` | Agregar material consultable al catálogo | Personal | HU-06 |
 | `GenerarReporteTiemposAtencion` | Medir cuánto tarda cada estado de la solicitud | Personal | HU-25 |
 | `GenerarReporteMaterialMasSolicitado` | Ver qué material se pide más | Personal | HU-26 |
 | `ExportarReporte` | Descargar un reporte | Personal | HU-27 |

@@ -63,7 +63,7 @@ La numeración documental anterior era 2.0 por la adaptación a la paleta. **HU-
 | WF-01, WF-02 | Coidentidad institucional también en acceso y registro; formulario móvil de una columna y acciones completas. Aviso de privacidad desplegable y aceptación sin marcar antes de crear la cuenta. |
 | WF-03 | Datos precargados en una columna y botón Guardar de ancho completo. No se agregan datos personales. |
 | WF-04, WF-15 | Buscador, botón de filtros (mostrado abierto para revisar campos), resultados en tarjetas y selección táctil. Se conserva la diferencia público/personal de copia digital. |
-| WF-05, WF-07, WF-08 | Paneles apilados en orden de lectura; campos y acciones de ancho completo. Primer nombre y primer apellido separados en WF-08. Modalidad en opciones separadas. Se conserva la reutilización de caracterización. |
+| WF-07, WF-08 | Paneles apilados en orden de lectura; campos y acciones de ancho completo. Primer nombre y primer apellido separados en WF-08. Modalidad en opciones separadas. Se conserva la reutilización de caracterización. |
 | WF-06, WF-09 | Tablas transformadas en tarjetas con etiquetas por dato, estado en texto y paginación; comentarios internos siguen excluidos del público. Polling documentado sin cambios de lógica. |
 | WF-10 | Material, copia digital y variantes de estado se presentan una debajo de otra. Las variantes siguen siendo alternativas, no acciones simultáneas. |
 | WF-11 | Se actualiza el escritorio a HU-142: tres citas y «+N más», filas iguales y ocupación. En 360 px se dibuja una agenda con todas las citas del día, en vez de un mes reducido. Ejemplos de cercanía y límite separados como leyenda. |
@@ -94,7 +94,7 @@ es orientativo y no constituye un contrato de API o de navegación.
 | WF-02 | Registro público | Sin sesión | `/registro` | HU-01, HU-31, HU-47, HU-73 · existente | [Escritorio](wireframes/wf-02-registro.png) · [Móvil 360 px](wireframes/wf-02-registro-movil.png) |
 | WF-03 | Mi perfil | PUBLICO, PERSONAL, ADMIN | `/mi-perfil` | HU-73 · existente | [Escritorio](wireframes/wf-03-mi-perfil.png) · [Móvil 360 px](wireframes/wf-03-mi-perfil-movil.png) |
 | WF-04 | Búsqueda de material pública | PUBLICO | `/materiales` | HU-07, HU-50 · existente; indicador HU-140 propuesto | [Escritorio](wireframes/wf-04-busqueda-material.png) · [Móvil 360 px](wireframes/wf-04-busqueda-material-movil.png) |
-| WF-05 | Formulario de material | PERSONAL, ADMIN | `/personal/materiales/nuevo` **propuesta** | HU-06, HU-49 · propuesta | [Escritorio](wireframes/wf-05-formulario-material.png) · [Móvil 360 px](wireframes/wf-05-formulario-material-movil.png) |
+| WF-05 | Formulario de material | PERSONAL, ADMIN | — | **Descartada** (HU-165): HU-06 y HU-49 se cerraron sin hacer; el catálogo solo crece por la sincronización (D-26) | [Escritorio](wireframes/wf-05-formulario-material.png) · [Móvil 360 px](wireframes/wf-05-formulario-material-movil.png) |
 | WF-06 | Mis solicitudes | PUBLICO | `/mis-solicitudes` | HU-11 · existente | [Escritorio](wireframes/wf-06-mis-solicitudes.png) · [Móvil 360 px](wireframes/wf-06-mis-solicitudes-movil.png) |
 | WF-07 | Radicar solicitud | PUBLICO | `/solicitudes/nueva?materiales=…` | HU-09 · existente | [Escritorio](wireframes/wf-07-radicar-solicitud.png) · [Móvil 360 px](wireframes/wf-07-radicar-solicitud-movil.png) |
 | WF-08 | Registro de solicitud por personal | PERSONAL, ADMIN | `/personal/solicitudes/nueva?materiales=…` | HU-10, HU-93, HU-73 · existente | [Escritorio](wireframes/wf-08-solicitud-personal.png) · [Móvil 360 px](wireframes/wf-08-solicitud-personal-movil.png) |
@@ -104,7 +104,7 @@ es orientativo y no constituye un contrato de API o de navegación.
 | WF-12 | Gestión de usuarios del personal | ADMIN | `/admin/usuarios` | HU-05 · existente | [Escritorio](wireframes/wf-12-gestion-usuarios.png) · [Móvil 360 px](wireframes/wf-12-gestion-usuarios-movil.png) |
 | WF-13 | Capacidad de la sala | ADMIN | `/admin/capacidad-sala` | HU-20.1 / HU-74 · existente | [Escritorio](wireframes/wf-13-capacidad-sala.png) · [Móvil 360 px](wireframes/wf-13-capacidad-sala-movil.png) |
 | WF-14 | Sincronización con Everything | ADMIN | `/admin/sincronizacion` **propuesta** | HU-138; depende de HU-137 · propuesta | [Escritorio](wireframes/wf-14-sincronizacion-everything.png) · [Móvil 360 px](wireframes/wf-14-sincronizacion-everything-movil.png) |
-| WF-15 | Material para el personal | PERSONAL, ADMIN | `/personal/materiales` | HU-08, HU-109 · existente; HU-06 y HU-140 propuestos | [Escritorio](wireframes/wf-15-material-personal.png) · [Móvil 360 px](wireframes/wf-15-material-personal-movil.png) |
+| WF-15 | Material para el personal | PERSONAL, ADMIN | `/personal/materiales` | HU-08, HU-109 · existente; HU-140 propuesto | [Escritorio](wireframes/wf-15-material-personal.png) · [Móvil 360 px](wireframes/wf-15-material-personal-movil.png) |
 
 Las rutas existentes se contrastaron con
 [`routes.ts`](../frontend/src/routes.ts), [`App.tsx`](../frontend/src/App.tsx)
@@ -132,8 +132,6 @@ flowchart TD
   Bandeja -->|registrar visitante| Mostrador[WF-08 Registro por personal]
   Material[WF-15 Material personal] -->|seleccionar materiales| Mostrador
   Mostrador -->|cambiar materiales| Material
-  Material -->|nuevo: propuesta| Alta[WF-05 Formulario material]
-  Alta --> Material
   Bandeja -->|ADMIN| Usuarios[WF-12 Usuarios del personal]
   Calendario -->|ADMIN| Sala[WF-13 Capacidad]
   Material -->|ADMIN: propuesta| Everything[WF-14 Everything]
@@ -205,20 +203,15 @@ cambiar rol, contraseña o correo desde esta pantalla.
 Buscador, filtros por tipo/colección/estado, orden, paginación y selección de
 materiales para WF-07. HU-140 agrega el indicador: con copia, el público solo
 ve **«DISPONIBLE EN DIGITAL»**, sin nombre de archivo. Sin copia, se indica
-«No». No hay rutas del disco, ubicación física ni acciones de apertura/descarga.
+«No». No hay rutas del disco ni acciones de apertura/descarga.
 
-### WF-05 Formulario de material
+### WF-05 Formulario de material *(descartada)*
 
-![Wireframe del formulario de material](wireframes/wf-05-formulario-material.png)
-
-[Escritorio · SVG para Figma](wireframes/wf-05-formulario-material.svg) · [Móvil · SVG para Figma](wireframes/wf-05-formulario-material-movil.svg).
-
-![Formulario de material: composición móvil de 360 px](wireframes/wf-05-formulario-material-movil.png)
-
-Propuesta de alta: código, título, tipo, autor opcional, colección, depósito,
-estantería, caja y estado inicial. Para periódicos, publicación y editorial
-opcionales. Guardar vuelve a WF-15; cancelar no guarda. Mostrar código duplicado
-y campos inválidos. La definición final de campos y edición depende de HU-06/49.
+Era la propuesta de alta manual de material. Queda descartada (HU-165, D-26):
+HU-06 y HU-49 se cerraron sin hacer, porque cada material nace de su carpeta
+digitalizada, que trae la sincronización con Everything (HU-137). El material
+que aún no está digitalizado se pide como referencia escrita (HU-09.2). Los
+bocetos se conservan en `wireframes/` solo como registro.
 
 ### WF-06 Mis solicitudes
 
@@ -390,8 +383,8 @@ issue de wireframes no implementa la integración ni cambia D-17 de arquitectura
 
 ![Material para personal: composición móvil de 360 px](wireframes/wf-15-material-personal-movil.png)
 
-Variante de WF-04: controles de disponibilidad y selección hacia WF-08; alta
-de material propuesta hacia WF-05. HU-140 muestra **«COPIA DIGITAL: SÍ / NO»**,
+Variante de WF-04: controles de disponibilidad y selección hacia WF-08; no hay
+alta manual de material (WF-05 descartada). HU-140 muestra **«COPIA DIGITAL: SÍ / NO»**,
 solo el nombre del archivo cuando existe y avisos de código duplicado o inválido.
 Nunca envía ni muestra rutas completas o unidad del disco; tampoco abre/descarga
 archivos. El acceso propuesto a WF-14 solo es visible para ADMIN.
