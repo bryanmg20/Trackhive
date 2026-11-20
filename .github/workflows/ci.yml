@@ -61,6 +61,23 @@ jobs:
         run: pnpm test:e2e
       - run: pnpm build
 
+  # Simulated documents and Everything mock (HU-133). On Linux and on Windows:
+  # both must generate the same tree as dev/manifiesto.json, and the mock must
+  # answer like the fixtures of the real Everything
+  dev-everything:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r dev/requirements.txt
+      - name: Generador, manifiesto y mock contra los fixtures de Everything real
+        run: python -m unittest discover -s dev/tests -t dev/tests -v
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
