@@ -5,11 +5,9 @@ import {
   searchMaterials,
 } from '../materials/api/search-materials';
 import type { Material } from '../materials/api/search-materials';
-import type { RequestStatus } from './api/list-requests';
 import { RequestsApiError } from './api/list-requests';
 import {
-  REFERENCE_RESOLVABLE_STATUSES,
-  referenceStatusLabel,
+  REFERENCE_DISPLAY_STATUS_LABELS,
   resolveReference,
 } from './api/material-references';
 import type { RequestReference } from './api/material-references';
@@ -20,8 +18,9 @@ const NETWORK_ERROR_MESSAGE =
 
 interface RequestReferencesSectionProps {
   requestId: string;
-  status: RequestStatus;
   references: RequestReference[];
+  // Decided by the backend: only RECIBIDA or EN_BUSQUEDA (HU-09.2)
+  canResolveReferences: boolean;
   // The detail and its history reload after an association
   onResolved: () => void;
 }
@@ -170,22 +169,21 @@ function AssociatePanel({
  */
 export function RequestReferencesSection({
   requestId,
-  status,
   references,
+  canResolveReferences,
   onResolved,
 }: RequestReferencesSectionProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const pendingCount = references.filter(
-    (reference) => reference.status === 'PENDIENTE',
+    (reference) => reference.displayStatus === 'PENDIENTE',
   ).length;
-  const canResolve = REFERENCE_RESOLVABLE_STATUSES.includes(status);
 
   return (
     <section className={styles.card} aria-labelledby="sec-references">
       <h2 id="sec-references" className={styles.cardTitle}>
         Referencias de material no catalogado
       </h2>
-      {pendingCount > 0 && canResolve ? (
+      {pendingCount > 0 ? (
         <p className={styles.notice} role="note">
           {pendingCount === 1
             ? 'Hay 1 referencia sin material asociado.'
@@ -200,8 +198,11 @@ export function RequestReferencesSection({
           <li key={reference.id} className={styles.item}>
             <div className={styles.itemHeader}>
               <strong>{reference.label}</strong>
-              <span className={styles.badge} data-status={reference.status}>
-                {referenceStatusLabel(reference.status, status)}
+              <span
+                className={styles.badge}
+                data-status={reference.displayStatus}
+              >
+                {REFERENCE_DISPLAY_STATUS_LABELS[reference.displayStatus]}
               </span>
             </div>
             {reference.material ? (
@@ -211,7 +212,7 @@ export function RequestReferencesSection({
                 {reference.resolvedBy ? ` — por ${reference.resolvedBy.name}` : ''}
               </span>
             ) : null}
-            {reference.status === 'PENDIENTE' && canResolve ? (
+            {reference.displayStatus === 'PENDIENTE' && canResolveReferences ? (
               openId === reference.id ? (
                 <AssociatePanel
                   requestId={requestId}

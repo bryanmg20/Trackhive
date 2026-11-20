@@ -2,7 +2,6 @@ import { apiUrl } from '../../auth/api/api-base-url';
 import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
 import type { StatusChange } from './change-request-status';
 import { RequestsApiError } from './list-requests';
-import type { RequestStatus } from './list-requests';
 
 /**
  * A material that is not in the catalog, described in writing (HU-09.2): a
@@ -19,27 +18,24 @@ export const REFERENCE_DESCRIPTION_MIN_LENGTH = 3;
 export const REFERENCE_DESCRIPTION_MAX_LENGTH = 500;
 export const REFERENCE_MIN_YEAR = 1500;
 
-// Same as REFERENCE_RESOLVABLE_STATUSES in the backend domain
-export const REFERENCE_RESOLVABLE_STATUSES: readonly RequestStatus[] = [
-  'RECIBIDA',
-  'EN_BUSQUEDA',
-];
-
 /**
- * How a reference reads for the staff: past EN_BUSQUEDA a reference without
- * material is no longer «pendiente», it was delivered without one (HU-09.2).
+ * How a reference reads, as the backend decides it (HU-09.2): PENDIENTE while
+ * the staff can still associate its material, SIN_MATERIAL once the request
+ * went past En búsqueda without one, RESUELTA with its catalog material.
  */
-export function referenceStatusLabel(
-  status: MaterialReferenceStatus,
-  requestStatus: RequestStatus,
-): string {
-  if (status === 'RESUELTA') {
-    return 'Resuelta';
-  }
-  return REFERENCE_RESOLVABLE_STATUSES.includes(requestStatus)
-    ? 'Pendiente'
-    : 'Sin material asociado';
-}
+export type MaterialReferenceDisplayStatus =
+  | 'PENDIENTE'
+  | 'RESUELTA'
+  | 'SIN_MATERIAL';
+
+export const REFERENCE_DISPLAY_STATUS_LABELS: Record<
+  MaterialReferenceDisplayStatus,
+  string
+> = {
+  PENDIENTE: 'Pendiente',
+  RESUELTA: 'Resuelta',
+  SIN_MATERIAL: 'Sin material asociado',
+};
 
 /** What the forms send for each reference (HU-09, HU-10.1). */
 export type MaterialReferencePayload =
@@ -57,6 +53,7 @@ export interface RequestListReference {
   kind: MaterialReferenceKind;
   label: string;
   status: MaterialReferenceStatus;
+  displayStatus: MaterialReferenceDisplayStatus;
 }
 
 /** A reference in the detail, with its material once the staff associates it. */

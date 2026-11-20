@@ -4,7 +4,7 @@ import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import { listMyRequests } from './api/list-my-requests';
-import { REFERENCE_RESOLVABLE_STATUSES } from './api/material-references';
+import { REFERENCE_DISPLAY_STATUS_LABELS } from './api/material-references';
 import type { ListMyRequestsParams, MyRequestPage } from './api/list-my-requests';
 import {
   REQUEST_STATUS_LABELS,
@@ -307,15 +307,11 @@ export function MyRequestsPage() {
                               {reference.label}{' '}
                               <span
                                 className={listStyles.referenceTag}
-                                data-status={reference.status}
+                                data-status={reference.displayStatus}
                               >
-                                {reference.status === 'RESUELTA'
-                                  ? 'Digitalizado'
-                                  : REFERENCE_RESOLVABLE_STATUSES.includes(
-                                        item.status,
-                                      )
-                                    ? 'Por digitalizar'
-                                    : 'Sin material asociado'}
+                                {REFERENCE_DISPLAY_STATUS_LABELS[
+                                  reference.displayStatus
+                                ]}
                               </span>
                             </li>
                           ))}

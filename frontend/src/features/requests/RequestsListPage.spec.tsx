@@ -313,6 +313,7 @@ describe('RequestsListPage', () => {
               kind: 'TEXTO_LIBRE',
               label: 'El Heraldo, 15-03-1950',
               status: 'PENDIENTE',
+              displayStatus: 'PENDIENTE',
             },
           ],
         }),

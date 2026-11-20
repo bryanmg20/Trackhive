@@ -10,7 +10,7 @@ import {
   REQUEST_STATUSES,
   RequestsApiError,
 } from './api/list-requests';
-import { referenceStatusLabel } from './api/material-references';
+import { REFERENCE_DISPLAY_STATUS_LABELS } from './api/material-references';
 import type {
   ListRequestsParams,
   RequestPage,
@@ -447,12 +447,11 @@ export function RequestsListPage() {
                               {reference.label}{' '}
                               <span
                                 className={styles.referenceTag}
-                                data-status={reference.status}
+                                data-status={reference.displayStatus}
                               >
-                                {`Referencia: ${referenceStatusLabel(
-                                  reference.status,
-                                  item.status,
-                                ).toLowerCase()}`}
+                                {`Referencia: ${REFERENCE_DISPLAY_STATUS_LABELS[
+                                  reference.displayStatus
+                                ].toLowerCase()}`}
                               </span>
                             </li>
                           ))}

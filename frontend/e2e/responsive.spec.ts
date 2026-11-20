@@ -110,6 +110,8 @@ const myRequest = {
       kind: 'TEXTO_LIBRE',
       label: 'El Heraldo, edición extraordinaria del 15-03-1950, páginas 1 a 12',
       status: 'PENDIENTE',
+      // The request was rejected: it is no longer pending
+      displayStatus: 'SIN_MATERIAL',
     },
   ],
 };
@@ -138,6 +140,7 @@ const requestListItem = {
       label:
         'Protocolo notarial: Notaría Primera del Circuito de Barranquilla, año 1950, escritura 245',
       status: 'PENDIENTE',
+      displayStatus: 'SIN_MATERIAL',
     },
   ],
 };
@@ -147,6 +150,8 @@ const requestDetail = {
   trackingCode: REQUEST_ID,
   status: 'DISPONIBLE',
   allowedTransitions: ['AGENDADA', 'RECHAZADA'],
+  commentRequiredFor: ['RECHAZADA'],
+  canResolveReferences: false,
   deliveryMode: 'PRESENCIAL',
   originChannel: 'WEB',
   reason: 'Consulta histórica sobre la organización del cabildo.',
@@ -190,6 +195,7 @@ const requestDetail = {
       deedNumber: '245',
       description: null,
       status: 'RESUELTA',
+      displayStatus: 'RESUELTA',
       material: {
         id: material.id,
         catalogCode: material.catalogCode,

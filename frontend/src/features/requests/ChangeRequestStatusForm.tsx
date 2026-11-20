@@ -135,13 +135,11 @@ export function ChangeRequestStatusForm({
   );
   // When rejecting, the comment is the reason the requester reads (HU-16)
   const rejecting = selected === 'RECHAZADA';
-  // HU-09.2: delivering with references without material, the comment says
-  // what is delivered and how. Same rule as the backend (Request.markAvailable)
-  const delivering =
-    selected === 'DISPONIBLE' &&
-    request.status === 'EN_BUSQUEDA' &&
-    request.references.some((reference) => reference.status === 'PENDIENTE');
-  const commentRequired = rejecting || delivering;
+  // The entity decides which comments are required (HU-16, HU-09.2)
+  const commentRequired =
+    selected !== '' && request.commentRequiredFor.includes(selected);
+  // Delivering with references without material: says what and how
+  const delivering = commentRequired && selected === 'DISPONIBLE';
 
   function choose(status: RequestStatus) {
     setSelected(status);

@@ -181,3 +181,7 @@
   color: var(--seal-dark);
   font-size: 0.88rem;
 }
+
+.badge[data-status='SIN_MATERIAL'] {
+  color: var(--muted);
+}

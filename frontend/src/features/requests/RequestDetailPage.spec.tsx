@@ -36,7 +36,15 @@ function tokenWithRole(role: string): string {
 }
 
 function detail(overrides: Record<string, unknown> = {}) {
+  // What the backend derives from the entity: the reason of RECHAZADA is
+  // required whenever it is allowed (HU-16)
+  const allowed = (overrides.allowedTransitions ?? [
+    'DISPONIBLE',
+    'ATENDIDA',
+  ]) as string[];
   return {
+    commentRequiredFor: allowed.filter((status) => status === 'RECHAZADA'),
+    canResolveReferences: false,
     id: REQUEST_ID,
     trackingCode: 'SOL-2026-00001',
     status: 'AGENDADA',
@@ -1210,15 +1218,23 @@ describe('RequestDetailPage', () => {
       deedNumber: null,
       description: 'El Heraldo, 15-03-1950',
       status: 'PENDIENTE',
+      displayStatus: 'PENDIENTE',
       material: null,
       resolvedAt: null,
       resolvedBy: null,
     };
+    // The backend asks for the comment of DISPONIBLE while one is pending
     const searching = (references: unknown[] = [pendingReference]) =>
       detail({
         status: 'EN_BUSQUEDA',
         committedDate: null,
         allowedTransitions: ['DISPONIBLE', 'RECHAZADA'],
+        commentRequiredFor: (references as { status: string }[]).some(
+          ({ status }) => status === 'PENDIENTE',
+        )
+          ? ['DISPONIBLE', 'RECHAZADA']
+          : ['RECHAZADA'],
+        canResolveReferences: true,
         materials: [],
         references,
       });
@@ -1263,6 +1279,7 @@ describe('RequestDetailPage', () => {
       const resolvedReference = {
         ...pendingReference,
         status: 'RESUELTA',
+        displayStatus: 'RESUELTA',
         material: {
           id: material.id,
           catalogCode: material.catalogCode,
@@ -1365,6 +1382,25 @@ describe('RequestDetailPage', () => {
       ).toBe(false);
     });
 
+    it('only asks for the comment the backend requires, without deducing the rule', async () => {
+      // A pending reference, but the backend does not list DISPONIBLE
+      fetchMock.mockResolvedValue(
+        ok({ ...searching(), commentRequiredFor: ['RECHAZADA'] }),
+      );
+      const { user } = await open();
+      const statusSection = screen.getByRole('region', {
+        name: 'Cambiar estado',
+      });
+
+      await user.click(
+        within(statusSection).getByRole('radio', { name: 'Disponible' }),
+      );
+
+      expect(
+        within(statusSection).getByLabelText('Comentario (opcional)'),
+      ).toBeInTheDocument();
+    });
+
     it('sends Disponible with the comment that explains the delivery', async () => {
       fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
         Promise.resolve(
@@ -1419,7 +1455,7 @@ describe('RequestDetailPage', () => {
           detail({
             status: 'DISPONIBLE',
             allowedTransitions: ['AGENDADA', 'CERRADA'],
-            references: [pendingReference],
+            references: [{ ...pendingReference, displayStatus: 'SIN_MATERIAL' }],
           }),
         ),
       );
@@ -1433,7 +1469,13 @@ describe('RequestDetailPage', () => {
 
     it('offers no association once the request was rejected', async () => {
       fetchMock.mockResolvedValue(
-        ok(detail({ status: 'RECHAZADA', allowedTransitions: [], references: [pendingReference] })),
+        ok(
+          detail({
+            status: 'RECHAZADA',
+            allowedTransitions: [],
+            references: [{ ...pendingReference, displayStatus: 'SIN_MATERIAL' }],
+          }),
+        ),
       );
 
       const { section } = await open();

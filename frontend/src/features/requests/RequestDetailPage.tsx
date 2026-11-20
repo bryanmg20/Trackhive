@@ -478,8 +478,8 @@ export function RequestDetailPage() {
             {request.references.length > 0 ? (
               <RequestReferencesSection
                 requestId={request.id}
-                status={request.status}
                 references={request.references}
+                canResolveReferences={request.canResolveReferences}
                 onResolved={() => {
                   setDetailVersion((version) => version + 1);
                   setHistoryVersion((version) => version + 1);

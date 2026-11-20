@@ -125,3 +125,7 @@
 .referenceTag[data-status='RESUELTA'] {
   background: var(--success-surface);
 }
+
+.referenceTag[data-status='SIN_MATERIAL'] {
+  color: var(--muted);
+}
