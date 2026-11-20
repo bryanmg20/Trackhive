@@ -14,6 +14,7 @@ Documentos del proyecto en Markdown, con su versión exportada a PDF cuando apli
 | Modelo de datos | `modelo-datos.md` | pendiente (E4) |
 | Modelo de dominio | — | pendiente (E3) |
 | Manual de operación | `manual-operacion.md` | — |
+| Entorno de Everything para desarrollo (HU-133) | `everything-desarrollo.md` | — |
 | Manual de usuario | `manual-usuario.md` | — |
 | Mapa de pantallas y wireframes (HU-46 / HU-152) | [pantallas.md](pantallas.md) · PNG y SVG de escritorio y móvil por pantalla | — |
 | Automatización del tablero | `automatizacion-tablero.md` | — |

@@ -220,6 +220,10 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `SMTP_USER` | Usuario SMTP. Vacío si el servidor no pide autenticación | *(vacío)* |
 | `SMTP_PASSWORD` | Contraseña SMTP | *(vacío)* |
 | `SMTP_FROM` | Remitente de los correos | `"Trackhive <no-reply@example.com>"` |
+| `EVERYTHING_URL` | Servidor HTTP de Everything o su mock ([guía](docs/everything-desarrollo.md)). Es lo único que cambia entre ambos | `http://everything-mock:8081` |
+| `EVERYTHING_USER` | Usuario del servidor HTTP de Everything | `trackhive` |
+| `EVERYTHING_PASSWORD` | Contraseña del servidor HTTP de Everything | `trackhive-dev` |
+| `EVERYTHING_MOCK_PORT` | Puerto local del mock de Everything | `8081` |
 | `DATABASE_URL` | Conexión de Prisma cuando el backend corre fuera de Docker | `postgresql://...@localhost:5432/trackhive?schema=public` |
 
 ## Desarrollo local sin Docker
@@ -286,6 +290,14 @@ Las pruebas e2e del backend necesitan PostgreSQL. Con `docker compose up -d post
 
 Las pruebas e2e del frontend abren cada ruta a 360 px y fallan si aparece desplazamiento horizontal. La Definition of Done completa está en la [plantilla de PR](.github/pull_request_template.md).
 
+```bash
+# Documentos simulados y mock de Everything (desde la raíz; Python 3.10+)
+pip install -r dev/requirements.txt
+python -m unittest discover -s dev/tests -t dev/tests
+```
+
+El CI las corre en Linux y en Windows: los dos deben generar el mismo árbol, y el mock debe responder igual que el Everything real ([guía](docs/everything-desarrollo.md)).
+
 ## Estructura del repositorio
 
 ```text
@@ -305,9 +317,14 @@ Trackhive/
 │   ├── src/styles/          # tokens, breakpoints y estilos globales
 │   ├── e2e/                 # pruebas Playwright
 │   └── nginx.conf           # servidor estático y proxy hacia la API
+├── dev/                     # entorno de Everything sin el CLENA (HU-133)
+│   ├── simulador/           # convención y generador de docs_simulados y del manifiesto
+│   ├── everything-mock/     # mock del servidor HTTP de Everything
+│   ├── fixtures/            # respuestas reales de Everything
+│   └── manifiesto.json      # lo que el parseo debe sacar de cada carpeta hoja
 ├── docs/                    # arquitectura, modelo de datos, manuales y Scrum
 │   └── img/                 # imágenes incrustadas en este README y en los informes
-├── docker-compose.yml       # PostgreSQL, backend, frontend y Mailpit
+├── docker-compose.yml       # PostgreSQL, backend, frontend, Mailpit y el mock de Everything
 ├── .env.example             # plantilla del entorno local
 └── README.md
 ```
@@ -324,6 +341,7 @@ referencia con revisión y validación de G6 pendientes.
 | [`docs/modelo-dominio.md`](docs/modelo-dominio.md) / [`docs/modelo-dominio.pdf`](docs/modelo-dominio.pdf) | Diagrama de clases, estados de la solicitud, reglas de negocio, glosario y casos de uso. |
 | [`docs/modelo-datos.md`](docs/modelo-datos.md) / [`docs/modelo-datos.pdf`](docs/modelo-datos.pdf) | Diagrama entidad-relación, tablas, índices, migraciones y datos personales. |
 | [`docs/manual-operacion.md`](docs/manual-operacion.md) | Operación, variables de entorno, correos, respaldos y diagnóstico. |
+| [`docs/everything-desarrollo.md`](docs/everything-desarrollo.md) | Entorno de Everything con documentos simulados: estructura del CLENA, Everything portable e instalado, fixtures, mock y conexión del backend. |
 | [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía del personal del CLENA (en elaboración). |
 | [`docs/sprint-planning.md`](docs/sprint-planning.md), [`docs/daily-scrum.md`](docs/daily-scrum.md), [`docs/sprint-review.md`](docs/sprint-review.md), [`docs/sprint-retrospective.md`](docs/sprint-retrospective.md) | Ceremonias y evidencias Scrum. |
 | [`docs/evidencias.md`](docs/evidencias.md) | Grabaciones y material recibido de G6. |
