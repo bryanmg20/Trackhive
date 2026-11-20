@@ -2,12 +2,14 @@ import type { Prisma } from '@prisma/client';
 import { isAppointmentStatus } from '../../domain/enums/appointment-status';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isRequestStatus } from '../../domain/enums/request-status';
+import { PrismaRequestReferenceMapper } from './prisma-request-reference.mapper';
 import type {
   AppointmentListItem,
   AppointmentMaterialLoanSummary,
   MaterialDayBooking,
   MaterialRequestCount,
   RequestDetail,
+  RequestDetailReference,
   RequesterProfile,
   RequestHistory,
   RequestListItem,
@@ -15,10 +17,26 @@ import type {
 } from '../../application/ports/request-query.port';
 import type { RequesterRow } from './prisma-requester.mapper';
 
+const REFERENCE_COLUMNS = {
+  id: true,
+  kind: true,
+  notary: true,
+  deedYear: true,
+  deedNumber: true,
+  description: true,
+  status: true,
+  materialId: true,
+} satisfies Prisma.RequestReferenceModelSelect;
+
 /** What the listings and the detail load of a request. */
 export const REQUEST_WITH_REQUESTER_AND_MATERIALS = {
   requester: true,
   items: { include: { material: true } },
+  // Written references (HU-09.2), oldest first
+  references: {
+    select: REFERENCE_COLUMNS,
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  },
 } satisfies Prisma.RequestModelInclude;
 
 /** A row of the «Material más solicitado» query (HU-26). */
@@ -105,6 +123,24 @@ export const APPOINTMENT_LIST_INCLUDE = {
 /** What the detail screen loads of a request (HU-13, HU-72). */
 export const REQUEST_DETAIL_INCLUDE = {
   ...REQUEST_WITH_REQUESTER_AND_MATERIALS,
+  // With the catalog material and who associated it (HU-09.2)
+  references: {
+    select: {
+      ...REFERENCE_COLUMNS,
+      resolvedAt: true,
+      material: { select: { id: true, catalogCode: true, title: true } },
+      resolvedBy: {
+        select: {
+          id: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          secondLastName: true,
+        },
+      },
+    },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  },
   appointments: {
     where: { status: 'PROGRAMADA' },
     orderBy: { createdAt: 'desc' },
@@ -187,6 +223,20 @@ export class PrismaRequestReadMapper {
         catalogCode: material.catalogCode,
         title: material.title,
       })),
+      references: model.references.map((row) =>
+        PrismaRequestReferenceMapper.toReadModel(row),
+      ),
+    };
+  }
+
+  static toDetailReference(
+    row: RequestDetailRow['references'][number],
+  ): RequestDetailReference {
+    return {
+      ...PrismaRequestReferenceMapper.toDomain(row),
+      material: row.material,
+      resolvedAt: row.resolvedAt,
+      resolvedBy: row.resolvedBy,
     };
   }
 
@@ -345,6 +395,9 @@ export class PrismaRequestReadMapper {
         location: PrismaRequestReadMapper.toLocation(material),
         itemStatus,
       })),
+      references: model.references.map((row) =>
+        PrismaRequestReadMapper.toDetailReference(row),
+      ),
       activeAppointment,
     };
   }

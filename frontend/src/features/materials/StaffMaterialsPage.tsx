@@ -264,14 +264,24 @@ export function StaffMaterialsPage() {
             ? '1 material seleccionado'
             : `${selected.length} materiales seleccionados`}
         </p>
-        <button
-          className={searchStyles.primary}
-          type="button"
-          onClick={requestSelected}
-          disabled={selected.length === 0}
-        >
-          Registrar solicitud
-        </button>
+        <div className={searchStyles.requestActions}>
+          {/* HU-09.2: a material not in the catalog is described in writing */}
+          <Link
+            className={searchStyles.requestLink}
+            to={buildStaffNewRequestPath(selected.map((item) => item.id))}
+            state={{ materials: selected }}
+          >
+            ¿No encuentra el material? Descríbalo
+          </Link>
+          <button
+            className={searchStyles.primary}
+            type="button"
+            onClick={requestSelected}
+            disabled={selected.length === 0}
+          >
+            Registrar solicitud
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -523,6 +533,17 @@ export function StaffMaterialsPage() {
               <div className={searchStyles.empty}>
                 <p className={searchStyles.emptyTitle}>
                   No encontramos material con esa búsqueda.
+                </p>
+                <p className={searchStyles.muted}>
+                  ¿Aún no está digitalizado?{' '}
+                  <Link
+                    to={buildStaffNewRequestPath(
+                      selected.map((item) => item.id),
+                    )}
+                    state={{ materials: selected }}
+                  >
+                    Registre la solicitud con una referencia escrita
+                  </Link>
                 </p>
               </div>
             ) : null}

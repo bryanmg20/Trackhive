@@ -1,5 +1,6 @@
 import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
 import { apiUrl } from '../../auth/api/api-base-url';
+import type { RequestListReference } from './material-references';
 
 export const REQUEST_STATUSES = [
   'RECIBIDA',
@@ -35,6 +36,8 @@ export interface RequestListItem {
   requesterName: string;
   requesterEmail: string | null;
   materials: { id: string; catalogCode: string; title: string }[];
+  // Materials not in the catalog, described in writing (HU-09.2)
+  references: RequestListReference[];
 }
 
 export interface RequestPage {
@@ -50,6 +53,8 @@ export interface ListRequestsParams {
   desiredTo?: string;
   requester?: string;
   material?: string;
+  // Only RECIBIDA or EN_BUSQUEDA requests with a reference to resolve (HU-09.2)
+  pendingReferences?: boolean;
   sort: RequestSortField;
   order: SortOrder;
   page: number;
@@ -99,6 +104,7 @@ export async function listRequests(
   if (params.desiredTo) query.set('desiredTo', params.desiredTo);
   if (params.requester) query.set('requester', params.requester);
   if (params.material) query.set('material', params.material);
+  if (params.pendingReferences) query.set('pendingReferences', 'true');
 
   const response = await authenticatedFetch(apiUrl(`/api/v1/requests?${query}`), {
     headers: {

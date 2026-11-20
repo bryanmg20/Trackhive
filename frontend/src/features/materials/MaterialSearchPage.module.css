@@ -316,6 +316,27 @@
   font-size: 0.9rem;
 }
 
+.requestActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem 1rem;
+  min-width: 0;
+}
+
+/* HU-09.2: the way to describe a material that is not in the catalog */
+.requestLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 .searchBar input:focus-visible,
 .group input:focus-visible,
 .sortRow select:focus-visible,

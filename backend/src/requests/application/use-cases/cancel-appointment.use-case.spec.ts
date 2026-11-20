@@ -95,6 +95,7 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
       saveAppointment: jest.fn(),
       rescheduleAppointment: jest.fn(),
       cancelAppointment,
+      saveReferenceResolution: jest.fn(),
     };
     const queries: IRequestQueryService = {
       list: jest.fn(),

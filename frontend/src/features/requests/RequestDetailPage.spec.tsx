@@ -36,7 +36,15 @@ function tokenWithRole(role: string): string {
 }
 
 function detail(overrides: Record<string, unknown> = {}) {
+  // What the backend derives from the entity: the reason of RECHAZADA is
+  // required whenever it is allowed (HU-16)
+  const allowed = (overrides.allowedTransitions ?? [
+    'DISPONIBLE',
+    'ATENDIDA',
+  ]) as string[];
   return {
+    commentRequiredFor: allowed.filter((status) => status === 'RECHAZADA'),
+    canResolveReferences: false,
     id: REQUEST_ID,
     trackingCode: 'SOL-2026-00001',
     status: 'AGENDADA',
@@ -71,6 +79,7 @@ function detail(overrides: Record<string, unknown> = {}) {
         itemStatus: 'LOCALIZADO',
       },
     ],
+    references: [],
     ...overrides,
   };
 }
@@ -335,6 +344,7 @@ describe('RequestDetailPage', () => {
                   requesterName: 'Juan Carlos Pérez',
                   requesterEmail: 'juan@mail.com',
                   materials: [],
+                  references: [],
                 },
               ],
               page: 1,
@@ -1194,6 +1204,285 @@ describe('RequestDetailPage', () => {
         }),
       ).toBeInTheDocument();
       expect(screen.getByText(/por Ana Gómez/)).toBeInTheDocument();
+    });
+  });
+
+  describe('written references (HU-09.2)', () => {
+    const REFERENCE_ID = '9b1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f';
+    const pendingReference = {
+      id: REFERENCE_ID,
+      kind: 'TEXTO_LIBRE',
+      label: 'El Heraldo, 15-03-1950',
+      notary: null,
+      year: null,
+      deedNumber: null,
+      description: 'El Heraldo, 15-03-1950',
+      status: 'PENDIENTE',
+      displayStatus: 'PENDIENTE',
+      material: null,
+      resolvedAt: null,
+      resolvedBy: null,
+    };
+    // The backend asks for the comment of DISPONIBLE while one is pending
+    const searching = (references: unknown[] = [pendingReference]) =>
+      detail({
+        status: 'EN_BUSQUEDA',
+        committedDate: null,
+        allowedTransitions: ['DISPONIBLE', 'RECHAZADA'],
+        commentRequiredFor: (references as { status: string }[]).some(
+          ({ status }) => status === 'PENDIENTE',
+        )
+          ? ['DISPONIBLE', 'RECHAZADA']
+          : ['RECHAZADA'],
+        canResolveReferences: true,
+        materials: [],
+        references,
+      });
+
+    async function open() {
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
+      const user = userEvent.setup();
+      renderAt(`/solicitudes/${REQUEST_ID}`, 'PERSONAL');
+      const section = await screen.findByRole('region', {
+        name: 'Referencias de material no catalogado',
+      });
+      return { user, section };
+    }
+
+    it('shows each reference with its status and explains what blocks the request', async () => {
+      fetchMock.mockResolvedValue(ok(searching()));
+
+      const { section } = await open();
+
+      expect(within(section).getByText('El Heraldo, 15-03-1950')).toBeInTheDocument();
+      expect(within(section).getByText('Pendiente')).toBeInTheDocument();
+      expect(within(section).getByRole('note')).toHaveTextContent(
+        'explicando en el comentario qué se entrega y cómo',
+      );
+      expect(
+        screen.getByText(/Aún no hay material del catálogo/),
+      ).toBeInTheDocument();
+    });
+
+    it('associates the catalog material found by the staff and reloads the request', async () => {
+      const material = {
+        id: 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc',
+        catalogCode: 'TH-PER-0101',
+        title: 'El Heraldo, 15-03-1950',
+        materialType: 'PERIODICO',
+        author: null,
+        collection: 'Prensa',
+        status: 'DISPONIBLE',
+      };
+      const resolvedReference = {
+        ...pendingReference,
+        status: 'RESUELTA',
+        displayStatus: 'RESUELTA',
+        material: {
+          id: material.id,
+          catalogCode: material.catalogCode,
+          title: material.title,
+        },
+        resolvedAt: '2026-11-20T15:00:00.000Z',
+        resolvedBy: { id: 'staff-1', name: 'Ana Gómez' },
+      };
+      let resolved = false;
+      fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+        if (url.startsWith('/api/v1/materials')) {
+          return Promise.resolve(
+            ok({ items: [material], page: 1, limit: 10, total: 1 }),
+          );
+        }
+        if (init?.method === 'PATCH') {
+          resolved = true;
+          return Promise.resolve(
+            ok({
+              requestId: REQUEST_ID,
+              reference: resolvedReference,
+              historyEntry: {
+                previousStatus: 'EN_BUSQUEDA',
+                newStatus: 'EN_BUSQUEDA',
+                changedAt: '2026-11-20T15:00:00.000Z',
+                changedBy: { id: 'staff-1', name: 'Ana Gómez' },
+                comment: 'Referencia asociada',
+              },
+            }),
+          );
+        }
+        return Promise.resolve(
+          ok(searching([resolved ? resolvedReference : pendingReference])),
+        );
+      });
+      const { user, section } = await open();
+
+      await user.click(
+        within(section).getByRole('button', {
+          name: 'Asociar material a El Heraldo, 15-03-1950',
+        }),
+      );
+      expect(
+        within(section).getByLabelText('Buscar el material en el catálogo'),
+      ).toHaveValue('El Heraldo, 15-03-1950');
+      await user.click(within(section).getByRole('button', { name: 'Buscar' }));
+      await user.click(
+        await within(section).findByRole('button', {
+          name: `Asociar ${material.title}`,
+        }),
+      );
+
+      expect(
+        await within(section).findByText(/Material asociado: TH-PER-0101/),
+      ).toHaveTextContent('por Ana Gómez');
+      const patch = fetchMock.mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
+      ) as [string, RequestInit];
+      expect(patch[0]).toBe(
+        `/api/v1/requests/${REQUEST_ID}/references/${REFERENCE_ID}`,
+      );
+      expect(JSON.parse(patch[1].body as string)).toEqual({
+        materialId: material.id,
+      });
+      // The history reloads to show who associated it
+      await waitFor(() => expect(historyMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('asks next to the field what is delivered before Disponible with a reference without material', async () => {
+      fetchMock.mockResolvedValue(ok(searching()));
+      const { user } = await open();
+      const statusSection = screen.getByRole('region', {
+        name: 'Cambiar estado',
+      });
+
+      await user.click(
+        within(statusSection).getByRole('radio', { name: 'Disponible' }),
+      );
+      expect(
+        within(statusSection).getByLabelText(
+          'Qué se entrega y cómo (obligatorio)',
+        ),
+      ).toHaveAttribute('aria-required', 'true');
+      await user.click(
+        within(statusSection).getByRole('button', { name: 'Guardar cambio' }),
+      );
+
+      expect(await within(statusSection).findByRole('alert')).toHaveTextContent(
+        'explique qué se entrega y cómo',
+      );
+      expect(
+        within(statusSection).getByLabelText(
+          'Qué se entrega y cómo (obligatorio)',
+        ),
+      ).toHaveFocus();
+      expect(
+        fetchMock.mock.calls.some(
+          ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
+        ),
+      ).toBe(false);
+    });
+
+    it('only asks for the comment the backend requires, without deducing the rule', async () => {
+      // A pending reference, but the backend does not list DISPONIBLE
+      fetchMock.mockResolvedValue(
+        ok({ ...searching(), commentRequiredFor: ['RECHAZADA'] }),
+      );
+      const { user } = await open();
+      const statusSection = screen.getByRole('region', {
+        name: 'Cambiar estado',
+      });
+
+      await user.click(
+        within(statusSection).getByRole('radio', { name: 'Disponible' }),
+      );
+
+      expect(
+        within(statusSection).getByLabelText('Comentario (opcional)'),
+      ).toBeInTheDocument();
+    });
+
+    it('sends Disponible with the comment that explains the delivery', async () => {
+      fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === 'PATCH'
+            ? ok({
+                id: REQUEST_ID,
+                status: 'DISPONIBLE',
+                allowedTransitions: ['AGENDADA', 'CERRADA'],
+                rejectionReason: null,
+                statusChange: {
+                  previousStatus: 'EN_BUSQUEDA',
+                  newStatus: 'DISPONIBLE',
+                  changedAt: '2026-11-20T15:00:00.000Z',
+                  changedBy: { id: 'staff-1', name: 'Ana Gómez' },
+                  comment: 'Localizada en físico, se consulta en sala',
+                },
+              })
+            : ok(searching()),
+        ),
+      );
+      const { user } = await open();
+      const statusSection = screen.getByRole('region', {
+        name: 'Cambiar estado',
+      });
+
+      await user.click(
+        within(statusSection).getByRole('radio', { name: 'Disponible' }),
+      );
+      await user.type(
+        within(statusSection).getByLabelText(
+          'Qué se entrega y cómo (obligatorio)',
+        ),
+        'Localizada en físico, se consulta en sala',
+      );
+      await user.click(
+        within(statusSection).getByRole('button', { name: 'Guardar cambio' }),
+      );
+
+      expect(await within(statusSection).findByRole('status')).toBeInTheDocument();
+      const patch = fetchMock.mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
+      ) as [string, RequestInit];
+      expect(JSON.parse(patch[1].body as string)).toEqual({
+        status: 'DISPONIBLE',
+        comment: 'Localizada en físico, se consulta en sala',
+      });
+    });
+
+    it('shows a reference without material as such once the request left En búsqueda', async () => {
+      fetchMock.mockResolvedValue(
+        ok(
+          detail({
+            status: 'DISPONIBLE',
+            allowedTransitions: ['AGENDADA', 'CERRADA'],
+            references: [{ ...pendingReference, displayStatus: 'SIN_MATERIAL' }],
+          }),
+        ),
+      );
+
+      const { section } = await open();
+
+      expect(within(section).getByText('Sin material asociado')).toBeInTheDocument();
+      expect(within(section).queryByText('Pendiente')).not.toBeInTheDocument();
+      expect(within(section).queryByRole('note')).not.toBeInTheDocument();
+    });
+
+    it('offers no association once the request was rejected', async () => {
+      fetchMock.mockResolvedValue(
+        ok(
+          detail({
+            status: 'RECHAZADA',
+            allowedTransitions: [],
+            references: [{ ...pendingReference, displayStatus: 'SIN_MATERIAL' }],
+          }),
+        ),
+      );
+
+      const { section } = await open();
+
+      expect(
+        within(section).queryByRole('button', { name: /Asociar material/ }),
+      ).not.toBeInTheDocument();
     });
   });
 });

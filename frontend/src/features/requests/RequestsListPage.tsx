@@ -10,6 +10,7 @@ import {
   REQUEST_STATUSES,
   RequestsApiError,
 } from './api/list-requests';
+import { REFERENCE_DISPLAY_STATUS_LABELS } from './api/material-references';
 import type {
   ListRequestsParams,
   RequestPage,
@@ -123,6 +124,15 @@ export function RequestsListPage() {
     }));
   }
 
+  // HU-09.2: RECIBIDA or EN_BUSQUEDA requests with a reference to resolve
+  function changePendingReferences(pendingReferences: boolean) {
+    setParams((current) => ({
+      ...current,
+      pendingReferences: pendingReferences || undefined,
+      page: 1,
+    }));
+  }
+
   // Dates apply as soon as they change, like the status; text waits for «Buscar»
   function changeDate(field: 'desiredFrom' | 'desiredTo', value: string) {
     if (field === 'desiredFrom') setDesiredFrom(value);
@@ -166,6 +176,7 @@ export function RequestsListPage() {
     params.desiredTo ||
     params.requester ||
     params.material ||
+    params.pendingReferences ||
     requester ||
     material,
   );
@@ -251,6 +262,23 @@ export function RequestsListPage() {
                 </label>
               ))}
             </fieldset>
+
+            <div className={searchStyles.group}>
+              <label className={searchStyles.option}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(params.pendingReferences)}
+                  onChange={(event) =>
+                    changePendingReferences(event.target.checked)
+                  }
+                />
+                Con referencias por resolver (Recibida o En búsqueda)
+              </label>
+              <p className={searchStyles.hint}>
+                Material no catalogado al que aún se le puede asociar el del
+                catálogo.
+              </p>
+            </div>
 
             <div className={searchStyles.group}>
               <label htmlFor="request-material">Material</label>
@@ -413,6 +441,19 @@ export function RequestsListPage() {
                         <ul className={styles.materials}>
                           {item.materials.map((material) => (
                             <li key={material.id}>{material.title}</li>
+                          ))}
+                          {item.references.map((reference) => (
+                            <li key={reference.id}>
+                              {reference.label}{' '}
+                              <span
+                                className={styles.referenceTag}
+                                data-status={reference.displayStatus}
+                              >
+                                {`Referencia: ${REFERENCE_DISPLAY_STATUS_LABELS[
+                                  reference.displayStatus
+                                ].toLowerCase()}`}
+                              </span>
+                            </li>
                           ))}
                         </ul>
                       </td>

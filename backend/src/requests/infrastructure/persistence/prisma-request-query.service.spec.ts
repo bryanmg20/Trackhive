@@ -107,6 +107,7 @@ describe('PrismaRequestQueryService', () => {
                 },
               },
             ],
+            references: [],
           },
         ],
         1,
@@ -224,6 +225,25 @@ describe('PrismaRequestQueryService', () => {
       });
     });
 
+    it('keeps only the RECIBIDA or EN_BUSQUEDA requests with a reference to resolve (HU-09.2)', async () => {
+      const prisma = buildListPrisma();
+
+      await new PrismaRequestQueryService(
+        prisma as unknown as PrismaService,
+      ).list({ ...baseCriteria, pendingReferences: true });
+
+      expect(prisma.requestModel.count).toHaveBeenCalledWith({
+        where: {
+          AND: [
+            {
+              status: { in: ['RECIBIDA', 'EN_BUSQUEDA'] },
+              references: { some: { status: 'PENDIENTE' } },
+            },
+          ],
+        },
+      });
+    });
+
     describe('listByRequesterUser (HU-11)', () => {
       it("only counts and pages the requests of the user's requester", async () => {
         const prisma = buildListPrisma();
@@ -329,6 +349,21 @@ describe('PrismaRequestQueryService', () => {
           },
         },
       ],
+      references: [
+        {
+          id: 'reference-1',
+          kind: 'PROTOCOLO_NOTARIAL',
+          notary: 'Notaría Primera',
+          deedYear: 1950,
+          deedNumber: '245',
+          description: null,
+          status: 'PENDIENTE',
+          materialId: null,
+          resolvedAt: null,
+          material: null,
+          resolvedBy: null,
+        },
+      ],
     };
 
     const repositoryWith = (found: unknown) => {
@@ -351,6 +386,21 @@ describe('PrismaRequestQueryService', () => {
           items: { include: { material: true } },
         }) as unknown,
       });
+      expect(detail?.references).toEqual([
+        {
+          id: 'reference-1',
+          kind: 'PROTOCOLO_NOTARIAL',
+          notary: 'Notaría Primera',
+          year: 1950,
+          deedNumber: '245',
+          description: null,
+          status: 'PENDIENTE',
+          materialId: null,
+          material: null,
+          resolvedAt: null,
+          resolvedBy: null,
+        },
+      ]);
       expect(detail).toMatchObject({
         trackingCode: 'SOL-2026-00001',
         requester: { firstName: 'Juan', email: 'juan@mail.com' },

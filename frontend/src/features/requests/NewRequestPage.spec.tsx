@@ -150,4 +150,47 @@ describe('NewRequestPage', () => {
     );
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
+
+  it('files a request with only a written reference when the material is not in the catalog (HU-09.2)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 'request-1',
+        trackingCode: 'SOL-2026-00002',
+        status: 'RECIBIDA',
+      }),
+    });
+    renderPage('/solicitudes/nueva');
+
+    await user.click(screen.getByLabelText('Otro material'));
+    await user.type(
+      screen.getByLabelText('Descripción del material'),
+      'El Heraldo, 15-03-1950',
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Agregar referencia' }),
+    );
+    expect(
+      screen.getByRole('list', { name: 'Referencias agregadas' }),
+    ).toHaveTextContent('El Heraldo, 15-03-1950');
+
+    await user.type(
+      screen.getByLabelText('Motivo de la consulta'),
+      'Consulta para investigación',
+    );
+    fireEvent.change(screen.getByLabelText('Fecha deseada'), {
+      target: { value: '2026-11-23' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Enviar solicitud' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'SOL-2026-00002',
+    );
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      materialIds: [],
+      references: [{ kind: 'TEXTO_LIBRE', description: 'El Heraldo, 15-03-1950' }],
+    });
+  });
 });

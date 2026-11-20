@@ -44,6 +44,7 @@ const buildDetail = (
       itemStatus: 'LOCALIZADO',
     },
   ],
+  references: [],
   ...overrides,
 });
 
@@ -143,6 +144,80 @@ describe('GetRequestDetailUseCase', () => {
       expect(result.allowedTransitions).toEqual(expected);
     },
   );
+
+  describe('written references (HU-09.2)', () => {
+    const reference = (
+      status: 'PENDIENTE' | 'RESUELTA',
+    ): RequestDetail['references'][number] => ({
+      id: 'reference-1',
+      kind: 'TEXTO_LIBRE',
+      notary: null,
+      year: null,
+      deedNumber: null,
+      description: 'El Heraldo, 15-03-1950',
+      status,
+      materialId: status === 'RESUELTA' ? 'material-9' : null,
+      material:
+        status === 'RESUELTA'
+          ? {
+              id: 'material-9',
+              catalogCode: 'TH-PER-0101',
+              title: 'El Heraldo',
+            }
+          : null,
+      resolvedAt: null,
+      resolvedBy: null,
+    });
+
+    it('asks for the comment of DISPONIBLE when EN_BUSQUEDA has a reference without material', async () => {
+      findById.mockResolvedValue(
+        buildDetail({
+          status: 'EN_BUSQUEDA',
+          references: [reference('PENDIENTE')],
+        }),
+      );
+
+      const result = await useCase.execute({ id: 'request-1' });
+
+      expect(result.commentRequiredFor).toEqual(['DISPONIBLE', 'RECHAZADA']);
+      expect(result.canResolveReferences).toBe(true);
+      expect(result.references[0]).toMatchObject({
+        displayStatus: 'PENDIENTE',
+      });
+    });
+
+    it('only asks for the reason of RECHAZADA once every reference is resolved', async () => {
+      findById.mockResolvedValue(
+        buildDetail({
+          status: 'EN_BUSQUEDA',
+          references: [reference('RESUELTA')],
+        }),
+      );
+
+      const result = await useCase.execute({ id: 'request-1' });
+
+      expect(result.commentRequiredFor).toEqual(['RECHAZADA']);
+      expect(result.references[0]).toMatchObject({ displayStatus: 'RESUELTA' });
+    });
+
+    it('shows a reference without material as SIN_MATERIAL past EN_BUSQUEDA, without association', async () => {
+      findById.mockResolvedValue(
+        buildDetail({
+          status: 'DISPONIBLE',
+          references: [reference('PENDIENTE')],
+        }),
+      );
+
+      const result = await useCase.execute({ id: 'request-1' });
+
+      expect(result.canResolveReferences).toBe(false);
+      expect(result.commentRequiredFor).toEqual([]);
+      expect(result.references[0]).toMatchObject({
+        status: 'PENDIENTE',
+        displayStatus: 'SIN_MATERIAL',
+      });
+    });
+  });
 
   it('throws RequestNotFoundError when the request does not exist', async () => {
     findById.mockResolvedValue(null);

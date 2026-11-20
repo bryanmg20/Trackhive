@@ -8,6 +8,7 @@ import { Request } from '../../domain/entities/request.entity';
 import { AppointmentNotFoundError } from '../../domain/errors/appointment-not-found.error';
 import { AppointmentNotScheduledError } from '../../domain/errors/appointment-not-scheduled.error';
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
+import { MaterialReferenceAlreadyResolvedError } from '../../domain/errors/material-reference-already-resolved.error';
 import { RequestStatusConflictError } from '../../domain/errors/request-status-conflict.error';
 import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
 import {
@@ -21,6 +22,10 @@ import {
 } from '../../domain/policies/room-capacity';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import type {
+  ReferenceResolution,
+  SavedReferenceResolution,
+} from '../../domain/value-objects/reference-resolution';
+import type {
   SavedAppointment,
   SavedCancelledAppointment,
   StoredAppointment,
@@ -29,6 +34,10 @@ import type { SavedStatusChange } from '../../domain/value-objects/saved-status-
 import type { StatusChange } from '../../domain/value-objects/status-change';
 import { PrismaAppointmentMapper } from '../mappers/prisma-appointment.mapper';
 import { PrismaRequestMapper } from '../mappers/prisma-request.mapper';
+import {
+  PrismaRequestReferenceMapper,
+  REQUEST_REFERENCE_SELECT,
+} from '../mappers/prisma-request-reference.mapper';
 import { PrismaStatusHistoryMapper } from '../mappers/prisma-status-history.mapper';
 import { findSchedulingConflicts } from './scheduling-conflicts.query';
 
@@ -68,9 +77,56 @@ export class PrismaRequestRepository implements IRequestRepository {
   async findById(id: string): Promise<Request | null> {
     const model = await this.prisma.requestModel.findUnique({
       where: { id },
-      include: { items: { select: { materialId: true } } },
+      include: {
+        items: { select: { materialId: true } },
+        references: { select: REQUEST_REFERENCE_SELECT },
+      },
     });
     return model ? PrismaRequestMapper.toDomain(model) : null;
+  }
+
+  async saveReferenceResolution(
+    resolution: ReferenceResolution,
+  ): Promise<SavedReferenceResolution> {
+    // The reference, the material in the request and the history row are
+    // saved together or not at all (HU-09.2, D-08)
+    return this.prisma.$transaction(async (tx) => {
+      // Only a reference still PENDIENTE: if another person resolved it
+      // first, nothing is written
+      const { count } = await tx.requestReferenceModel.updateMany({
+        where: {
+          id: resolution.referenceId,
+          requestId: resolution.requestId,
+          status: 'PENDIENTE',
+        },
+        data: PrismaRequestReferenceMapper.toResolved(resolution),
+      });
+      if (count === 0) {
+        throw new MaterialReferenceAlreadyResolvedError();
+      }
+
+      // The material joins the request, so the appointment books it; it may
+      // already be there (another reference or chosen from the catalog)
+      await tx.requestItemModel.createMany({
+        data: [
+          PrismaRequestReferenceMapper.toRequestItem(resolution, randomUUID()),
+        ],
+        skipDuplicates: true,
+      });
+
+      // Same status: the optimistic lock still stops a concurrent change
+      const historyEntry = await this.applyStatusChange(
+        tx,
+        resolution.historyEntry,
+        null,
+      );
+
+      const row = await tx.requestReferenceModel.findUniqueOrThrow({
+        where: { id: resolution.referenceId },
+        select: { ...REQUEST_REFERENCE_SELECT, resolvedAt: true },
+      });
+      return PrismaRequestReferenceMapper.toSavedResolution(row, historyEntry);
+    });
   }
 
   async findAppointmentById(id: string): Promise<StoredAppointment | null> {
@@ -82,7 +138,10 @@ export class PrismaRequestRepository implements IRequestRepository {
         status: true,
         materials: { select: { materialId: true } },
         request: {
-          include: { items: { select: { materialId: true } } },
+          include: {
+            items: { select: { materialId: true } },
+            references: { select: REQUEST_REFERENCE_SELECT },
+          },
         },
       },
     });

@@ -5,6 +5,7 @@ import {
   networkRequestApiError,
   readRequestApiError,
 } from './request-api-error';
+import type { MaterialReferencePayload } from './material-references';
 
 export type DeliveryMode = 'PRESENCIAL' | 'DIGITAL';
 
@@ -27,6 +28,8 @@ export interface RequesterPayload {
 
 export interface CreateRequestOnBehalfInput {
   materialIds: string[];
+  // At least one material or one reference (RN-04, HU-09.2)
+  references: MaterialReferencePayload[];
   reason: string;
   desiredDate: string;
   deliveryMode: DeliveryMode;

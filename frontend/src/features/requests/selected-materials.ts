@@ -10,6 +10,10 @@ export interface SelectedMaterial {
 export const MATERIALS_QUERY_PARAM = 'materiales';
 
 function buildRequestPath(route: string, materialIds: string[]): string {
+  // No materials: only written references (HU-09.2), so no empty parameter
+  if (materialIds.length === 0) {
+    return route;
+  }
   // Commas are kept literal so the URL stays readable (URLSearchParams would encode them)
   const value = materialIds.map(encodeURIComponent).join(',');
   return `${route}?${MATERIALS_QUERY_PARAM}=${value}`;

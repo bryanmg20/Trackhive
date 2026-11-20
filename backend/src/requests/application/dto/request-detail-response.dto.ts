@@ -6,6 +6,7 @@ import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import { REQUEST_STATUSES } from '../../domain/enums/request-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
 import { AppointmentMaterialLoanDto } from './appointment-list-response.dto';
+import { RequestReferenceDto } from './request-reference-response.dto';
 import { AppointmentServiceHoursDto } from './schedule-appointment-response.dto';
 
 export class RequestDetailRequesterDto {
@@ -138,6 +139,18 @@ export class RequestDetailResponseDto {
   })
   allowedTransitions: RequestStatus[];
 
+  @ApiProperty({
+    description:
+      'Transiciones permitidas cuyo comentario es obligatorio, según la ' +
+      'entidad: RECHAZADA (el motivo, HU-16) y DISPONIBLE cuando la ' +
+      'solicitud está EN_BUSQUEDA con referencias sin material asociado ' +
+      '(HU-09.2).',
+    enum: REQUEST_STATUSES,
+    isArray: true,
+    example: ['DISPONIBLE', 'RECHAZADA'],
+  })
+  commentRequiredFor: RequestStatus[];
+
   @ApiProperty({ enum: DELIVERY_MODES })
   deliveryMode: DeliveryMode;
 
@@ -178,6 +191,21 @@ export class RequestDetailResponseDto {
 
   @ApiProperty({ type: [RequestDetailMaterialDto] })
   materials: RequestDetailMaterialDto[];
+
+  @ApiProperty({
+    description:
+      'Materiales que no están en el catálogo, descritos por escrito, con su estado y el material asociado (HU-09.2). Una PENDIENTE no bloquea: de EN_BUSQUEDA a DISPONIBLE solo exige un comentario que explique qué se entrega y cómo.',
+    type: [RequestReferenceDto],
+  })
+  references: RequestReferenceDto[];
+
+  @ApiProperty({
+    description:
+      'Si el personal aún puede asociar material a sus referencias: solo ' +
+      'con la solicitud RECIBIDA o EN_BUSQUEDA (HU-09.2)',
+    example: true,
+  })
+  canResolveReferences: boolean;
 
   @ApiProperty({
     description:

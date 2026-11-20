@@ -3,6 +3,8 @@ import { Request } from '../../domain/entities/request.entity';
 import type { OriginChannel } from '../../domain/entities/request.entity';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isRequestStatus } from '../../domain/enums/request-status';
+import { PrismaRequestReferenceMapper } from './prisma-request-reference.mapper';
+import type { RequestReferenceRow } from './prisma-request-reference.mapper';
 import { PrismaStatusHistoryMapper } from './prisma-status-history.mapper';
 
 /** The columns of a request that the entity needs, with its materials. */
@@ -19,6 +21,9 @@ export interface RequestEntityRow {
   desiredDate: Date;
   rejectionReason: string | null;
   items: { materialId: string }[];
+  // Written references (HU-09.2). Required: without them hasPendingReferences
+  // would be false and the rule of the delivery comment would be skipped
+  references: RequestReferenceRow[];
 }
 
 /** Translates between the Request entity and the requests table. */
@@ -42,12 +47,16 @@ export class PrismaRequestMapper {
         desiredDate: model.desiredDate,
         materialIds: model.items.map(({ materialId }) => materialId),
       },
+      references: model.references.map((row) =>
+        PrismaRequestReferenceMapper.toDomain(row),
+      ),
     });
   }
 
   /**
-   * A new request, with one item per material (HU-09, HU-10) and the first
-   * row of its history (HU-17), all in the same insert.
+   * A new request, with one item per material (HU-09, HU-10), its written
+   * references (HU-09.2) and the first row of its history (HU-17), all in
+   * the same insert.
    */
   static toPersistence(
     request: Request,
@@ -77,6 +86,11 @@ export class PrismaRequestMapper {
           itemStatus: 'PENDIENTE',
           accessType: 'FISICO',
         })),
+      },
+      references: {
+        create: request.references.map((reference) =>
+          PrismaRequestReferenceMapper.toPersistence(reference),
+        ),
       },
       statusHistory: {
         create: PrismaStatusHistoryMapper.toCreationRow(request),

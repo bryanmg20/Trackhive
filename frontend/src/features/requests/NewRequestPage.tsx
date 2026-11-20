@@ -4,6 +4,8 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
 import { createRequest } from './api/create-request';
+import type { MaterialReferencePayload } from './api/material-references';
+import { MaterialReferencesEditor } from './MaterialReferencesEditor';
 import { readMaterialIds } from './selected-materials';
 import type { SelectedMaterial } from './selected-materials';
 import styles from './NewRequestPage.module.css';
@@ -27,6 +29,9 @@ export function NewRequestPage() {
         catalogCode: id,
       },
   );
+  const [references, setReferences] = useState<MaterialReferencePayload[]>(
+    [],
+  );
   const [reason, setReason] = useState('');
   const [desiredDate, setDesiredDate] = useState('');
   const [deliveryMode, setDeliveryMode] = useState<'PRESENCIAL' | 'DIGITAL'>(
@@ -44,6 +49,7 @@ export function NewRequestPage() {
     try {
       const result = await createRequest({
         materialIds: selectedMaterialIds,
+        references,
         reason,
         desiredDate,
         deliveryMode,
@@ -67,8 +73,9 @@ export function NewRequestPage() {
           <p className={styles.eyebrow}>Consulta documental</p>
           <h1 className={styles.title}>Radicar solicitud</h1>
           <p className={styles.intro}>
-            Revise los materiales elegidos y complete la solicitud. Sus datos
-            se obtienen de la cuenta con la que inició sesión.
+            Revise los materiales elegidos y complete la solicitud. Si un
+            documento no está en el buscador, descríbalo con una referencia.
+            Sus datos se obtienen de la cuenta con la que inició sesión.
           </p>
         </header>
 
@@ -95,7 +102,7 @@ export function NewRequestPage() {
           ) : (
             <p className={styles.intro}>
               Aún no ha elegido materiales. Búsquelos en el archivo y pulse
-              «Solicitar».
+              «Solicitar», o describa abajo el que no encuentra.
             </p>
           )}
           <Link className={styles.backLink} to={ROUTES.materials}>
@@ -103,9 +110,15 @@ export function NewRequestPage() {
               ? 'Cambiar materiales en el buscador'
               : 'Ir al buscador de material'}
           </Link>
+          <MaterialReferencesEditor
+            idPrefix="public-reference"
+            references={references}
+            onChange={setReferences}
+            disabled={isSubmitting}
+          />
         </section>
 
-        {selectedMaterials.length > 0 ? (
+        {selectedMaterials.length > 0 || references.length > 0 ? (
           <form className={styles.requestForm} onSubmit={submit}>
             <div className={styles.field}>
               <label htmlFor="request-reason">Motivo de la consulta</label>
@@ -174,7 +187,10 @@ export function NewRequestPage() {
             <button
               className={styles.submit}
               type="submit"
-              disabled={isSubmitting || selectedMaterialIds.length === 0}
+              disabled={
+                isSubmitting ||
+                (selectedMaterialIds.length === 0 && references.length === 0)
+              }
             >
               {isSubmitting ? 'Enviando…' : 'Enviar solicitud'}
             </button>

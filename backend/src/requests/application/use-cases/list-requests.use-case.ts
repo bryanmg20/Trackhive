@@ -25,6 +25,7 @@ export class ListRequestsUseCase {
       desiredTo: input.desiredTo,
       requester: input.requester,
       material: input.material,
+      pendingReferences: input.pendingReferences,
       // Newest first by default, so the staff sees what just arrived
       sort: input.sort ?? 'registeredAt',
       order: input.order ?? 'desc',

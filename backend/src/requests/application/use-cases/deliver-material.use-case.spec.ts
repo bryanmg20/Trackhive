@@ -76,6 +76,7 @@ describe('DeliverMaterialUseCase', () => {
       saveAppointment: jest.fn(),
       rescheduleAppointment: jest.fn(),
       cancelAppointment: jest.fn(),
+      saveReferenceResolution: jest.fn(),
     };
     const loanRepo: IMaterialLoanRepository = {
       deliverMaterial,

@@ -74,6 +74,7 @@ describe('Request registration (e2e)', () => {
     saveAppointment: jest.fn(),
     rescheduleAppointment: jest.fn(),
     cancelAppointment: jest.fn(),
+    saveReferenceResolution: jest.fn(),
     findSchedulingConflicts: jest.fn().mockResolvedValue({
       materials: [],
       bookedMaterials: [],
@@ -250,6 +251,87 @@ describe('Request registration (e2e)', () => {
         statusCode: 400,
         code: 'INVALID_DESIRED_DATE',
       });
+    });
+  });
+
+  describe('written references of a material not in the catalog (HU-09.2)', () => {
+    const REFERENCE_PATH = `${REQUESTS_PATH}/c3f6c8f0-1c2b-4e3d-8f4a-123456789abc/references/9b1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f`;
+
+    it('accepts a request with only a free text reference', async () => {
+      await request(server)
+        .post(REQUESTS_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({
+          ...validBody(),
+          materialIds: [],
+          references: [
+            { kind: 'TEXTO_LIBRE', description: 'El Heraldo, 15-03-1950' },
+          ],
+        })
+        .expect(201);
+    });
+
+    it('rejects a request without materials nor references with 400 and REQUEST_MATERIALS_REQUIRED', async () => {
+      const response = await request(server)
+        .post(REQUESTS_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({ ...validBody(), materialIds: [] })
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'REQUEST_MATERIALS_REQUIRED',
+      });
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects a notarial reference without its deed number with 400', async () => {
+      const response = await request(server)
+        .post(REQUESTS_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({
+          ...validBody(),
+          references: [
+            { kind: 'PROTOCOLO_NOTARIAL', notary: 'Notaría 1', year: 1950 },
+          ],
+        })
+        .expect(400);
+
+      expect((response.body as ErrorBody).code).toBe('VALIDATION_ERROR');
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects associating a material without access token with 401', async () => {
+      await request(server)
+        .patch(REFERENCE_PATH)
+        .send({ materialId: 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc' })
+        .expect(401);
+    });
+
+    it('rejects a public user associating a material with 403', async () => {
+      await request(server)
+        .patch(REFERENCE_PATH)
+        .set('Authorization', `Bearer ${accessToken('PUBLICO')}`)
+        .send({ materialId: 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc' })
+        .expect(403);
+      expect(repository.saveReferenceResolution).not.toHaveBeenCalled();
+    });
+
+    it('rejects a material id that is not a UUID with 400', async () => {
+      await request(server)
+        .patch(REFERENCE_PATH)
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .send({ materialId: 'not-a-uuid' })
+        .expect(400);
+      expect(repository.saveReferenceResolution).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invalid pendingReferences filter with 400', async () => {
+      await request(server)
+        .get(REQUESTS_PATH)
+        .query({ pendingReferences: 'maybe' })
+        .set('Authorization', `Bearer ${accessToken('PERSONAL')}`)
+        .expect(400);
     });
   });
 
@@ -487,6 +569,7 @@ describe('Request registration (e2e)', () => {
         documentNumber: null,
       },
       materials: [],
+      references: [],
     };
 
     beforeEach(() => {
@@ -1378,6 +1461,7 @@ describe('Request registration (e2e)', () => {
             materials: [
               { id: 'material-1', catalogCode: 'TH-DOC-0001', title: 'Acta' },
             ],
+            references: [],
           },
         ],
         total: 1,
@@ -1399,6 +1483,7 @@ describe('Request registration (e2e)', () => {
         materials: [
           { id: 'material-1', catalogCode: 'TH-DOC-0001', title: 'Acta' },
         ],
+        references: [],
         rejectionReason: null,
       });
     });
@@ -1422,6 +1507,7 @@ describe('Request registration (e2e)', () => {
               email: 'ana@mail.com',
             },
             materials: [],
+            references: [],
           },
         ],
         total: 1,

@@ -1,6 +1,7 @@
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import type { MaterialReference } from '../../domain/value-objects/material-reference';
 import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
 import type { ReportPeriod } from '../../domain/policies/report-period';
 import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
@@ -39,10 +40,29 @@ export interface RequestListCriteria {
   requester?: string;
   // Free text matched against the title or catalog code of a requested material
   material?: string;
+  // Only RECIBIDA or EN_BUSQUEDA requests with a reference without material (HU-09.2)
+  pendingReferences?: boolean;
   sort: RequestSortField;
   order: SortOrder;
   page: number;
   limit: number;
+}
+
+/**
+ * A written reference of the request as the detail shows it (HU-09.2): its
+ * catalog material, who associated it and when; all null while PENDIENTE.
+ * Whole MaterialReference, so the detail can rebuild the Request with it.
+ */
+export interface RequestDetailReference extends MaterialReference {
+  material: { id: string; catalogCode: string; title: string } | null;
+  resolvedAt: Date | null;
+  resolvedBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  } | null;
 }
 
 /** «Mis solicitudes» (HU-11): only the status filter, the order and the page. */
@@ -68,6 +88,8 @@ export interface RequestListItem {
     email: string | null;
   };
   materials: { id: string; catalogCode: string; title: string }[];
+  // Written references (HU-09.2), oldest first
+  references: Omit<MaterialReference, 'materialId'>[];
 }
 
 export interface RequestListResult {
@@ -147,6 +169,8 @@ export interface RequestDetail {
     location: { depot: string; shelf: string; box: string } | null;
     itemStatus: string;
   }[];
+  // Written references (HU-09.2), oldest first
+  references: RequestDetailReference[];
   activeAppointment?: RequestDetailActiveAppointment | null;
 }
 

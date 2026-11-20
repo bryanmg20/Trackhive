@@ -243,7 +243,11 @@ vacía ofrece buscar material. No enlaza al detalle reservado al personal.
 Resumen de materiales, motivo, fecha deseada y modalidad presencial/digital.
 La fecha exige diez días hábiles de anticipación y atención de lunes a sábado.
 El comprobante muestra el radicado y acceso a WF-06. No se repiten los datos del
-perfil; un error conserva el formulario.
+perfil; un error conserva el formulario. HU-09.2: si el material no aparece en
+la búsqueda (WF-04 ofrece el enlace en «sin resultados»), se agregan una o más
+referencias escritas: protocolo notarial (notaría, año y número de escritura) u
+otro material en texto libre. Se puede radicar solo con referencias; sin
+materiales ni referencias no se envía (RN-04).
 
 ### WF-08 Registro de solicitud por personal
 
@@ -258,6 +262,9 @@ solicitud. Encontrado: reutilizar sus datos. Nuevo: recoger nombres y
 caracterización una sola vez; los datos adicionales siguen siendo opcionales.
 Seleccionar/cambiar material remite a WF-15. Tras guardar, entregar el radicado
 y permitir registrar otra solicitud sin perder la selección de material.
+HU-09.2: igual que en WF-07, el personal puede agregar referencias escritas de
+material que no está en el catálogo (protocolo notarial o texto libre); el
+comprobante indica cuántas quedaron pendientes.
 
 ### WF-09 Listado de solicitudes del personal
 
@@ -267,8 +274,10 @@ y permitir registrar otra solicitud sin perder la selección de material.
 
 ![Listado de solicitudes del personal: composición móvil de 360 px](wireframes/wf-09-listado-personal-movil.png)
 
-Filtros por estado, material, solicitante y fechas; orden, páginas y radicado
-enlazado a WF-10. El acceso de visitante lleva a WF-08. HU-141: consulta cada
+Filtros por estado, material, solicitante, fechas y «con referencias por
+resolver» (HU-09.2: solicitudes Recibida o En búsqueda con alguna referencia
+sin material asociado); la columna de material muestra también las referencias
+con su estado. Orden, páginas y radicado enlazado a WF-10. El acceso de visitante lleva a WF-08. HU-141: consulta cada
 30 segundos y al volver a la pestaña; no consulta oculta, conserva filtros,
 página y scroll y mantiene la tabla durante la actualización. Prever carga
 inicial, error, sin resultados y recuperación de la conexión.
@@ -286,6 +295,16 @@ Solicitante, material, fechas, modalidad y acciones permitidas. Se muestran
 presencial con agendamiento. No son acciones simultáneas de una solicitud.
 AGENDADA solo se alcanza al agendar; una solicitud digital puede pasar a
 ATENDIDA sin cita; los estados finales no ofrecen acciones.
+
+HU-09.2: la sección **«Referencias de material no catalogado»** lista cada
+referencia escrita con su estado: pendiente, resuelta (con el material asociado
+y quién lo asoció) o, si la solicitud ya pasó de en búsqueda, «sin material
+asociado». Mientras la solicitud está recibida o en búsqueda, «Asociar
+material» (opcional) abre una búsqueda en el catálogo, precargada con el texto
+de la referencia. Al pasar de en búsqueda a disponible con referencias sin
+material, el comentario se vuelve obligatorio («Qué se entrega y cómo»): sin
+él, la pantalla lo pide junto al campo y la API responde 400. La cita no se
+bloquea por las referencias.
 
 HU-140 agrega **«COPIA DIGITAL: SÍ / NO»** por material. El personal ve solo el
 nombre de archivo, por ejemplo `ACTA-2024-001.pdf`, nunca ruta ni unidad.

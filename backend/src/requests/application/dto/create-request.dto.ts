@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
-  ArrayMinSize,
+  ArrayMaxSize,
   IsArray,
   IsDateString,
   IsIn,
@@ -10,18 +11,41 @@ import {
   MinLength,
   MaxLength,
   IsUUID,
+  ValidateNested,
 } from 'class-validator';
+import { MaterialReferenceDto } from './material-reference.dto';
+
+// Enough for any real request; it only stops an abusive payload
+const MAX_REFERENCES = 20;
 
 export class CreateRequestDto {
   @ApiProperty({
+    description:
+      'Materiales del catálogo. Puede ir vacío si la solicitud trae al menos una referencia (RN-04).',
     type: [String],
+    required: false,
     example: ['00000000-0000-0000-0000-000000000001'],
   })
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @IsString({ each: true })
   @IsUUID('4', { each: true })
-  materialIds: string[];
+  materialIds?: string[];
+
+  @ApiProperty({
+    description:
+      'Materiales que no están en el catálogo, descritos por escrito (HU-09.2). Debe haber al menos un material o una referencia (RN-04).',
+    type: [MaterialReferenceDto],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_REFERENCES, {
+    message: `No se pueden enviar más de ${MAX_REFERENCES} referencias`,
+  })
+  @ValidateNested({ each: true })
+  @Type(() => MaterialReferenceDto)
+  references?: MaterialReferenceDto[];
 
   @ApiProperty({ example: 'Consulta para un trabajo de investigación' })
   @IsString()

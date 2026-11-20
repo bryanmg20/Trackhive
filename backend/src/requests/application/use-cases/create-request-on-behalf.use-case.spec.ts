@@ -39,6 +39,7 @@ describe('CreateRequestOnBehalfUseCase', () => {
     saveAppointment: jest.fn(),
     rescheduleAppointment: jest.fn(),
     cancelAppointment: jest.fn(),
+    saveReferenceResolution: jest.fn(),
   };
   const findMissingMaterialIds = jest.fn<
     Promise<string[]>,

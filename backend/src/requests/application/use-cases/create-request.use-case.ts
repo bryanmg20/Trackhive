@@ -29,12 +29,22 @@ export class CreateRequestUseCase {
 
   async execute(input: CreateRequestInput): Promise<CreateRequestResponseDto> {
     // RN-03 and RN-04 before looking anything up
-    Request.assertCanBeCreated(input);
+    const materialIds = input.materialIds ?? [];
+    const references = (input.references ?? []).map((reference) => ({
+      ...reference,
+      id: randomUUID(),
+    }));
+    Request.assertCanBeCreated({
+      desiredDate: input.desiredDate,
+      materialIds,
+      references,
+    });
 
     const requester = await this.requesterResolver.forUser(input.userId);
-    const missing = await this.queries.findMissingMaterialIds(
-      input.materialIds,
-    );
+    const missing =
+      materialIds.length > 0
+        ? await this.queries.findMissingMaterialIds(materialIds)
+        : [];
     if (missing.length > 0) {
       throw new RequestMaterialNotFoundError();
     }
@@ -49,7 +59,8 @@ export class CreateRequestUseCase {
       reason: input.reason,
       requirementDescription: input.requirementDescription,
       desiredDate: input.desiredDate,
-      materialIds: input.materialIds,
+      materialIds,
+      references,
     });
     await this.repository.save(request);
 

@@ -4,6 +4,7 @@ import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import { listMyRequests } from './api/list-my-requests';
+import { REFERENCE_DISPLAY_STATUS_LABELS } from './api/material-references';
 import type { ListMyRequestsParams, MyRequestPage } from './api/list-my-requests';
 import {
   REQUEST_STATUS_LABELS,
@@ -300,6 +301,19 @@ export function MyRequestsPage() {
                         <ul className={listStyles.materials}>
                           {item.materials.map((material) => (
                             <li key={material.id}>{material.title}</li>
+                          ))}
+                          {item.references.map((reference) => (
+                            <li key={reference.id}>
+                              {reference.label}{' '}
+                              <span
+                                className={listStyles.referenceTag}
+                                data-status={reference.displayStatus}
+                              >
+                                {REFERENCE_DISPLAY_STATUS_LABELS[
+                                  reference.displayStatus
+                                ]}
+                              </span>
+                            </li>
                           ))}
                         </ul>
                       </td>

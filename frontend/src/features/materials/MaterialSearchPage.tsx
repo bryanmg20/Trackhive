@@ -146,14 +146,24 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
             ? '1 material seleccionado'
             : `${selected.length} materiales seleccionados`}
         </p>
-        <button
-          className={styles.primary}
-          type="button"
-          onClick={requestSelected}
-          disabled={selected.length === 0}
-        >
-          Solicitar
-        </button>
+        <div className={styles.requestActions}>
+          {/* HU-09.2: a material not in the catalog is described in writing */}
+          <Link
+            className={styles.requestLink}
+            to={buildNewRequestPath(selected.map((item) => item.id))}
+            state={{ materials: selected }}
+          >
+            ¿No encuentra el material? Descríbalo
+          </Link>
+          <button
+            className={styles.primary}
+            type="button"
+            onClick={requestSelected}
+            disabled={selected.length === 0}
+          >
+            Solicitar
+          </button>
+        </div>
       </div>
     </div>
   ) : null;
@@ -305,6 +315,17 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                   Pruebe con otras palabras o cambie los filtros de tipo y
                   colección.
                 </p>
+                {canSelect ? (
+                  <p className={styles.muted}>
+                    ¿Aún no está digitalizado?{' '}
+                    <Link
+                      to={buildNewRequestPath(selected.map((item) => item.id))}
+                      state={{ materials: selected }}
+                    >
+                      Solicítelo con una referencia escrita
+                    </Link>
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </div>

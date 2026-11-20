@@ -27,6 +27,7 @@ import { MaterialController } from './presentation/controllers/material.controll
     ReturnMaterialUseCase,
     GetMaterialHistoryUseCase,
   ],
-  exports: [MATERIAL_LOAN_REPOSITORY],
+  // MATERIAL_REPOSITORY: the material of a written reference (HU-09.2)
+  exports: [MATERIAL_LOAN_REPOSITORY, MATERIAL_REPOSITORY],
 })
 export class MaterialsModule {}

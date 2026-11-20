@@ -113,6 +113,20 @@ erDiagram
     varchar access_type "max 10"
     text note "NULL"
   }
+  request_references {
+    uuid id PK
+    uuid request_id FK
+    varchar kind "max 20"
+    varchar notary "max 120; NULL"
+    smallint deed_year "NULL"
+    varchar deed_number "max 20; NULL"
+    varchar description "max 500; NULL"
+    varchar status "max 10"
+    uuid material_id FK "NULL"
+    uuid resolved_by_id FK "NULL"
+    timestamptz resolved_at "NULL"
+    timestamptz created_at
+  }
   status_history {
     bigint id PK
     uuid request_id FK
@@ -190,6 +204,9 @@ erDiagram
   users |o--o{ requests : atiende
   requests ||--|{ request_items : contiene
   materials ||--o{ request_items : solicitado
+  requests ||--o{ request_references : describe
+  materials |o--o{ request_references : resuelve
+  users |o--o{ request_references : asocia
   requests ||--o{ status_history : historial
   users ||--o{ status_history : responsable
   requests ||--o{ appointments : agenda
@@ -214,8 +231,11 @@ erDiagram
 | users – materials | 0..1 : 0..N | `materials.status_changed_by` |
 | requesters – requests | 1 : 0..N | `requests.requester_id` |
 | users – requests | 1 : 0..N (registrada por) y 0..1 : 0..N (atendida por) | `requests.created_by_id`, `requests.assignee_id` |
-| requests – request_items | 1 : 1..N | `request_items.request_id` |
+| requests – request_items | 1 : 0..N (sin ítems solo si trae referencias, RN-04) | `request_items.request_id` |
 | materials – request_items | 1 : 0..N | `request_items.material_id` |
+| requests – request_references | 1 : 0..N | `request_references.request_id` |
+| materials – request_references | 0..1 : 0..N | `request_references.material_id` |
+| users – request_references | 0..1 : 0..N | `request_references.resolved_by_id` |
 | requests – status_history | 1 : 1..N | `status_history.request_id` |
 | users – status_history | 1 : 0..N | `status_history.user_id` |
 | requests – appointments | 1 : 0..N | `appointments.request_id` |
@@ -372,6 +392,29 @@ Creada en HU-09 (migración `20261109000000_create_requests`).
 | access_type | varchar(10) | CHECK, DEFAULT `FISICO` | `FISICO`, `DIGITAL` |
 | note | text | NULL | |
 
+### request_references
+
+Creada en HU-09.2 (migración `20261120120000_create_request_references`). Un material que todavía no está en el catálogo, descrito por escrito. RN-04: una solicitud pide al menos un material del catálogo (`request_items`) o una referencia; la regla vive en la entidad `Request`.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| id | uuid | PK | |
+| request_id | uuid | FK → requests, IDX | |
+| kind | varchar(20) | CHECK | `PROTOCOLO_NOTARIAL` o `TEXTO_LIBRE`. Un CHECK deja solo las columnas de su tipo, sin texto en blanco |
+| notary | varchar(120) | NULL | Notaría; solo protocolo notarial |
+| deed_year | smallint | NULL | Año de la escritura; solo protocolo notarial |
+| deed_number | varchar(20) | NULL | Número de escritura; solo protocolo notarial |
+| description | varchar(500) | NULL | Texto libre (p. ej. «El Heraldo, 15-03-1950»); solo `TEXTO_LIBRE` |
+| status | varchar(10) | CHECK, DEFAULT `PENDIENTE` | `PENDIENTE` o `RESUELTA`. Un CHECK exige que `RESUELTA` lleve `material_id`, `resolved_by_id` y `resolved_at`, y que `PENDIENTE` no lleve ninguno |
+| material_id | uuid | FK → materials, NULL, IDX | Material del catálogo asociado por el personal |
+| resolved_by_id | uuid | FK → users, NULL, IDX | Quién lo asoció |
+| resolved_at | timestamptz | NULL | Cuándo |
+| created_at | timestamptz | DEFAULT now() | |
+
+Asociar el material es opcional: una referencia puede quedar `PENDIENTE` para siempre si la solicitud se entregó sin él (el comentario del cambio a Disponible explica cómo). Al asociar el material, en una sola transacción: la referencia pasa a `RESUELTA`, el material se agrega a `request_items` (si no estaba) para que la cita lo reserve y el reporte de material más solicitado lo cuente, y se inserta una fila en `status_history` con el mismo estado y un comentario que nombra la referencia y el material. Las referencias no cuentan en el reporte de material más solicitado (HU-26): solo cuenta `request_items`.
+
+El rango de escrituras de los tomos (`deed_from`/`deed_to`) no existe todavía en `materials`; cuando exista, al asociar una referencia notarial se podrá sugerir el tomo cuyo rango contiene la escritura (mejora pendiente).
+
 ### status_history
 
 Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila por cada cambio de estado. Desde HU-17 la primera fila de cada solicitud es su registro (`previous_status` NULL, `RECIBIDA`, quien la registró), insertada junto con la solicitud; la migración `20261116000000_backfill_status_history_creation` la agregó a las solicitudes que ya existían, con su `registered_at`.
@@ -380,7 +423,7 @@ Creada en HU-15 (migración `20261111000000_create_status_history`). Una fila po
 |---|---|---|---|
 | id | bigint | PK (autoincremental) | |
 | request_id | uuid | FK → requests, IDX con changed_at | |
-| previous_status | varchar(12) | NULL, CHECK | `NULL` en la fila de creación. Distinto de `new_status` (CHECK) |
+| previous_status | varchar(12) | NULL, CHECK | `NULL` en la fila de creación. Distinto de `new_status` (CHECK), salvo `AGENDADA → AGENDADA` (reprogramar, HU-21) y `RECIBIDA → RECIBIDA` o `EN_BUSQUEDA → EN_BUSQUEDA` (asociar el material de una referencia, HU-09.2) |
 | new_status | varchar(12) | CHECK | |
 | user_id | uuid | FK → users, IDX | Quién hizo el cambio |
 | comment | text | NULL | Obligatorio al rechazar: es el motivo |
@@ -488,6 +531,8 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | requests | registered_at | Listados y reportes por periodo |
 | request_items | (request_id, material_id) (UK) | Un material no se repite en una solicitud |
 | request_items | material_id | Reporte de material más solicitado y filtro de la bandeja por material |
+| request_references | request_id; parcial `(request_id) WHERE status = 'PENDIENTE'` | Referencias de una solicitud y filtro de la bandeja «con referencias por resolver» (Recibida o En búsqueda, HU-09.2) |
+| request_references | material_id, resolved_by_id | Claves foráneas del material asociado y de quien lo asoció |
 | status_history | (request_id, changed_at) | Línea de tiempo de una solicitud y tiempos de atención |
 | status_history | user_id | Cambios hechos por un funcionario |
 | appointments | appointment_date | Calendario por rango de fechas (HU-19) |
@@ -530,6 +575,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261118120000_material_digital_copy` | HU-134 | Ubicación física opcional, `source`, `digital_path` y `last_seen_at` en `materials`, y la tabla `sync_runs` |
 | `20261118150000_allow_reschedule_status_history` | HU-21 | Permite registrar la reprogramación de una cita (`AGENDADA → AGENDADA`) en `status_history` |
 | `20261119140000_create_material_loans` | HU-72 | Tabla `material_loans` para entregas, devoluciones e historial de custodia de materiales en sala |
+| `20261120120000_create_request_references` | HU-09.2 | Tabla `request_references` (referencias escritas de material no catalogado) y permite `RECIBIDA → RECIBIDA` y `EN_BUSQUEDA → EN_BUSQUEDA` en `status_history` al asociar su material |
 
 **Semillas:**
 

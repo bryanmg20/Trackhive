@@ -123,6 +123,7 @@ describe('ScheduleAppointmentUseCase', () => {
       saveAppointment,
       rescheduleAppointment: jest.fn(),
       cancelAppointment: jest.fn(),
+      saveReferenceResolution: jest.fn(),
     };
     const queries: IRequestQueryService = {
       list: jest.fn(),
