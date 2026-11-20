@@ -1,4 +1,3 @@
-
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
@@ -88,12 +87,15 @@ type SeedMaterial = {
   location?: { depot: string; shelf: string; box: string };
   // HU-134. Default MANUAL, without digital copy
   source?: 'MANUAL' | 'EVERYTHING';
-  // Full path of the digital copy, as Everything would report it
+  // Full path of the folder with the digital copy, as Everything reports it
   digitalPath?: string;
 };
 
-// Fictitious root of the scanned copies (not the real CLENA path)
-const DIGITAL_ROOT = 'D:\\Digitalizados\\Fondo - Libros y Revistas';
+// Root of the notary fund in the simulated tree, as Everything reports it on
+// Windows (dev/docs_simulados placed at C:\trackhive, HU-133). Not the real
+// CLENA path, which is on its network drive
+const DIGITAL_ROOT =
+  'C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías';
 
 // Fictitious archive material: every type and status, some without author
 const MATERIALS: SeedMaterial[] = [
@@ -387,48 +389,51 @@ const MATERIALS: SeedMaterial[] = [
     status: 'NO_CONSULTABLE',
     location: { depot: 'D-05', shelf: 'E-01', box: 'C-301' },
   },
-  // From the Everything sync (HU-134): with and without digital copy, and
-  // most of them without a physical location
+  // From the Everything sync (HU-134): month folders of the simulated tree
+  // (HU-133), with the code, title and folder path of dev/manifiesto.json.
+  // With and without digital copy, and most of them without a physical location
   {
-    catalogCode: '986115 M245',
-    title: 'Historia del puerto fluvial',
-    materialType: 'OTRO',
-    author: 'Ana Martínez Rojas',
-    collection: 'Libros y Revistas',
+    catalogCode: 'NOT1-1931-0001-0109',
+    title: 'Notaría Primera de Barranquilla · 1931 · Escrituras 1–109 (enero)',
+    materialType: 'PROTOCOLO_NOTARIAL',
+    author: null,
+    collection: 'Notarías',
     status: 'DISPONIBLE',
     source: 'EVERYTHING',
-    digitalPath: `${DIGITAL_ROOT}\\#LB - 986115 M245 - Historia del puerto fluvial - Ana Martinez Rojas\\M245.pdf`,
+    digitalPath: `${DIGITAL_ROOT}\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0001-0109 - Ene`,
   },
   {
-    catalogCode: '986115 S812B',
-    title: 'Crónicas del barrio Abajo - 1920-1950',
-    materialType: 'OTRO',
-    author: 'Luis Sarmiento',
-    collection: 'Libros y Revistas',
+    catalogCode: 'NOT1-1931-0110-0206',
+    title:
+      'Notaría Primera de Barranquilla · 1931 · Escrituras 110–206 (febrero)',
+    materialType: 'PROTOCOLO_NOTARIAL',
+    author: null,
+    collection: 'Notarías',
     status: 'DISPONIBLE',
     source: 'EVERYTHING',
-    digitalPath: `${DIGITAL_ROOT}\\#LB - 986115 S812B - Cronicas del barrio Abajo - 1920-1950 - Luis Sarmiento\\S812B.pdf`,
+    digitalPath: `${DIGITAL_ROOT}\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0110-0206 - Feb`,
   },
   {
-    catalogCode: '38454 P438',
-    title: 'La radio en la costa',
-    materialType: 'OTRO',
-    author: 'Marta Pérez',
-    collection: 'Libros y Revistas',
+    catalogCode: 'NOT3-1950-0051-0160',
+    title: 'Notaría Tercera de Barranquilla · 1950 · Escrituras 51–160 (enero)',
+    materialType: 'PROTOCOLO_NOTARIAL',
+    author: null,
+    collection: 'Notarías',
     status: 'EN_RESTAURACION',
     // Digital copy and also a known physical location
     location: { depot: 'D-06', shelf: 'E-01', box: 'C-400' },
     source: 'EVERYTHING',
-    digitalPath: `${DIGITAL_ROOT}\\#LB - 38454 P438 - La radio en la costa - Marta Perez\\P438.tif`,
+    digitalPath: `${DIGITAL_ROOT}\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0051-0160 - Ene`,
   },
   {
-    catalogCode: '986115 G210',
-    title: 'Guía de calles de 1960',
-    materialType: 'OTRO',
+    // Not in the simulated tree: a sync saw it once and its folder is gone,
+    // so it has no digital copy now
+    catalogCode: 'NOT4-1956-0001-0180',
+    title: 'Notaría Cuarta de Barranquilla · 1956 · Escrituras 1–180 (enero)',
+    materialType: 'PROTOCOLO_NOTARIAL',
     author: null,
-    collection: 'Libros y Revistas',
+    collection: 'Notarías',
     status: 'DISPONIBLE',
-    // Only a reference in Everything: no scanned file yet
     source: 'EVERYTHING',
   },
 ];
@@ -919,7 +924,9 @@ async function main() {
             create: request.items.map(({ materialId }) => ({
               materialId,
               bookedDate:
-                seedAppointment.status === 'PROGRAMADA' ? appointmentDate : null,
+                seedAppointment.status === 'PROGRAMADA'
+                  ? appointmentDate
+                  : null,
             })),
           },
         },
