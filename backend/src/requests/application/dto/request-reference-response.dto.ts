@@ -1,3 +1,5 @@
+import { MATERIAL_REFERENCE_DISPLAY_STATUSES } from '../../domain/enums/material-reference-display-status';
+import type { MaterialReferenceDisplayStatus } from '../../domain/enums/material-reference-display-status';
 import { ApiProperty } from '@nestjs/swagger';
 import { MATERIAL_REFERENCE_KINDS } from '../../domain/enums/material-reference-kind';
 import type { MaterialReferenceKind } from '../../domain/enums/material-reference-kind';
@@ -47,6 +49,16 @@ export class RequestReferenceDto {
 
   @ApiProperty({ enum: MATERIAL_REFERENCE_STATUSES, example: 'PENDIENTE' })
   status: MaterialReferenceStatus;
+
+  @ApiProperty({
+    description:
+      'Cómo se muestra: PENDIENTE mientras la solicitud está RECIBIDA o ' +
+      'EN_BUSQUEDA sin material; SIN_MATERIAL si ya pasó de ahí sin él; ' +
+      'RESUELTA con su material del catálogo',
+    enum: MATERIAL_REFERENCE_DISPLAY_STATUSES,
+    example: 'PENDIENTE',
+  })
+  displayStatus: MaterialReferenceDisplayStatus;
 
   @ApiProperty({
     description: 'Material del catálogo asociado; null si está pendiente',

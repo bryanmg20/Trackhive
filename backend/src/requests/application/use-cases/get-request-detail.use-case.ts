@@ -22,15 +22,21 @@ export class GetRequestDetailUseCase {
       throw new RequestNotFoundError();
     }
 
-    // The screen offers only these transitions (HU-15): the rule stays in the
-    // entity instead of being repeated in React
-    const { allowedTransitions } = new Request({
+    // The screen offers only these transitions (HU-15) and asks for the
+    // comment only where the entity requires it (HU-16, HU-09.2): the rules
+    // stay in the entity instead of being repeated in React. With its
+    // references, or the delivery comment would never be required
+    const request = new Request({
       id: detail.id,
       status: detail.status,
       deliveryMode: detail.deliveryMode,
       rejectionReason: detail.rejectionReason,
+      references: detail.references,
     });
 
-    return RequestDetailResponseMapper.toDto(detail, allowedTransitions);
+    return RequestDetailResponseMapper.toDto(detail, {
+      allowedTransitions: request.allowedTransitions,
+      commentRequiredFor: request.commentRequiredFor,
+    });
   }
 }

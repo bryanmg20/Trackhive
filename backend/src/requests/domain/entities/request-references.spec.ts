@@ -230,6 +230,19 @@ describe('Request written references (HU-09.2)', () => {
       expect(request.status).toBe('AGENDADA');
     });
 
+    it('lists DISPONIBLE among the transitions whose comment is required, with the same rule', () => {
+      expect(
+        withReferences('EN_BUSQUEDA', [pending()]).commentRequiredFor,
+      ).toEqual(['DISPONIBLE', 'RECHAZADA']);
+      expect(
+        withReferences('EN_BUSQUEDA', [resolved()]).commentRequiredFor,
+      ).toEqual(['RECHAZADA']);
+      // Coming back from AGENDADA never asks for it
+      expect(
+        withReferences('AGENDADA', [pending()]).commentRequiredFor,
+      ).toEqual([]);
+    });
+
     it('offers only EN_BUSQUEDA and RECHAZADA from RECIBIDA (rule of #139 not in place)', () => {
       const request = withReferences('RECIBIDA', [pending()]);
 

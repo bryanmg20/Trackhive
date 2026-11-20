@@ -21,7 +21,7 @@ export class RequestListResponseMapper {
       requesterEmail: item.requester.email,
       materials: item.materials,
       references: item.references.map((reference) =>
-        RequestReferenceResponseMapper.toListDto(reference),
+        RequestReferenceResponseMapper.toListDto(reference, item.status),
       ),
     };
   }

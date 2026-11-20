@@ -233,7 +233,7 @@ export class PrismaRequestReadMapper {
     row: RequestDetailRow['references'][number],
   ): RequestDetailReference {
     return {
-      ...PrismaRequestReferenceMapper.toReadModel(row),
+      ...PrismaRequestReferenceMapper.toDomain(row),
       material: row.material,
       resolvedAt: row.resolvedAt,
       resolvedBy: row.resolvedBy,

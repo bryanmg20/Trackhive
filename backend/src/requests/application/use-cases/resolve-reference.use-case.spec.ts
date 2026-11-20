@@ -142,6 +142,7 @@ describe('ResolveReferenceUseCase (HU-09.2)', () => {
         deedNumber: null,
         description: 'El Heraldo, 15-03-1950',
         status: 'RESUELTA',
+        displayStatus: 'RESUELTA',
         material: {
           id: 'material-9',
           catalogCode: 'TH-PER-0101',

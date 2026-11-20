@@ -1,4 +1,5 @@
 import type { RequestStatus } from '../../domain/enums/request-status';
+import { canResolveReferences } from '../../domain/policies/reference-resolution';
 import { toAppointmentDay } from '../../domain/value-objects/appointment-date';
 import { RequestDetailResponseDto } from '../dto/request-detail-response.dto';
 import type { RequestDetail } from '../ports/request-query.port';
@@ -11,7 +12,10 @@ import { RequestReferenceResponseMapper } from './request-reference-response.map
 export class RequestDetailResponseMapper {
   static toDto(
     detail: RequestDetail,
-    allowedTransitions: RequestStatus[],
+    rules: {
+      allowedTransitions: RequestStatus[];
+      commentRequiredFor: RequestStatus[];
+    },
   ): RequestDetailResponseDto {
     const { requester } = detail;
     const activeAppointment = detail.activeAppointment
@@ -45,7 +49,8 @@ export class RequestDetailResponseMapper {
       id: detail.id,
       trackingCode: detail.trackingCode,
       status: detail.status,
-      allowedTransitions,
+      allowedTransitions: rules.allowedTransitions,
+      commentRequiredFor: rules.commentRequiredFor,
       deliveryMode: detail.deliveryMode,
       originChannel: detail.originChannel,
       reason: detail.reason,
@@ -67,8 +72,9 @@ export class RequestDetailResponseMapper {
       },
       materials: detail.materials,
       references: detail.references.map((reference) =>
-        RequestReferenceResponseMapper.toDto(reference),
+        RequestReferenceResponseMapper.toDto(reference, detail.status),
       ),
+      canResolveReferences: canResolveReferences(detail.status),
       activeAppointment,
     };
   }

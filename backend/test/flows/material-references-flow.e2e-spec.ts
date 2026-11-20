@@ -95,7 +95,9 @@ describe('Written references flow, HU-09.2 (e2e, PostgreSQL)', () => {
     });
 
   /** A request with only one written reference, moved to EN_BUSQUEDA. */
-  const searchingWithReference = async (reference = FREE_TEXT) => {
+  const searchingWithReference = async (
+    reference: Record<string, unknown> = FREE_TEXT,
+  ) => {
     const created = (await fileRequest({ references: [reference] }).expect(201))
       .body as CreatedBody;
     await changeStatus(e2e.server, staff, created.id, {
@@ -385,6 +387,37 @@ describe('Written references flow, HU-09.2 (e2e, PostgreSQL)', () => {
     expect(await historyOf(created.id)).toEqual(historyBefore);
   });
 
+  it('answers 409 to an association once the request is DISPONIBLE, and saves nothing', async () => {
+    const { created, referenceId } = await searchingWithReference();
+    await changeStatus(e2e.server, staff, created.id, {
+      status: 'DISPONIBLE',
+      comment: 'Localizada en físico, se consulta en sala',
+    }).expect(200);
+    const historyBefore = await historyOf(created.id);
+    const material = await createMaterial(e2e.prisma);
+
+    const response = await resolve(created.id, referenceId, material.id).expect(
+      409,
+    );
+
+    expect((response.body as ErrorBody).code).toBe(
+      'MATERIAL_REFERENCE_NOT_RESOLVABLE',
+    );
+    const [reference] = await referencesOf(created.id);
+    expect(reference).toMatchObject({
+      status: 'PENDIENTE',
+      materialId: null,
+      resolvedById: null,
+      resolvedAt: null,
+    });
+    expect(
+      await e2e.prisma.requestItemModel.count({
+        where: { requestId: created.id },
+      }),
+    ).toBe(0);
+    expect(await historyOf(created.id)).toEqual(historyBefore);
+  });
+
   it('forbids a public user from associating a material (403)', async () => {
     const { created, referenceId } = await searchingWithReference();
     const material = await createMaterial(e2e.prisma);
@@ -416,14 +449,24 @@ describe('Written references flow, HU-09.2 (e2e, PostgreSQL)', () => {
         label:
           'Protocolo notarial: Notaría Primera de Barranquilla, año 1950, escritura 245',
         status: 'PENDIENTE',
+        displayStatus: 'PENDIENTE',
         material: null,
         resolvedBy: null,
       }),
     ]);
+    expect(detail.body).toMatchObject({
+      canResolveReferences: true,
+      commentRequiredFor: ['DISPONIBLE', 'RECHAZADA'],
+    });
 
     const list = await request(e2e.server)
       .get(`${API}/requests`)
-      .query({ pendingReferences: 'true', limit: 100 })
+      .query({
+        pendingReferences: 'true',
+        // Only this file's requests: other e2e files share the database
+        requester: requester.email,
+        limit: 100,
+      })
       .set('Authorization', bearer(staff))
       .expect(200);
     const ids = (list.body as { items: { id: string }[] }).items.map(
@@ -439,7 +482,12 @@ describe('Written references flow, HU-09.2 (e2e, PostgreSQL)', () => {
     }).expect(200);
     const afterSearch = await request(e2e.server)
       .get(`${API}/requests`)
-      .query({ pendingReferences: 'true', limit: 100 })
+      .query({
+        pendingReferences: 'true',
+        // Only this file's requests: other e2e files share the database
+        requester: requester.email,
+        limit: 100,
+      })
       .set('Authorization', bearer(staff))
       .expect(200);
     expect(

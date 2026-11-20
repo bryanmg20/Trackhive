@@ -86,6 +86,37 @@ describe('PrismaRequestRepository', () => {
       desiredDate: new Date('2026-12-01T00:00:00.000Z'),
       rejectionReason: null,
       items: [{ materialId: MATERIAL_ID }],
+      references: [
+        {
+          id: 'reference-1',
+          kind: 'TEXTO_LIBRE',
+          notary: null,
+          deedYear: null,
+          deedNumber: null,
+          description: 'El Heraldo, 15-03-1950',
+          status: 'PENDIENTE',
+          materialId: null,
+        },
+      ],
+    });
+
+    it('loads the written references with the entity, so its rules see them (HU-09.2)', async () => {
+      const findUnique = jest.fn().mockResolvedValue(row('EN_BUSQUEDA'));
+      const repository = new PrismaRequestRepository({
+        requestModel: { findUnique },
+      } as unknown as PrismaService);
+
+      const request = await repository.findById('request-1');
+
+      expect(findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            references: expect.anything() as unknown,
+          }) as unknown,
+        }),
+      );
+      expect(request?.hasPendingReferences).toBe(true);
+      expect(request?.commentRequiredFor).toEqual(['DISPONIBLE', 'RECHAZADA']);
     });
 
     it('returns the domain entity with its status, delivery mode and materials', async () => {

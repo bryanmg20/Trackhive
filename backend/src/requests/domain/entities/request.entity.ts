@@ -190,22 +190,36 @@ export class Request {
     return REQUEST_STATUSES.filter((next) => this.canTransitionTo(next));
   }
 
+  /**
+   * The allowed transitions whose comment is required, so the screen asks
+   * for it without repeating the rules (HU-16, HU-09.2): RECHAZADA (the
+   * reason) and DISPONIBLE when it delivers references without material.
+   */
+  get commentRequiredFor(): RequestStatus[] {
+    return this.allowedTransitions.filter(
+      (next) =>
+        next === 'RECHAZADA' ||
+        (next === 'DISPONIBLE' && this.requiresDeliveryComment),
+    );
+  }
+
+  /**
+   * EN_BUSQUEDA → DISPONIBLE with references without material: the comment
+   * says what is delivered and how (HU-09.2). Coming back from AGENDADA
+   * (no-show or cancelled appointment) never asks for it.
+   */
+  private get requiresDeliveryComment(): boolean {
+    return this.currentStatus === 'EN_BUSQUEDA' && this.hasPendingReferences;
+  }
+
   startSearch(): void {
     this.transitionTo('EN_BUSQUEDA');
   }
 
-  /**
-   * From EN_BUSQUEDA with references without material, the comment is
-   * required: it says what is delivered and how (HU-09.2). Coming back from
-   * AGENDADA (no-show or cancelled appointment) never asks for it.
-   */
+  /** See requiresDeliveryComment: then the comment is required (HU-09.2). */
   markAvailable(comment?: string | null): void {
     this.assertCanTransitionTo('DISPONIBLE');
-    if (
-      this.currentStatus === 'EN_BUSQUEDA' &&
-      this.hasPendingReferences &&
-      !comment?.trim()
-    ) {
+    if (this.requiresDeliveryComment && !comment?.trim()) {
       throw new DeliveryCommentRequiredError();
     }
     this.currentStatus = 'DISPONIBLE';

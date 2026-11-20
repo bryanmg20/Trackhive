@@ -51,11 +51,9 @@ export interface RequestListCriteria {
 /**
  * A written reference of the request as the detail shows it (HU-09.2): its
  * catalog material, who associated it and when; all null while PENDIENTE.
+ * Whole MaterialReference, so the detail can rebuild the Request with it.
  */
-export interface RequestDetailReference extends Omit<
-  MaterialReference,
-  'materialId'
-> {
+export interface RequestDetailReference extends MaterialReference {
   material: { id: string; catalogCode: string; title: string } | null;
   resolvedAt: Date | null;
   resolvedBy: {

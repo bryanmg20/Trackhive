@@ -21,8 +21,9 @@ export interface RequestEntityRow {
   desiredDate: Date;
   rejectionReason: string | null;
   items: { materialId: string }[];
-  // Written references (HU-09.2)
-  references?: RequestReferenceRow[];
+  // Written references (HU-09.2). Required: without them hasPendingReferences
+  // would be false and the rule of the delivery comment would be skipped
+  references: RequestReferenceRow[];
 }
 
 /** Translates between the Request entity and the requests table. */
@@ -46,7 +47,7 @@ export class PrismaRequestMapper {
         desiredDate: model.desiredDate,
         materialIds: model.items.map(({ materialId }) => materialId),
       },
-      references: (model.references ?? []).map((row) =>
+      references: model.references.map((row) =>
         PrismaRequestReferenceMapper.toDomain(row),
       ),
     });

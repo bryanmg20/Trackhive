@@ -139,6 +139,18 @@ export class RequestDetailResponseDto {
   })
   allowedTransitions: RequestStatus[];
 
+  @ApiProperty({
+    description:
+      'Transiciones permitidas cuyo comentario es obligatorio, según la ' +
+      'entidad: RECHAZADA (el motivo, HU-16) y DISPONIBLE cuando la ' +
+      'solicitud está EN_BUSQUEDA con referencias sin material asociado ' +
+      '(HU-09.2).',
+    enum: REQUEST_STATUSES,
+    isArray: true,
+    example: ['DISPONIBLE', 'RECHAZADA'],
+  })
+  commentRequiredFor: RequestStatus[];
+
   @ApiProperty({ enum: DELIVERY_MODES })
   deliveryMode: DeliveryMode;
 
@@ -186,6 +198,14 @@ export class RequestDetailResponseDto {
     type: [RequestReferenceDto],
   })
   references: RequestReferenceDto[];
+
+  @ApiProperty({
+    description:
+      'Si el personal aún puede asociar material a sus referencias: solo ' +
+      'con la solicitud RECIBIDA o EN_BUSQUEDA (HU-09.2)',
+    example: true,
+  })
+  canResolveReferences: boolean;
 
   @ApiProperty({
     description:

@@ -18,7 +18,7 @@ export class MyRequestListResponseMapper {
       registeredAt: item.registeredAt.toISOString(),
       materials: item.materials,
       references: item.references.map((reference) =>
-        RequestReferenceResponseMapper.toListDto(reference),
+        RequestReferenceResponseMapper.toListDto(reference, item.status),
       ),
       // The requester sees why their request was rejected (HU-16)
       rejectionReason: item.rejectionReason,

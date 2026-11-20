@@ -395,6 +395,7 @@ describe('PrismaRequestQueryService', () => {
           deedNumber: '245',
           description: null,
           status: 'PENDIENTE',
+          materialId: null,
           material: null,
           resolvedAt: null,
           resolvedBy: null,
