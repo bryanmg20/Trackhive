@@ -1,0 +1,15 @@
+{
+	"totalResults":2,
+	"results":[
+		{
+			"type":"folder",
+			"name":"Fondo - Notarías",
+			"path":"C:\\trackhive\\docs_simulados\\Aha"
+		},
+		{
+			"type":"folder",
+			"name":"Notarías",
+			"path":"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías"
+		}
+	]
+}

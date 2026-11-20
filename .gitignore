@@ -36,3 +36,7 @@ Thumbs.db
 uploads/
 pgdata/
 
+
+# Árbol de documentos simulados (HU-133): se genera con dev/simulador/generar_docs.py
+dev/docs_simulados/
+__pycache__/

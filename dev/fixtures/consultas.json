@@ -1,0 +1,127 @@
+{
+  "descripcion": "Consultas al servidor HTTP de Everything que se guardan como fixtures (HU-133). Las captura dev/scripts/capturar_fixtures.py contra un Everything real y las repite dev/scripts/comparar_everything.py contra el mock o contra otro Everything. Todas, menos las de autenticación, se restringen a C:\\trackhive\\docs_simulados\\, así que dan lo mismo aunque Everything indexe más discos.",
+  "consultas": [
+    {
+      "id": "carpetas_notarias_p1",
+      "descripcion": "Solo carpetas bajo la raíz del fondo de notarías (folder: + ruta), primera página. Es la consulta de la sincronización (HU-135, HU-137)",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\\"", "json": "1", "path_column": "1", "size_column": "1", "date_modified_column": "1", "offset": "0", "count": "50"}
+    },
+    {
+      "id": "carpetas_notarias_p2",
+      "descripcion": "La misma búsqueda, segunda página (offset 50)",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\\"", "json": "1", "path_column": "1", "size_column": "1", "date_modified_column": "1", "offset": "50", "count": "50"}
+    },
+    {
+      "id": "carpetas_notarias_p3",
+      "descripcion": "La misma búsqueda, última página: trae menos de count",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\\"", "json": "1", "path_column": "1", "size_column": "1", "date_modified_column": "1", "offset": "100", "count": "50"}
+    },
+    {
+      "id": "carpetas_periodicos",
+      "descripcion": "Solo carpetas bajo el fondo de periódicos, sin count: Everything devuelve todas",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Periódicos\\\"", "json": "1", "path_column": "1", "size_column": "1", "date_modified_column": "1"}
+    },
+    {
+      "id": "carpetas_raiz_sin_barra",
+      "descripcion": "La raíz sin la barra final también trae la carpeta raíz: por eso la búsqueda termina en \\",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\"", "json": "1", "path_column": "1", "count": "3"}
+    },
+    {
+      "id": "carpetas_fuera_de_raiz",
+      "descripcion": "Carpeta de trabajo que cuelga de «Fondo - Notarías» pero fuera de la raíz «Notarías»",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\\" pdf", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "raiz_del_indice",
+      "descripcion": "La carpeta indexada (Indexes → Folders) llega con name = ruta completa y path vacío: el adaptador no debe unirlas con \\",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\" !\"C:\\trackhive\\docs_simulados\\\"", "json": "1", "path_column": "1", "size_column": "1", "date_modified_column": "1"}
+    },
+    {
+      "id": "archivos_de_una_hoja",
+      "descripcion": "Imágenes de una carpeta de mes: archivos con tamaño \"0\"",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0001-0109 - Ene\\\"", "json": "1", "path_column": "1", "size_column": "1", "date_modified_column": "1"}
+    },
+    {
+      "id": "y_entre_palabras",
+      "descripcion": "Las palabras separadas por espacio se combinan con Y",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" esc en", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "frase_entre_comillas",
+      "descripcion": "Entre comillas, las palabras van juntas",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" \"Esc en\"", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "sin_tildes",
+      "descripcion": "Sin distinguir tildes: «notarias» encuentra «Notarías»",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" notarias", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "mayusculas_y_tildes",
+      "descripcion": "Sin distinguir mayúsculas ni tildes: «NOTARÍA primera» encuentra «Notaria Primera»",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" NOTARÍA primera", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "o_entre_palabras",
+      "descripcion": "El operador | (O) se aplica antes que el espacio (Y)",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" LEEME | Aha", "json": "1", "path_column": "1", "size_column": "1"}
+    },
+    {
+      "id": "negacion_y_orden_por_ruta",
+      "descripcion": "! excluye por nombre; sort=path ordena por carpeta contenedora y luego por nombre",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\\" !notar", "json": "1", "path_column": "1", "sort": "path", "ascending": "1", "count": "14"}
+    },
+    {
+      "id": "orden_nombre_descendente",
+      "descripcion": "Por nombre las carpetas van primero; ascending=0 invierte toda la lista",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" 1577", "json": "1", "path_column": "1", "sort": "name", "ascending": "0"}
+    },
+    {
+      "id": "mismo_nombre_en_dos_carpetas",
+      "descripcion": "Archivos con el mismo nombre en las dos carpetas del código duplicado: el empate se resuelve por la ruta",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" 1940 Esc 0001 jpg", "json": "1", "path_column": "1", "size_column": "1"}
+    },
+    {
+      "id": "comodines",
+      "descripcion": "Con * o ? se compara el nombre completo",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" *.pdf", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "solo_archivos",
+      "descripcion": "file: deja solo archivos; sin columnas, cada resultado trae solo type y name",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" file: 1577", "json": "1"}
+    },
+    {
+      "id": "parametros_cortos",
+      "descripcion": "s, o y c son lo mismo que search, offset y count",
+      "params": {"s": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Periódicos\\\"", "o": "1", "c": "2", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "parametro_q",
+      "descripcion": "q también es la búsqueda",
+      "params": {"q": "\"C:\\trackhive\\docs_simulados\\\" folder:1577", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "sin_resultados",
+      "descripcion": "Búsqueda sin resultados",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\" noexiste", "json": "1", "path_column": "1"}
+    },
+    {
+      "id": "offset_fuera_de_rango",
+      "descripcion": "Un offset mayor que el total: results vacío y totalResults igual",
+      "params": {"search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Periódicos\\\"", "json": "1", "offset": "100", "count": "10"}
+    },
+    {
+      "id": "sin_credenciales",
+      "descripcion": "Sin usuario ni contraseña: 401 con WWW-Authenticate",
+      "auth": "ninguna",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\"", "json": "1"}
+    },
+    {
+      "id": "contrasena_incorrecta",
+      "descripcion": "Con una contraseña incorrecta: 401",
+      "auth": "incorrecta",
+      "params": {"search": "\"C:\\trackhive\\docs_simulados\\\"", "json": "1"}
+    }
+  ]
+}

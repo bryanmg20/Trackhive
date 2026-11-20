@@ -1,0 +1,2 @@
+# Simulated documents and Everything mock (HU-133). Tests use the standard library
+pyyaml==6.0.3

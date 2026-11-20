@@ -1,0 +1,962 @@
+{
+  "descripcion": "Respuestas reales del servidor HTTP de Everything, capturadas con dev/scripts/capturar_fixtures.py. No editar a mano.",
+  "everything": "1.4.1.1032 x64 (portable)",
+  "servidor": "http://127.0.0.1:8081",
+  "capturadoEl": "2026-11-20",
+  "capturas": [
+    {
+      "id": "carpetas_notarias_p1",
+      "descripcion": "Solo carpetas bajo la raíz del fondo de notarías (folder: + ruta), primera página. Es la consulta de la sincronización (HU-135, HU-137)",
+      "archivo": "everything_carpetas_notarias_p1.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\\"",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1",
+        "date_modified_column": "1",
+        "offset": "0",
+        "count": "50"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1&offset=0&count=50",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_carpetas_notarias_p1.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1&offset=0&count=50\""
+    },
+    {
+      "id": "carpetas_notarias_p2",
+      "descripcion": "La misma búsqueda, segunda página (offset 50)",
+      "archivo": "everything_carpetas_notarias_p2.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\\"",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1",
+        "date_modified_column": "1",
+        "offset": "50",
+        "count": "50"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1&offset=50&count=50",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_carpetas_notarias_p2.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1&offset=50&count=50\""
+    },
+    {
+      "id": "carpetas_notarias_p3",
+      "descripcion": "La misma búsqueda, última página: trae menos de count",
+      "archivo": "everything_carpetas_notarias_p3.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\\"",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1",
+        "date_modified_column": "1",
+        "offset": "100",
+        "count": "50"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1&offset=100&count=50",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_carpetas_notarias_p3.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1&offset=100&count=50\""
+    },
+    {
+      "id": "carpetas_periodicos",
+      "descripcion": "Solo carpetas bajo el fondo de periódicos, sin count: Everything devuelve todas",
+      "archivo": "everything_carpetas_periodicos.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Periódicos\\\"",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1",
+        "date_modified_column": "1"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Peri%C3%B3dicos%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_carpetas_periodicos.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Peri%C3%B3dicos%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1\""
+    },
+    {
+      "id": "carpetas_raiz_sin_barra",
+      "descripcion": "La raíz sin la barra final también trae la carpeta raíz: por eso la búsqueda termina en \\",
+      "archivo": "everything_carpetas_raiz_sin_barra.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\"",
+        "json": "1",
+        "path_column": "1",
+        "count": "3"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%22&json=1&path_column=1&count=3",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_carpetas_raiz_sin_barra.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%22&json=1&path_column=1&count=3\""
+    },
+    {
+      "id": "carpetas_fuera_de_raiz",
+      "descripcion": "Carpeta de trabajo que cuelga de «Fondo - Notarías» pero fuera de la raíz «Notarías»",
+      "archivo": "everything_carpetas_fuera_de_raiz.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\\" pdf",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5C%22%20pdf&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_carpetas_fuera_de_raiz.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5C%22%20pdf&json=1&path_column=1\""
+    },
+    {
+      "id": "raiz_del_indice",
+      "descripcion": "La carpeta indexada (Indexes → Folders) llega con name = ruta completa y path vacío: el adaptador no debe unirlas con \\",
+      "archivo": "everything_raiz_del_indice.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\" !\"C:\\trackhive\\docs_simulados\\\"",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1",
+        "date_modified_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%22%20%21%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_raiz_del_indice.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%22%20%21%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1\""
+    },
+    {
+      "id": "archivos_de_una_hoja",
+      "descripcion": "Imágenes de una carpeta de mes: archivos con tamaño \"0\"",
+      "archivo": "everything_archivos_de_una_hoja.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0001-0109 - Ene\\\"",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1",
+        "date_modified_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C1ra%20-%20Notaria%20Primera%20de%20Barranquilla%20-%201815%20a%201979%5C1931%20-%20Esc%201-1290%20%2812%29%20%2B%5C1ra-1931%20-%20Esc%200001-0109%20-%20Ene%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_archivos_de_una_hoja.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Notar%C3%ADas%5CNotar%C3%ADas%5C1ra%20-%20Notaria%20Primera%20de%20Barranquilla%20-%201815%20a%201979%5C1931%20-%20Esc%201-1290%20%2812%29%20%2B%5C1ra-1931%20-%20Esc%200001-0109%20-%20Ene%5C%22&json=1&path_column=1&size_column=1&date_modified_column=1\""
+    },
+    {
+      "id": "y_entre_palabras",
+      "descripcion": "Las palabras separadas por espacio se combinan con Y",
+      "archivo": "everything_y_entre_palabras.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" esc en",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20esc%20en&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_y_entre_palabras.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20esc%20en&json=1&path_column=1\""
+    },
+    {
+      "id": "frase_entre_comillas",
+      "descripcion": "Entre comillas, las palabras van juntas",
+      "archivo": "everything_frase_entre_comillas.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" \"Esc en\"",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20%22Esc%20en%22&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_frase_entre_comillas.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20%22Esc%20en%22&json=1&path_column=1\""
+    },
+    {
+      "id": "sin_tildes",
+      "descripcion": "Sin distinguir tildes: «notarias» encuentra «Notarías»",
+      "archivo": "everything_sin_tildes.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" notarias",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20notarias&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_sin_tildes.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20notarias&json=1&path_column=1\""
+    },
+    {
+      "id": "mayusculas_y_tildes",
+      "descripcion": "Sin distinguir mayúsculas ni tildes: «NOTARÍA primera» encuentra «Notaria Primera»",
+      "archivo": "everything_mayusculas_y_tildes.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" NOTARÍA primera",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20NOTAR%C3%8DA%20primera&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_mayusculas_y_tildes.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20NOTAR%C3%8DA%20primera&json=1&path_column=1\""
+    },
+    {
+      "id": "o_entre_palabras",
+      "descripcion": "El operador | (O) se aplica antes que el espacio (Y)",
+      "archivo": "everything_o_entre_palabras.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" LEEME | Aha",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20LEEME%20%7C%20Aha&json=1&path_column=1&size_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_o_entre_palabras.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20LEEME%20%7C%20Aha&json=1&path_column=1&size_column=1\""
+    },
+    {
+      "id": "negacion_y_orden_por_ruta",
+      "descripcion": "! excluye por nombre; sort=path ordena por carpeta contenedora y luego por nombre",
+      "archivo": "everything_negacion_y_orden_por_ruta.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\\" !notar",
+        "json": "1",
+        "path_column": "1",
+        "sort": "path",
+        "ascending": "1",
+        "count": "14"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5C%22%20%21notar&json=1&path_column=1&sort=path&ascending=1&count=14",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_negacion_y_orden_por_ruta.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5C%22%20%21notar&json=1&path_column=1&sort=path&ascending=1&count=14\""
+    },
+    {
+      "id": "orden_nombre_descendente",
+      "descripcion": "Por nombre las carpetas van primero; ascending=0 invierte toda la lista",
+      "archivo": "everything_orden_nombre_descendente.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" 1577",
+        "json": "1",
+        "path_column": "1",
+        "sort": "name",
+        "ascending": "0"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%201577&json=1&path_column=1&sort=name&ascending=0",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_orden_nombre_descendente.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%201577&json=1&path_column=1&sort=name&ascending=0\""
+    },
+    {
+      "id": "mismo_nombre_en_dos_carpetas",
+      "descripcion": "Archivos con el mismo nombre en las dos carpetas del código duplicado: el empate se resuelve por la ruta",
+      "archivo": "everything_mismo_nombre_en_dos_carpetas.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" 1940 Esc 0001 jpg",
+        "json": "1",
+        "path_column": "1",
+        "size_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%201940%20Esc%200001%20jpg&json=1&path_column=1&size_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_mismo_nombre_en_dos_carpetas.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%201940%20Esc%200001%20jpg&json=1&path_column=1&size_column=1\""
+    },
+    {
+      "id": "comodines",
+      "descripcion": "Con * o ? se compara el nombre completo",
+      "archivo": "everything_comodines.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" *.pdf",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20%2A.pdf&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_comodines.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20%2A.pdf&json=1&path_column=1\""
+    },
+    {
+      "id": "solo_archivos",
+      "descripcion": "file: deja solo archivos; sin columnas, cada resultado trae solo type y name",
+      "archivo": "everything_solo_archivos.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" file: 1577",
+        "json": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20file%3A%201577&json=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_solo_archivos.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20file%3A%201577&json=1\""
+    },
+    {
+      "id": "parametros_cortos",
+      "descripcion": "s, o y c son lo mismo que search, offset y count",
+      "archivo": "everything_parametros_cortos.json",
+      "auth": "correcta",
+      "params": {
+        "s": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Periódicos\\\"",
+        "o": "1",
+        "c": "2",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?s=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Peri%C3%B3dicos%5C%22&o=1&c=2&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_parametros_cortos.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?s=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Peri%C3%B3dicos%5C%22&o=1&c=2&json=1&path_column=1\""
+    },
+    {
+      "id": "parametro_q",
+      "descripcion": "q también es la búsqueda",
+      "archivo": "everything_parametro_q.json",
+      "auth": "correcta",
+      "params": {
+        "q": "\"C:\\trackhive\\docs_simulados\\\" folder:1577",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?q=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20folder%3A1577&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_parametro_q.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?q=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20folder%3A1577&json=1&path_column=1\""
+    },
+    {
+      "id": "sin_resultados",
+      "descripcion": "Búsqueda sin resultados",
+      "archivo": "everything_sin_resultados.json",
+      "auth": "correcta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\" noexiste",
+        "json": "1",
+        "path_column": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20noexiste&json=1&path_column=1",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_sin_resultados.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22%20noexiste&json=1&path_column=1\""
+    },
+    {
+      "id": "offset_fuera_de_rango",
+      "descripcion": "Un offset mayor que el total: results vacío y totalResults igual",
+      "archivo": "everything_offset_fuera_de_rango.json",
+      "auth": "correcta",
+      "params": {
+        "search": "folder: \"C:\\trackhive\\docs_simulados\\Aha\\Fondo - Periódicos\\\"",
+        "json": "1",
+        "offset": "100",
+        "count": "10"
+      },
+      "pathQuery": "/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Peri%C3%B3dicos%5C%22&json=1&offset=100&count=10",
+      "status": 200,
+      "headers": [
+        [
+          "Server",
+          "Everything HTTP Server"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-cache, no-store, must-revalidate"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Expires",
+          "0"
+        ],
+        [
+          "Connection",
+          "Close"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_offset_fuera_de_rango.json -u \"$EVERYTHING_USER:$EVERYTHING_PASSWORD\" \"http://127.0.0.1:8081/?search=folder%3A%20%22C%3A%5Ctrackhive%5Cdocs_simulados%5CAha%5CFondo%20-%20Peri%C3%B3dicos%5C%22&json=1&offset=100&count=10\""
+    },
+    {
+      "id": "sin_credenciales",
+      "descripcion": "Sin usuario ni contraseña: 401 con WWW-Authenticate",
+      "archivo": "everything_sin_credenciales.html",
+      "auth": "ninguna",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\"",
+        "json": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22&json=1",
+      "status": 401,
+      "headers": [
+        [
+          "WWW-Authenticate",
+          "Basic realm=\"Everything\""
+        ],
+        [
+          "Content-Type",
+          "text/html; charset=UTF-8"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_sin_credenciales.html \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22&json=1\""
+    },
+    {
+      "id": "contrasena_incorrecta",
+      "descripcion": "Con una contraseña incorrecta: 401",
+      "archivo": "everything_contrasena_incorrecta.html",
+      "auth": "incorrecta",
+      "params": {
+        "search": "\"C:\\trackhive\\docs_simulados\\\"",
+        "json": "1"
+      },
+      "pathQuery": "/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22&json=1",
+      "status": 401,
+      "headers": [
+        [
+          "WWW-Authenticate",
+          "Basic realm=\"Everything\""
+        ],
+        [
+          "Content-Type",
+          "text/html; charset=UTF-8"
+        ]
+      ],
+      "curl": "curl -s -S -D - -o everything_contrasena_incorrecta.html -u \"$EVERYTHING_USER:incorrecta\" \"http://127.0.0.1:8081/?search=%22C%3A%5Ctrackhive%5Cdocs_simulados%5C%22&json=1\""
+    }
+  ]
+}

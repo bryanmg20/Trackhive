@@ -1,0 +1,190 @@
+# Convención de carpetas del CLENA para generar dev/docs_simulados (HU-133).
+#
+# Copia la FORMA de la estructura real (respuestas del CLENA del 2026-11-20),
+# no sus documentos: Z:\Aha\Fondo - Notarías\Notarías\<notaría>\<año>\<mes>\
+# con las imágenes escaneadas dentro de la carpeta de mes. Las imágenes que
+# se generan están vacías (0 bytes) y no hay ningún dato personal.
+#
+# Los nombres se pueden cambiar (otra ciudad, otros años o rangos) siempre que
+# conserven la forma. Después de cambiar este archivo, vuelve a generar el
+# árbol y el manifiesto:  python dev/simulador/generar_docs.py
+
+# Semilla fija: reparte los rangos de cada mes y el número de imágenes. Con la
+# misma semilla, Linux y Windows generan exactamente las mismas carpetas y
+# archivos (lo comprueba dev/tests/test_generador.py).
+semilla: 133
+
+# Ruta de Windows donde se coloca el árbol para que Everything lo indexe
+# (docs/everything-desarrollo.md). Es la ruta que aparece en los fixtures y la
+# que informa el mock, así que es la misma para todo el equipo.
+raiz_windows: 'C:\trackhive\docs_simulados'
+
+# Imágenes vacías por carpeta hoja
+imagenes_por_hoja: {min: 2, max: 4}
+
+# Abreviaturas de los meses, como en los nombres de carpeta del CLENA
+meses: [Ene, Feb, Mar, Abr, May, Jun, Jul, Ago, Sep, Oct, Nov, Dic]
+
+# Forma de cada nivel (formato de Python). Ejemplos reales:
+#   notaría  1ra - Notaria Primera de Barranquilla - 1815 a 1979
+#            3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (499)
+#   año      1931 - Esc 1-1290 (12) +       1932 - Esc 1-0820 (07) +
+#   mes      1ra-1931 - Esc 0001-0109 - Ene
+#   imagen   002 - 1ra - 1931 - Esc 0001.jpg
+# El número entre paréntesis es el número de carpetas que hay dentro: en el
+# año, sus carpetas de mes (1931 tiene 12); en la notaría, todas sus carpetas
+# de mes. El generador lo calcula.
+formatos:
+  notaria: '{ordinal} - Notaria {nombre} de {ciudad} - {desde} a {hasta}'
+  conteo_notaria: ' ({n})'
+  anio: '{anio} - Esc {inicio}-{fin:04d} ({n:02d}){marca}'
+  mes: '{ordinal}-{anio} - Esc {inicio:04d}-{fin:04d} - {mes}'
+  # Copia de un mes con otro relleno de ceros (caso raro de código duplicado)
+  mes_sin_ceros: '{ordinal}-{anio} - Esc {inicio}-{fin} - {mes}'
+  imagen_mes: '{pagina:03d} - {ordinal} - {anio} - Esc {escritura:04d}.jpg'
+  # Imágenes de las carpetas que no siguen el patrón
+  imagen_libre: '{pagina:03d} - {carpeta}.jpg'
+
+fondos:
+  # Fondo con patrón conocido: raíz → notaría → año → mes
+  - raiz: [Aha, Fondo - Notarías, Notarías]
+    coleccion: Notarías
+    prefijo: NOT
+    tipo_material: PROTOCOLO_NOTARIAL
+    patron: notarias
+    notarias:
+      - ordinal: 1ra
+        nombre: Primera
+        ciudad: Barranquilla
+        desde: 1815
+        hasta: 1979
+        # La notaría primera no muestra el conteo en el CLENA; las demás sí
+        mostrar_conteo: false
+        anios:
+          # Rangos copiados de la carpeta real de 1931 (doce meses seguidos)
+          - anio: 1931
+            fin: 1290
+            marca: ' +'
+            rangos:
+              - [Ene, 1, 109]
+              - [Feb, 110, 206]
+              - [Mar, 207, 303]
+              - [Abr, 304, 417]
+              - [May, 418, 532]
+              - [Jun, 533, 660]
+              - [Jul, 661, 772]
+              - [Ago, 773, 890]
+              - [Sep, 891, 996]
+              - [Oct, 997, 1074]
+              - [Nov, 1075, 1156]
+              - [Dic, 1157, 1290]
+          # Solo están digitalizados los primeros meses: (07)
+          - anio: 1932
+            fin: 820
+            marca: ' +'
+            meses_digitalizados: 7
+          - anio: 1935
+            fin: 777
+            marca: ''
+          # Marca «+ ptes» y una copia de enero con otro relleno de ceros
+          # (Esc 1-NN frente a Esc 0001-00NN): mismo código en dos carpetas
+          - anio: 1940
+            fin: 1783
+            marca: ' + ptes'
+            copia_sin_ceros: Ene
+          # Marca «+ Ptes» y meses partidos en varias carpetas: el conteo pasa
+          # de 12. SUPUESTO por confirmar con el CLENA (años con (19), (56)…)
+          - anio: 1945
+            fin: 2162
+            marca: ' + Ptes'
+            partidos: {Ene: 2, Jun: 2, Oct: 2}
+        # Carpetas dentro de la notaría que no siguen el patrón del año
+        sueltas: ['1ra - Matrimonios', '1080', '1823 - 1827']
+
+      - ordinal: 2da
+        nombre: Segunda
+        ciudad: Barranquilla
+        desde: 1874
+        hasta: 1950
+        mostrar_conteo: true
+        anios:
+          - anio: 1930
+            fin: 640
+            marca: ''
+          - anio: 1941
+            fin: 1205
+            marca: ' +'
+
+      - ordinal: 3ra
+        nombre: Tercera
+        ciudad: Barranquilla
+        desde: 1929
+        hasta: 1950
+        mostrar_conteo: true
+        anios:
+          # Enero partido en dos carpetas: la segunda empieza en la escritura
+          # 51, como la carpeta de trabajo «3ra-1950 - Esc 0051-0160 - Ene»
+          - anio: 1950
+            fin: 3733
+            marca: ''
+            rangos:
+              - [Ene, 1, 50]
+              - [Ene, 51, 160]
+              - [Feb, 161, 452]
+              - [Mar, 453, 760]
+              - [Abr, 761, 1049]
+              - [May, 1050, 1371]
+              - [Jun, 1372, 1680]
+              - [Jul, 1681, 2008]
+              - [Ago, 2009, 2330]
+              - [Sep, 2331, 2655]
+              - [Oct, 2656, 2990]
+              - [Nov, 2991, 3349]
+              - [Dic, 3350, 3733]
+
+      - ordinal: 4ta
+        nombre: Cuarta
+        ciudad: Barranquilla
+        desde: 1950
+        hasta: 1960
+        mostrar_conteo: true
+        anios:
+          - anio: 1955
+            fin: 2410
+            marca: ' +'
+
+  # Fondo de periódicos sin patrón conocido: todas sus hojas usan el respaldo
+  # y quedan para revisión. Nombres de periódicos inventados
+  - raiz: [Aha, Fondo - Periódicos]
+    coleccion: Periódicos
+    prefijo: PER
+    tipo_material: PERIODICO
+    patron: null
+    carpetas:
+      - [El Correo del Litoral, '1925', 1925-03 Marzo]
+      - [El Correo del Litoral, '1925', 1925-04 Abril]
+      - [El Correo del Litoral, Suplemento dominical 1926]
+      - [La Gaceta Ribereña - 1931 a 1933]
+
+  # Cualquier otro fondo: tipo DOCUMENTO por defecto y sin patrón conocido
+  - raiz: [Aha, Fondo - Correspondencia]
+    coleccion: Correspondencia
+    prefijo: DOC
+    patron: null
+    carpetas:
+      - [Cartas del cabildo - 1890 a 1895]
+      - [Telegramas, '1902']
+
+# Carpetas de trabajo fuera de la raíz de los fondos. No son materiales: la
+# sincronización solo mira bajo cada raíz. «Esc en PDF» cuelga de
+# «Fondo - Notarías» pero fuera de su raíz «Notarías»; la copia de trabajo
+# repite el nombre de una carpeta de mes que sí está dentro del fondo
+trabajo:
+  - ruta: [Aha, Fondo - Notarías, Esc en PDF]
+    archivos: ['1ra - 1931 - Esc 0001.pdf', '1ra - 1931 - Esc 0002.pdf']
+  - ruta: [Escritura 1577]
+    archivos: ['001 - 1ra - 1938 - Esc 1577.jpg', '002 - 1ra - 1938 - Esc 1577.jpg']
+  - ruta: [Empaste 2026]
+    archivos: ['001 - Empaste 2026.jpg']
+  - ruta: [3ra-1950 - Esc 0051-0160 - Ene]
+    archivos: ['001 - 3ra - 1950 - Esc 0051.jpg', '002 - 3ra - 1950 - Esc 0051.jpg']

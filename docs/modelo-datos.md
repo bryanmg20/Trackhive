@@ -580,7 +580,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 **Semillas:**
 
 - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
-- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos), 34 materiales (30 manuales y 4 de Everything: 3 con copia digital y 1 solo de referencia; 3 de ellos sin ubicación física), 12 solicitudes repartidas en los 7 estados y 4 citas.
+- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos), 34 materiales (30 manuales y 4 de Everything: 3 con copia digital y 1 cuya carpeta ya no aparece; 3 de ellos sin ubicación física). Los de Everything son protocolos notariales con los códigos, títulos y rutas de carpeta del árbol simulado de HU-133 (`dev/manifiesto.json`, por ejemplo `NOT1-1931-0001-0109`), 12 solicitudes repartidas en los 7 estados y 4 citas.
 - Las contraseñas salen de variables de entorno (`SEED_ADMIN_PASSWORD`, `SEED_DEMO_PASSWORD`).
 - Datos **ficticios**, con correos `@example.com`. No se usan datos reales del CLENA sin autorización escrita.
 
