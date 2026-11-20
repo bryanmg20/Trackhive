@@ -82,9 +82,10 @@ type SeedMaterial = {
   // Periodicals only
   publicationDate?: string;
   publisher?: string;
-  // Leaf folder of the simulated tree (dev/manifiesto.json). Without it, the
-  // material has no digital copy
-  folder?: string;
+  // Full path of the leaf folder of the simulated tree (dev/manifiesto.json),
+  // as Everything reports it; not of a file (HU-133). Without it, the material
+  // has no digital copy
+  digitalPath?: string;
   // Last time a sync saw it; by default, when the seed runs
   lastSeenAt?: string;
 };
@@ -106,7 +107,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'DOCUMENTO',
     collection: 'Correspondencia',
     status: 'DISPONIBLE',
-    folder: 'Aha\\Fondo - Correspondencia\\Cartas del cabildo - 1890 a 1895',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Correspondencia\\Cartas del cabildo - 1890 a 1895`,
   },
   {
     catalogCode: 'DOC-AF12775E',
@@ -114,7 +115,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'DOCUMENTO',
     collection: 'Correspondencia',
     status: 'NO_CONSULTABLE',
-    folder: 'Aha\\Fondo - Correspondencia\\Telegramas\\1902',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Correspondencia\\Telegramas\\1902`,
   },
   // Periodicals: some issues lack the publication date
   {
@@ -125,8 +126,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'DISPONIBLE',
     publicationDate: '1925-03-01',
     publisher: 'El Correo del Litoral',
-    folder:
-      'Aha\\Fondo - Periódicos\\El Correo del Litoral\\1925\\1925-03 Marzo',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\El Correo del Litoral\\1925\\1925-03 Marzo`,
   },
   {
     catalogCode: 'PER-98EA1A48',
@@ -136,8 +136,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'EN_RESTAURACION',
     publicationDate: '1925-04-01',
     publisher: 'El Correo del Litoral',
-    folder:
-      'Aha\\Fondo - Periódicos\\El Correo del Litoral\\1925\\1925-04 Abril',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\El Correo del Litoral\\1925\\1925-04 Abril`,
   },
   {
     catalogCode: 'PER-A0CBF1ED',
@@ -146,8 +145,7 @@ const MATERIALS: SeedMaterial[] = [
     collection: 'Periódicos',
     status: 'DISPONIBLE',
     publisher: 'El Correo del Litoral',
-    folder:
-      'Aha\\Fondo - Periódicos\\El Correo del Litoral\\Suplemento dominical 1926',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\El Correo del Litoral\\Suplemento dominical 1926`,
   },
   {
     catalogCode: 'PER-2D9B489C',
@@ -156,7 +154,7 @@ const MATERIALS: SeedMaterial[] = [
     collection: 'Periódicos',
     status: 'DISPONIBLE',
     publisher: 'La Gaceta Ribereña',
-    folder: 'Aha\\Fondo - Periódicos\\La Gaceta Ribereña - 1931 a 1933',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\La Gaceta Ribereña - 1931 a 1933`,
   },
   // Notarial protocols: Notaría Primera, 1931
   {
@@ -165,8 +163,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0001-0109 - Ene',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0001-0109 - Ene`,
   },
   {
     catalogCode: 'NOT1-1931-0110-0206',
@@ -175,8 +172,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0110-0206 - Feb',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0110-0206 - Feb`,
   },
   {
     catalogCode: 'NOT1-1931-0207-0303',
@@ -185,8 +181,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0207-0303 - Mar',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0207-0303 - Mar`,
   },
   {
     catalogCode: 'NOT1-1931-0304-0417',
@@ -195,8 +190,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0304-0417 - Abr',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0304-0417 - Abr`,
   },
   {
     catalogCode: 'NOT1-1931-0418-0532',
@@ -204,8 +198,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0418-0532 - May',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0418-0532 - May`,
   },
   {
     catalogCode: 'NOT1-1931-0533-0660',
@@ -214,8 +207,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'EN_RESTAURACION',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0533-0660 - Jun',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0533-0660 - Jun`,
   },
   {
     catalogCode: 'NOT1-1931-0661-0772',
@@ -224,8 +216,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0661-0772 - Jul',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +\\1ra-1931 - Esc 0661-0772 - Jul`,
   },
   // Notaría Segunda, 1930 and 1941
   {
@@ -234,8 +225,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0001-0061 - Ene',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0001-0061 - Ene`,
   },
   {
     catalogCode: 'NOT2-1930-0062-0117',
@@ -244,8 +234,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0062-0117 - Feb',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0062-0117 - Feb`,
   },
   {
     catalogCode: 'NOT2-1930-0118-0161',
@@ -254,8 +243,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0118-0161 - Mar',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0118-0161 - Mar`,
   },
   {
     catalogCode: 'NOT2-1930-0162-0213',
@@ -264,8 +252,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'NO_CONSULTABLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0162-0213 - Abr',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0162-0213 - Abr`,
   },
   {
     catalogCode: 'NOT2-1930-0214-0253',
@@ -273,8 +260,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0214-0253 - May',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1930 - Esc 1-0640 (12)\\2da-1930 - Esc 0214-0253 - May`,
   },
   {
     catalogCode: 'NOT2-1941-0001-0097',
@@ -282,8 +268,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0001-0097 - Ene',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0001-0097 - Ene`,
   },
   {
     catalogCode: 'NOT2-1941-0098-0222',
@@ -292,8 +277,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0098-0222 - Feb',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0098-0222 - Feb`,
   },
   {
     catalogCode: 'NOT2-1941-0223-0285',
@@ -302,8 +286,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0223-0285 - Mar',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0223-0285 - Mar`,
   },
   {
     catalogCode: 'NOT2-1941-0286-0382',
@@ -312,8 +295,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'EN_RESTAURACION',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0286-0382 - Abr',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0286-0382 - Abr`,
   },
   {
     catalogCode: 'NOT2-1941-0383-0519',
@@ -321,8 +303,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0383-0519 - May',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\2da - Notaria Segunda de Barranquilla - 1874 a 1950 (24)\\1941 - Esc 1-1205 (12) +\\2da-1941 - Esc 0383-0519 - May`,
   },
   // Notaría Tercera, 1950
   {
@@ -331,8 +312,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0001-0050 - Ene',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0001-0050 - Ene`,
   },
   {
     catalogCode: 'NOT3-1950-0051-0160',
@@ -340,8 +320,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'EN_RESTAURACION',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0051-0160 - Ene',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0051-0160 - Ene`,
   },
   {
     catalogCode: 'NOT3-1950-0161-0452',
@@ -350,8 +329,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0161-0452 - Feb',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0161-0452 - Feb`,
   },
   {
     catalogCode: 'NOT3-1950-0453-0760',
@@ -360,8 +338,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'NO_CONSULTABLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0453-0760 - Mar',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0453-0760 - Mar`,
   },
   {
     catalogCode: 'NOT3-1950-0761-1049',
@@ -370,8 +347,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0761-1049 - Abr',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\3ra - Notaria Tercera de Barranquilla - 1929 a 1950 (13)\\1950 - Esc 1-3733 (13)\\3ra-1950 - Esc 0761-1049 - Abr`,
   },
   // Notaría Cuarta, 1955. The first two are in use: handed over in the
   // appointment of SOL-2026-90007 and not returned yet (HU-72)
@@ -381,8 +357,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'EN_USO',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0001-0193 - Ene',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0001-0193 - Ene`,
   },
   {
     catalogCode: 'NOT4-1955-0194-0450',
@@ -391,8 +366,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'EN_USO',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0194-0450 - Feb',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0194-0450 - Feb`,
   },
   {
     catalogCode: 'NOT4-1955-0451-0561',
@@ -400,8 +374,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0451-0561 - Mar',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0451-0561 - Mar`,
   },
   {
     catalogCode: 'NOT4-1955-0562-0837',
@@ -409,8 +382,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0562-0837 - Abr',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0562-0837 - Abr`,
   },
   {
     catalogCode: 'NOT4-1955-0838-1033',
@@ -418,8 +390,7 @@ const MATERIALS: SeedMaterial[] = [
     materialType: 'PROTOCOLO_NOTARIAL',
     collection: 'Notarías',
     status: 'DISPONIBLE',
-    folder:
-      'Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0838-1033 - May',
+    digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Notarías\\Notarías\\4ta - Notaria Cuarta de Barranquilla - 1950 a 1960 (12)\\1955 - Esc 1-2410 (12) +\\4ta-1955 - Esc 0838-1033 - May`,
   },
   {
     // Not in the simulated tree: a sync saw it once and its folder is gone,
@@ -845,7 +816,7 @@ async function main() {
     for (const {
       publicationDate,
       publisher,
-      folder,
+      digitalPath,
       lastSeenAt,
       ...material
     } of MATERIALS) {
@@ -856,8 +827,7 @@ async function main() {
         publicationDate: publicationDate ? new Date(publicationDate) : null,
         publisher: publisher ?? null,
         source: 'EVERYTHING',
-        // The path of the leaf folder, not of a file (HU-133)
-        digitalPath: folder ? `${DIGITAL_ROOT}\\${folder}` : null,
+        digitalPath: digitalPath ?? null,
         lastSeenAt: lastSeenAt ? new Date(lastSeenAt) : seenAt,
       };
       // Upsert by catalog code: running the seed again does not duplicate material
