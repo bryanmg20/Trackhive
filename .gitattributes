@@ -1,0 +1,3 @@
+# Real Everything responses (HU-133): kept byte for byte (CRLF and tabs)
+dev/fixtures/everything_* -text
+dev/everything-portable/*.ini text eol=crlf

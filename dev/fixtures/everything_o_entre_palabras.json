@@ -1,0 +1,17 @@
+{
+	"totalResults":2,
+	"results":[
+		{
+			"type":"folder",
+			"name":"Aha",
+			"path":"C:\\trackhive\\docs_simulados",
+			"size":""
+		},
+		{
+			"type":"file",
+			"name":"LEEME.txt",
+			"path":"C:\\trackhive\\docs_simulados",
+			"size":"269"
+		}
+	]
+}

@@ -1,0 +1,20 @@
+{
+	"totalResults":3,
+	"results":[
+		{
+			"type":"file",
+			"name":"002 - 1ra - 1938 - Esc 1577.jpg",
+			"path":"C:\\trackhive\\docs_simulados\\Escritura 1577"
+		},
+		{
+			"type":"file",
+			"name":"001 - 1ra - 1938 - Esc 1577.jpg",
+			"path":"C:\\trackhive\\docs_simulados\\Escritura 1577"
+		},
+		{
+			"type":"folder",
+			"name":"Escritura 1577",
+			"path":"C:\\trackhive\\docs_simulados"
+		}
+	]
+}
