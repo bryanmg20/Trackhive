@@ -3,8 +3,24 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { requestDetailPath, ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
-import { MATERIAL_TYPE_LABELS } from '../materials/api/search-materials';
+import {
+  MATERIAL_STATUS_LABELS,
+  MATERIAL_TYPE_LABELS,
+  MaterialsApiError,
+} from '../materials/api/search-materials';
 import type { MaterialType } from '../materials/api/search-materials';
+import {
+  deliverAppointmentMaterial,
+  formatBogotaDateTime,
+  returnMaterial,
+  todayInBogotaIso,
+} from '../materials/api/material-loans';
+import type {
+  AppointmentMaterialLoanSummary,
+  MaterialLoanRecord,
+} from '../materials/api/material-loans';
+import { LoanActionModal } from '../materials/LoanActionModal';
+import type { LoanActionMode } from '../materials/LoanActionModal';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -208,6 +224,13 @@ export function AppointmentsCalendarPage() {
   const [actionComment, setActionComment] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [loanDialog, setLoanDialog] = useState<{
+    mode: LoanActionMode;
+    appointment: AppointmentListItem;
+    material: AppointmentListItem['materials'][number];
+  } | null>(null);
+  const [loanSubmitting, setLoanSubmitting] = useState(false);
+  const [loanError, setLoanError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<{
     message: string;
     sessionExpired: boolean;
@@ -508,6 +531,72 @@ export function AppointmentsCalendarPage() {
       setActionError(toActionError(caught));
     } finally {
       setCancelling(false);
+    }
+  }
+
+  function toLoanSummary(
+    record: MaterialLoanRecord,
+  ): AppointmentMaterialLoanSummary {
+    return {
+      id: record.id,
+      handedOverAt: record.handedOverAt,
+      handedOverBy: record.handedOverBy,
+      deliveryNotes: record.deliveryNotes,
+      returnedAt: record.returnedAt,
+      returnedBy: record.returnedBy,
+      returnNotes: record.returnNotes,
+    };
+  }
+
+  async function handleConfirmLoanAction(notes: string | undefined) {
+    if (!loanDialog) return;
+    setLoanSubmitting(true);
+    setLoanError(null);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      const { mode, appointment, material } = loanDialog;
+      const saved =
+        mode === 'deliver'
+          ? await deliverAppointmentMaterial({
+              appointmentId: appointment.id,
+              materialId: material.id,
+              notes,
+            })
+          : await returnMaterial({
+              materialId: material.id,
+              notes,
+            });
+      const summary = toLoanSummary(saved);
+      const updatedMaterials = appointment.materials.map((item) =>
+        item.id === material.id
+          ? {
+              ...item,
+              status: saved.materialStatus,
+              activeLoan: saved.returnedAt ? null : summary,
+              lastLoan: summary,
+            }
+          : item,
+      );
+      patchStoredAppointment(appointment.id, { materials: updatedMaterials });
+      setLoanDialog(null);
+      setActionNotice(
+        mode === 'deliver'
+          ? `Entrega registrada para «${material.title}» (${formatBogotaDateTime(saved.handedOverAt)}). El material quedó en uso.`
+          : `Devolución registrada para «${material.title}»${saved.returnedAt ? ` (${formatBogotaDateTime(saved.returnedAt)})` : ''}. El material volvió a estar disponible.`,
+      );
+    } catch (caught: unknown) {
+      if (caught instanceof MaterialsApiError) {
+        setLoanError(
+          caught.status === 401
+            ? 'Su sesión no es válida o venció. Inicie sesión de nuevo.'
+            : caught.message,
+        );
+      } else {
+        setLoanError(NETWORK_ERROR_MESSAGE);
+      }
+    } finally {
+      setLoanSubmitting(false);
     }
   }
 
@@ -1077,23 +1166,94 @@ export function AppointmentsCalendarPage() {
                       Material reservado para la cita
                     </p>
                     <ul className={styles.detailMaterials}>
-                      {selectedAppointment.materials.map((materialItem) => (
-                        <li
-                          key={materialItem.id}
-                          className={styles.detailMaterialItem}
-                        >
-                          <strong>{materialItem.title}</strong>
-                          <span className={styles.detailMeta}>
-                            {materialItem.catalogCode} ·{' '}
-                            {MATERIAL_TYPE_LABELS[
-                              materialItem.materialType as MaterialType
-                            ] ?? materialItem.materialType}
-                          </span>
-                          <span className={styles.detailMeta}>
-                            {formatMaterialLocation(materialItem.location)}
-                          </span>
-                        </li>
-                      ))}
+                      {selectedAppointment.materials.map((materialItem) => {
+                        const materialStatus =
+                          materialItem.status ?? 'DISPONIBLE';
+                        const isToday =
+                          selectedAppointment.date === todayInBogotaIso();
+                        const canDeliver =
+                          selectedAppointment.status === 'PROGRAMADA' &&
+                          isToday &&
+                          !materialItem.activeLoan &&
+                          materialStatus === 'DISPONIBLE';
+                        const canReturn = Boolean(materialItem.activeLoan);
+
+                        return (
+                          <li
+                            key={materialItem.id}
+                            className={styles.detailMaterialItem}
+                          >
+                            <strong>{materialItem.title}</strong>
+                            <span className={styles.detailMeta}>
+                              {materialItem.catalogCode} ·{' '}
+                              {MATERIAL_TYPE_LABELS[
+                                materialItem.materialType as MaterialType
+                              ] ?? materialItem.materialType}{' '}
+                              · {MATERIAL_STATUS_LABELS[materialStatus]}
+                            </span>
+                            <span className={styles.detailMeta}>
+                              {formatMaterialLocation(materialItem.location)}
+                            </span>
+                            {materialItem.activeLoan ? (
+                              <span className={styles.loanStatus}>
+                                Entregado{' '}
+                                {formatBogotaDateTime(
+                                  materialItem.activeLoan.handedOverAt,
+                                )}{' '}
+                                por {materialItem.activeLoan.handedOverBy.name}
+                              </span>
+                            ) : materialItem.lastLoan?.returnedAt ? (
+                              <span className={styles.loanStatus}>
+                                Última devolución:{' '}
+                                {formatBogotaDateTime(
+                                  materialItem.lastLoan.returnedAt,
+                                )}
+                                {materialItem.lastLoan.returnedBy
+                                  ? ` · recibió ${materialItem.lastLoan.returnedBy.name}`
+                                  : ''}
+                              </span>
+                            ) : null}
+                            {canDeliver || canReturn ? (
+                              <div className={styles.loanActions}>
+                                {canDeliver ? (
+                                  <button
+                                    type="button"
+                                    className={styles.loanButton}
+                                    onClick={() => {
+                                      setLoanError(null);
+                                      setLoanDialog({
+                                        mode: 'deliver',
+                                        appointment: selectedAppointment,
+                                        material: materialItem,
+                                      });
+                                    }}
+                                    aria-label={`Registrar entrega de ${materialItem.title}`}
+                                  >
+                                    Registrar entrega
+                                  </button>
+                                ) : null}
+                                {canReturn ? (
+                                  <button
+                                    type="button"
+                                    className={styles.loanReturnButton}
+                                    onClick={() => {
+                                      setLoanError(null);
+                                      setLoanDialog({
+                                        mode: 'return',
+                                        appointment: selectedAppointment,
+                                        material: materialItem,
+                                      });
+                                    }}
+                                    aria-label={`Registrar devolución de ${materialItem.title}`}
+                                  >
+                                    Registrar devolución
+                                  </button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
 
@@ -1199,6 +1359,18 @@ export function AppointmentsCalendarPage() {
           ) : null}
         </section>
       </div>
+
+      {loanDialog ? (
+        <LoanActionModal
+          mode={loanDialog.mode}
+          materialTitle={loanDialog.material.title}
+          materialCatalogCode={loanDialog.material.catalogCode}
+          submitting={loanSubmitting}
+          error={loanError}
+          onConfirm={handleConfirmLoanAction}
+          onCancel={() => setLoanDialog(null)}
+        />
+      ) : null}
     </AppLayout>
   );
 }

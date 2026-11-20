@@ -1,14 +1,43 @@
 import { toAppointmentDay } from '../../domain/value-objects/appointment-date';
 import {
   AppointmentListItemDto,
+  AppointmentMaterialLoanDto,
   PaginatedAppointmentsResponseDto,
 } from '../dto/appointment-list-response.dto';
-import type { AppointmentListItem } from '../ports/request-query.port';
+import type {
+  AppointmentListItem,
+  AppointmentMaterialLoanSummary,
+} from '../ports/request-query.port';
 import { DateOnlyMapper } from './date-only.mapper';
 import { PersonNameMapper } from './person-name.mapper';
 
 /** A row of the calendar (HU-19) → its response. */
 export class AppointmentListResponseMapper {
+  static toLoanDto(
+    loan: AppointmentMaterialLoanSummary | null | undefined,
+  ): AppointmentMaterialLoanDto | null {
+    if (!loan) {
+      return null;
+    }
+    return {
+      id: loan.id,
+      handedOverAt: loan.handedOverAt.toISOString(),
+      handedOverBy: {
+        id: loan.handedOverBy.id,
+        name: PersonNameMapper.fullName(loan.handedOverBy),
+      },
+      deliveryNotes: loan.deliveryNotes,
+      returnedAt: loan.returnedAt ? loan.returnedAt.toISOString() : null,
+      returnedBy: loan.returnedBy
+        ? {
+            id: loan.returnedBy.id,
+            name: PersonNameMapper.fullName(loan.returnedBy),
+          }
+        : null,
+      returnNotes: loan.returnNotes,
+    };
+  }
+
   static toDto(item: AppointmentListItem): AppointmentListItemDto {
     const date = DateOnlyMapper.toDto(item.appointmentDate);
     const { serviceHours } = toAppointmentDay(date);
@@ -45,6 +74,7 @@ export class AppointmentListResponseMapper {
         catalogCode: material.catalogCode,
         title: material.title,
         materialType: material.materialType,
+        status: material.status ?? 'DISPONIBLE',
         location:
           material.depot !== null &&
           material.shelf !== null &&
@@ -55,6 +85,10 @@ export class AppointmentListResponseMapper {
                 box: material.box,
               }
             : null,
+        activeLoan: AppointmentListResponseMapper.toLoanDto(
+          material.activeLoan,
+        ),
+        lastLoan: AppointmentListResponseMapper.toLoanDto(material.lastLoan),
       })),
     };
   }

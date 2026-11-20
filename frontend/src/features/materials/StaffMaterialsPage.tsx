@@ -7,8 +7,16 @@ import type { SelectedMaterial } from '../requests/selected-materials';
 import { buildStaffNewRequestPath } from '../requests/selected-materials';
 import {
   changeMaterialStatus,
+  MANUAL_MATERIAL_STATUSES,
   MAX_STATUS_REASON_LENGTH,
 } from './api/change-material-status';
+import type { ManualMaterialStatus } from './api/change-material-status';
+import {
+  formatBogotaDateTime,
+  returnMaterial,
+} from './api/material-loans';
+import { LoanActionModal } from './LoanActionModal';
+import { MaterialHistoryModal } from './MaterialHistoryModal';
 import {
   MATERIAL_STATUS_LABELS,
   MATERIAL_STATUSES,
@@ -77,11 +85,16 @@ export function StaffMaterialsPage() {
   const [selected, setSelected] = useState<SelectedMaterial[]>([]);
 
   const [editing, setEditing] = useState<Material | null>(null);
-  const [newStatus, setNewStatus] = useState<MaterialStatus>('DISPONIBLE');
+  const [newStatus, setNewStatus] =
+    useState<ManualMaterialStatus>('DISPONIBLE');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [returning, setReturning] = useState<Material | null>(null);
+  const [returningBusy, setReturningBusy] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<Material | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -147,11 +160,55 @@ export function StaffMaterialsPage() {
   }
 
   function startEditing(material: Material) {
+    const currentStatus = savedStatuses[material.id] ?? material.status;
+    if (currentStatus === 'EN_USO') {
+      return;
+    }
     setEditing(material);
-    setNewStatus(savedStatuses[material.id] ?? material.status);
+    setNewStatus(currentStatus);
     setReason('');
     setSaveError(null);
     setConfirmation(null);
+  }
+
+  function startReturn(material: Material) {
+    setReturning(material);
+    setReturnError(null);
+    setConfirmation(null);
+  }
+
+  async function confirmReturn(notes: string | undefined) {
+    if (!returning) return;
+    setReturningBusy(true);
+    setReturnError(null);
+    try {
+      const loan = await returnMaterial({
+        materialId: returning.id,
+        notes,
+      });
+      setSavedStatuses((current) => ({
+        ...current,
+        [returning.id]: loan.materialStatus,
+      }));
+      const returnedTime = loan.returnedAt
+        ? formatBogotaDateTime(loan.returnedAt)
+        : '';
+      setConfirmation(
+        `Devolución registrada para «${returning.title}»${returnedTime ? ` (${returnedTime})` : ''}. El material volvió a estar disponible.`,
+      );
+      setReturning(null);
+    } catch (caught: unknown) {
+      const error = toApiError(caught);
+      setReturnError(
+        error.status === 401
+          ? 'Su sesión no es válida o venció. Inicie sesión de nuevo.'
+          : error.status === 403
+            ? 'No tiene permiso para registrar devoluciones.'
+            : error.message,
+      );
+    } finally {
+      setReturningBusy(false);
+    }
   }
 
   function cancelEditing() {
@@ -395,10 +452,10 @@ export function StaffMaterialsPage() {
                   id="material-new-status"
                   value={newStatus}
                   onChange={(event) =>
-                    setNewStatus(event.target.value as MaterialStatus)
+                    setNewStatus(event.target.value as ManualMaterialStatus)
                   }
                 >
-                  {MATERIAL_STATUSES.map((value) => (
+                  {MANUAL_MATERIAL_STATUSES.map((value) => (
                     <option key={value} value={value}>
                       {MATERIAL_STATUS_LABELS[value]}
                     </option>
@@ -528,14 +585,35 @@ export function StaffMaterialsPage() {
                           </span>
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            className={styles.changeButton}
-                            onClick={() => startEditing(material)}
-                            aria-label={`Cambiar estado de ${material.title}`}
-                          >
-                            Cambiar estado
-                          </button>
+                          <div className={styles.rowActions}>
+                            {status === 'EN_USO' ? (
+                              <button
+                                type="button"
+                                className={styles.returnButton}
+                                onClick={() => startReturn(material)}
+                                aria-label={`Registrar devolución de ${material.title}`}
+                              >
+                                Registrar devolución
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className={styles.changeButton}
+                                onClick={() => startEditing(material)}
+                                aria-label={`Cambiar estado de ${material.title}`}
+                              >
+                                Cambiar estado
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className={styles.changeButton}
+                              onClick={() => setHistoryTarget(material)}
+                              aria-label={`Ver historial de ${material.title}`}
+                            >
+                              Ver historial
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -569,6 +647,27 @@ export function StaffMaterialsPage() {
           ) : null}
         </section>
       </div>
+
+      {returning ? (
+        <LoanActionModal
+          mode="return"
+          materialTitle={returning.title}
+          materialCatalogCode={returning.catalogCode}
+          submitting={returningBusy}
+          error={returnError}
+          onConfirm={confirmReturn}
+          onCancel={() => setReturning(null)}
+        />
+      ) : null}
+
+      {historyTarget ? (
+        <MaterialHistoryModal
+          materialId={historyTarget.id}
+          materialTitle={historyTarget.title}
+          materialCatalogCode={historyTarget.catalogCode}
+          onClose={() => setHistoryTarget(null)}
+        />
+      ) : null}
     </AppLayout>
   );
 }

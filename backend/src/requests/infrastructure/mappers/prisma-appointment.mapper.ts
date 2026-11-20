@@ -21,11 +21,12 @@ export interface NewAppointment {
   materialIds: string[];
 }
 
-/** An appointment loaded with its request row (HU-21). */
+/** An appointment loaded with its request row and booked materials (HU-21, HU-72). */
 export interface StoredAppointmentRow {
   id: string;
   appointmentDate: Date;
   status: string;
+  materials: { materialId: string }[];
   request: RequestEntityRow;
 }
 
@@ -53,6 +54,7 @@ export class PrismaAppointmentMapper {
       id: row.id,
       date: row.appointmentDate,
       status: row.status,
+      materialIds: row.materials.map(({ materialId }) => materialId),
       request: PrismaRequestMapper.toDomain(row.request),
     };
   }

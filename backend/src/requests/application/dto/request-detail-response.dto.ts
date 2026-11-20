@@ -1,8 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { APPOINTMENT_STATUSES } from '../../domain/enums/appointment-status';
+import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import { DELIVERY_MODES } from '../../domain/enums/delivery-mode';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import { REQUEST_STATUSES } from '../../domain/enums/request-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import { AppointmentMaterialLoanDto } from './appointment-list-response.dto';
+import { AppointmentServiceHoursDto } from './schedule-appointment-response.dto';
 
 export class RequestDetailRequesterDto {
   @ApiProperty({ description: 'Nombre completo', example: 'Juan Carlos Pérez' })
@@ -74,6 +78,46 @@ export class RequestDetailMaterialDto {
   itemStatus: string;
 }
 
+export class RequestDetailAppointmentMaterialDto {
+  @ApiProperty({ example: 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc' })
+  id: string;
+
+  @ApiProperty({ example: 'TH-DOC-0001' })
+  catalogCode: string;
+
+  @ApiProperty({ example: 'Acta de fundación de la villa' })
+  title: string;
+
+  @ApiProperty({ example: 'DISPONIBLE' })
+  status: string;
+
+  @ApiProperty({ type: AppointmentMaterialLoanDto, nullable: true })
+  activeLoan: AppointmentMaterialLoanDto | null;
+
+  @ApiProperty({ type: AppointmentMaterialLoanDto, nullable: true })
+  lastLoan: AppointmentMaterialLoanDto | null;
+}
+
+export class RequestDetailAppointmentDto {
+  @ApiProperty({ example: '9b1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })
+  id: string;
+
+  @ApiProperty({
+    description: 'Día de la cita (YYYY-MM-DD)',
+    example: '2026-11-19',
+  })
+  date: string;
+
+  @ApiProperty({ type: AppointmentServiceHoursDto })
+  serviceHours: AppointmentServiceHoursDto;
+
+  @ApiProperty({ enum: APPOINTMENT_STATUSES, example: 'PROGRAMADA' })
+  status: AppointmentStatus;
+
+  @ApiProperty({ type: [RequestDetailAppointmentMaterialDto] })
+  materials: RequestDetailAppointmentMaterialDto[];
+}
+
 export class RequestDetailResponseDto {
   @ApiProperty({ example: '3f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })
   id: string;
@@ -134,4 +178,12 @@ export class RequestDetailResponseDto {
 
   @ApiProperty({ type: [RequestDetailMaterialDto] })
   materials: RequestDetailMaterialDto[];
+
+  @ApiProperty({
+    description:
+      'Cita PROGRAMADA vigente de la solicitud con el estado de entrega de cada material; null si no tiene cita activa (HU-72)',
+    type: RequestDetailAppointmentDto,
+    nullable: true,
+  })
+  activeAppointment: RequestDetailAppointmentDto | null;
 }

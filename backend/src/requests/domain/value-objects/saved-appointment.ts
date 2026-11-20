@@ -2,12 +2,13 @@ import type { Request } from '../entities/request.entity';
 import type { AppointmentStatus } from '../enums/appointment-status';
 import type { SavedStatusChange } from './saved-status-change';
 
-/** An appointment loaded with its request entity to reschedule or cancel it (HU-21). */
+/** An appointment loaded with its request entity to reschedule, cancel or deliver material (HU-21, HU-72). */
 export interface StoredAppointment {
   readonly id: string;
   // UTC midnight of the day
   readonly date: Date;
   readonly status: AppointmentStatus;
+  readonly materialIds: readonly string[];
   readonly request: Request;
 }
 

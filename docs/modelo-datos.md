@@ -169,6 +169,19 @@ erDiagram
     int files_count "CHECK >= 0"
     varchar error_message "max 1000; NULL"
   }
+  material_loans {
+    uuid id PK
+    uuid material_id FK
+    uuid appointment_id FK
+    timestamptz handed_over_at
+    uuid handed_over_by_id FK
+    varchar delivery_notes "max 500; NULL"
+    timestamptz returned_at "NULL"
+    uuid returned_by_id FK "NULL"
+    varchar return_notes "max 500; NULL"
+    timestamptz created_at
+    timestamptz updated_at
+  }
   users ||--o{ refresh_tokens : sesiones
   users |o--o| requesters : cuenta
   users |o--o{ materials : cambia_estado
@@ -187,6 +200,9 @@ erDiagram
   requests ||--o{ notifications : notifica
   status_history |o--o| notifications : genera
   users |o--o{ reading_room_config : configura
+  materials ||--o{ material_loans : prestamos
+  appointments ||--o{ material_loans : entregas
+  users ||--o{ material_loans : entrega_o_recibe
 ```
 
 **Figura 1.** Diagrama ER actualizado para HU-134, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
@@ -210,6 +226,9 @@ erDiagram
 | requests – notifications | 1 : 0..N | `notifications.request_id` |
 | status_history – notifications | 0..1 : 0..1 | `notifications.status_history_id` (única) |
 | users – reading_room_config | 0..1 : 0..N | `reading_room_config.updated_by_id` |
+| materials – material_loans | 1 : 0..N | `material_loans.material_id` |
+| appointments – material_loans | 1 : 0..N | `material_loans.appointment_id` |
+| users – material_loans | 1 : 0..N (entrega) y 0..1 : 0..N (devolución) | `material_loans.handed_over_by_id`, `material_loans.returned_by_id` |
 
 Decisiones principales:
 
@@ -429,6 +448,23 @@ Creada en HU-134 (migración `20261118120000_material_digital_copy`). Cada fila 
 
 Un índice único parcial (`sync_runs_single_running_idx`, sobre `status = 'EN_CURSO'`) impide que haya dos corridas a la vez, aunque el job y el botón arranquen una al mismo tiempo.
 
+### material_loans
+
+Creada en HU-72 (migración `20261119140000_create_material_loans`). Registra cada entrega física de un material durante una cita en sala y su posterior devolución. Permite múltiples préstamos del mismo material en la misma cita tras haber sido devuelto, mientras un índice único parcial impide dos préstamos abiertos a la vez sobre el mismo material.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| id | uuid | PK | |
+| material_id | uuid | FK → materials, IDX con handed_over_at DESC, UK parcial (`returned_at IS NULL`) | Material entregado |
+| appointment_id | uuid | FK → appointments, IDX con material_id | Cita del día en la que se entregó |
+| handed_over_at | timestamptz | DEFAULT now() | Fecha y hora de entrega |
+| handed_over_by_id | uuid | FK → users, IDX | Funcionario que entregó el material |
+| delivery_notes | varchar(500) | NULL | Observaciones opcionales de la entrega |
+| returned_at | timestamptz | NULL, CHECK con returned_by_id y `>= handed_over_at` | Fecha y hora de devolución; `NULL` mientras el material sigue `EN_USO` |
+| returned_by_id | uuid | FK → users, NULL, IDX | Funcionario que recibió la devolución |
+| return_notes | varchar(500) | NULL, CHECK solo si `returned_at IS NOT NULL` | Observaciones opcionales de la devolución |
+| created_at, updated_at | timestamptz | | |
+
 ## 4. Índices
 
 Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, porque PostgreSQL no lo hace. Los índices GIN trigram usan la extensión `pg_trgm` y permiten buscar con `ILIKE '%texto%'` sin recorrer toda la tabla (D-16).
@@ -463,6 +499,10 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | notifications | status_history_id (UK) | Un cambio de estado dispara a lo sumo un correo |
 | sync_runs | started_at DESC | Última corrida, para el estado de la sincronización (HU-138) |
 | sync_runs | Único parcial `WHERE status = 'EN_CURSO'` | Una sola sincronización a la vez (HU-137) |
+| material_loans | (material_id, handed_over_at DESC) | Historial de custodia del material del más reciente al más antiguo (HU-72) |
+| material_loans | (appointment_id, material_id) | Préstamos registrados en una cita y salvaguardas del ciclo de vida (HU-72) |
+| material_loans | handed_over_by_id, returned_by_id | Claves foráneas de funcionarios responsables |
+| material_loans | Único parcial `(material_id) WHERE returned_at IS NULL` | A lo sumo un préstamo abierto por material a la vez (HU-72) |
 
 ## 5. Migraciones y datos semilla
 
@@ -489,6 +529,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261118030000_create_reading_room_config` | HU-20.1 | Tabla singleton `reading_room_config` para la capacidad diaria |
 | `20261118120000_material_digital_copy` | HU-134 | Ubicación física opcional, `source`, `digital_path` y `last_seen_at` en `materials`, y la tabla `sync_runs` |
 | `20261118150000_allow_reschedule_status_history` | HU-21 | Permite registrar la reprogramación de una cita (`AGENDADA → AGENDADA`) en `status_history` |
+| `20261119140000_create_material_loans` | HU-72 | Tabla `material_loans` para entregas, devoluciones e historial de custodia de materiales en sala |
 
 **Semillas:**
 

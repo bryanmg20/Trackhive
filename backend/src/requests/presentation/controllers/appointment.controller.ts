@@ -5,6 +5,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Put,
   Query,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
@@ -25,9 +27,11 @@ import { CurrentUser } from '../../../auth/presentation/decorators/current-user.
 import { Roles } from '../../../auth/presentation/decorators/roles.decorator';
 import type { AuthenticatedUser } from '../../../auth/presentation/guards/authenticated-user';
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
+import { MaterialLoanResponseDto } from '../../../materials/application/dto/material-loan-response.dto';
 import { PaginatedAppointmentsResponseDto } from '../../application/dto/appointment-list-response.dto';
 import { CancelAppointmentResponseDto } from '../../application/dto/cancel-appointment-response.dto';
 import { CancelAppointmentDto } from '../../application/dto/cancel-appointment.dto';
+import { DeliverMaterialDto } from '../../application/dto/deliver-material.dto';
 import { GetRoomOccupancyQueryDto } from '../../application/dto/get-room-occupancy-query.dto';
 import { ListAppointmentsQueryDto } from '../../application/dto/list-appointments-query.dto';
 import { RescheduleAppointmentDto } from '../../application/dto/reschedule-appointment.dto';
@@ -36,6 +40,7 @@ import { RoomOccupancyResponseDto } from '../../application/dto/room-occupancy-r
 import { ScheduleAppointmentResponseDto } from '../../application/dto/schedule-appointment-response.dto';
 import { UpdateRoomCapacityDto } from '../../application/dto/update-room-capacity.dto';
 import { CancelAppointmentUseCase } from '../../application/use-cases/cancel-appointment.use-case';
+import { DeliverMaterialUseCase } from '../../application/use-cases/deliver-material.use-case';
 import { GetRoomCapacityUseCase } from '../../application/use-cases/get-room-capacity.use-case';
 import { GetRoomOccupancyUseCase } from '../../application/use-cases/get-room-occupancy.use-case';
 import { ListAppointmentsUseCase } from '../../application/use-cases/list-appointments.use-case';
@@ -53,6 +58,7 @@ export class AppointmentController {
     private readonly getRoomOccupancyUseCase: GetRoomOccupancyUseCase,
     private readonly rescheduleAppointmentUseCase: RescheduleAppointmentUseCase,
     private readonly cancelAppointmentUseCase: CancelAppointmentUseCase,
+    private readonly deliverMaterialUseCase: DeliverMaterialUseCase,
   ) {}
 
   @Get()
@@ -306,6 +312,66 @@ export class AppointmentController {
       appointmentId: id,
       comment: body.comment,
       userId: user.id,
+    });
+  }
+
+  @Post(':id/materials/:materialId/deliver')
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Registra la entrega física de un material para una cita del día',
+    description:
+      'Solo para PERSONAL y ADMIN (HU-72). Para una cita PROGRAMADA del día ' +
+      'de hoy (hora America/Bogota), registra la hora de entrega, el ' +
+      'funcionario responsable y observaciones opcionales, y cambia el ' +
+      'material al estado EN_USO. Permite volver a entregar el mismo material ' +
+      'en la misma cita una vez haya sido devuelto.',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la cita' })
+  @ApiParam({ name: 'materialId', description: 'Identificador del material' })
+  @ApiCreatedResponse({
+    description: 'Entrega registrada y material marcado EN_USO',
+    type: MaterialLoanResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Identificador u observaciones inválidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden registrar entregas',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description:
+      'La cita no existe (APPOINTMENT_NOT_FOUND) o el material no pertenece a ' +
+      'la cita (APPOINTMENT_MATERIAL_NOT_FOUND)',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'La cita no está PROGRAMADA (APPOINTMENT_NOT_SCHEDULED), no es del día ' +
+      'de hoy (APPOINTMENT_NOT_TODAY), el material ya está en uso ' +
+      '(MATERIAL_IN_USE) o no está disponible (MATERIAL_NOT_AVAILABLE)',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  deliverMaterial(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('materialId', new ParseUUIDPipe()) materialId: string,
+    @Body() body: DeliverMaterialDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MaterialLoanResponseDto> {
+    return this.deliverMaterialUseCase.execute({
+      appointmentId: id,
+      materialId,
+      userId: user.id,
+      notes: body.notes,
     });
   }
 }

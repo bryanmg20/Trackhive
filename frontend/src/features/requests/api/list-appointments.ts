@@ -6,6 +6,8 @@ import {
 } from './list-requests';
 import type { RequestStatus, SortOrder } from './list-requests';
 import type { MaterialLocation } from '../material-location';
+import type { AppointmentMaterialLoanSummary } from '../../materials/api/material-loans';
+import type { MaterialStatus } from '../../materials/api/search-materials';
 
 export const APPOINTMENT_STATUSES = [
   'PROGRAMADA',
@@ -30,8 +32,11 @@ export interface AppointmentMaterialItem {
   catalogCode: string;
   title: string;
   materialType: string;
+  status?: MaterialStatus;
   // null when the material has no physical location (HU-134)
   location: MaterialLocation | null;
+  activeLoan?: AppointmentMaterialLoanSummary | null;
+  lastLoan?: AppointmentMaterialLoanSummary | null;
 }
 
 export interface AppointmentListItem {

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Material } from '../../domain/entities/material.entity';
+import { MaterialInUseError } from '../../domain/errors/material-in-use.error';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
   IMaterialRepository,
@@ -42,10 +43,14 @@ export class PrismaMaterialRepository implements IMaterialRepository {
   }
 
   async saveStatusChange(material: Material): Promise<void> {
-    await this.prisma.materialModel.update({
-      where: { id: material.id },
+    // Guard against a concurrent delivery transitioning the material to EN_USO
+    const { count } = await this.prisma.materialModel.updateMany({
+      where: { id: material.id, status: { not: 'EN_USO' } },
       data: PrismaMaterialMapper.toStatusUpdate(material),
     });
+    if (count === 0) {
+      throw new MaterialInUseError();
+    }
   }
 
   private buildWhere(

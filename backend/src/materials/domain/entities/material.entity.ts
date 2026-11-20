@@ -1,8 +1,14 @@
 import { InvalidMaterialSourceError } from '../errors/invalid-material-source.error';
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
+import { MaterialInUseError } from '../errors/material-in-use.error';
+import { MaterialStatusNotManualError } from '../errors/material-status-not-manual.error';
 import { isMaterialSource, MaterialSource } from '../enums/material-source';
-import { isMaterialStatus, MaterialStatus } from '../enums/material-status';
+import {
+  isManualMaterialStatus,
+  isMaterialStatus,
+  MaterialStatus,
+} from '../enums/material-status';
 import { isMaterialType, MaterialType } from '../enums/material-type';
 
 // Physical location in the archive. Never shown to the PUBLICO role.
@@ -90,7 +96,11 @@ export class Material {
     this.updatedAt = props.updatedAt;
   }
 
-  /** Returns a copy with the new status and who changed it, when and why (HU-08). */
+  /**
+   * Returns a copy with the new status and who changed it, when and why (HU-08).
+   * Since HU-72, EN_USO is managed exclusively via delivery and return, so it
+   * cannot be chosen manually nor overwritten manually while in use.
+   */
   changeStatus(
     status: MaterialStatus,
     changedBy: string,
@@ -99,6 +109,12 @@ export class Material {
   ): Material {
     if (!isMaterialStatus(status)) {
       throw new InvalidMaterialStatusError();
+    }
+    if (!isManualMaterialStatus(status)) {
+      throw new MaterialStatusNotManualError();
+    }
+    if (this.status === 'EN_USO') {
+      throw new MaterialInUseError();
     }
     return new Material({
       ...this,

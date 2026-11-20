@@ -307,6 +307,38 @@
   background: var(--surface-strong);
 }
 
+.loanStatus {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.loanActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.loanButton {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.loanReturnButton {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--gold-text);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .detailHeader {
   display: flex;
   flex-wrap: wrap;

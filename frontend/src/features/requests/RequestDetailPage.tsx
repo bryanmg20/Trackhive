@@ -4,12 +4,24 @@ import { ROUTES } from '../../routes';
 import {
   MATERIAL_STATUS_LABELS,
   MATERIAL_TYPE_LABELS,
+  MaterialsApiError,
 } from '../materials/api/search-materials';
+import {
+  deliverAppointmentMaterial,
+  formatBogotaDateTime,
+  returnMaterial,
+  todayInBogotaIso,
+} from '../materials/api/material-loans';
+import { LoanActionModal } from '../materials/LoanActionModal';
+import type { LoanActionMode } from '../materials/LoanActionModal';
 import { AppLayout } from '../layout/AppLayout';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import type { ChangeRequestStatusResult } from './api/change-request-status';
 import { getRequest } from './api/get-request';
-import type { RequestDetail } from './api/get-request';
+import type {
+  RequestDetail,
+  RequestDetailAppointmentMaterial,
+} from './api/get-request';
 import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
 import { ChangeRequestStatusForm } from './ChangeRequestStatusForm';
 import styles from './RequestDetailPage.module.css';
@@ -74,6 +86,15 @@ export function RequestDetailPage() {
   const [response, setResponse] = useState<DetailResponse | null>(null);
   // Each status change adds a row to the history (HU-17): reload it
   const [historyVersion, setHistoryVersion] = useState(0);
+  const [detailVersion, setDetailVersion] = useState(0);
+  const [loanDialog, setLoanDialog] = useState<{
+    mode: LoanActionMode;
+    appointmentId: string;
+    material: RequestDetailAppointmentMaterial;
+  } | null>(null);
+  const [loanSubmitting, setLoanSubmitting] = useState(false);
+  const [loanError, setLoanError] = useState<string | null>(null);
+  const [loanNotice, setLoanNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -95,7 +116,47 @@ export function RequestDetailPage() {
     return () => {
       ignore = true;
     };
-  }, [id]);
+  }, [id, detailVersion]);
+
+  async function handleConfirmLoanAction(notes: string | undefined) {
+    if (!loanDialog) return;
+    setLoanSubmitting(true);
+    setLoanError(null);
+    setLoanNotice(null);
+    try {
+      const { mode, appointmentId, material } = loanDialog;
+      const saved =
+        mode === 'deliver'
+          ? await deliverAppointmentMaterial({
+              appointmentId,
+              materialId: material.id,
+              notes,
+            })
+          : await returnMaterial({
+              materialId: material.id,
+              notes,
+            });
+      setLoanDialog(null);
+      setLoanNotice(
+        mode === 'deliver'
+          ? `Entrega registrada para «${material.title}» (${formatBogotaDateTime(saved.handedOverAt)}). El material quedó en uso.`
+          : `Devolución registrada para «${material.title}»${saved.returnedAt ? ` (${formatBogotaDateTime(saved.returnedAt)})` : ''}. El material volvió a estar disponible.`,
+      );
+      setDetailVersion((version) => version + 1);
+    } catch (caught: unknown) {
+      if (caught instanceof MaterialsApiError) {
+        setLoanError(
+          caught.status === 401
+            ? 'Su sesión no es válida o venció. Inicie sesión de nuevo.'
+            : caught.message,
+        );
+      } else {
+        setLoanError(NETWORK_ERROR_MESSAGE);
+      }
+    } finally {
+      setLoanSubmitting(false);
+    }
+  }
 
   const isLoading = response?.id !== id;
   const request = isLoading ? null : response.request;
@@ -122,6 +183,10 @@ export function RequestDetailPage() {
               // Shows the «Motivo del rechazo» field right after rejecting (HU-16)
               // An appointment (HU-18) sends none: the request is not rejected
               rejectionReason: result.rejectionReason ?? null,
+              activeAppointment:
+                result.status === 'AGENDADA'
+                  ? current.request.activeAppointment
+                  : null,
             },
           }
         : current,
@@ -177,6 +242,108 @@ export function RequestDetailPage() {
               request={request}
               onChanged={applyStatusChange}
             />
+
+            {request.activeAppointment ? (
+              <section
+                className={styles.card}
+                aria-labelledby="sec-active-appointment"
+              >
+                <h2 id="sec-active-appointment" className={styles.cardTitle}>
+                  Cita programada · entrega y devolución en sala
+                </h2>
+                <p className={styles.meta}>
+                  Fecha: {formatDate(request.activeAppointment.date)} · Horario
+                  de {request.activeAppointment.serviceHours.opensAt} a{' '}
+                  {request.activeAppointment.serviceHours.closesAt}
+                </p>
+
+                {loanNotice ? (
+                  <p className={styles.notice} role="status">
+                    {loanNotice}
+                  </p>
+                ) : null}
+
+                <ul className={styles.materialList}>
+                  {request.activeAppointment.materials.map((material) => {
+                    const isToday =
+                      request.activeAppointment?.date === todayInBogotaIso();
+                    const canDeliver =
+                      request.activeAppointment?.status === 'PROGRAMADA' &&
+                      isToday &&
+                      !material.activeLoan &&
+                      material.status === 'DISPONIBLE';
+                    const canReturn = Boolean(material.activeLoan);
+
+                    return (
+                      <li key={material.id} className={styles.material}>
+                        <strong>{material.title}</strong>
+                        <span className={styles.meta}>
+                          {material.catalogCode} · Estado:{' '}
+                          {MATERIAL_STATUS_LABELS[material.status]}
+                        </span>
+                        {material.activeLoan ? (
+                          <span>
+                            Entregado{' '}
+                            {formatBogotaDateTime(
+                              material.activeLoan.handedOverAt,
+                            )}{' '}
+                            por {material.activeLoan.handedOverBy.name}
+                          </span>
+                        ) : material.lastLoan?.returnedAt ? (
+                          <span>
+                            Última devolución:{' '}
+                            {formatBogotaDateTime(material.lastLoan.returnedAt)}
+                            {material.lastLoan.returnedBy
+                              ? ` · recibió ${material.lastLoan.returnedBy.name}`
+                              : ''}
+                          </span>
+                        ) : null}
+                        {canDeliver || canReturn ? (
+                          <div className={styles.loanActions}>
+                            {canDeliver ? (
+                              <button
+                                type="button"
+                                className={styles.loanButton}
+                                onClick={() => {
+                                  setLoanError(null);
+                                  setLoanDialog({
+                                    mode: 'deliver',
+                                    appointmentId:
+                                      request.activeAppointment!.id,
+                                    material,
+                                  });
+                                }}
+                                aria-label={`Registrar entrega de ${material.title}`}
+                              >
+                                Registrar entrega
+                              </button>
+                            ) : null}
+                            {canReturn ? (
+                              <button
+                                type="button"
+                                className={styles.loanReturnButton}
+                                onClick={() => {
+                                  setLoanError(null);
+                                  setLoanDialog({
+                                    mode: 'return',
+                                    appointmentId:
+                                      request.activeAppointment!.id,
+                                    material,
+                                  });
+                                }}
+                                aria-label={`Registrar devolución de ${material.title}`}
+                              >
+                                Registrar devolución
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ) : null}
 
             <section className={styles.card} aria-labelledby="sec-requester">
               <h2 id="sec-requester" className={styles.cardTitle}>
@@ -302,6 +469,18 @@ export function RequestDetailPage() {
             </section>
           </div>
         </article>
+      ) : null}
+
+      {loanDialog ? (
+        <LoanActionModal
+          mode={loanDialog.mode}
+          materialTitle={loanDialog.material.title}
+          materialCatalogCode={loanDialog.material.catalogCode}
+          submitting={loanSubmitting}
+          error={loanError}
+          onConfirm={handleConfirmLoanAction}
+          onCancel={() => setLoanDialog(null)}
+        />
       ) : null}
     </AppLayout>
   );

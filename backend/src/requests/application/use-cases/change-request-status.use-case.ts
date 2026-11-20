@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { assertCanSettleAppointmentOutcome } from '../../domain/policies/appointment-loans';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
 import type { ChangeRequestStatusInput } from '../dto/change-request-status.input';
 import { RequestNotFoundError } from '../../domain/errors/request-not-found.error';
@@ -39,6 +40,12 @@ export class ChangeRequestStatusUseCase {
       input.userId,
       input.comment,
     );
+
+    if (change.appointmentOutcome) {
+      const loanCounts =
+        await this.queries.countScheduledAppointmentLoansByRequest(request.id);
+      assertCanSettleAppointmentOutcome(change.appointmentOutcome, loanCounts);
+    }
 
     // HU-23: the new status and, if rejected, the reason the requester reads
     const context = await this.queries.findNotificationContext(request.id);

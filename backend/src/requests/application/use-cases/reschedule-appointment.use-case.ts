@@ -5,6 +5,7 @@ import { InvalidAppointmentDateError } from '../../domain/errors/invalid-appoint
 import { MaterialAlreadyBookedError } from '../../domain/errors/material-already-booked.error';
 import { MaterialNotAvailableError } from '../../domain/errors/material-not-available.error';
 import { RoomCapacityExceededError } from '../../domain/errors/room-capacity-exceeded.error';
+import { assertCanCancelOrRescheduleAppointment } from '../../domain/policies/appointment-loans';
 import { blocksScheduling } from '../../domain/policies/material-availability';
 import { isRoomFull } from '../../domain/policies/room-capacity';
 import type { IRequestRepository } from '../../domain/repositories/request.repository';
@@ -59,6 +60,9 @@ export class RescheduleAppointmentUseCase {
         'La nueva fecha de la cita debe ser distinta a la fecha actual.',
       );
     }
+
+    const loanCounts = await this.queries.countAppointmentLoans(appointment.id);
+    assertCanCancelOrRescheduleAppointment(loanCounts);
 
     const previousDate = DateOnlyMapper.toDto(appointment.date);
     const defaultComment = `Cita reprogramada del ${previousDate} al ${input.date}`;

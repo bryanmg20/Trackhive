@@ -18,6 +18,37 @@ export class AppointmentLocationDto {
   box: string;
 }
 
+export class AppointmentLoanActorDto {
+  @ApiProperty({ example: '2b1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })
+  id: string;
+
+  @ApiProperty({ description: 'Nombre completo', example: 'Ana Gómez' })
+  name: string;
+}
+
+export class AppointmentMaterialLoanDto {
+  @ApiProperty({ example: '4f1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })
+  id: string;
+
+  @ApiProperty({ example: '2026-11-19T14:30:00.000Z' })
+  handedOverAt: string;
+
+  @ApiProperty({ type: AppointmentLoanActorDto })
+  handedOverBy: AppointmentLoanActorDto;
+
+  @ApiProperty({ nullable: true, type: String, example: null })
+  deliveryNotes: string | null;
+
+  @ApiProperty({ nullable: true, type: String, example: null })
+  returnedAt: string | null;
+
+  @ApiProperty({ nullable: true, type: AppointmentLoanActorDto })
+  returnedBy: AppointmentLoanActorDto | null;
+
+  @ApiProperty({ nullable: true, type: String, example: null })
+  returnNotes: string | null;
+}
+
 export class AppointmentListMaterialDto {
   @ApiProperty({ example: 'c3f6c8f0-1c2b-4e3d-8f4a-123456789abc' })
   id: string;
@@ -32,11 +63,33 @@ export class AppointmentListMaterialDto {
   materialType: string;
 
   @ApiProperty({
+    description: 'Estado actual del material',
+    example: 'DISPONIBLE',
+  })
+  status: string;
+
+  @ApiProperty({
     description: 'Ubicación física; null si el material no la tiene (HU-134)',
     type: AppointmentLocationDto,
     nullable: true,
   })
   location: AppointmentLocationDto | null;
+
+  @ApiProperty({
+    description:
+      'Préstamo abierto en esta cita; null si no está en uso en esta cita (HU-72)',
+    type: AppointmentMaterialLoanDto,
+    nullable: true,
+  })
+  activeLoan: AppointmentMaterialLoanDto | null;
+
+  @ApiProperty({
+    description:
+      'Último préstamo registrado de este material en esta cita (HU-72)',
+    type: AppointmentMaterialLoanDto,
+    nullable: true,
+  })
+  lastLoan: AppointmentMaterialLoanDto | null;
 }
 
 export class AppointmentListRequestDto {

@@ -80,6 +80,12 @@ describe('Request registration (e2e)', () => {
     }),
     countActiveAppointmentsOnDate: jest.fn().mockResolvedValue(0),
     countActiveAppointmentsByDateRange: jest.fn().mockResolvedValue([]),
+    countAppointmentLoans: jest
+      .fn()
+      .mockResolvedValue({ totalLoans: 0, openLoans: 0 }),
+    countScheduledAppointmentLoansByRequest: jest
+      .fn()
+      .mockResolvedValue({ totalLoans: 0, openLoans: 0 }),
     findRequesterByEmail: jest.fn().mockResolvedValue({
       requesterId: 'requester-1',
       userId: null,
@@ -1614,7 +1620,10 @@ describe('Request registration (e2e)', () => {
                 catalogCode: 'TH-DOC-0001',
                 title: 'Acta de fundación de la villa',
                 materialType: 'DOCUMENTO',
+                status: 'DISPONIBLE',
                 location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
+                activeLoan: null,
+                lastLoan: null,
               },
             ],
           },

@@ -1,13 +1,25 @@
 import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
 import { apiUrl } from '../../auth/api/api-base-url';
 import { MaterialsApiError } from './search-materials';
-import type { Material, MaterialStatus } from './search-materials';
+import type { Material } from './search-materials';
 
 export const MAX_STATUS_REASON_LENGTH = 500;
 
+/**
+ * Statuses staff may set manually (HU-06, HU-08, HU-72).
+ * EN_USO changes exclusively through reading-room delivery and return.
+ */
+export const MANUAL_MATERIAL_STATUSES = [
+  'DISPONIBLE',
+  'EN_RESTAURACION',
+  'NO_CONSULTABLE',
+] as const;
+
+export type ManualMaterialStatus = (typeof MANUAL_MATERIAL_STATUSES)[number];
+
 export interface ChangeMaterialStatusParams {
   materialId: string;
-  status: MaterialStatus;
+  status: ManualMaterialStatus;
   reason?: string;
 }
 

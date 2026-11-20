@@ -4,6 +4,7 @@ import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isRequestStatus } from '../../domain/enums/request-status';
 import type {
   AppointmentListItem,
+  AppointmentMaterialLoanSummary,
   MaterialDayBooking,
   MaterialRequestCount,
   RequestDetail,
@@ -65,7 +66,7 @@ type RequestHistoryRow = Prisma.RequestModelGetPayload<{
   select: typeof REQUEST_HISTORY_SELECT;
 }>;
 
-/** What the calendar loads of an appointment (HU-19). */
+/** What the calendar loads of an appointment (HU-19, HU-72). */
 export const APPOINTMENT_LIST_INCLUDE = {
   request: {
     select: { id: true, trackingCode: true, status: true, deliveryMode: true },
@@ -86,7 +87,53 @@ export const APPOINTMENT_LIST_INCLUDE = {
     include: { material: true },
     orderBy: { material: { catalogCode: 'asc' } },
   },
+  loans: {
+    select: {
+      id: true,
+      materialId: true,
+      handedOverAt: true,
+      deliveryNotes: true,
+      returnedAt: true,
+      returnNotes: true,
+      handedOverBy: { select: PERSON_NAME },
+      returnedBy: { select: PERSON_NAME },
+    },
+    orderBy: [{ handedOverAt: 'desc' }, { id: 'asc' }],
+  },
 } satisfies Prisma.AppointmentModelInclude;
+
+/** What the detail screen loads of a request (HU-13, HU-72). */
+export const REQUEST_DETAIL_INCLUDE = {
+  ...REQUEST_WITH_REQUESTER_AND_MATERIALS,
+  appointments: {
+    where: { status: 'PROGRAMADA' },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    include: {
+      materials: {
+        include: { material: true },
+        orderBy: { material: { catalogCode: 'asc' } },
+      },
+      loans: {
+        select: {
+          id: true,
+          materialId: true,
+          handedOverAt: true,
+          deliveryNotes: true,
+          returnedAt: true,
+          returnNotes: true,
+          handedOverBy: { select: PERSON_NAME },
+          returnedBy: { select: PERSON_NAME },
+        },
+        orderBy: [{ handedOverAt: 'desc' }, { id: 'asc' }],
+      },
+    },
+  },
+} satisfies Prisma.RequestModelInclude;
+
+type RequestDetailRow = Prisma.RequestModelGetPayload<{
+  include: typeof REQUEST_DETAIL_INCLUDE;
+}>;
 
 type AppointmentWithRelations = Prisma.AppointmentModelGetPayload<{
   include: typeof APPOINTMENT_LIST_INCLUDE;
@@ -186,10 +233,83 @@ export class PrismaRequestReadMapper {
     };
   }
 
-  static toDetail(model: RequestWithRequesterAndMaterials): RequestDetail {
+  private static toLoanSummary(
+    row: AppointmentWithRelations['loans'][number],
+  ): AppointmentMaterialLoanSummary {
+    return {
+      id: row.id,
+      handedOverAt: row.handedOverAt,
+      handedOverBy: row.handedOverBy,
+      deliveryNotes: row.deliveryNotes,
+      returnedAt: row.returnedAt,
+      returnedBy: row.returnedBy,
+      returnNotes: row.returnNotes,
+    };
+  }
+
+  private static indexLoansByMaterial(
+    loans: AppointmentWithRelations['loans'] = [],
+  ): Map<
+    string,
+    {
+      activeLoan: AppointmentMaterialLoanSummary | null;
+      lastLoan: AppointmentMaterialLoanSummary | null;
+    }
+  > {
+    const byMaterial = new Map<
+      string,
+      {
+        activeLoan: AppointmentMaterialLoanSummary | null;
+        lastLoan: AppointmentMaterialLoanSummary | null;
+      }
+    >();
+    // loans are ordered handedOverAt DESC: first seen is lastLoan
+    for (const loan of loans) {
+      const summary = PrismaRequestReadMapper.toLoanSummary(loan);
+      const entry = byMaterial.get(loan.materialId) ?? {
+        activeLoan: null,
+        lastLoan: null,
+      };
+      if (!entry.lastLoan) {
+        entry.lastLoan = summary;
+      }
+      if (loan.returnedAt === null && !entry.activeLoan) {
+        entry.activeLoan = summary;
+      }
+      byMaterial.set(loan.materialId, entry);
+    }
+    return byMaterial;
+  }
+
+  static toDetail(model: RequestDetailRow): RequestDetail {
     if (!isRequestStatus(model.status) || !isDeliveryMode(model.deliveryMode)) {
       throw new Error(`Request ${model.id} has an invalid stored value`);
     }
+    const scheduled = model.appointments?.[0] ?? null;
+    const activeAppointment =
+      scheduled && isAppointmentStatus(scheduled.status)
+        ? (() => {
+            const loansByMaterial =
+              PrismaRequestReadMapper.indexLoansByMaterial(scheduled.loans);
+            return {
+              id: scheduled.id,
+              appointmentDate: scheduled.appointmentDate,
+              status: scheduled.status,
+              materials: scheduled.materials.map(({ material }) => {
+                const loans = loansByMaterial.get(material.id);
+                return {
+                  id: material.id,
+                  catalogCode: material.catalogCode,
+                  title: material.title,
+                  status: material.status,
+                  activeLoan: loans?.activeLoan ?? null,
+                  lastLoan: loans?.lastLoan ?? null,
+                };
+              }),
+            };
+          })()
+        : null;
+
     return {
       id: model.id,
       trackingCode: model.trackingCode,
@@ -225,6 +345,7 @@ export class PrismaRequestReadMapper {
         location: PrismaRequestReadMapper.toLocation(material),
         itemStatus,
       })),
+      activeAppointment,
     };
   }
 
@@ -238,6 +359,9 @@ export class PrismaRequestReadMapper {
     ) {
       throw new Error(`Appointment ${model.id} has an invalid stored value`);
     }
+    const loansByMaterial = PrismaRequestReadMapper.indexLoansByMaterial(
+      model.loans,
+    );
     return {
       id: model.id,
       appointmentDate: model.appointmentDate,
@@ -252,15 +376,21 @@ export class PrismaRequestReadMapper {
       },
       requester: model.requester,
       scheduledBy: model.scheduledBy,
-      materials: model.materials.map(({ material }) => ({
-        id: material.id,
-        catalogCode: material.catalogCode,
-        title: material.title,
-        materialType: material.materialType,
-        depot: material.depot,
-        shelf: material.shelf,
-        box: material.box,
-      })),
+      materials: model.materials.map(({ material }) => {
+        const loans = loansByMaterial.get(material.id);
+        return {
+          id: material.id,
+          catalogCode: material.catalogCode,
+          title: material.title,
+          materialType: material.materialType,
+          status: material.status,
+          depot: material.depot,
+          shelf: material.shelf,
+          box: material.box,
+          activeLoan: loans?.activeLoan ?? null,
+          lastLoan: loans?.lastLoan ?? null,
+        };
+      }),
     };
   }
 

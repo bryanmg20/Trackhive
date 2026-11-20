@@ -1,6 +1,7 @@
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { RequestStatus } from '../../domain/enums/request-status';
+import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
 import type { ReportPeriod } from '../../domain/policies/report-period';
 import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
 
@@ -74,6 +75,42 @@ export interface RequestListResult {
   total: number;
 }
 
+export interface AppointmentMaterialLoanSummary {
+  id: string;
+  handedOverAt: Date;
+  handedOverBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  };
+  deliveryNotes: string | null;
+  returnedAt: Date | null;
+  returnedBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    secondLastName: string | null;
+  } | null;
+  returnNotes: string | null;
+}
+
+export interface RequestDetailActiveAppointment {
+  id: string;
+  appointmentDate: Date;
+  status: AppointmentStatus;
+  materials: {
+    id: string;
+    catalogCode: string;
+    title: string;
+    status: string;
+    activeLoan: AppointmentMaterialLoanSummary | null;
+    lastLoan: AppointmentMaterialLoanSummary | null;
+  }[];
+}
+
 export interface RequestDetail {
   id: string;
   trackingCode: string;
@@ -110,6 +147,7 @@ export interface RequestDetail {
     location: { depot: string; shelf: string; box: string } | null;
     itemStatus: string;
   }[];
+  activeAppointment?: RequestDetailActiveAppointment | null;
 }
 
 /** One row of status_history, with the name of who made the change (HU-17). */
@@ -235,10 +273,13 @@ export interface AppointmentListItem {
     catalogCode: string;
     title: string;
     materialType: string;
+    status?: string;
     // The physical location goes whole or not at all (HU-134)
     depot: string | null;
     shelf: string | null;
     box: string | null;
+    activeLoan?: AppointmentMaterialLoanSummary | null;
+    lastLoan?: AppointmentMaterialLoanSummary | null;
   }[];
 }
 
@@ -339,4 +380,20 @@ export interface IRequestQueryService {
   findMostRequestedMaterials(
     criteria: MostRequestedMaterialsCriteria,
   ): Promise<MostRequestedMaterialsResult>;
+
+  /**
+   * Total and open (`returned_at IS NULL`) material loans recorded for an
+   * appointment, used by the appointment-loans policy before cancelling or
+   * rescheduling (HU-21, HU-72, RN-20).
+   */
+  countAppointmentLoans(appointmentId: string): Promise<AppointmentLoanCounts>;
+
+  /**
+   * Total and open (`returned_at IS NULL`) material loans of the PROGRAMADA
+   * appointment of a request, used by the appointment-loans policy before
+   * settling the request as ATENDIDA or DISPONIBLE (HU-15, HU-72).
+   */
+  countScheduledAppointmentLoansByRequest(
+    requestId: string,
+  ): Promise<AppointmentLoanCounts>;
 }

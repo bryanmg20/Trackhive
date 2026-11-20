@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
-import { MATERIAL_STATUSES } from '../../domain/enums/material-status';
-import type { MaterialStatus } from '../../domain/enums/material-status';
+import { MANUAL_MATERIAL_STATUSES } from '../../domain/enums/material-status';
+import type { ManualMaterialStatus } from '../../domain/enums/material-status';
 
 export const MAX_STATUS_REASON_LENGTH = 500;
 
@@ -15,14 +15,15 @@ const trimToUndefined = ({ value }: { value: unknown }): unknown => {
 
 export class ChangeMaterialStatusDto {
   @ApiProperty({
-    description: 'Nuevo estado del material',
-    enum: MATERIAL_STATUSES,
+    description:
+      'Nuevo estado manual del material (EN_USO solo cambia mediante entrega y devolución)',
+    enum: MANUAL_MATERIAL_STATUSES,
     example: 'EN_RESTAURACION',
   })
-  @IsIn(MATERIAL_STATUSES, {
-    message: `El estado debe ser uno de: ${MATERIAL_STATUSES.join(', ')}`,
+  @IsIn(MANUAL_MATERIAL_STATUSES, {
+    message: `El estado manual debe ser uno de: ${MANUAL_MATERIAL_STATUSES.join(', ')}`,
   })
-  status: MaterialStatus;
+  status: ManualMaterialStatus;
 
   @ApiPropertyOptional({
     description: 'Motivo del cambio (opcional)',

@@ -35,6 +35,8 @@ model UserModel {
   requestStatusChanges     StatusHistoryModel[]
   scheduledAppointments    AppointmentModel[]
   readingRoomConfigUpdates ReadingRoomConfigModel[] @relation("ReadingRoomConfigUpdatedBy")
+  handedOverMaterialLoans  MaterialLoanModel[]      @relation("MaterialLoanHandedOverBy")
+  returnedMaterialLoans    MaterialLoanModel[]      @relation("MaterialLoanReturnedBy")
 
   @@map("users")
 }
@@ -92,6 +94,7 @@ model MaterialModel {
   updatedAt          DateTime                   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   requestItems       RequestItemModel[]
   appointments       AppointmentMaterialModel[]
+  loans              MaterialLoanModel[]
 
   @@index([materialType])
   // Text search with ILIKE '%...%' (HU-07)
@@ -235,6 +238,7 @@ model AppointmentModel {
   requester       RequesterModel             @relation(fields: [requesterId], references: [id], onDelete: Restrict)
   scheduledBy     UserModel                  @relation(fields: [scheduledById], references: [id], onDelete: Restrict)
   materials       AppointmentMaterialModel[]
+  loans           MaterialLoanModel[]
 
   // Calendar by date range (§4 of docs/modelo-datos.md)
   @@index([appointmentDate])
@@ -323,4 +327,32 @@ model SyncRunModel {
 
   @@index([startedAt(sort: Desc)])
   @@map("sync_runs")
+}
+
+// One physical handover and return of a material during an appointment (HU-72).
+// A material may be loaned more than once in the same appointment after being
+// returned, but at most one loan can be open (returned_at IS NULL) at a time
+// (partial unique index in the migration).
+model MaterialLoanModel {
+  id             String           @id @db.Uuid
+  materialId     String           @map("material_id") @db.Uuid
+  appointmentId  String           @map("appointment_id") @db.Uuid
+  handedOverAt   DateTime         @default(now()) @map("handed_over_at") @db.Timestamptz
+  handedOverById String           @map("handed_over_by_id") @db.Uuid
+  deliveryNotes  String?          @map("delivery_notes") @db.VarChar(500)
+  returnedAt     DateTime?        @map("returned_at") @db.Timestamptz
+  returnedById   String?          @map("returned_by_id") @db.Uuid
+  returnNotes    String?          @map("return_notes") @db.VarChar(500)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  material       MaterialModel    @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  appointment    AppointmentModel @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  handedOverBy   UserModel        @relation("MaterialLoanHandedOverBy", fields: [handedOverById], references: [id], onDelete: Restrict)
+  returnedBy     UserModel?       @relation("MaterialLoanReturnedBy", fields: [returnedById], references: [id], onDelete: Restrict)
+
+  @@index([materialId, handedOverAt(sort: Desc)], map: "material_loans_material_handed_over_idx")
+  @@index([appointmentId, materialId], map: "material_loans_appointment_material_idx")
+  @@index([handedOverById], map: "material_loans_handed_over_by_idx")
+  @@index([returnedById], map: "material_loans_returned_by_idx")
+  @@map("material_loans")
 }
