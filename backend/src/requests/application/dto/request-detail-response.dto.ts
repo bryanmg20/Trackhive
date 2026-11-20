@@ -6,6 +6,7 @@ import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import { REQUEST_STATUSES } from '../../domain/enums/request-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
 import { AppointmentMaterialLoanDto } from './appointment-list-response.dto';
+import { RequestReferenceDto } from './request-reference-response.dto';
 import { AppointmentServiceHoursDto } from './schedule-appointment-response.dto';
 
 export class RequestDetailRequesterDto {
@@ -178,6 +179,13 @@ export class RequestDetailResponseDto {
 
   @ApiProperty({ type: [RequestDetailMaterialDto] })
   materials: RequestDetailMaterialDto[];
+
+  @ApiProperty({
+    description:
+      'Materiales que no están en el catálogo, descritos por escrito, con su estado y el material asociado (HU-09.2). Una PENDIENTE no bloquea: de EN_BUSQUEDA a DISPONIBLE solo exige un comentario que explique qué se entrega y cómo.',
+    type: [RequestReferenceDto],
+  })
+  references: RequestReferenceDto[];
 
   @ApiProperty({
     description:

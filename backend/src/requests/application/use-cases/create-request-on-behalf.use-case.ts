@@ -36,14 +36,24 @@ export class CreateRequestOnBehalfUseCase {
   ): Promise<CreateRequestResponseDto> {
     // RN-03 and RN-04, and the minimum data of the requester (HU-10), before
     // looking anything up
-    Request.assertCanBeCreated(input);
+    const materialIds = input.materialIds ?? [];
+    const references = (input.references ?? []).map((reference) => ({
+      ...reference,
+      id: randomUUID(),
+    }));
+    Request.assertCanBeCreated({
+      desiredDate: input.desiredDate,
+      materialIds,
+      references,
+    });
     if (!input.requester.email?.trim()) {
       throw new RequesterEmailRequiredError();
     }
 
-    const missing = await this.queries.findMissingMaterialIds(
-      input.materialIds,
-    );
+    const missing =
+      materialIds.length > 0
+        ? await this.queries.findMissingMaterialIds(materialIds)
+        : [];
     if (missing.length > 0) {
       throw new RequestMaterialNotFoundError();
     }
@@ -59,7 +69,8 @@ export class CreateRequestOnBehalfUseCase {
       reason: input.reason,
       requirementDescription: input.requirementDescription,
       desiredDate: input.desiredDate,
-      materialIds: input.materialIds,
+      materialIds,
+      references,
     });
     await this.repository.save(request);
 

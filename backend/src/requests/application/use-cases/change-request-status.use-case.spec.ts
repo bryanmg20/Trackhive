@@ -88,6 +88,7 @@ describe('ChangeRequestStatusUseCase', () => {
       saveAppointment: jest.fn(),
       rescheduleAppointment: jest.fn(),
       cancelAppointment: jest.fn(),
+      saveReferenceResolution: jest.fn(),
     };
     const queries: IRequestQueryService = {
       list: jest.fn(),

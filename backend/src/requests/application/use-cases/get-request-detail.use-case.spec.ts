@@ -44,6 +44,7 @@ const buildDetail = (
       itemStatus: 'LOCALIZADO',
     },
   ],
+  references: [],
   ...overrides,
 });
 

@@ -1,6 +1,10 @@
 import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
 import type { Request } from '../entities/request.entity';
 import type {
+  ReferenceResolution,
+  SavedReferenceResolution,
+} from '../value-objects/reference-resolution';
+import type {
   SavedAppointment,
   SavedCancelledAppointment,
   StoredAppointment,
@@ -16,8 +20,23 @@ export interface IRequestRepository {
   /** Inserts a new request (Request.create) with its materials (HU-09, HU-10). */
   save(request: Request): Promise<void>;
 
-  /** The request as a domain entity, to apply its transition rules (HU-15). */
+  /**
+   * The request as a domain entity, with its written references, to apply
+   * its transition rules (HU-15, HU-09.2).
+   */
   findById(id: string): Promise<Request | null>;
+
+  /**
+   * Associates the catalog material with a pending reference in one
+   * transaction (HU-09.2): marks it RESUELTA with who and when, adds the
+   * material to the request if it was not there and inserts the history row.
+   * Throws MaterialReferenceAlreadyResolvedError when someone resolved it
+   * first, or RequestStatusConflictError when the status changed meanwhile;
+   * then nothing is saved.
+   */
+  saveReferenceResolution(
+    resolution: ReferenceResolution,
+  ): Promise<SavedReferenceResolution>;
 
   /** An appointment with its request entity, to reschedule or cancel it (HU-21). */
   findAppointmentById(id: string): Promise<StoredAppointment | null>;

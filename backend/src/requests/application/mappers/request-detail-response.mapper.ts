@@ -5,6 +5,7 @@ import type { RequestDetail } from '../ports/request-query.port';
 import { AppointmentListResponseMapper } from './appointment-list-response.mapper';
 import { DateOnlyMapper } from './date-only.mapper';
 import { PersonNameMapper } from './person-name.mapper';
+import { RequestReferenceResponseMapper } from './request-reference-response.mapper';
 
 /** The detail of a request (HU-13) → its response. */
 export class RequestDetailResponseMapper {
@@ -65,6 +66,9 @@ export class RequestDetailResponseMapper {
         documentNumber: requester.documentNumber,
       },
       materials: detail.materials,
+      references: detail.references.map((reference) =>
+        RequestReferenceResponseMapper.toDto(reference),
+      ),
       activeAppointment,
     };
   }

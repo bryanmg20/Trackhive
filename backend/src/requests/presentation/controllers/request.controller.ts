@@ -38,6 +38,8 @@ import { RequestHistoryResponseDto } from '../../application/dto/request-history
 import { ScheduleAppointmentResponseDto } from '../../application/dto/schedule-appointment-response.dto';
 import { ScheduleAppointmentDto } from '../../application/dto/schedule-appointment.dto';
 import { PaginatedRequestsResponseDto } from '../../application/dto/request-list-response.dto';
+import { ResolveReferenceResponseDto } from '../../application/dto/request-reference-response.dto';
+import { ResolveReferenceDto } from '../../application/dto/resolve-reference.dto';
 import { CreateRequestResponseDto } from '../../application/dto/create-request-response.dto';
 import { ChangeRequestStatusUseCase } from '../../application/use-cases/change-request-status.use-case';
 import { ScheduleAppointmentUseCase } from '../../application/use-cases/schedule-appointment.use-case';
@@ -47,6 +49,7 @@ import { GetRequestDetailUseCase } from '../../application/use-cases/get-request
 import { GetRequestHistoryUseCase } from '../../application/use-cases/get-request-history.use-case';
 import { ListMyRequestsUseCase } from '../../application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from '../../application/use-cases/list-requests.use-case';
+import { ResolveReferenceUseCase } from '../../application/use-cases/resolve-reference.use-case';
 
 @ApiTags('Requests')
 @ApiBearerAuth()
@@ -61,6 +64,7 @@ export class RequestController {
     private readonly listMyRequestsUseCase: ListMyRequestsUseCase,
     private readonly changeRequestStatusUseCase: ChangeRequestStatusUseCase,
     private readonly scheduleAppointmentUseCase: ScheduleAppointmentUseCase,
+    private readonly resolveReferenceUseCase: ResolveReferenceUseCase,
   ) {}
 
   @Get()
@@ -69,8 +73,10 @@ export class RequestController {
     summary: 'Lista y filtra las solicitudes',
     description:
       'Devuelve las solicitudes paginadas, con filtros por estado, rango de ' +
-      'fecha deseada, solicitante y material, y ordenamiento por fecha de ' +
-      'radicación o fecha deseada. Solo para PERSONAL y ADMIN.',
+      'fecha deseada, solicitante, material y referencias por resolver ' +
+      '(solicitudes Recibida o En búsqueda con alguna referencia sin ' +
+      'material asociado, HU-09.2), y ordenamiento por fecha de radicación o fecha ' +
+      'deseada. Solo para PERSONAL y ADMIN.',
   })
   @ApiOkResponse({
     description: 'Página de solicitudes',
@@ -237,7 +243,9 @@ export class RequestController {
       'anterior, el nuevo, la fecha y hora, el responsable (el usuario del ' +
       'token) y un comentario opcional. Desde AGENDADA, ATENDIDA indica que ' +
       'el solicitante asistió y DISPONIBLE que no asistió. Para RECHAZADA el ' +
-      'comentario es el motivo y es obligatorio (HU-16). El solicitante ' +
+      'comentario es el motivo y es obligatorio (HU-16). De EN_BUSQUEDA a ' +
+      'DISPONIBLE con referencias sin material asociado el comentario también ' +
+      'es obligatorio: explica qué se entrega y cómo (HU-09.2). El solicitante ' +
       'recibe un correo con el nuevo estado, el material y, si se rechaza, ' +
       'el motivo; se envía en segundo plano, así que un fallo del servidor ' +
       'de correo no cambia la respuesta (HU-23).',
@@ -248,7 +256,11 @@ export class RequestController {
     type: ChangeRequestStatusResponseDto,
   })
   @ApiBadRequestResponse({
-    description: 'Identificador, estado o comentario inválidos',
+    description:
+      'Identificador, estado o comentario inválidos, rechazo sin motivo ' +
+      '(REJECTION_REASON_REQUIRED) o Disponible desde En búsqueda con ' +
+      'referencias sin material asociado y sin comentario ' +
+      '(DELIVERY_COMMENT_REQUIRED, HU-09.2)',
     type: ErrorResponseDto,
   })
   @ApiUnauthorizedResponse({
@@ -352,9 +364,82 @@ export class RequestController {
     });
   }
 
+  @Patch(':id/references/:referenceId')
+  @Roles('PERSONAL', 'ADMIN')
+  @ApiOperation({
+    summary: 'Asocia un material del catálogo a una referencia pendiente',
+    description:
+      'Solo para PERSONAL y ADMIN (HU-09.2). La referencia escrita de un ' +
+      'material que no estaba en el catálogo pasa a RESUELTA con el material ' +
+      'indicado, normalmente el que trajo la sincronización tras ' +
+      'digitalizarlo. El material se suma a la solicitud y el cambio queda ' +
+      'en el historial con el responsable (el usuario del token). Solo ' +
+      'mientras la solicitud está RECIBIDA o EN_BUSQUEDA.',
+  })
+  @ApiParam({ name: 'id', description: 'Identificador de la solicitud' })
+  @ApiParam({
+    name: 'referenceId',
+    description: 'Identificador de la referencia',
+  })
+  @ApiOkResponse({
+    description: 'Referencia resuelta y registro guardado en el historial',
+    type: ResolveReferenceResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Identificador o material inválidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta el access token o no es válido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo PERSONAL o ADMIN pueden asociar un material',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description:
+      'La solicitud (REQUEST_NOT_FOUND), la referencia ' +
+      '(MATERIAL_REFERENCE_NOT_FOUND) o el material ' +
+      '(REQUEST_MATERIAL_NOT_FOUND) no existen',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'La referencia ya tiene material (MATERIAL_REFERENCE_ALREADY_RESOLVED), ' +
+      'la solicitud ya no está RECIBIDA ni EN_BUSQUEDA ' +
+      '(MATERIAL_REFERENCE_NOT_RESOLVABLE) u otra persona cambió su estado ' +
+      'primero (REQUEST_STATUS_CONFLICT)',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error interno del servidor',
+    type: ErrorResponseDto,
+  })
+  resolveReference(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('referenceId', new ParseUUIDPipe()) referenceId: string,
+    @Body() body: ResolveReferenceDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ResolveReferenceResponseDto> {
+    return this.resolveReferenceUseCase.execute({
+      requestId: id,
+      referenceId,
+      materialId: body.materialId,
+      userId: user.id,
+    });
+  }
+
   @Post()
   @Roles('PUBLICO')
-  @ApiOperation({ summary: 'Radica una solicitud de consulta' })
+  @ApiOperation({
+    summary: 'Radica una solicitud de consulta',
+    description:
+      'Pide al menos un material del catálogo o una referencia escrita de ' +
+      'uno que aún no está (RN-04, HU-09.2): un protocolo notarial por ' +
+      'notaría, año y número de escritura, o cualquier otro material en ' +
+      'texto libre.',
+  })
   @ApiCreatedResponse({ type: CreateRequestResponseDto })
   @ApiBadRequestResponse({
     description: 'Datos inválidos o fecha deseada no permitida',
@@ -386,7 +471,9 @@ export class RequestController {
     description:
       'El personal del CLENA registra la solicitud de una persona que llega ' +
       'o llama sin cuenta. El solicitante puede asociarse a un usuario ' +
-      'existente o registrarse solo con sus datos de contacto. La fecha ' +
+      'existente o registrarse solo con sus datos de contacto. Pide al ' +
+      'menos un material del catálogo o una referencia escrita (RN-04, ' +
+      'HU-09.2). La fecha ' +
       'deseada debe tener al menos 10 días hábiles de anticipación y caer ' +
       'entre lunes y sábado.',
   })

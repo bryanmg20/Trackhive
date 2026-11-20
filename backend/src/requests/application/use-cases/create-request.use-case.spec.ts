@@ -36,6 +36,7 @@ const build = () => {
     saveAppointment: jest.fn(),
     rescheduleAppointment: jest.fn(),
     cancelAppointment: jest.fn(),
+    saveReferenceResolution: jest.fn(),
   };
   const findMissingMaterialIds = jest.fn<
     Promise<string[]>,
@@ -114,6 +115,44 @@ describe('CreateRequestUseCase', () => {
       trackingCode: 'SOL-2026-00001',
       status: 'RECIBIDA',
     });
+  });
+
+  it('saves a request with only a written reference, without looking up the catalog (HU-09.2)', async () => {
+    const { useCase, save, findMissingMaterialIds } = build();
+
+    await useCase.execute({
+      ...input(validDate()),
+      materialIds: [],
+      references: [
+        { kind: 'TEXTO_LIBRE', description: 'El Heraldo, 15-03-1950' },
+      ],
+    });
+
+    expect(findMissingMaterialIds).not.toHaveBeenCalled();
+    const [saved] = save.mock.calls[0];
+    expect(saved.registration?.materialIds).toEqual([]);
+    expect(saved.references).toEqual([
+      expect.objectContaining({
+        kind: 'TEXTO_LIBRE',
+        description: 'El Heraldo, 15-03-1950',
+        status: 'PENDIENTE',
+        id: expect.any(String) as unknown,
+      }),
+    ]);
+  });
+
+  it('rejects a request without materials nor references before looking anything up (RN-04)', async () => {
+    const { useCase, save, forUser } = build();
+
+    await expect(
+      useCase.execute({
+        ...input(validDate()),
+        materialIds: [],
+        references: [],
+      }),
+    ).rejects.toBeInstanceOf(RequestMaterialsRequiredError);
+    expect(forUser).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('allows a Saturday after the ten-business-day minimum', async () => {

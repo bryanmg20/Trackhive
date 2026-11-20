@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { DELIVERY_MODES } from '../../domain/enums/delivery-mode';
+import { MATERIAL_REFERENCE_KINDS } from '../../domain/enums/material-reference-kind';
+import type { MaterialReferenceKind } from '../../domain/enums/material-reference-kind';
+import { MATERIAL_REFERENCE_STATUSES } from '../../domain/enums/material-reference-status';
+import type { MaterialReferenceStatus } from '../../domain/enums/material-reference-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import { REQUEST_STATUSES } from '../../domain/enums/request-status';
 import type { RequestStatus } from '../../domain/enums/request-status';
@@ -13,6 +17,21 @@ export class RequestListMaterialDto {
 
   @ApiProperty({ example: 'Acta de fundación de la villa' })
   title: string;
+}
+
+/** A written reference of the request, as a listing shows it (HU-09.2). */
+export class RequestListReferenceDto {
+  @ApiProperty({ example: '9b1c2a9e-7b4d-4c1a-9e2f-1a2b3c4d5e6f' })
+  id: string;
+
+  @ApiProperty({ enum: MATERIAL_REFERENCE_KINDS, example: 'TEXTO_LIBRE' })
+  kind: MaterialReferenceKind;
+
+  @ApiProperty({ example: 'El Heraldo, 15-03-1950' })
+  label: string;
+
+  @ApiProperty({ enum: MATERIAL_REFERENCE_STATUSES, example: 'PENDIENTE' })
+  status: MaterialReferenceStatus;
 }
 
 export class RequestListItemDto {
@@ -51,6 +70,13 @@ export class RequestListItemDto {
 
   @ApiProperty({ type: [RequestListMaterialDto] })
   materials: RequestListMaterialDto[];
+
+  @ApiProperty({
+    description:
+      'Materiales que no están en el catálogo, descritos por escrito, y su estado (HU-09.2)',
+    type: [RequestListReferenceDto],
+  })
+  references: RequestListReferenceDto[];
 }
 
 export class PaginatedRequestsResponseDto {

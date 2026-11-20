@@ -1,7 +1,11 @@
 import { DeliveryMode } from '../enums/delivery-mode';
 import { RequestMaterialsRequiredError } from '../errors/request-materials-required.error';
+import { DeliveryCommentRequiredError } from '../errors/delivery-comment-required.error';
 import { InvalidRequestStatusError } from '../errors/invalid-request-status.error';
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
+import { MaterialReferenceAlreadyResolvedError } from '../errors/material-reference-already-resolved.error';
+import { MaterialReferenceNotFoundError } from '../errors/material-reference-not-found.error';
+import { MaterialReferenceNotResolvableError } from '../errors/material-reference-not-resolvable.error';
 import { RejectionReasonRequiredError } from '../errors/rejection-reason-required.error';
 import {
   ChangeableStatus,
@@ -10,7 +14,17 @@ import {
   REQUEST_STATUSES,
   RequestStatus,
 } from '../enums/request-status';
+import { canResolveReferences } from '../policies/reference-resolution';
 import { assertValidDesiredDate } from '../value-objects/desired-date';
+import {
+  createMaterialReference,
+  describeMaterialReference,
+} from '../value-objects/material-reference';
+import type {
+  MaterialReference,
+  MaterialReferenceData,
+} from '../value-objects/material-reference';
+import type { ReferenceResolution } from '../value-objects/reference-resolution';
 import type { StatusChange } from '../value-objects/status-change';
 
 // Business rule: the only status changes allowed (docs/modelo-dominio.md, section 4)
@@ -53,6 +67,20 @@ export interface NewRequestData {
   // YYYY-MM-DD
   desiredDate: string;
   materialIds: readonly string[];
+  // Materials not in the catalog, described in writing (HU-09.2)
+  references?: readonly NewMaterialReference[];
+}
+
+/** A written reference of a new request, with the id the use case gave it. */
+export interface NewMaterialReference extends MaterialReferenceData {
+  id: string;
+}
+
+/** The catalog material the staff associates with a reference (HU-09.2). */
+export interface ReferenceMaterial {
+  id: string;
+  catalogCode: string;
+  title: string;
 }
 
 export interface RequestProps {
@@ -62,6 +90,8 @@ export interface RequestProps {
   rejectionReason?: string | null;
   // Loaded by the repository; null for a request rebuilt only to apply its rules
   registration?: RequestRegistration | null;
+  // Its written references (HU-09.2); none when omitted
+  references?: readonly MaterialReference[];
 }
 
 export class Request {
@@ -70,6 +100,7 @@ export class Request {
   private currentStatus: RequestStatus;
   private currentRejectionReason: string | null;
   public readonly registration: RequestRegistration | null;
+  private currentReferences: readonly MaterialReference[];
 
   constructor(props: RequestProps) {
     if (!isRequestStatus(props.status)) {
@@ -80,24 +111,37 @@ export class Request {
     this.currentStatus = props.status;
     this.currentRejectionReason = props.rejectionReason ?? null;
     this.registration = props.registration ?? null;
+    this.currentReferences = props.references ?? [];
   }
 
   /**
    * The rules a new request must meet (HU-09, HU-10): at least one material
-   * (RN-04) and a valid desired date (RN-03). The use cases check them first,
-   * before looking up the requester, and create() checks them again.
+   * of the catalog or one written reference (RN-04, HU-09.2), each reference
+   * with the data of its kind, and a valid desired date (RN-03). The use
+   * cases check them first, before looking up the requester, and create()
+   * checks them again.
    */
   static assertCanBeCreated(
-    data: Pick<NewRequestData, 'desiredDate' | 'materialIds'>,
+    data: Pick<NewRequestData, 'desiredDate' | 'materialIds'> & {
+      references?: readonly MaterialReferenceData[];
+    },
     now: Date = new Date(),
   ): void {
     assertValidDesiredDate(data.desiredDate, now);
-    if (data.materialIds.length === 0) {
+    const references = data.references ?? [];
+    if (data.materialIds.length === 0 && references.length === 0) {
       throw new RequestMaterialsRequiredError();
     }
+    // Throws InvalidMaterialReferenceError (400) for an incomplete reference
+    references.forEach((reference) =>
+      createMaterialReference('', reference, now),
+    );
   }
 
-  /** A new request: it always starts RECIBIDA. A repeated material counts once. */
+  /**
+   * A new request: it always starts RECIBIDA, and its references PENDIENTE.
+   * A repeated material counts once.
+   */
   static create(data: NewRequestData, now: Date = new Date()): Request {
     Request.assertCanBeCreated(data, now);
     return new Request({
@@ -114,7 +158,24 @@ export class Request {
         desiredDate: new Date(`${data.desiredDate}T00:00:00.000Z`),
         materialIds: [...new Set(data.materialIds)],
       },
+      references: (data.references ?? []).map((reference) =>
+        createMaterialReference(reference.id, reference, now),
+      ),
     });
+  }
+
+  get references(): readonly MaterialReference[] {
+    return this.currentReferences;
+  }
+
+  /**
+   * A reference without its catalog material. It blocks nothing: going
+   * EN_BUSQUEDA → DISPONIBLE with one only asks for a comment (HU-09.2).
+   */
+  get hasPendingReferences(): boolean {
+    return this.currentReferences.some(
+      (reference) => reference.status === 'PENDIENTE',
+    );
   }
 
   get status(): RequestStatus {
@@ -133,8 +194,21 @@ export class Request {
     this.transitionTo('EN_BUSQUEDA');
   }
 
-  markAvailable(): void {
-    this.transitionTo('DISPONIBLE');
+  /**
+   * From EN_BUSQUEDA with references without material, the comment is
+   * required: it says what is delivered and how (HU-09.2). Coming back from
+   * AGENDADA (no-show or cancelled appointment) never asks for it.
+   */
+  markAvailable(comment?: string | null): void {
+    this.assertCanTransitionTo('DISPONIBLE');
+    if (
+      this.currentStatus === 'EN_BUSQUEDA' &&
+      this.hasPendingReferences &&
+      !comment?.trim()
+    ) {
+      throw new DeliveryCommentRequiredError();
+    }
+    this.currentStatus = 'DISPONIBLE';
   }
 
   schedule(): void {
@@ -183,7 +257,7 @@ export class Request {
         this.startSearch();
         break;
       case 'DISPONIBLE':
-        this.markAvailable();
+        this.markAvailable(comment);
         break;
       case 'ATENDIDA':
         this.attend();
@@ -253,6 +327,60 @@ export class Request {
       now,
       'CANCELADA',
     );
+  }
+
+  /**
+   * «Asociar material» (HU-09.2): the staff gives a pending reference its
+   * catalog material, normally the one the sync brought after digitizing
+   * it. Only while the request is RECIBIDA or EN_BUSQUEDA. The status does
+   * not change; the history records who did it and which material it was.
+   */
+  resolveReference(
+    referenceId: string,
+    material: ReferenceMaterial,
+    resolvedBy: string,
+    now: Date = new Date(),
+  ): ReferenceResolution {
+    const reference = this.currentReferences.find(
+      ({ id }) => id === referenceId,
+    );
+    if (!reference) {
+      throw new MaterialReferenceNotFoundError();
+    }
+    if (reference.status === 'RESUELTA') {
+      throw new MaterialReferenceAlreadyResolvedError();
+    }
+    if (!canResolveReferences(this.currentStatus)) {
+      throw new MaterialReferenceNotResolvableError();
+    }
+
+    this.currentReferences = this.currentReferences.map((current) =>
+      current.id === referenceId
+        ? Object.freeze({
+            ...current,
+            status: 'RESUELTA' as const,
+            materialId: material.id,
+          })
+        : current,
+    );
+
+    const comment =
+      `Referencia «${describeMaterialReference(reference)}» asociada al ` +
+      `material ${material.catalogCode} · ${material.title}`;
+    return Object.freeze({
+      requestId: this.id,
+      referenceId,
+      materialId: material.id,
+      resolvedBy,
+      resolvedAt: now,
+      historyEntry: this.recordChange(
+        this.currentStatus,
+        resolvedBy,
+        comment,
+        now,
+        null,
+      ),
+    });
   }
 
   private recordChange(

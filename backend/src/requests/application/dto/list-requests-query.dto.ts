@@ -5,6 +5,7 @@ import {
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsISO8601,
@@ -85,6 +86,22 @@ export class ListRequestsQueryDto {
     message: 'El material no puede superar los 100 caracteres',
   })
   material?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'true: solo las solicitudes con referencias por resolver: en estado RECIBIDA o EN_BUSQUEDA y con alguna referencia sin material asociado (HU-09.2)',
+    type: Boolean,
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' || value === true
+      ? true
+      : value === 'false' || value === false
+        ? false
+        : value,
+  )
+  @IsOptional()
+  @IsBoolean({ message: 'pendingReferences debe ser true o false' })
+  pendingReferences?: boolean;
 
   @ApiPropertyOptional({
     description: 'Campo por el que se ordena',

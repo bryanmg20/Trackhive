@@ -24,6 +24,7 @@ import { ListAppointmentsUseCase } from './application/use-cases/list-appointmen
 import { ListMyRequestsUseCase } from './application/use-cases/list-my-requests.use-case';
 import { ListRequestsUseCase } from './application/use-cases/list-requests.use-case';
 import { RescheduleAppointmentUseCase } from './application/use-cases/reschedule-appointment.use-case';
+import { ResolveReferenceUseCase } from './application/use-cases/resolve-reference.use-case';
 import { ScheduleAppointmentUseCase } from './application/use-cases/schedule-appointment.use-case';
 import { UpdateRoomCapacityUseCase } from './application/use-cases/update-room-capacity.use-case';
 import { PrismaRequestQueryService } from './infrastructure/persistence/prisma-request-query.service';
@@ -41,7 +42,8 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
 
 @Module({
   // USER_REPOSITORY: requester accounts (HU-09, HU-10);
-  // MATERIAL_LOAN_REPOSITORY: reading-room delivery (HU-72)
+  // MATERIAL_LOAN_REPOSITORY: reading-room delivery (HU-72);
+  // MATERIAL_REPOSITORY: the material of a written reference (HU-09.2)
   imports: [UsersModule, MaterialsModule],
   controllers: [
     RequestController,
@@ -75,6 +77,7 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     ListMyRequestsUseCase,
     ChangeRequestStatusUseCase,
     ScheduleAppointmentUseCase,
+    ResolveReferenceUseCase,
     RescheduleAppointmentUseCase,
     CancelAppointmentUseCase,
     DeliverMaterialUseCase,

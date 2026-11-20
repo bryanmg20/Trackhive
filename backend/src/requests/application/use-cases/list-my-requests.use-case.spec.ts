@@ -27,6 +27,17 @@ const buildItem = (): RequestListItem => ({
       title: 'Acta de fundación de la villa',
     },
   ],
+  references: [
+    {
+      id: 'reference-1',
+      kind: 'TEXTO_LIBRE',
+      notary: null,
+      year: null,
+      deedNumber: null,
+      description: 'El Heraldo, 15-03-1950',
+      status: 'PENDIENTE',
+    },
+  ],
 });
 
 describe('ListMyRequestsUseCase', () => {
@@ -116,6 +127,14 @@ describe('ListMyRequestsUseCase', () => {
               id: 'material-1',
               catalogCode: 'TH-DOC-0001',
               title: 'Acta de fundación de la villa',
+            },
+          ],
+          references: [
+            {
+              id: 'reference-1',
+              kind: 'TEXTO_LIBRE',
+              label: 'El Heraldo, 15-03-1950',
+              status: 'PENDIENTE',
             },
           ],
           rejectionReason: null,

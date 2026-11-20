@@ -9,6 +9,8 @@ export interface ListRequestsInput {
   desiredTo?: string;
   requester?: string;
   material?: string;
+  // Only the requests with a pending written reference (HU-09.2)
+  pendingReferences?: boolean;
   sort?: RequestSortField;
   order?: SortOrder;
   page?: number;

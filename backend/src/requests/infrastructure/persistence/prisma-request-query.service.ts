@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type { AppointmentLoanCounts } from '../../domain/policies/appointment-loans';
+import { REFERENCE_RESOLVABLE_STATUSES } from '../../domain/policies/reference-resolution';
 import { ACTIVE_CAPACITY_APPOINTMENT_STATUSES } from '../../domain/policies/room-capacity';
 import type { DayOccupancyCount } from '../../domain/value-objects/room-capacity';
 import type {
@@ -209,6 +210,15 @@ export class PrismaRequestQueryService implements IRequestQueryService {
         items: {
           some: { material: { OR: [{ title: text }, { catalogCode: text }] } },
         },
+      });
+    }
+    // HU-09.2: the requests whose references the staff can still resolve.
+    // Past EN_BUSQUEDA a reference without material stays so for good, and
+    // the listing would fill up with requests nobody can act on
+    if (criteria.pendingReferences) {
+      and.push({
+        status: { in: [...REFERENCE_RESOLVABLE_STATUSES] },
+        references: { some: { status: 'PENDIENTE' } },
       });
     }
     return and.length > 0 ? { AND: and } : {};
