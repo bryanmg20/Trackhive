@@ -11,14 +11,6 @@ import {
 } from '../enums/material-status';
 import { isMaterialType, MaterialType } from '../enums/material-type';
 
-// Physical location in the archive. Never shown to the PUBLICO role.
-// It goes whole or not at all: a material from Everything may lack it (HU-134)
-export interface MaterialLocation {
-  depot: string;
-  shelf: string;
-  box: string;
-}
-
 export interface MaterialProps {
   id: string;
   catalogCode: string;
@@ -29,7 +21,6 @@ export interface MaterialProps {
   // Periodicals only (HU-06)
   publicationDate: Date | null;
   publisher: string | null;
-  location: MaterialLocation | null;
   status: MaterialStatus;
   // HU-134. Defaults: MANUAL, without digital copy and never seen by a sync
   source?: MaterialSource;
@@ -53,7 +44,6 @@ export class Material {
   public readonly collection: string;
   public readonly publicationDate: Date | null;
   public readonly publisher: string | null;
-  public readonly location: MaterialLocation | null;
   public readonly status: MaterialStatus;
   public readonly source: MaterialSource;
   public readonly digitalPath: string | null;
@@ -84,7 +74,6 @@ export class Material {
     this.collection = props.collection;
     this.publicationDate = props.publicationDate;
     this.publisher = props.publisher;
-    this.location = props.location;
     this.status = props.status;
     this.source = source;
     this.digitalPath = props.digitalPath ?? null;

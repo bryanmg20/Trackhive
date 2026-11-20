@@ -75,16 +75,6 @@ export class AppointmentListResponseMapper {
         title: material.title,
         materialType: material.materialType,
         status: material.status ?? 'DISPONIBLE',
-        location:
-          material.depot !== null &&
-          material.shelf !== null &&
-          material.box !== null
-            ? {
-                depot: material.depot,
-                shelf: material.shelf,
-                box: material.box,
-              }
-            : null,
         activeLoan: AppointmentListResponseMapper.toLoanDto(
           material.activeLoan,
         ),

@@ -5,11 +5,8 @@ import {
 } from '../dto/material-response.dto';
 
 export class MaterialResponseMapper {
-  static toDto(
-    material: Material,
-    includeLocation: boolean,
-  ): MaterialResponseDto {
-    const dto: MaterialResponseDto = {
+  static toDto(material: Material): MaterialResponseDto {
+    return {
       id: material.id,
       catalogCode: material.catalogCode,
       title: material.title,
@@ -22,21 +19,15 @@ export class MaterialResponseMapper {
       publisher: material.publisher,
       status: material.status,
     };
-    if (includeLocation) {
-      // null when the material has no physical location (HU-134)
-      dto.location = material.location ? { ...material.location } : null;
-    }
-    return dto;
   }
 
   static toPaginatedDto(
     materials: Material[],
     pagination: { page: number; limit: number; total: number },
-    includeLocation: boolean,
   ): PaginatedMaterialsResponseDto {
     return {
       items: materials.map((material) =>
-        MaterialResponseMapper.toDto(material, includeLocation),
+        MaterialResponseMapper.toDto(material),
       ),
       ...pagination,
     };

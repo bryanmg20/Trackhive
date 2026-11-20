@@ -45,9 +45,6 @@ const buildItem = (
       catalogCode: 'TH-DOC-0001',
       title: 'Acta de fundación de la villa',
       materialType: 'DOCUMENTO',
-      depot: 'D-01',
-      shelf: 'E-01',
-      box: 'C-001',
     },
   ],
   ...overrides,
@@ -122,7 +119,7 @@ describe('ListAppointmentsUseCase', () => {
     });
   });
 
-  it('returns the page with formatted names, service hours, location and total', async () => {
+  it('returns the page with formatted names, service hours and total, without a physical location', async () => {
     const result = await useCase.execute({ page: 1, limit: 10 });
 
     expect(result).toEqual({
@@ -161,7 +158,6 @@ describe('ListAppointmentsUseCase', () => {
               title: 'Acta de fundación de la villa',
               materialType: 'DOCUMENTO',
               status: 'DISPONIBLE',
-              location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
               activeLoan: null,
               lastLoan: null,
             },
@@ -172,31 +168,6 @@ describe('ListAppointmentsUseCase', () => {
       limit: 10,
       total: 8,
     });
-  });
-
-  it('sends location null for a material without physical location (HU-134)', async () => {
-    listAppointments.mockResolvedValue({
-      items: [
-        buildItem({
-          materials: [
-            {
-              id: 'material-2',
-              catalogCode: '986115 M245',
-              title: 'Historia del puerto fluvial',
-              materialType: 'OTRO',
-              depot: null,
-              shelf: null,
-              box: null,
-            },
-          ],
-        }),
-      ],
-      total: 1,
-    });
-
-    const result = await useCase.execute({ page: 1, limit: 10 });
-
-    expect(result.items[0].materials[0].location).toBeNull();
   });
 
   it('computes the Saturday service hours for a Saturday appointment', async () => {

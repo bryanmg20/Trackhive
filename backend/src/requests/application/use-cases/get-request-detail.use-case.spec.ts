@@ -40,7 +40,6 @@ const buildDetail = (
       author: null,
       collection: 'Actas del Cabildo',
       status: 'DISPONIBLE',
-      location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
       itemStatus: 'LOCALIZADO',
     },
   ],
@@ -98,7 +97,6 @@ describe('GetRequestDetailUseCase', () => {
         catalogCode: 'TH-DOC-0001',
         title: 'Acta de fundación de la villa',
         status: 'DISPONIBLE',
-        location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
         itemStatus: 'LOCALIZADO',
       }),
     ]);

@@ -9,7 +9,6 @@ import type { AppointmentStatus } from './list-appointments';
 import type { RequestReference } from './material-references';
 import { RequestsApiError } from './list-requests';
 import type { RequestStatus } from './list-requests';
-import type { MaterialLocation } from '../material-location';
 
 export interface RequestDetailMaterial {
   id: string;
@@ -19,8 +18,6 @@ export interface RequestDetailMaterial {
   author: string | null;
   collection: string;
   status: MaterialStatus;
-  // null when the material has no physical location (HU-134)
-  location: MaterialLocation | null;
   itemStatus: string;
 }
 

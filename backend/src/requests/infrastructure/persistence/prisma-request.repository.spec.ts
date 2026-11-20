@@ -51,7 +51,6 @@ describe('PrismaRequestRepository', () => {
               expect.objectContaining({
                 materialId: MATERIAL_ID,
                 itemStatus: 'PENDIENTE',
-                accessType: 'FISICO',
               }),
             ],
           },

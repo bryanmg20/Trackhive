@@ -38,7 +38,6 @@ test('busy days keep equal rows, expose all appointments by keyboard and become 
         title: `Documento histórico con un título muy largo ${index}`,
         catalogCode: `DOC-${index}`,
         materialType: 'DOCUMENTO',
-        location: { depot: 'D1', shelf: 'E1', box: 'C1' },
       },
     ],
   }));

@@ -1,14 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { UserRole } from '../../../users/domain/enums/user-role';
 import { DEFAULT_PAGE_LIMIT } from '../../../common/pagination';
 import type { IMaterialRepository } from '../../domain/repositories/material.repository';
 import { PaginatedMaterialsResponseDto } from '../dto/material-response.dto';
 import type { SearchMaterialsInput } from '../dto/search-materials.input';
 import { MaterialResponseMapper } from '../mappers/material-response.mapper';
 import { MATERIAL_REPOSITORY } from '../tokens';
-
-// Business rule (HU-07): only staff can see where a material is stored
-const ROLES_THAT_SEE_LOCATION: readonly UserRole[] = ['PERSONAL', 'ADMIN'];
 
 @Injectable()
 export class SearchMaterialsUseCase {
@@ -34,11 +30,6 @@ export class SearchMaterialsUseCase {
       limit,
     });
 
-    const includeLocation = ROLES_THAT_SEE_LOCATION.includes(input.viewerRole);
-    return MaterialResponseMapper.toPaginatedDto(
-      items,
-      { page, limit, total },
-      includeLocation,
-    );
+    return MaterialResponseMapper.toPaginatedDto(items, { page, limit, total });
   }
 }

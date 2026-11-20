@@ -89,7 +89,6 @@ describe('Change material status (e2e)', () => {
     collection: 'Actas del Cabildo',
     publicationDate: null,
     publisher: null,
-    location: { depot: 'D-01', shelf: 'E-12', box: 'C-034' },
     status: 'DISPONIBLE',
     createdAt: new Date('2026-11-08T00:00:00Z'),
     updatedAt: new Date('2026-11-08T00:00:00Z'),
@@ -152,7 +151,7 @@ describe('Change material status (e2e)', () => {
       const response = await request(server)
         .patch(statusPath(MATERIAL_ID))
         .set('Authorization', `Bearer ${tokenFor(role)}`)
-        .send({ status: 'EN_RESTAURACION', reason: 'Humedad en la caja' })
+        .send({ status: 'EN_RESTAURACION', reason: 'Humedad en las hojas' })
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -229,7 +228,6 @@ describe('Material loans HTTP authorization & routing, HU-72 (e2e)', () => {
       collection: 'Actas del Cabildo',
       publicationDate: null,
       publisher: null,
-      location: { depot: 'D-01', shelf: 'E-12', box: 'C-034' },
       status,
       createdAt: new Date('2026-11-08T00:00:00Z'),
       updatedAt: new Date('2026-11-08T00:00:00Z'),

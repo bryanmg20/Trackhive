@@ -165,8 +165,6 @@ export interface RequestDetail {
     author: string | null;
     collection: string;
     status: string;
-    // null when the material has no physical location (HU-134)
-    location: { depot: string; shelf: string; box: string } | null;
     itemStatus: string;
   }[];
   // Written references (HU-09.2), oldest first
@@ -298,10 +296,6 @@ export interface AppointmentListItem {
     title: string;
     materialType: string;
     status?: string;
-    // The physical location goes whole or not at all (HU-134)
-    depot: string | null;
-    shelf: string | null;
-    box: string | null;
     activeLoan?: AppointmentMaterialLoanSummary | null;
     lastLoan?: AppointmentMaterialLoanSummary | null;
   }[];

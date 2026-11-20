@@ -31,10 +31,10 @@ describe('ChangeMaterialStatusDto', () => {
   it('trims the reason', () => {
     const dto = toDto({
       status: 'EN_RESTAURACION',
-      reason: '  Humedad en la caja  ',
+      reason: '  Humedad en las hojas  ',
     });
 
-    expect(dto.reason).toBe('Humedad en la caja');
+    expect(dto.reason).toBe('Humedad en las hojas');
   });
 
   it('treats a blank reason as no reason', async () => {

@@ -28,7 +28,6 @@ import styles from './RequestDetailPage.module.css';
 import { RequestHistory } from './RequestHistory';
 import { RequestReferencesSection } from './RequestReferencesSection';
 import { ScheduleAppointmentForm } from './ScheduleAppointmentForm';
-import { formatMaterialLocation } from './material-location';
 
 const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
@@ -461,9 +460,6 @@ export function RequestDetailPage() {
                     <span>
                       Estado del material:{' '}
                       {MATERIAL_STATUS_LABELS[material.status]}
-                    </span>
-                    <span className={styles.meta}>
-                      {formatMaterialLocation(material.location)}
                     </span>
                     <span>
                       Búsqueda:{' '}

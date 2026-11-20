@@ -1,19 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { MATERIAL_STATUSES } from '../../domain/enums/material-status';
 import type { MaterialStatus } from '../../domain/enums/material-status';
 import { MATERIAL_TYPES } from '../../domain/enums/material-type';
 import type { MaterialType } from '../../domain/enums/material-type';
-
-export class MaterialLocationDto {
-  @ApiProperty({ description: 'Depósito', example: 'D-01' })
-  depot: string;
-
-  @ApiProperty({ description: 'Estante', example: 'E-12' })
-  shelf: string;
-
-  @ApiProperty({ description: 'Caja', example: 'C-034' })
-  box: string;
-}
 
 export class MaterialResponseDto {
   @ApiProperty({
@@ -69,14 +58,6 @@ export class MaterialResponseDto {
 
   @ApiProperty({ description: 'Estado del material', enum: MATERIAL_STATUSES })
   status: MaterialStatus;
-
-  @ApiPropertyOptional({
-    description:
-      'Ubicación física. Solo se envía a los roles PERSONAL y ADMIN; nunca al rol PUBLICO. null si el material no la tiene registrada (por ejemplo, uno que llegó de Everything)',
-    type: MaterialLocationDto,
-    nullable: true,
-  })
-  location?: MaterialLocationDto | null;
 }
 
 export class PaginatedMaterialsResponseDto {

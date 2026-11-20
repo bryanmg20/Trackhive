@@ -43,7 +43,6 @@ import {
   rescheduleAppointment,
 } from './api/manage-appointment';
 import styles from './AppointmentsCalendarPage.module.css';
-import { formatMaterialLocation } from './material-location';
 import { listCalendarMonth } from './api/list-calendar-month';
 import listStyles from './RequestsListPage.module.css';
 
@@ -1190,9 +1189,6 @@ export function AppointmentsCalendarPage() {
                                 materialItem.materialType as MaterialType
                               ] ?? materialItem.materialType}{' '}
                               · {MATERIAL_STATUS_LABELS[materialStatus]}
-                            </span>
-                            <span className={styles.detailMeta}>
-                              {formatMaterialLocation(materialItem.location)}
                             </span>
                             {materialItem.activeLoan ? (
                               <span className={styles.loanStatus}>

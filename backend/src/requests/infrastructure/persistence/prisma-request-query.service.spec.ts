@@ -343,9 +343,6 @@ describe('PrismaRequestQueryService', () => {
             author: null,
             collection: 'Actas del Cabildo',
             status: 'DISPONIBLE',
-            depot: 'D-01',
-            shelf: 'E-01',
-            box: 'C-001',
           },
         },
       ],
@@ -407,11 +404,12 @@ describe('PrismaRequestQueryService', () => {
         materials: [
           {
             catalogCode: 'TH-DOC-0001',
-            location: { depot: 'D-01', shelf: 'E-01', box: 'C-001' },
             itemStatus: 'LOCALIZADO',
           },
         ],
       });
+      // The physical location no longer exists (#165)
+      expect(detail?.materials[0]).not.toHaveProperty('location');
     });
 
     it('returns null when the request does not exist', async () => {
@@ -597,9 +595,6 @@ describe('PrismaRequestQueryService', () => {
                   catalogCode: 'TH-DOC-0001',
                   title: 'Acta de fundación de la villa',
                   materialType: 'DOCUMENTO',
-                  depot: 'D-01',
-                  shelf: 'E-01',
-                  box: 'C-001',
                 },
               },
             ],
@@ -642,7 +637,6 @@ describe('PrismaRequestQueryService', () => {
             id: 'material-1',
             catalogCode: 'TH-DOC-0001',
             title: 'Acta de fundación de la villa',
-            depot: 'D-01',
           },
         ],
       });

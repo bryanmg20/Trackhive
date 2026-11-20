@@ -15,7 +15,6 @@ const buildMaterial = (): Material =>
     collection: 'Prensa regional',
     publicationDate: new Date('1915-03-21'),
     publisher: 'Imprenta del Valle',
-    location: { depot: 'D-03', shelf: 'E-01', box: 'C-100' },
     status: 'DISPONIBLE',
     createdAt: new Date('2026-11-08T00:00:00Z'),
     updatedAt: new Date('2026-11-08T00:00:00Z'),
@@ -40,31 +39,11 @@ describe('SearchMaterialsUseCase', () => {
     });
   });
 
-  it('hides the physical location from the PUBLICO role', async () => {
-    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
-
-    expect(result.items[0]).not.toHaveProperty('location');
-  });
-
-  it.each(['PERSONAL', 'ADMIN'] as const)(
-    'shows the physical location to %s',
-    async (role) => {
-      const result = await useCase.execute({ viewerRole: role });
-
-      expect(result.items[0].location).toEqual({
-        depot: 'D-03',
-        shelf: 'E-01',
-        box: 'C-100',
-      });
-    },
-  );
-
-  it('sends location null to the staff when the material has none, and never the digital path (HU-134)', async () => {
+  it('never sends a physical location, the digital path nor the source (HU-134, #165)', async () => {
     search.mockResolvedValue({
       items: [
         new Material({
           ...buildMaterial(),
-          location: null,
           source: 'EVERYTHING',
           digitalPath: 'D:\\Digitalizados\\M245.pdf',
         }),
@@ -72,15 +51,15 @@ describe('SearchMaterialsUseCase', () => {
       total: 1,
     });
 
-    const result = await useCase.execute({ viewerRole: 'PERSONAL' });
+    const result = await useCase.execute({});
 
-    expect(result.items[0].location).toBeNull();
+    expect(result.items[0]).not.toHaveProperty('location');
     expect(result.items[0]).not.toHaveProperty('digitalPath');
     expect(result.items[0]).not.toHaveProperty('source');
   });
 
   it('uses page 1, 20 per page and title ascending by default', async () => {
-    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
+    const result = await useCase.execute({});
 
     expect(search).toHaveBeenCalledWith({
       q: undefined,
@@ -105,7 +84,6 @@ describe('SearchMaterialsUseCase', () => {
       order: 'desc',
       page: 2,
       limit: 5,
-      viewerRole: 'PERSONAL',
     });
 
     expect(search).toHaveBeenCalledWith({
@@ -122,7 +100,7 @@ describe('SearchMaterialsUseCase', () => {
   });
 
   it('sends the publication date without time', async () => {
-    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
+    const result = await useCase.execute({});
 
     expect(result.items[0].publicationDate).toBe('1915-03-21');
   });

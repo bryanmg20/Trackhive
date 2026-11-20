@@ -22,7 +22,6 @@ const MATERIAL = new Material({
   collection: 'Prensa',
   publicationDate: null,
   publisher: null,
-  location: null,
   status: 'DISPONIBLE',
   createdAt: NOW,
   updatedAt: NOW,
