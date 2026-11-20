@@ -10,7 +10,9 @@ import type {
 } from './api/create-request-on-behalf';
 import { findRequesterByEmail } from './api/find-requester';
 import type { RequesterProfile } from './api/find-requester';
+import type { MaterialReferencePayload } from './api/material-references';
 import { RequestApiError } from './api/request-api-error';
+import { MaterialReferencesEditor } from './MaterialReferencesEditor';
 import { readMaterialIds } from './selected-materials';
 import type { SelectedMaterial } from './selected-materials';
 import shellStyles from '../materials/MaterialSearchPage.module.css';
@@ -76,6 +78,7 @@ interface Receipt {
   desiredDate: string;
   deliveryMode: DeliveryMode;
   materialCount: number;
+  referenceCount: number;
 }
 
 const EMPTY_CONTACT: ContactData = {
@@ -116,6 +119,7 @@ const DETAIL_FIELD_BY_API: Record<string, FieldKey> = {
   desiredDate: 'desiredDate',
   deliveryMode: 'deliveryMode',
   materialIds: 'materials',
+  references: 'materials',
 };
 
 function normalizeEmail(value: string): string {
@@ -221,6 +225,9 @@ export function StaffNewRequestPage() {
   const [email, setEmail] = useState('');
   const [lookup, setLookup] = useState<LookupState>({ status: 'idle' });
   const [contact, setContact] = useState<ContactData>(EMPTY_CONTACT);
+  const [references, setReferences] = useState<MaterialReferencePayload[]>(
+    [],
+  );
   const [reason, setReason] = useState('');
   const [desiredDate, setDesiredDate] = useState('');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('PRESENCIAL');
@@ -323,8 +330,10 @@ export function StaffNewRequestPage() {
   function validateForm(normalizedEmail: string): FieldErrors {
     const errors: FieldErrors = {};
 
-    if (selectedMaterialIds.length === 0) {
-      errors.materials = 'Elija al menos un material en el buscador.';
+    // RN-04: a catalog material or a written reference (HU-09.2)
+    if (selectedMaterialIds.length === 0 && references.length === 0) {
+      errors.materials =
+        'Elija al menos un material en el buscador o agregue una referencia.';
     }
 
     if (lookup.status === 'idle' || lookup.status === 'searching') {
@@ -457,6 +466,7 @@ export function StaffNewRequestPage() {
     try {
       const result = await createRequestOnBehalf({
         materialIds: selectedMaterialIds,
+        references,
         reason: reason.trim(),
         desiredDate,
         deliveryMode,
@@ -471,6 +481,7 @@ export function StaffNewRequestPage() {
         desiredDate,
         deliveryMode,
         materialCount: selectedMaterialIds.length,
+        referenceCount: references.length,
       });
     } catch (error) {
       if (error instanceof RequestApiError) {
@@ -498,6 +509,7 @@ export function StaffNewRequestPage() {
     setLookup({ status: 'idle' });
     setContact(EMPTY_CONTACT);
     setReason('');
+    setReferences([]);
     setDesiredDate('');
     setDeliveryMode('PRESENCIAL');
     setFieldErrors({});
@@ -572,6 +584,16 @@ export function StaffNewRequestPage() {
                   : `${receipt.materialCount} materiales`}
               </dd>
             </div>
+            {receipt.referenceCount > 0 ? (
+              <div>
+                <dt>Referencias</dt>
+                <dd>
+                  {receipt.referenceCount === 1
+                    ? '1 referencia pendiente'
+                    : `${receipt.referenceCount} referencias pendientes`}
+                </dd>
+              </div>
+            ) : null}
           </dl>
           <div className={styles.actions}>
             <button
@@ -942,9 +964,22 @@ export function StaffNewRequestPage() {
               ) : (
                 <p className={styles.emptyMaterials}>
                   Aún no ha elegido materiales. Búsquelos en el archivo y pulse
-                  «Solicitar» o «Registrar solicitud».
+                  «Solicitar» o «Registrar solicitud», o describa abajo el que
+                  no está en el catálogo.
                 </p>
               )}
+              <MaterialReferencesEditor
+                idPrefix="staff-reference"
+                references={references}
+                onChange={(next) => {
+                  setReferences(next);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    materials: undefined,
+                  }));
+                }}
+                disabled={isSubmitting}
+              />
               {fieldErrors.materials ? (
                 <p className={styles.fieldError} role="alert">
                   {fieldErrors.materials}
@@ -1084,15 +1119,15 @@ export function StaffNewRequestPage() {
                 disabled={
                   isSubmitting ||
                   isLookupBusy ||
-                  selectedMaterialIds.length === 0
+                  (selectedMaterialIds.length === 0 && references.length === 0)
                 }
               >
                 {isSubmitting ? 'Registrando…' : 'Registrar solicitud'}
               </button>
-              {selectedMaterialIds.length === 0 ? (
+              {selectedMaterialIds.length === 0 && references.length === 0 ? (
                 <p className={styles.hint}>
-                  Elija al menos un material en el buscador para habilitar el
-                  registro.
+                  Elija al menos un material en el buscador o agregue una
+                  referencia para habilitar el registro.
                 </p>
               ) : null}
             </form>

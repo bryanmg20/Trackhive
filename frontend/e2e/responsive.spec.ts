@@ -104,6 +104,14 @@ const myRequest = {
       title: material.title,
     },
   ],
+  references: [
+    {
+      id: 'reference-1',
+      kind: 'TEXTO_LIBRE',
+      label: 'El Heraldo, edición extraordinaria del 15-03-1950, páginas 1 a 12',
+      status: 'PENDIENTE',
+    },
+  ],
 };
 
 const requestListItem = {
@@ -120,6 +128,16 @@ const requestListItem = {
       id: material.id,
       catalogCode: material.catalogCode,
       title: material.title,
+    },
+  ],
+  // HU-09.2: a long written reference must wrap in the materials column
+  references: [
+    {
+      id: 'reference-1',
+      kind: 'PROTOCOLO_NOTARIAL',
+      label:
+        'Protocolo notarial: Notaría Primera del Circuito de Barranquilla, año 1950, escritura 245',
+      status: 'PENDIENTE',
     },
   ],
 };
@@ -158,6 +176,27 @@ const requestDetail = {
       status: 'DISPONIBLE',
       location: { depot: 'Depósito 1', shelf: 'Estante 12', box: 'Caja 4' },
       itemStatus: 'LOCALIZADO',
+    },
+  ],
+  // HU-09.2: a resolved reference with its long material name
+  references: [
+    {
+      id: 'reference-1',
+      kind: 'PROTOCOLO_NOTARIAL',
+      label:
+        'Protocolo notarial: Notaría Primera del Circuito de Barranquilla, año 1950, escritura 245',
+      notary: 'Notaría Primera del Circuito de Barranquilla',
+      year: 1950,
+      deedNumber: '245',
+      description: null,
+      status: 'RESUELTA',
+      material: {
+        id: material.id,
+        catalogCode: material.catalogCode,
+        title: material.title,
+      },
+      resolvedAt: '2026-11-12T15:00:00.000Z',
+      resolvedBy: { id: 'user-1', name: 'María Fernanda de los Ángeles Rodríguez' },
     },
   ],
 };

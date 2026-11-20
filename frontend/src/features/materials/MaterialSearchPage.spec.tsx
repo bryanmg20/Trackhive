@@ -181,6 +181,40 @@ describe('MaterialSearchPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('lets a public user describe a material not in the catalog without choosing any (HU-09.2)', async () => {
+    const user = userEvent.setup();
+    // The search finds something, just not what the user is looking for
+    fetchMock.mockResolvedValue(page([material(1)]));
+    renderPage('PUBLICO');
+    await screen.findByText('Acta 1');
+
+    expect(screen.getByRole('button', { name: 'Solicitar' })).toBeDisabled();
+    await user.click(
+      screen.getByRole('link', { name: '¿No encuentra el material? Descríbalo' }),
+    );
+
+    expect(
+      screen.getByText('Destino: /solicitudes/nueva'),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the chosen materials when the user also describes another one', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(page([material(1)]));
+    renderPage('PUBLICO');
+
+    await user.click(
+      await screen.findByRole('checkbox', { name: 'Seleccionar Acta 1' }),
+    );
+    await user.click(
+      screen.getByRole('link', { name: '¿No encuentra el material? Descríbalo' }),
+    );
+
+    expect(
+      screen.getByText(`Destino: /solicitudes/nueva?materiales=${material(1).id}`),
+    ).toBeInTheDocument();
+  });
+
   it.each(['PERSONAL', 'ADMIN'])(
     'sends %s to the staff material screen and loads nothing',
     (role) => {

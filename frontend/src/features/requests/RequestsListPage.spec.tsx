@@ -31,6 +31,7 @@ function item(overrides: Record<string, unknown> = {}) {
         title: 'Acta de fundación',
       },
     ],
+    references: [],
     ...overrides,
   };
 }
@@ -297,6 +298,40 @@ describe('RequestsListPage', () => {
       expect(searchParams.get('material')).toBe('cabildo');
       expect(searchParams.get('desiredFrom')).toBe('2026-12-01');
       expect(searchParams.get('desiredTo')).toBe('2026-12-31');
+    });
+  });
+
+  it('filters the requests with pending references and shows them (HU-09.2)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(
+      page([
+        item({
+          materials: [],
+          references: [
+            {
+              id: 'reference-1',
+              kind: 'TEXTO_LIBRE',
+              label: 'El Heraldo, 15-03-1950',
+              status: 'PENDIENTE',
+            },
+          ],
+        }),
+      ]),
+    );
+    renderPage('PERSONAL');
+    await screen.findByRole('table');
+
+    expect(screen.getByText('Referencia: pendiente')).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('checkbox', {
+        name: 'Con referencias por resolver (Recibida o En búsqueda)',
+      }),
+    );
+
+    await waitFor(() => {
+      const { searchParams } = lastUrl();
+      expect(searchParams.get('pendingReferences')).toBe('true');
+      expect(searchParams.get('page')).toBe('1');
     });
   });
 

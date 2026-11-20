@@ -128,6 +128,21 @@ describe('StaffMaterialsPage', () => {
     },
   );
 
+  it('lets the staff describe a material not in the catalog without choosing any (HU-09.2)', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(listResponse([material()]));
+    renderPage('PERSONAL');
+    await screen.findByRole('checkbox', { name: 'Seleccionar Acta 1' });
+
+    await user.click(
+      screen.getByRole('link', { name: '¿No encuentra el material? Descríbalo' }),
+    );
+
+    expect(
+      screen.getByText('Destino: /personal/solicitudes/nueva'),
+    ).toBeInTheDocument();
+  });
+
   it('sends a PUBLICO user to the public search and loads nothing', () => {
     renderPage('PUBLICO');
 

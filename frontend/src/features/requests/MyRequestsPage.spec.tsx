@@ -30,6 +30,7 @@ function item(overrides: Record<string, unknown> = {}) {
         title: 'Acta de fundación',
       },
     ],
+    references: [],
     ...overrides,
   };
 }

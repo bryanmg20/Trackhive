@@ -1,8 +1,11 @@
 import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
 import { apiUrl } from '../../auth/api/api-base-url';
+import type { MaterialReferencePayload } from './material-references';
 
 export interface CreateRequestInput {
   materialIds: string[];
+  // At least one material or one reference (RN-04, HU-09.2)
+  references: MaterialReferencePayload[];
   reason: string;
   desiredDate: string;
   deliveryMode: 'PRESENCIAL' | 'DIGITAL';

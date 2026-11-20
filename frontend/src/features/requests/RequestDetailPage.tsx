@@ -26,6 +26,7 @@ import { REQUEST_STATUS_LABELS, RequestsApiError } from './api/list-requests';
 import { ChangeRequestStatusForm } from './ChangeRequestStatusForm';
 import styles from './RequestDetailPage.module.css';
 import { RequestHistory } from './RequestHistory';
+import { RequestReferencesSection } from './RequestReferencesSection';
 import { ScheduleAppointmentForm } from './ScheduleAppointmentForm';
 import { formatMaterialLocation } from './material-location';
 
@@ -442,6 +443,12 @@ export function RequestDetailPage() {
               <h2 id="sec-materials" className={styles.cardTitle}>
                 Material solicitado
               </h2>
+              {request.materials.length === 0 ? (
+                <p className={searchStyles.muted}>
+                  Aún no hay material del catálogo: la solicitud solo trae
+                  referencias escritas.
+                </p>
+              ) : null}
               <ul className={styles.materialList}>
                 {request.materials.map((material) => (
                   <li key={material.id} className={styles.material}>
@@ -467,6 +474,18 @@ export function RequestDetailPage() {
                 ))}
               </ul>
             </section>
+
+            {request.references.length > 0 ? (
+              <RequestReferencesSection
+                requestId={request.id}
+                status={request.status}
+                references={request.references}
+                onResolved={() => {
+                  setDetailVersion((version) => version + 1);
+                  setHistoryVersion((version) => version + 1);
+                }}
+              />
+            ) : null}
           </div>
         </article>
       ) : null}

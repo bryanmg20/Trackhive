@@ -6,6 +6,7 @@ import type {
 } from '../../materials/api/search-materials';
 import type { AppointmentMaterialLoanSummary } from '../../materials/api/material-loans';
 import type { AppointmentStatus } from './list-appointments';
+import type { RequestReference } from './material-references';
 import { RequestsApiError } from './list-requests';
 import type { RequestStatus } from './list-requests';
 import type { MaterialLocation } from '../material-location';
@@ -67,6 +68,8 @@ export interface RequestDetail {
     documentNumber: string | null;
   };
   materials: RequestDetailMaterial[];
+  // Materials not in the catalog, described in writing (HU-09.2)
+  references: RequestReference[];
   activeAppointment?: RequestDetailActiveAppointment | null;
 }
 

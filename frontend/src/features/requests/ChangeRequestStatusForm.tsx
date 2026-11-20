@@ -42,6 +42,9 @@ const TRANSITION_HINTS: Partial<Record<RequestStatus, string>> = {
   RECHAZADA: 'No se atenderá. Debe escribir el motivo, que verá el solicitante.',
 };
 
+const DELIVERY_COMMENT_REQUIRED_MESSAGE =
+  'Hay referencias sin material asociado: explique qué se entrega y cómo (por ejemplo «localizada en físico, se consulta en sala»).';
+
 const REASON_REQUIRED_MESSAGE =
   'Escriba el motivo del rechazo: el solicitante lo verá en «Mis solicitudes».';
 
@@ -132,6 +135,13 @@ export function ChangeRequestStatusForm({
   );
   // When rejecting, the comment is the reason the requester reads (HU-16)
   const rejecting = selected === 'RECHAZADA';
+  // HU-09.2: delivering with references without material, the comment says
+  // what is delivered and how. Same rule as the backend (Request.markAvailable)
+  const delivering =
+    selected === 'DISPONIBLE' &&
+    request.status === 'EN_BUSQUEDA' &&
+    request.references.some((reference) => reference.status === 'PENDIENTE');
+  const commentRequired = rejecting || delivering;
 
   function choose(status: RequestStatus) {
     setSelected(status);
@@ -145,9 +155,11 @@ export function ChangeRequestStatusForm({
       return;
     }
     // The backend also refuses it; checking here avoids a useless request
-    if (rejecting && !comment.trim()) {
+    if (commentRequired && !comment.trim()) {
       setError(null);
-      setReasonError(REASON_REQUIRED_MESSAGE);
+      setReasonError(
+        rejecting ? REASON_REQUIRED_MESSAGE : DELIVERY_COMMENT_REQUIRED_MESSAGE,
+      );
       commentRef.current?.focus();
       return;
     }
@@ -165,7 +177,17 @@ export function ChangeRequestStatusForm({
       setLastChange(result.statusChange);
       onChanged(result);
     } catch (caught: unknown) {
-      setError(toSaveError(caught));
+      // A 400 about the required comment goes next to the field
+      if (
+        commentRequired &&
+        caught instanceof RequestsApiError &&
+        caught.status === 400
+      ) {
+        setReasonError(caught.message);
+        commentRef.current?.focus();
+      } else {
+        setError(toSaveError(caught));
+      }
     } finally {
       setSaving(false);
     }
@@ -223,11 +245,19 @@ export function ChangeRequestStatusForm({
             <label htmlFor="status-comment">
               {rejecting
                 ? 'Motivo del rechazo (obligatorio)'
-                : 'Comentario (opcional)'}
+                : delivering
+                  ? 'Qué se entrega y cómo (obligatorio)'
+                  : 'Comentario (opcional)'}
             </label>
             {rejecting ? (
               <span id="status-comment-hint" className={styles.fieldHint}>
                 El solicitante lo verá en «Mis solicitudes».
+              </span>
+            ) : null}
+            {delivering ? (
+              <span id="status-comment-hint" className={styles.fieldHint}>
+                Hay referencias sin material asociado. Indique qué se entrega y
+                cómo; queda en el historial.
               </span>
             ) : null}
             <textarea
@@ -236,11 +266,11 @@ export function ChangeRequestStatusForm({
               rows={3}
               maxLength={MAX_STATUS_COMMENT_LENGTH}
               value={comment}
-              aria-required={rejecting}
+              aria-required={commentRequired}
               aria-invalid={reasonError ? true : undefined}
               aria-describedby={
                 [
-                  rejecting ? 'status-comment-hint' : '',
+                  commentRequired ? 'status-comment-hint' : '',
                   reasonError ? 'status-comment-error' : '',
                 ]
                   .filter(Boolean)
