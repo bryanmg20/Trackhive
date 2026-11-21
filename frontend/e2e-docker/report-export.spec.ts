@@ -67,6 +67,7 @@ test('ADMIN downloads both filtered CSV reports through Nginx and other roles re
     await download.saveAs(saved);
     const bytes = await readFile(saved);
     expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(bytes.toString('utf8')).toMatch(/^\uFEFFsep=,\r\n/);
     expect(bytes.toString('utf8')).toContain(
       '"Radicadas desde","Radicadas hasta"',
     );

@@ -1,9 +1,9 @@
 export type CsvCell = string | number | null;
 
-/** UTF-8 BOM for spreadsheets, RFC 4180 quoting and CRLF record separators. */
+/** UTF-8 BOM and explicit Excel delimiter, quoted cells and CRLF records. */
 export function toCsv(rows: readonly (readonly CsvCell[])[]): string {
   return (
-    '\uFEFF' +
+    '\uFEFFsep=,\r\n' +
     rows
       .map((row) =>
         row

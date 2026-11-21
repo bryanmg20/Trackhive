@@ -17,7 +17,8 @@ jest.setTimeout(30000);
 
 /** Test-side CSV reader handles quoted commas, doubled quotes and embedded LF. */
 function readCsv(text: string): string[][] {
-  const source = text.replace(/^\uFEFF/, '');
+  expect(text).toMatch(/^\uFEFF?sep=,\r\n/);
+  const source = text.replace(/^\uFEFF?sep=,\r\n/, '');
   const rows: string[][] = [];
   let row: string[] = [],
     value = '',

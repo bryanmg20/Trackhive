@@ -10,7 +10,7 @@ describe('report CSV formatting', () => {
         [null, 0],
       ]),
     ).toBe(
-      '\uFEFF"Material","Cantidad"\r\n"Actas, ""año""\n1890","2"\r\n"","0"\r\n',
+      '\uFEFFsep=,\r\n"Material","Cantidad"\r\n"Actas, ""año""\n1890","2"\r\n"","0"\r\n',
     );
   });
   it.each([
@@ -24,12 +24,12 @@ describe('report CSV formatting', () => {
     '\nCMD',
   ])('exports formula-like text %j as literal text', (value) => {
     expect(toCsv([[value]])).toBe(
-      '\uFEFF"\'' + value.replaceAll('"', '""') + '"\r\n',
+      '\uFEFFsep=,\r\n"\'' + value.replaceAll('"', '""') + '"\r\n',
     );
   });
   it('leaves ordinary text and numeric values unchanged', () => {
     expect(toCsv([['Actas-1890', 2.5, -2]])).toBe(
-      '\uFEFF"Actas-1890","2.5","-2"\r\n',
+      '\uFEFFsep=,\r\n"Actas-1890","2.5","-2"\r\n',
     );
   });
   it('keeps the ranking filters and ordering, including the applied limit in the file name', () => {
@@ -62,7 +62,7 @@ describe('report CSV formatting', () => {
         { from: null, to: null, totalRequests: 0, items: [] },
         10,
       ).content.split('\r\n'),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
   it('distinguishes no observations from true zero duration in the attention export', () => {
     const result = ReportCsvMapper.attention({
