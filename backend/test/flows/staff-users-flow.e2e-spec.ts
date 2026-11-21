@@ -393,11 +393,12 @@ describe('Staff accounts management (e2e, PostgreSQL, HU-05)', () => {
       const auth = (test: request.Test) =>
         session ? test.set('Authorization', bearer(session)) : test;
       return [
-        auth(request(e2e.server).get(STAFF)),
-        auth(request(e2e.server).post(STAFF).send(staffBody(tag))),
-        auth(
-          request(e2e.server).patch(`${STAFF}/${id}`).send({ active: false }),
-        ),
+        () => auth(request(e2e.server).get(STAFF)),
+        () => auth(request(e2e.server).post(STAFF).send(staffBody(tag))),
+        () =>
+          auth(
+            request(e2e.server).patch(`${STAFF}/${id}`).send({ active: false }),
+          ),
       ];
     };
 
@@ -412,7 +413,7 @@ describe('Staff accounts management (e2e, PostgreSQL, HU-05)', () => {
         const tag = randomUUID().slice(0, 8);
 
         for (const call of calls(caller, target.id, tag)) {
-          const response = await call.expect(403);
+          const response = await call().expect(403);
           expect(response.body as ErrorBody).toMatchObject({
             statusCode: 403,
             code: 'FORBIDDEN',
@@ -434,7 +435,7 @@ describe('Staff accounts management (e2e, PostgreSQL, HU-05)', () => {
 
     it('rejects a request without a session with 401', async () => {
       for (const call of calls(null, randomUUID(), randomUUID().slice(0, 8))) {
-        await call.expect(401);
+        await call().expect(401);
       }
     });
   });

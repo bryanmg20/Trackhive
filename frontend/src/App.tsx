@@ -20,6 +20,7 @@ import { ROUTES } from './routes';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { StaffUsersPage } from './features/users/StaffUsersPage';
 import { MostRequestedMaterialsPage } from './features/reports/MostRequestedMaterialsPage';
+import { AttentionTimesPage } from './features/reports/AttentionTimesPage';
 
 function HomeRedirect() {
   const role = readSessionRole();
@@ -54,6 +55,7 @@ function App() {
         />
       </Route>
       <Route element={<AdminRoute />}>
+        <Route path={ROUTES.attentionTimes} element={<AttentionTimesPage />} />
         <Route
           path={ROUTES.adminRoomCapacity}
           element={<RoomCapacityPage />}

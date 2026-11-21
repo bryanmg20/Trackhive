@@ -55,6 +55,11 @@ export const SECTIONS: readonly Section[] = [
     roles: ['ADMIN'],
   },
   {
+    to: ROUTES.attentionTimes,
+    label: 'Tiempos de atención',
+    roles: ['ADMIN'],
+  },
+  {
     to: ROUTES.staffUsers,
     label: 'Usuarios',
     roles: ['ADMIN'],

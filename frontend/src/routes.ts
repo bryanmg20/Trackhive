@@ -13,6 +13,7 @@ export const ROUTES = {
   adminRoomCapacity: '/admin/capacidad-sala',
   staffUsers: '/admin/usuarios',
   mostRequestedMaterials: '/reportes/material-mas-solicitado',
+  attentionTimes: '/reportes/tiempos-de-atencion',
 } as const;
 
 export function requestDetailPath(id: string): string {
