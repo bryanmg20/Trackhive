@@ -52,6 +52,23 @@ incluye. Los materiales con el mismo número de solicitudes comparten puesto.
 - Cada barra es proporcional al material más pedido, y al lado se lee el
   número exacto de solicitudes.
 
+**Tiempos de atención (solo administrador).** La opción **Tiempos de atención**
+del menú muestra el promedio desde Recibida hasta Atendida y cuántas solicitudes
+se consideraron. Incluye las solicitudes que después se cerraron. El tiempo
+incluye noches y fines de semana; no corresponde a horas hábiles.
+
+«Radicadas desde» y «Radicadas hasta» filtran por la fecha en que se recibió
+la solicitud, en hora de Bogotá y con ambos días incluidos. Pulse «Aplicar
+fechas» para consultar y «Quitar fechas» para volver al historial completo.
+La duración se mide hasta la atención, aunque haya terminado después del rango.
+
+Cada tarjeta muestra el tiempo promedio y el número de solicitudes que pasaron
+por ese estado. Las solicitudes que omitieron un estado no cuentan como cero;
+por eso los tamaños de muestra pueden variar. Si una solicitud volvió al mismo
+estado, sus permanencias se suman antes de calcular el promedio. «Sin datos»
+significa que no hay observaciones; «0 s» indica un tiempo registrado de cero.
+El personal y los usuarios públicos no pueden abrir este reporte.
+
 ## 7. Gestión de usuarios
 
 Solo el administrador ve la opción **Usuarios** en el menú. Ahí están las

@@ -23,6 +23,14 @@ function renderNav() {
 }
 
 describe('SiteNav', () => {
+  it.each(['PUBLICO', 'PERSONAL', 'ADMIN'])('offers attention times exclusively to ADMIN (%s)', (role) => {
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
+    const view = renderNav();
+    const link = screen.queryByRole('link', { name: 'Tiempos de atención' });
+    if (role === 'ADMIN') expect(link).toHaveAttribute('href', '/reportes/tiempos-de-atencion');
+    else expect(link).not.toBeInTheDocument();
+    view.unmount();
+  });
   beforeEach(() => {
     sessionStorage.clear();
   });

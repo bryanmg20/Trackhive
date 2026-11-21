@@ -50,6 +50,49 @@ Backend de Trackhive: API REST en NestJS con Prisma y PostgreSQL.
 - Cada endpoint nuevo debe validar su entrada con un DTO y documentarse en Swagger (`@ApiTags`, `@ApiOperation`, `@Api*Response`) dentro de su propia HU.
 - Endpoint de referencia: `POST /api/v1/users` (`UsersModule`).
 
+## Tiempos de atención (HU-25)
+
+`GET /api/v1/reports/attention-times?from=2026-11-01&to=2026-11-30`
+requiere access token y `@Roles('ADMIN')`. Sin sesión responde 401; PERSONAL
+y PUBLICO reciben 403. `from` y `to` son opcionales, fechas `YYYY-MM-DD`
+validadas por DTO; un rango invertido o una fecha inválida responde 400.
+
+El rango selecciona solicitudes por **radicación**, con ambos días incluidos
+en Bogotá (UTC−5). El total es el promedio entre `registered_at` y la primera
+entrada a Atendida del historial inmutable,
+incluyendo solicitudes que después se cerraron, y sin recortar la duración al
+final del periodo. Es tiempo transcurrido, no horas hábiles. Solicitudes sin
+entrada a Atendida ni fecha `attended_at` no participan. Se prioriza el historial
+inmutable; solo si un dato antiguo carece de esa entrada se usa su `attended_at`
+guardado. No se inventan transiciones intermedias para completar historiales.
+
+La respuesta contiene `from`, `to`, `completedRequests`, `averageSeconds` y
+`states` (`state`, `requestCount`, `averageSeconds`). Para Recibida, En búsqueda,
+Disponible y Agendada se calcula la permanencia hasta Atendida usando el
+historial ordenado por fecha e ID. Las visitas repetidas al mismo estado se
+suman por solicitud antes de promediar. Una solicitud que omitió un estado no
+participa en su denominador. Sin observaciones se devuelve `null`, no cero;
+una transición instantánea sí tiene duración cero. No se envían identidades,
+notas, materiales ni historiales individuales.
+
+La consulta agrega los datos en PostgreSQL en una sola sentencia de lectura.
+No introduce migraciones, tablas, índices ni reglas nuevas de persistencia.
+
+Verificación desde `backend`:
+
+```bash
+pnpm exec prisma generate
+pnpm test -- --runInBand attention-times
+pnpm test:e2e -- --runInBand attention-times-flow
+```
+
+La prueba e2e usa exclusivamente una base terminada en `_e2e`, con migraciones
+reales. Inserta historiales de ejemplo sin modificar filas de auditoría y
+verifica promedio total, estados omitidos, visitas repetidas, duración cero,
+fechas de Bogotá, solicitudes cerradas y accesos 401/403. Comprueba las filas
+guardadas y que lecturas o errores no alteren solicitudes, historial ni outbox.
+También radica, atiende y cierra una solicitud a través de la API real.
+
 ## Project setup
 
 ```bash

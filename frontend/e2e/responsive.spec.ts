@@ -18,6 +18,7 @@ interface RouteCase {
  * fails if a new route is added and this list is not updated.
  */
 const ROUTE_CASES: RouteCase[] = [
+  { name: 'tiempos de atención', path: ROUTES.attentionTimes, role: 'ADMIN' },
   { name: 'mi perfil', path: ROUTES.profile, role: 'PUBLICO' },
   { name: 'registro', path: ROUTES.register, role: null },
   { name: 'login', path: ROUTES.login, role: null },
@@ -364,6 +365,15 @@ async function mockApi(page: Page): Promise<void> {
       return;
     }
 
+    if (pathname === '/api/v1/reports/attention-times') {
+      await json({ from: null, to: null, completedRequests: 2, averageSeconds: 5400, states: [
+        { state: 'RECIBIDA', requestCount: 2, averageSeconds: 0 },
+        { state: 'EN_BUSQUEDA', requestCount: 1, averageSeconds: 3600 },
+        { state: 'DISPONIBLE', requestCount: 2, averageSeconds: 1800 },
+        { state: 'AGENDADA', requestCount: 0, averageSeconds: null },
+      ] });
+      return;
+    }
     if (pathname === '/api/v1/reports/most-requested-materials') {
       await json({
         from: null,

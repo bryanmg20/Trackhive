@@ -16,6 +16,9 @@ import { CreateRequestOnBehalfUseCase } from './application/use-cases/create-req
 import { CreateRequestUseCase } from './application/use-cases/create-request.use-case';
 import { FindRequesterByEmailUseCase } from './application/use-cases/find-requester-by-email.use-case';
 import { GetMostRequestedMaterialsUseCase } from './application/use-cases/get-most-requested-materials.use-case';
+import { GetAttentionTimesUseCase } from './application/use-cases/get-attention-times.use-case';
+import { ATTENTION_TIME_QUERY } from './application/ports/attention-time-query.port';
+import { PrismaAttentionTimeQuery } from './infrastructure/persistence/prisma-attention-time.query';
 import { GetRequestDetailUseCase } from './application/use-cases/get-request-detail.use-case';
 import { GetRequestHistoryUseCase } from './application/use-cases/get-request-history.use-case';
 import { GetRoomCapacityUseCase } from './application/use-cases/get-room-capacity.use-case';
@@ -82,6 +85,8 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     CancelAppointmentUseCase,
     DeliverMaterialUseCase,
     GetMostRequestedMaterialsUseCase,
+    GetAttentionTimesUseCase,
+    { provide: ATTENTION_TIME_QUERY, useClass: PrismaAttentionTimeQuery },
   ],
 })
 export class RequestsModule {}

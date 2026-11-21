@@ -14,6 +14,9 @@ import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
 import { MostRequestedMaterialsQueryDto } from '../../application/dto/most-requested-materials-query.dto';
 import { MostRequestedMaterialsResponseDto } from '../../application/dto/most-requested-materials-response.dto';
 import { GetMostRequestedMaterialsUseCase } from '../../application/use-cases/get-most-requested-materials.use-case';
+import { AttentionTimesQueryDto } from '../../application/dto/attention-times-query.dto';
+import { AttentionTimesResponseDto } from '../../application/dto/attention-times-response.dto';
+import { GetAttentionTimesUseCase } from '../../application/use-cases/get-attention-times.use-case';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
@@ -21,7 +24,38 @@ import { GetMostRequestedMaterialsUseCase } from '../../application/use-cases/ge
 export class ReportController {
   constructor(
     private readonly getMostRequestedMaterialsUseCase: GetMostRequestedMaterialsUseCase,
+    private readonly getAttentionTimesUseCase: GetAttentionTimesUseCase,
   ) {}
+
+  @Get('attention-times')
+  @Roles('ADMIN')
+  @ApiOperation({
+    summary: 'Tiempos promedio de atención (HU-25)',
+    description:
+      'Solo ADMIN. Filtra por radicación en días de Bogotá, ambos extremos incluidos. ' +
+      'Mide tiempo transcurrido (incluye noches y fines de semana) hasta Atendida, también si luego se cerró. ' +
+      'Cada estado excluye solicitudes que no lo recorrieron; las permanencias repetidas se suman por solicitud. ' +
+      'El rango no recorta la duración de la atención. Sin observaciones, promedio null y muestra 0.',
+  })
+  @ApiOkResponse({ type: AttentionTimesResponseDto })
+  @ApiBadRequestResponse({
+    description: 'Fechas inválidas o rango invertido',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token ausente o inválido',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Solo ADMIN puede consultar los tiempos de atención',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({ type: ErrorResponseDto })
+  getAttentionTimes(
+    @Query() query: AttentionTimesQueryDto,
+  ): Promise<AttentionTimesResponseDto> {
+    return this.getAttentionTimesUseCase.execute(query);
+  }
 
   @Get('most-requested-materials')
   @Roles('PERSONAL', 'ADMIN')

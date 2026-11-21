@@ -290,6 +290,32 @@ propia cuenta).
 
 ## Pruebas
 
+### Tiempos de atención (HU-25)
+
+La ruta `/reportes/tiempos-de-atencion` y su entrada de menú son exclusivas de
+ADMIN. Usa `GET /api/v1/reports/attention-times` y muestra promedio total,
+promedio por estado y tamaño de cada muestra. Filtra por radicación en Bogotá;
+los estados omitidos se excluyen y se distingue «Sin datos» de «0 s».
+
+`AttentionTimesPage.spec.tsx` cubre permisos, filtros, rango inválido, teclado,
+muestras, cero, ausencia de datos y recuperación de errores. Las pruebas de API
+cubren fechas, errores y unidades de duración. Playwright comprueba el flujo y
+la pantalla a 360 px. Para la verificación completa:
+
+```bash
+pnpm test -- --pool=threads --maxWorkers=2
+pnpm lint
+pnpm build
+pnpm test:e2e
+```
+
+Con `docker compose up -d --build` iniciado desde la raíz, ejecutar desde
+`frontend` `pnpm test:e2e:docker attention-times.spec.ts`. Usa el seed de ADMIN
+(`admin@example.com`) y las cuentas demo de personal/público para comprobar
+los 403, sin crear solicitudes. Guarda capturas de escritorio y móvil en
+`test-results/`. Usa las contraseñas `SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD`
+del entorno de la prueba (por defecto local: `1`).
+
 ### Calendario legible (HU-142)
 
 El mes muestra hasta tres citas por día y «+N más» abre un diálogo con todas
