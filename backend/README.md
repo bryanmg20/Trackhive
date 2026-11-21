@@ -93,6 +93,35 @@ fechas de Bogotá, solicitudes cerradas y accesos 401/403. Comprueba las filas
 guardadas y que lecturas o errores no alteren solicitudes, historial ni outbox.
 También radica, atiende y cierra una solicitud a través de la API real.
 
+## Exportación de reportes (HU-27)
+
+Solo ADMIN puede descargar estos archivos:
+
+- `GET /api/v1/reports/most-requested-materials/export?from=2026-11-01&to=2026-11-30&limit=20`.
+- `GET /api/v1/reports/attention-times/export?from=2026-11-01&to=2026-11-30`.
+
+Reutilizan los DTOs, casos de uso, fechas de radicación de Bogotá y cálculos de
+sus reportes JSON. El ranking conserva el límite y el orden consultados. Se
+consulta nuevamente el reporte con esos criterios al exportar. Ambos endpoints
+declaran `@Roles('ADMIN')`: PERSONAL y PUBLICO reciben 403 y sin sesión, 401.
+Los filtros inválidos reciben 400 antes de generar el archivo. Swagger documenta
+la descarga binaria `text/csv`.
+
+La respuesta usa `Content-Disposition: attachment`, nombre de archivo con el
+periodo, UTF-8 con BOM, comas y finales de registro CRLF. Las comillas se duplican
+y cada celda va entre comillas; se conservan acentos y saltos de línea dentro
+del texto. Los textos que podrían interpretarse como fórmulas de hoja de cálculo
+se prefijan con apóstrofo. No se exportan datos personales ni identificadores
+internos. Los promedios se expresan en segundos; vacío significa sin observaciones,
+mientras que `0` conserva una duración real de cero. Un ranking vacío descarga
+solo sus encabezados; el periodo y el límite siguen identificados en el nombre.
+
+Verificar con `pnpm test -- --runInBand 'csv|export-report'` y
+`pnpm test:e2e -- --runInBand report-export-flow`. El flujo usa PostgreSQL
+aislado, compara CSV con los reportes JSON y comprueba permisos, filtros,
+caracteres especiales, archivos vacíos y ausencia de escrituras durante la
+consulta y sus errores. No requiere migración ni cambios al esquema.
+
 ## Project setup
 
 ```bash

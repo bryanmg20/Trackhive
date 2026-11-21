@@ -21,6 +21,7 @@ import type {
   RankingLimit,
 } from './api/most-requested-materials';
 import styles from './MostRequestedMaterialsPage.module.css';
+import { ExportReportButton } from './ExportReportButton';
 
 const DAY_FORMAT = new Intl.DateTimeFormat('es-CO', {
   day: 'numeric',
@@ -109,7 +110,9 @@ export function MostRequestedMaterialsPage() {
     event.preventDefault();
     // YYYY-MM-DD strings compare like the dates they hold
     if (fromInput && toInput && fromInput > toInput) {
-      setRangeError('La fecha inicial no puede ser posterior a la fecha final.');
+      setRangeError(
+        'La fecha inicial no puede ser posterior a la fecha final.',
+      );
       return;
     }
     setRangeError(null);
@@ -213,6 +216,11 @@ export function MostRequestedMaterialsPage() {
         ) : null}
       </form>
 
+      <ExportReportButton
+        report="most-requested-materials"
+        params={params}
+        disabled={loading || !ranking}
+      />
       <section className={styles.results} aria-labelledby="ranking-title">
         <h2 id="ranking-title" className={styles.sectionTitle}>
           Ranking

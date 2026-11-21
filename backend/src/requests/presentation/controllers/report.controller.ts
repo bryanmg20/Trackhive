@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, StreamableFile } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -6,6 +6,7 @@ import {
   ApiInternalServerErrorResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiProduces,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -17,6 +18,7 @@ import { GetMostRequestedMaterialsUseCase } from '../../application/use-cases/ge
 import { AttentionTimesQueryDto } from '../../application/dto/attention-times-query.dto';
 import { AttentionTimesResponseDto } from '../../application/dto/attention-times-response.dto';
 import { GetAttentionTimesUseCase } from '../../application/use-cases/get-attention-times.use-case';
+import { ExportReportUseCase } from '../../application/use-cases/export-report.use-case';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
@@ -25,7 +27,81 @@ export class ReportController {
   constructor(
     private readonly getMostRequestedMaterialsUseCase: GetMostRequestedMaterialsUseCase,
     private readonly getAttentionTimesUseCase: GetAttentionTimesUseCase,
+    private readonly exportReportUseCase: ExportReportUseCase,
   ) {}
+
+  @Get('most-requested-materials/export')
+  @Roles('ADMIN')
+  @ApiProduces('text/csv')
+  @ApiOperation({
+    summary: 'Exportar material más solicitado a CSV (HU-27)',
+    description:
+      'Mismos filtros, límite y orden que el reporte. UTF-8 con BOM. Ranking vacío: solo encabezados. Solo ADMIN.',
+  })
+  @ApiOkResponse({
+    description: 'Archivo CSV descargable',
+    schema: { type: 'string', format: 'binary' },
+  })
+  @ApiBadRequestResponse({
+    description: 'Filtros inválidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({
+    description: 'Solo ADMIN puede exportar reportes',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({ type: ErrorResponseDto })
+  async exportMostRequestedMaterials(
+    @Query() query: MostRequestedMaterialsQueryDto,
+  ): Promise<StreamableFile> {
+    const csv = await this.exportReportUseCase.execute({
+      report: 'most-requested-materials',
+      from: query.from,
+      to: query.to,
+      limit: query.limit,
+    });
+    return new StreamableFile(Buffer.from(csv.content, 'utf8'), {
+      type: 'text/csv; charset=utf-8',
+      disposition: `attachment; filename="${csv.fileName}"`,
+    });
+  }
+
+  @Get('attention-times/export')
+  @Roles('ADMIN')
+  @ApiProduces('text/csv')
+  @ApiOperation({
+    summary: 'Exportar tiempos de atención a CSV (HU-27)',
+    description:
+      'Mismos filtros y promedios que el reporte. Duraciones en segundos; promedio vacío significa sin datos, no cero. Solo ADMIN.',
+  })
+  @ApiOkResponse({
+    description: 'Archivo CSV descargable',
+    schema: { type: 'string', format: 'binary' },
+  })
+  @ApiBadRequestResponse({
+    description: 'Filtros inválidos',
+    type: ErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({
+    description: 'Solo ADMIN puede exportar reportes',
+    type: ErrorResponseDto,
+  })
+  @ApiInternalServerErrorResponse({ type: ErrorResponseDto })
+  async exportAttentionTimes(
+    @Query() query: AttentionTimesQueryDto,
+  ): Promise<StreamableFile> {
+    const csv = await this.exportReportUseCase.execute({
+      report: 'attention-times',
+      from: query.from,
+      to: query.to,
+    });
+    return new StreamableFile(Buffer.from(csv.content, 'utf8'), {
+      type: 'text/csv; charset=utf-8',
+      disposition: `attachment; filename="${csv.fileName}"`,
+    });
+  }
 
   @Get('attention-times')
   @Roles('ADMIN')

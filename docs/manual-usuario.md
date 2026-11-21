@@ -69,6 +69,18 @@ estado, sus permanencias se suman antes de calcular el promedio. «Sin datos»
 significa que no hay observaciones; «0 s» indica un tiempo registrado de cero.
 El personal y los usuarios públicos no pueden abrir este reporte.
 
+**Exportar reportes (solo administrador).** En Material más solicitado y
+Tiempos de atención, consulte el reporte y pulse **Exportar CSV**. Se descarga
+un archivo con los filtros aplicados y, en el ranking, el límite seleccionado.
+Si editó las fechas, pulse primero «Aplicar fechas»; los cambios sin aplicar
+no afectan la descarga. La exportación vuelve a consultar los datos con esos
+criterios, por lo que incorpora las actualizaciones registradas desde la consulta.
+
+El archivo incluye encabezados y acentos. El nombre identifica su periodo.
+En tiempos de atención, los promedios se expresan en segundos y una celda vacía
+significa «Sin datos», no cero. Si el ranking está vacío se descargan únicamente
+sus encabezados. El personal y el público no disponen de esta acción.
+
 ## 7. Gestión de usuarios
 
 Solo el administrador ve la opción **Usuarios** en el menú. Ahí están las
