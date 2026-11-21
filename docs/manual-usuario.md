@@ -79,7 +79,7 @@ criterios, por lo que incorpora las actualizaciones registradas desde la consult
 El archivo incluye encabezados y acentos. El nombre identifica su periodo.
 Al abrir el CSV directamente en Excel, cada dato aparece en su columna: el archivo
 incluye la indicación de separador `sep=,`. En otras herramientas de importación,
-seleccione UTF-8, separador coma y omita esa primera línea antes de los encabezados.
+seleccione Unicode UTF-16 LE, separador coma y omita esa primera línea antes de los encabezados.
 En tiempos de atención, los promedios se expresan en segundos y una celda vacía
 significa «Sin datos», no cero. Si el ranking está vacío se descargan únicamente
 sus encabezados. El personal y el público no disponen de esta acción.

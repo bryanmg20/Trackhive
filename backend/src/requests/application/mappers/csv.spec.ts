@@ -2,6 +2,21 @@ import { toCsv } from './csv';
 import { ReportCsvMapper } from './report-csv.mapper';
 
 describe('report CSV formatting', () => {
+  it('preserves Spanish accents and symbols in the UTF-16LE download bytes', () => {
+    const text = toCsv([
+      ['Código', 'Material', 'Estado'],
+      [
+        'Ñ-01',
+        'Fundación, sesión, edición, número y año · 1812',
+        'Recibida → Atendida',
+      ],
+    ]);
+    const bytes = Buffer.from(text, 'utf16le');
+    expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    expect(bytes.toString('utf16le')).toBe(text);
+    expect(bytes.includes(Buffer.from('Código', 'utf16le'))).toBe(true);
+    expect(bytes.includes(Buffer.from('año · 1812', 'utf16le'))).toBe(true);
+  });
   it('preserves accents, quotes, delimiters and embedded newlines, with BOM and CRLF', () => {
     expect(
       toCsv([

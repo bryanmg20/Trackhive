@@ -36,7 +36,7 @@ export class ReportController {
   @ApiOperation({
     summary: 'Exportar material más solicitado a CSV (HU-27)',
     description:
-      'Mismos filtros, límite y orden que el reporte. UTF-8 con BOM. Ranking vacío: solo encabezados. Solo ADMIN.',
+      'Mismos filtros, límite y orden que el reporte. UTF-16LE con BOM. Ranking vacío: solo encabezados. Solo ADMIN.',
   })
   @ApiOkResponse({
     description: 'Archivo CSV descargable',
@@ -61,8 +61,8 @@ export class ReportController {
       to: query.to,
       limit: query.limit,
     });
-    return new StreamableFile(Buffer.from(csv.content, 'utf8'), {
-      type: 'text/csv; charset=utf-8',
+    return new StreamableFile(Buffer.from(csv.content, 'utf16le'), {
+      type: 'text/csv; charset=utf-16le',
       disposition: `attachment; filename="${csv.fileName}"`,
     });
   }
@@ -97,8 +97,8 @@ export class ReportController {
       from: query.from,
       to: query.to,
     });
-    return new StreamableFile(Buffer.from(csv.content, 'utf8'), {
-      type: 'text/csv; charset=utf-8',
+    return new StreamableFile(Buffer.from(csv.content, 'utf16le'), {
+      type: 'text/csv; charset=utf-16le',
       disposition: `attachment; filename="${csv.fileName}"`,
     });
   }

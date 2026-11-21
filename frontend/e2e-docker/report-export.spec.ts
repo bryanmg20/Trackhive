@@ -66,10 +66,13 @@ test('ADMIN downloads both filtered CSV reports through Nginx and other roles re
     const saved = testInfo.outputPath(`${report}.csv`);
     await download.saveAs(saved);
     const bytes = await readFile(saved);
-    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(bytes.toString('utf8')).toMatch(/^\uFEFFsep=,\r\n/);
-    expect(bytes.toString('utf8')).toContain(
+    expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    expect(bytes.toString('utf16le')).toMatch(/^\uFEFFsep=,\r\n/);
+    expect(bytes.toString('utf16le')).toContain(
       '"Radicadas desde","Radicadas hasta"',
+    );
+    expect(bytes.toString('utf16le')).toContain(
+      report === 'most-requested-materials' ? '"Código"' : '"Recibida → Atendida"',
     );
     await page.screenshot({
       path: testInfo.outputPath(`${report}-exportar.png`),

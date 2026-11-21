@@ -1,6 +1,6 @@
 export type CsvCell = string | number | null;
 
-/** UTF-8 BOM and explicit Excel delimiter, quoted cells and CRLF records. */
+/** Unicode BOM and explicit Excel delimiter, quoted cells and CRLF records. */
 export function toCsv(rows: readonly (readonly CsvCell[])[]): string {
   return (
     '\uFEFFsep=,\r\n' +

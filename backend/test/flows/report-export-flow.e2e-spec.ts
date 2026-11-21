@@ -16,7 +16,10 @@ import type { AttentionTimesResponseDto } from '../../src/requests/application/d
 jest.setTimeout(30000);
 
 /** Test-side CSV reader handles quoted commas, doubled quotes and embedded LF. */
-function readCsv(text: string): string[][] {
+function readCsv(bytes: unknown): string[][] {
+  if (!Buffer.isBuffer(bytes)) throw new Error('Expected binary CSV response');
+  expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+  const text = bytes.toString('utf16le');
   expect(text).toMatch(/^\uFEFF?sep=,\r\n/);
   const source = text.replace(/^\uFEFF?sep=,\r\n/, '');
   const rows: string[][] = [];
@@ -58,6 +61,13 @@ describe('CSV report export, HU-27 (PostgreSQL)', () => {
     const test = request(e2e.server)
       .get(`${API}/reports/${report}${csv ? '/export' : ''}`)
       .query(query);
+    if (csv)
+      test.buffer(true).parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+        response.on('error', callback);
+      });
     return session ? test.set('Authorization', bearer(session)) : test;
   };
   beforeAll(async () => {
@@ -115,14 +125,15 @@ describe('CSV report export, HU-27 (PostgreSQL)', () => {
       filters,
     ).expect(200);
     expect(exported.headers['content-type']).toContain(
-      'text/csv; charset=utf-8',
+      'text/csv; charset=utf-16le',
     );
     expect(exported.headers['content-disposition']).toContain(
       'attachment; filename="material-mas-solicitado_2004-01-01_2004-01-31_top-1.csv"',
     );
-    const text = exported.text;
+    const bytes = exported.body as Buffer;
+    const text = bytes.toString('utf16le');
     expect(text.charCodeAt(0)).toBe(0xfeff);
-    const rows = readCsv(text);
+    const rows = readCsv(bytes);
     expect(rows).toHaveLength(data.items.length + 1);
     expect(rows[1]).toEqual([
       range.from,
@@ -139,14 +150,14 @@ describe('CSV report export, HU-27 (PostgreSQL)', () => {
       ...range,
       limit: 10,
     }).expect(200);
-    expect(readCsv(all.text).map((row) => row[5])).toContain("'=1+1");
+    expect(readCsv(all.body).map((row) => row[5])).toContain("'=1+1");
   });
 
   it('exports the total and each attention state without turning missing observations into zero', async () => {
     const json = await call('attention-times', admin, range, false).expect(200);
     const data = json.body as AttentionTimesResponseDto;
     const exported = await call('attention-times', admin, range).expect(200);
-    const rows = readCsv(exported.text);
+    const rows = readCsv(exported.body);
     expect(rows).toHaveLength(data.states.length + 2);
     expect(rows[1]).toEqual([
       range.from,
@@ -175,10 +186,10 @@ describe('CSV report export, HU-27 (PostgreSQL)', () => {
       admin,
       filters,
     ).expect(200);
-    expect(readCsv(ranking.text)).toHaveLength(1);
+    expect(readCsv(ranking.body)).toHaveLength(1);
     const attention = await call('attention-times', admin, filters).expect(200);
     expect(
-      readCsv(attention.text)
+      readCsv(attention.body)
         .slice(1)
         .every((row) => row[4] === '0' && row[5] === ''),
     ).toBe(true);

@@ -108,7 +108,7 @@ Los filtros inválidos reciben 400 antes de generar el archivo. Swagger document
 la descarga binaria `text/csv`.
 
 La respuesta usa `Content-Disposition: attachment`, nombre de archivo con el
-periodo, UTF-8 con BOM, comas y finales de registro CRLF. La primera línea `sep=,`
+periodo, UTF-16LE con BOM, comas y finales de registro CRLF. La primera línea `sep=,`
 indica a Excel el separador para abrir cada dato en su columna, independientemente
 del separador regional. Los lectores CSV genéricos deben omitir esa línea.
 Las comillas se duplican
