@@ -208,7 +208,7 @@ python dev/scripts/comparar_everything.py --url http://127.0.0.1:8081 --bytes
 
 ## 7. Conectar el backend
 
-El backend llega al mock o a Everything **cambiando solo `EVERYTHING_URL`** en el `.env`. El usuario y la contraseña son los del servidor HTTP. El adaptador que las usa llega con HU-135.
+El backend llega al mock o a Everything **cambiando solo `EVERYTHING_URL`** en el `.env`. El usuario y la contraseña son los del servidor HTTP. El backend no tiene cliente HTTP hacia Everything: con HU-137 estas variables pasan al agente (HU-166), que consulta Everything y envía al backend cada página sin transformarla.
 
 | Backend | Everything | `EVERYTHING_URL` |
 |---|---|---|
@@ -224,6 +224,16 @@ El backend llega al mock o a Everything **cambiando solo `EVERYTHING_URL`** en e
 - El navegador nunca llama a Everything: solo el backend.
 
 ## 8. Pruebas
+
+### Mapeo en el backend (HU-135)
+
+`EverythingPageMapper.toDocumentRecords` (`backend/src/everything/application/mappers/`) convierte una página cruda (`totalResults`, `results`) en `DocumentRecord[]`: une la carpeta y el nombre con `\` (salvo la raíz del índice, que llega con `path` vacío), pasa `size` a número (sin tamaño en carpetas) y `date_modified` de FILETIME a `Date`. Si la página no tiene la forma de Everything (falta `results` o una columna, un campo con otro tipo, una fecha que no es número) lanza `INVALID_EVERYTHING_PAGE` (400) y no devuelve nada. Sus pruebas usan los fixtures de la sección 5:
+
+```bash
+cd backend && pnpm exec jest src/everything
+```
+
+### Árbol, mock y fixtures
 
 ```bash
 pip install -r dev/requirements.txt

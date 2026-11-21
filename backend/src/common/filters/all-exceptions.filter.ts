@@ -99,6 +99,8 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   REQUESTER_NAME_REQUIRED: HttpStatus.BAD_REQUEST,
   REQUESTER_EMAIL_REQUIRED: HttpStatus.BAD_REQUEST,
   REQUESTER_EMAIL_MISMATCH: HttpStatus.BAD_REQUEST,
+  // The agent (HU-166) sent a page without the shape of Everything (HU-135)
+  INVALID_EVERYTHING_PAGE: HttpStatus.BAD_REQUEST,
   // The mail server failed, not the request: like a proxy, answer 502
   MAIL_DELIVERY_FAILED: HttpStatus.BAD_GATEWAY,
 };
