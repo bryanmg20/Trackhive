@@ -1,6 +1,5 @@
-/** Kinds of email of the outbox (CHECK in the migration). Keeps legacy CAMBIO_ESTADO until Task 4 stops emitting it. */
+/** Kinds of email of the outbox (CHECK in the migration). */
 export const NOTIFICATION_TEMPLATES = [
-  'CAMBIO_ESTADO',
   'SOLICITUD_RECIBIDA',
   'SOLICITUD_EN_BUSQUEDA',
   'SOLICITUD_DISPONIBLE',

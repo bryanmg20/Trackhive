@@ -26,6 +26,7 @@ describe('notification-template (HU-24)', () => {
   it('validates known and unknown template values', () => {
     expect(isNotificationTemplate('SOLICITUD_DISPONIBLE')).toBe(true);
     expect(isNotificationTemplate('CITA_REPROGRAMADA')).toBe(true);
+    expect(isNotificationTemplate('CAMBIO_ESTADO')).toBe(false);
     expect(isNotificationTemplate('DESCONOCIDA')).toBe(false);
   });
 });

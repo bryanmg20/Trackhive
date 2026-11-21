@@ -66,7 +66,8 @@ export class RescheduleAppointmentUseCase {
 
     const previousDate = DateOnlyMapper.toDto(appointment.date);
     const defaultComment = `Cita reprogramada del ${previousDate} al ${input.date}`;
-    const comment = input.comment?.trim() || defaultComment;
+    const staffComment = input.comment?.trim() || null;
+    const comment = staffComment ?? defaultComment;
     const change = appointment.request.rescheduleAppointment(
       input.userId,
       comment,
@@ -103,7 +104,13 @@ export class RescheduleAppointmentUseCase {
     const notification = context
       ? buildStatusChangeEmail(context, {
           newStatus: change.newStatus,
-          appointment: { date: day.date, serviceHours: day.serviceHours },
+          appointmentEvent: 'REPROGRAMADA',
+          appointment: {
+            date: day.date,
+            serviceHours: day.serviceHours,
+            previousDate: appointment.date,
+          },
+          comment: staffComment,
         })
       : null;
     if (!notification) {

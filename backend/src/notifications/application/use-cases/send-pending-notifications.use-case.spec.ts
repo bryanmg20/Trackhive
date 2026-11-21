@@ -16,7 +16,7 @@ const at = (minutesFromNow: number) =>
 
 const EMAIL: NotificationDraft = {
   recipientEmail: 'juan@example.com',
-  template: 'CAMBIO_ESTADO',
+  template: 'SOLICITUD_EN_BUSQUEDA',
   subject: 'Su solicitud SOL-2026-00042 pasó a «En búsqueda»',
   text: 'Nuevo estado: En búsqueda',
   html: '<p>Nuevo estado: <strong>En búsqueda</strong></p>',

@@ -47,11 +47,12 @@ export class ChangeRequestStatusUseCase {
       assertCanSettleAppointmentOutcome(change.appointmentOutcome, loanCounts);
     }
 
-    // HU-23: the new status and, if rejected, the reason the requester reads
+    // HU-23 / HU-24: the new status and, if rejected, the reason (otherwise the staff comment)
     const context = await this.queries.findNotificationContext(request.id);
     const notification = context
       ? buildStatusChangeEmail(context, {
           newStatus: change.newStatus,
+          comment: change.rejectionReason ? null : change.comment,
           rejectionReason: change.rejectionReason,
         })
       : null;

@@ -114,8 +114,8 @@ describe('ChangeRequestStatusUseCase', () => {
   // The email queued with the change (HU-23)
   const queuedEmail = () => saveStatusChange.mock.calls[0][1];
 
-  describe('emailing the requester (HU-23)', () => {
-    it('queues the email with the new status and the material in the same save', async () => {
+  describe('emailing the requester (HU-23, HU-24)', () => {
+    it('queues the email with the dedicated template, new status, and material without observations when omitted', async () => {
       await useCase.execute({
         requestId: 'request-1',
         status: 'ATENDIDA',
@@ -126,14 +126,16 @@ describe('ChangeRequestStatusUseCase', () => {
       expect(saveStatusChange).toHaveBeenCalledTimes(1);
       expect(queuedEmail()).toMatchObject({
         recipientEmail: 'juan@example.com',
-        template: 'CAMBIO_ESTADO',
-        subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
+        template: 'SOLICITUD_ATENDIDA',
+        subject: 'Su solicitud SOL-2026-00042 fue atendida',
       });
-      expect(queuedEmail()?.text).toContain('Nuevo estado: Atendida');
+      expect(queuedEmail()?.text).toContain('Estado actual: Atendida');
       expect(queuedEmail()?.text).toContain('AHB-001 · Actas de 1890');
+      expect(queuedEmail()?.text).not.toContain('Observaciones del personal');
+      expect(queuedEmail()?.html).not.toContain('Observaciones del personal');
     });
 
-    it('includes the reason when the request is rejected', async () => {
+    it('includes the reason once on RECHAZADA without duplicating it under Observaciones del personal', async () => {
       findById.mockResolvedValue(buildRequest('RECIBIDA'));
 
       await useCase.execute({
@@ -143,20 +145,68 @@ describe('ChangeRequestStatusUseCase', () => {
         userId: 'staff-1',
       });
 
+      expect(queuedEmail()).toMatchObject({
+        template: 'SOLICITUD_RECHAZADA',
+        subject: 'No fue posible atender su solicitud SOL-2026-00042',
+      });
       expect(queuedEmail()?.text).toContain(
         'Motivo del rechazo: El material está restringido',
       );
+      expect(queuedEmail()?.text).not.toContain('Observaciones del personal');
+      expect(queuedEmail()?.html).not.toContain('Observaciones del personal');
     });
 
-    it('does not show an ordinary comment, which can be an internal note', async () => {
+    it.each<[RequestStatus, RequestStatus, string, string]>([
+      [
+        'RECIBIDA',
+        'EN_BUSQUEDA',
+        'SOLICITUD_EN_BUSQUEDA',
+        'En búsqueda en depósito 2',
+      ],
+      [
+        'EN_BUSQUEDA',
+        'DISPONIBLE',
+        'SOLICITUD_DISPONIBLE',
+        'Disponible en formato físico',
+      ],
+      [
+        'AGENDADA',
+        'ATENDIDA',
+        'SOLICITUD_ATENDIDA',
+        'Consultó los tomos completos',
+      ],
+    ])(
+      'includes staff comment under Observaciones del personal when transitioning %s -> %s (%s)',
+      async (fromStatus, toStatus, expectedTemplate, comment) => {
+        findById.mockResolvedValue(buildRequest(fromStatus));
+
+        await useCase.execute({
+          requestId: 'request-1',
+          status: toStatus as 'EN_BUSQUEDA' | 'DISPONIBLE' | 'ATENDIDA',
+          comment: `  ${comment}  `,
+          userId: 'staff-1',
+        });
+
+        expect(queuedEmail()?.template).toBe(expectedTemplate);
+        expect(queuedEmail()?.text).toContain(
+          `Observaciones del personal:\n${comment}`,
+        );
+        expect(queuedEmail()?.html).toContain('Observaciones del personal:');
+        expect(queuedEmail()?.html).toContain(comment);
+      },
+    );
+
+    it('omits Observaciones del personal when the staff comment is whitespace-only', async () => {
       await useCase.execute({
         requestId: 'request-1',
         status: 'DISPONIBLE',
-        comment: 'Nota interna del personal',
+        comment: '   \n\t  ',
         userId: 'staff-1',
       });
 
-      expect(queuedEmail()?.text).not.toContain('Nota interna');
+      expect(queuedEmail()?.template).toBe('SOLICITUD_DISPONIBLE');
+      expect(queuedEmail()?.text).not.toContain('Observaciones del personal');
+      expect(queuedEmail()?.html).not.toContain('Observaciones del personal');
     });
 
     it('saves the change without an email when the requester has none, and logs it', async () => {

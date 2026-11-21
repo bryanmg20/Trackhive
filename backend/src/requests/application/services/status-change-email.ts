@@ -1,30 +1,15 @@
 import { escapeHtml } from '../../../common/html/escape-html';
 import type { NotificationDraft } from '../../../notifications/domain/value-objects/notification-draft';
-import type { ServiceHours } from '../../domain/value-objects/appointment-date';
-import { REQUEST_STATUS_LABELS } from '../../domain/enums/request-status';
-import type { RequestStatus } from '../../domain/enums/request-status';
 import type { RequestNotificationContext } from '../ports/request-query.port';
+import {
+  resolveRequestEmailTemplate,
+  type StatusChangeEmailDetails,
+} from './email-templates';
 
-export interface StatusChangeEmailDetails {
-  newStatus: RequestStatus;
-  // Only when the change rejects the request (HU-16)
-  rejectionReason?: string | null;
-  // Only when the change schedules an appointment (HU-18)
-  appointment?: {
-    // UTC midnight of the day
-    date: Date;
-    serviceHours: ServiceHours;
-  } | null;
-}
-
-// The appointment is a day stored as UTC midnight, so it is formatted in UTC
-const APPOINTMENT_DATE_FORMAT = new Intl.DateTimeFormat('es-CO', {
-  timeZone: 'UTC',
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
+export type {
+  AppointmentEmailEvent,
+  StatusChangeEmailDetails,
+} from './email-templates';
 
 const ACCOUNT_HINT =
   'Si tiene una cuenta en Trackhive, también puede ver sus solicitudes en ' +
@@ -34,10 +19,9 @@ const SIGNATURE =
   'solicitudes del CLENA.';
 
 /**
- * The email that tells the requester that their request changed status
- * (HU-23): the new status, the material and, when it applies, the date of
- * the appointment or the reason of the rejection. Returns null when the
- * requester has no email. HU-24 will give each status its own template.
+ * Builds the email sent when a request changes status or its appointment is
+ * rescheduled or cancelled (HU-23, HU-24). Returns null when the requester
+ * has no email address.
  */
 export function buildStatusChangeEmail(
   context: RequestNotificationContext,
@@ -48,74 +32,121 @@ export function buildStatusChangeEmail(
     return null;
   }
 
+  const { template, subject, heading, intro, facts } =
+    resolveRequestEmailTemplate(context, details);
+  const trimmedComment = details.comment?.trim() || null;
+  const trimmedReason = details.rejectionReason?.trim() || null;
+  // On RECHAZADA, the reason is already shown under «Motivo del rechazo»
+  const staffComment =
+    trimmedComment && trimmedComment !== trimmedReason ? trimmedComment : null;
+
   // Like the test email: first name and first last name (HU-22)
   const name = `${context.requester.firstName} ${context.requester.lastName}`;
-  const status = REQUEST_STATUS_LABELS[details.newStatus];
-  const facts = statusFacts(status, details);
-  const materials = context.materials.map(
-    ({ catalogCode, title }) => `${catalogCode} · ${title}`,
-  );
+  const materials = [
+    ...context.materials.map(
+      ({ catalogCode, title }) => `${catalogCode} · ${title}`,
+    ),
+    ...context.references,
+  ];
 
-  const text = [
-    `Hola, ${name}:`,
-    '',
-    `Su solicitud ${context.trackingCode} cambió de estado.`,
-    '',
-    ...facts.map(([label, value]) => `${label}: ${value}`),
-    '',
-    'Material solicitado:',
-    ...materials.map((material) => `- ${material}`),
-    '',
-    ACCOUNT_HINT,
-    '',
-    SIGNATURE,
-  ].join('\n');
-
-  // Every value can come from a person (names, titles, the reason): escaped
-  const html = [
-    `<p>Hola, ${toHtml(name)}:</p>`,
-    `<p>Su solicitud <strong>${toHtml(context.trackingCode)}</strong> cambió de estado.</p>`,
-    `<p>${facts
-      .map(([label, value]) => `${label}: <strong>${toHtml(value)}</strong>`)
-      .join('<br>')}</p>`,
-    '<p>Material solicitado:</p>',
-    `<ul>${materials.map((material) => `<li>${toHtml(material)}</li>`).join('')}</ul>`,
-    `<p>${ACCOUNT_HINT}</p>`,
-    `<p><small>${SIGNATURE}</small></p>`,
-  ].join('\n');
+  const text = buildPlainText(name, intro, facts, staffComment, materials);
+  const html = buildHtml(heading, name, intro, facts, staffComment, materials);
 
   return {
     recipientEmail,
-    template: 'CAMBIO_ESTADO',
-    subject: `Su solicitud ${context.trackingCode} pasó a «${status}»`,
+    template,
+    subject,
     text,
     html,
   };
 }
 
-/** The lines with the new status and what comes with it. */
-function statusFacts(
-  status: string,
-  details: StatusChangeEmailDetails,
-): [string, string][] {
-  const facts: [string, string][] = [['Nuevo estado', status]];
-  if (details.appointment) {
-    const { date, serviceHours } = details.appointment;
-    facts.push(['Fecha de la cita', APPOINTMENT_DATE_FORMAT.format(date)]);
-    facts.push([
-      'Horario de atención',
-      `de ${hour(serviceHours.opensAt)} a ${hour(serviceHours.closesAt)}`,
-    ]);
+function buildPlainText(
+  name: string,
+  intro: string,
+  facts: readonly (readonly [string, string])[],
+  staffComment: string | null,
+  materials: readonly string[],
+): string {
+  const sections: string[] = [
+    `Hola, ${name}:`,
+    intro,
+    facts.map(([label, value]) => `${label}: ${value}`).join('\n'),
+  ];
+
+  if (staffComment) {
+    sections.push(`Observaciones del personal:\n${staffComment}`);
   }
-  if (details.rejectionReason) {
-    facts.push(['Motivo del rechazo', details.rejectionReason]);
+
+  if (materials.length > 0) {
+    sections.push(
+      ['Material solicitado:', ...materials.map((item) => `- ${item}`)].join(
+        '\n',
+      ),
+    );
   }
-  return facts;
+
+  sections.push(ACCOUNT_HINT, SIGNATURE);
+  return sections.join('\n\n');
 }
 
-// 08:00 -> 8:00
-function hour(value: string): string {
-  return value.replace(/^0(\d)/, '$1');
+function buildHtml(
+  heading: string,
+  name: string,
+  intro: string,
+  facts: readonly (readonly [string, string])[],
+  staffComment: string | null,
+  materials: readonly string[],
+): string {
+  const factsHtml = facts
+    .map(
+      ([label, value]) => `${toHtml(label)}: <strong>${toHtml(value)}</strong>`,
+    )
+    .join('<br>');
+
+  // Every value can come from a person (names, titles, references, notes): escaped
+  const sections: string[] = [
+    '<div style="background-color:#f8fafc;padding:24px 16px;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">',
+    '<div style="max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">',
+    '<div style="background-color:#0f172a;padding:20px 24px;color:#ffffff;">',
+    '<p style="margin:0 0 4px;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;color:#cbd5e1;">CLENA · Trackhive</p>',
+    `<h1 style="margin:0;font-size:20px;line-height:1.3;font-weight:600;color:#ffffff;">${toHtml(heading)}</h1>`,
+    '</div>',
+    '<div style="padding:24px;">',
+    `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;">Hola, ${toHtml(name)}:</p>`,
+    `<p style="margin:0 0 16px;font-size:15px;line-height:1.5;">${toHtml(intro)}</p>`,
+    `<div style="margin:0 0 16px;padding:12px 16px;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;line-height:1.6;">${factsHtml}</div>`,
+  ];
+
+  if (staffComment) {
+    sections.push(
+      '<div style="margin:0 0 16px;padding:12px 16px;background-color:#eff6ff;border-left:4px solid #2563eb;border-radius:4px;font-size:14px;line-height:1.5;">',
+      '<p style="margin:0 0 4px;font-weight:600;color:#1e3a8a;">Observaciones del personal:</p>',
+      `<p style="margin:0;color:#1e293b;">${toHtml(staffComment)}</p>`,
+      '</div>',
+    );
+  }
+
+  if (materials.length > 0) {
+    const itemsHtml = materials
+      .map((material) => `<li>${toHtml(material)}</li>`)
+      .join('');
+    sections.push(
+      '<p style="margin:0 0 8px;font-size:14px;font-weight:600;line-height:1.5;">Material solicitado:</p>',
+      `<ul style="margin:0 0 16px;padding-left:20px;font-size:14px;line-height:1.6;">${itemsHtml}</ul>`,
+    );
+  }
+
+  sections.push(
+    '<hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;">',
+    `<p style="margin:0 0 8px;color:#475569;font-size:12px;line-height:1.5;"><small>${ACCOUNT_HINT}</small></p>`,
+    `<p style="margin:0;color:#64748b;font-size:12px;line-height:1.5;"><small>${SIGNATURE}</small></p>`,
+    '</div>',
+    '</div>',
+    '</div>',
+  );
+
+  return sections.join('\n');
 }
 
 function toHtml(value: string): string {
