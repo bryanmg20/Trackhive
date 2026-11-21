@@ -104,12 +104,14 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
 
   const CONTEXT: RequestNotificationContext = {
     trackingCode: 'SOL-2026-00042',
+    deliveryMode: 'PRESENCIAL',
     requester: {
       firstName: 'Juan',
       lastName: 'Pérez',
       email: 'juan@example.com',
     },
     materials: MATERIALS,
+    references: [],
   };
 
   beforeEach(() => {
@@ -168,7 +170,7 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
     );
   });
 
-  it('reschedules a PROGRAMADA appointment to a new day, records the history change and queues an email', async () => {
+  it('reschedules a PROGRAMADA appointment to a new day, records the history change and queues CITA_REPROGRAMADA without observations', async () => {
     const result = await useCase.execute({
       appointmentId: 'appointment-1',
       date: '2026-11-24',
@@ -191,8 +193,22 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
       comment: 'Cita reprogramada del 2026-11-20 al 2026-11-24',
     });
     expect(date).toEqual(new Date('2026-11-24T00:00:00.000Z'));
+    expect(email).toMatchObject({
+      recipientEmail: 'juan@example.com',
+      template: 'CITA_REPROGRAMADA',
+      subject: 'Su cita de la solicitud SOL-2026-00042 fue reprogramada',
+    });
     expect(email?.text).toContain(
-      'Fecha de la cita: martes, 24 de noviembre de 2026',
+      'Fecha anterior: viernes, 20 de noviembre de 2026',
+    );
+    expect(email?.text).toContain(
+      'Nueva fecha de la cita: martes, 24 de noviembre de 2026',
+    );
+    expect(email?.text).toContain('Horario de atención: de 8:00 a 17:00');
+    expect(email?.text).not.toContain('Observaciones del personal');
+    expect(email?.html).not.toContain('Observaciones del personal');
+    expect(email?.text).not.toContain(
+      'Cita reprogramada del 2026-11-20 al 2026-11-24',
     );
     expect(result).toMatchObject({
       id: 'request-1',
@@ -210,7 +226,41 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
     });
   });
 
-  it('uses the custom comment when provided', async () => {
+  it('uses Saturday service hours in the email when rescheduled to a Saturday', async () => {
+    await useCase.execute({
+      appointmentId: 'appointment-1',
+      date: '2026-11-21',
+      userId: 'staff-1',
+    });
+
+    const email = rescheduleAppointment.mock.calls[0][3];
+    expect(email?.template).toBe('CITA_REPROGRAMADA');
+    expect(email?.text).toContain(
+      'Fecha anterior: viernes, 20 de noviembre de 2026',
+    );
+    expect(email?.text).toContain(
+      'Nueva fecha de la cita: sábado, 21 de noviembre de 2026',
+    );
+    expect(email?.text).toContain('Horario de atención: de 9:00 a 13:00');
+  });
+
+  it('omits Observaciones del personal when comment is whitespace-only while keeping the automatic history note', async () => {
+    await useCase.execute({
+      appointmentId: 'appointment-1',
+      date: '2026-11-24',
+      comment: '   \n\t  ',
+      userId: 'staff-1',
+    });
+
+    const [, change, , email] = rescheduleAppointment.mock.calls[0];
+    expect(change.comment).toBe(
+      'Cita reprogramada del 2026-11-20 al 2026-11-24',
+    );
+    expect(email?.text).not.toContain('Observaciones del personal');
+    expect(email?.html).not.toContain('Observaciones del personal');
+  });
+
+  it('uses the custom comment in both history and email Observaciones del personal when provided', async () => {
     await useCase.execute({
       appointmentId: 'appointment-1',
       date: '2026-11-24',
@@ -218,7 +268,13 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
       userId: 'staff-1',
     });
 
-    expect(rescheduleAppointment.mock.calls[0][1].comment).toBe(
+    const [, change, , email] = rescheduleAppointment.mock.calls[0];
+    expect(change.comment).toBe('El solicitante pidió cambiar para el martes');
+    expect(email?.text).toContain(
+      'Observaciones del personal:\nEl solicitante pidió cambiar para el martes',
+    );
+    expect(email?.html).toContain('Observaciones del personal:');
+    expect(email?.html).toContain(
       'El solicitante pidió cambiar para el martes',
     );
   });

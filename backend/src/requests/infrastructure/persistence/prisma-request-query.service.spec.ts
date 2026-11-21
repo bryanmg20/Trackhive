@@ -500,9 +500,10 @@ describe('PrismaRequestQueryService', () => {
   });
 
   describe('findNotificationContext (HU-23)', () => {
-    it('loads the tracking code, the requester and the materials in catalog order', async () => {
+    it('loads tracking code, delivery mode, requester, catalog materials without digitalPath and formatted pending references', async () => {
       const findUnique = jest.fn().mockResolvedValue({
         trackingCode: 'SOL-2026-00042',
+        deliveryMode: 'DIGITAL',
         requester: {
           firstName: 'Juan',
           lastName: 'Pérez',
@@ -510,6 +511,22 @@ describe('PrismaRequestQueryService', () => {
         },
         items: [
           { material: { catalogCode: 'AHB-001', title: 'Actas de 1890' } },
+        ],
+        references: [
+          {
+            kind: 'PROTOCOLO_NOTARIAL',
+            notary: 'Notaría Primera',
+            deedYear: 1940,
+            deedNumber: '57',
+            description: null,
+          },
+          {
+            kind: 'TEXTO_LIBRE',
+            notary: null,
+            deedYear: null,
+            deedNumber: null,
+            description: 'El Heraldo, 15-03-1950',
+          },
         ],
       });
       const repository = new PrismaRequestQueryService({
@@ -520,23 +537,45 @@ describe('PrismaRequestQueryService', () => {
 
       expect(context).toEqual({
         trackingCode: 'SOL-2026-00042',
+        deliveryMode: 'DIGITAL',
         requester: {
           firstName: 'Juan',
           lastName: 'Pérez',
           email: 'juan@example.com',
         },
         materials: [{ catalogCode: 'AHB-001', title: 'Actas de 1890' }],
+        references: [
+          'Protocolo notarial: Notaría Primera, año 1940, escritura 57',
+          'El Heraldo, 15-03-1950',
+        ],
       });
-      expect(findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'request-1' },
-          select: expect.objectContaining({
-            items: expect.objectContaining({
-              orderBy: { material: { catalogCode: 'asc' } },
-            }) as unknown,
-          }) as unknown,
-        }),
-      );
+      expect(findUnique).toHaveBeenCalledWith({
+        where: { id: 'request-1' },
+        select: {
+          trackingCode: true,
+          deliveryMode: true,
+          requester: {
+            select: { firstName: true, lastName: true, email: true },
+          },
+          items: {
+            select: {
+              material: { select: { catalogCode: true, title: true } },
+            },
+            orderBy: { material: { catalogCode: 'asc' } },
+          },
+          references: {
+            where: { status: 'PENDIENTE' },
+            select: {
+              kind: true,
+              notary: true,
+              deedYear: true,
+              deedNumber: true,
+              description: true,
+            },
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          },
+        },
+      });
     });
 
     it('returns null when the request does not exist', async () => {
@@ -545,6 +584,58 @@ describe('PrismaRequestQueryService', () => {
       } as unknown as PrismaService);
 
       expect(await repository.findNotificationContext('missing')).toBeNull();
+    });
+
+    it('throws when deliveryMode has an invalid stored value', async () => {
+      const repository = new PrismaRequestQueryService({
+        requestModel: {
+          findUnique: jest.fn().mockResolvedValue({
+            trackingCode: 'SOL-2026-00042',
+            deliveryMode: 'INVALIDA',
+            requester: {
+              firstName: 'Juan',
+              lastName: 'Pérez',
+              email: 'juan@example.com',
+            },
+            items: [],
+            references: [],
+          }),
+        },
+      } as unknown as PrismaService);
+
+      await expect(
+        repository.findNotificationContext('request-1'),
+      ).rejects.toThrow(/invalid stored/i);
+    });
+
+    it('throws when a reference kind has an invalid stored value', async () => {
+      const repository = new PrismaRequestQueryService({
+        requestModel: {
+          findUnique: jest.fn().mockResolvedValue({
+            trackingCode: 'SOL-2026-00042',
+            deliveryMode: 'PRESENCIAL',
+            requester: {
+              firstName: 'Juan',
+              lastName: 'Pérez',
+              email: 'juan@example.com',
+            },
+            items: [],
+            references: [
+              {
+                kind: 'OTRO',
+                notary: null,
+                deedYear: null,
+                deedNumber: null,
+                description: 'Algo',
+              },
+            ],
+          }),
+        },
+      } as unknown as PrismaService);
+
+      await expect(
+        repository.findNotificationContext('request-1'),
+      ).rejects.toThrow(/invalid stored/i);
     });
   });
 

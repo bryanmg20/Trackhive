@@ -199,9 +199,10 @@ export interface RequestHistory {
   entries: RequestHistoryEntry[];
 }
 
-/** What the email of a status change needs to know of the request (HU-23). */
+/** What the email of a status change needs to know of the request (HU-23, HU-24). */
 export interface RequestNotificationContext {
   trackingCode: string;
+  deliveryMode: DeliveryMode;
   requester: {
     firstName: string;
     lastName: string;
@@ -209,6 +210,8 @@ export interface RequestNotificationContext {
     email: string | null;
   };
   materials: { catalogCode: string; title: string }[];
+  // Written references without an associated catalog material (HU-09.2, HU-24)
+  references: string[];
 }
 
 /** A material of the request, as the scheduling checks read it (HU-20). */

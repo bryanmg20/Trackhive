@@ -45,14 +45,20 @@ export class CancelAppointmentUseCase {
 
     const appointmentDate = DateOnlyMapper.toDto(appointment.date);
     const defaultComment = `Cita del ${appointmentDate} cancelada`;
-    const comment = input.comment?.trim() || defaultComment;
+    const staffComment = input.comment?.trim() || null;
+    const comment = staffComment ?? defaultComment;
     const change = appointment.request.cancelAppointment(input.userId, comment);
 
     const context = await this.queries.findNotificationContext(
       appointment.request.id,
     );
     const notification = context
-      ? buildStatusChangeEmail(context, { newStatus: change.newStatus })
+      ? buildStatusChangeEmail(context, {
+          newStatus: change.newStatus,
+          appointmentEvent: 'CANCELADA',
+          cancelledAppointmentDate: appointment.date,
+          comment: staffComment,
+        })
       : null;
     if (!notification) {
       this.logger.warn(

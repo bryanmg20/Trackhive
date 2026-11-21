@@ -222,7 +222,7 @@ describe('PrismaRequestRepository', () => {
     describe('queuing the email to the requester (HU-23)', () => {
       const EMAIL: NotificationDraft = {
         recipientEmail: 'juan@example.com',
-        template: 'CAMBIO_ESTADO',
+        template: 'SOLICITUD_ATENDIDA',
         subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
         text: 'Nuevo estado: Atendida',
         html: '<p>Nuevo estado: <strong>Atendida</strong></p>',
@@ -241,7 +241,7 @@ describe('PrismaRequestRepository', () => {
             // The id of the status_history row created just before
             statusHistoryId: BigInt(1),
             recipientEmail: 'juan@example.com',
-            template: 'CAMBIO_ESTADO',
+            template: 'SOLICITUD_ATENDIDA',
             subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
             body: 'Nuevo estado: Atendida',
             htmlBody: '<p>Nuevo estado: <strong>Atendida</strong></p>',
@@ -590,7 +590,7 @@ describe('PrismaRequestRepository', () => {
 
       await repository.saveAppointment(CHANGE, DATE, {
         recipientEmail: 'juan@example.com',
-        template: 'CAMBIO_ESTADO',
+        template: 'SOLICITUD_AGENDADA',
         subject: 'Su solicitud SOL-2026-00042 pasó a «Agendada»',
         text: 'Fecha de la cita: viernes, 20 de noviembre de 2026',
         html: '<p>Fecha de la cita</p>',

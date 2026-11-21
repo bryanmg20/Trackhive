@@ -84,12 +84,14 @@ describe('ScheduleAppointmentUseCase', () => {
 
   const CONTEXT: RequestNotificationContext = {
     trackingCode: 'SOL-2026-00042',
+    deliveryMode: 'PRESENCIAL',
     requester: {
       firstName: 'Juan',
       lastName: 'Pérez',
       email: 'juan@example.com',
     },
     materials: MATERIALS,
+    references: [],
   };
 
   beforeEach(() => {
@@ -148,34 +150,38 @@ describe('ScheduleAppointmentUseCase', () => {
   const schedule = (date = '2026-11-20') =>
     useCase.execute({ requestId: 'request-1', date, userId: 'staff-1' });
 
-  describe('emailing the requester (HU-23)', () => {
+  describe('emailing the requester (HU-23, HU-24)', () => {
     const queuedEmail = () => saveAppointment.mock.calls[0][2];
 
-    it('queues the email with AGENDADA, the day, the service hours and the material', async () => {
+    it('queues the email with SOLICITUD_AGENDADA, the day, the service hours and the material without observations', async () => {
       await schedule();
 
       expect(queuedEmail()).toMatchObject({
         recipientEmail: 'juan@example.com',
-        template: 'CAMBIO_ESTADO',
-        subject: 'Su solicitud SOL-2026-00042 pasó a «Agendada»',
+        template: 'SOLICITUD_AGENDADA',
+        subject: 'Cita agendada para su solicitud SOL-2026-00042',
       });
       const text = queuedEmail()?.text ?? '';
-      expect(text).toContain('Nuevo estado: Agendada');
+      expect(text).toContain('Estado actual: Agendada');
       expect(text).toContain(
         'Fecha de la cita: viernes, 20 de noviembre de 2026',
       );
       expect(text).toContain('Horario de atención: de 8:00 a 17:00');
       expect(text).toContain('AHB-001 · Actas de 1890');
       expect(text).toContain('AHB-002 · El Heraldo, 1935');
+      expect(text).not.toContain('Observaciones del personal');
+      expect(queuedEmail()?.html).not.toContain('Observaciones del personal');
     });
 
     it('gives the Saturday service hours in the email of a Saturday', async () => {
       await schedule('2026-11-21');
 
+      expect(queuedEmail()?.template).toBe('SOLICITUD_AGENDADA');
       expect(queuedEmail()?.text).toContain(
         'Fecha de la cita: sábado, 21 de noviembre de 2026',
       );
       expect(queuedEmail()?.text).toContain('de 9:00 a 13:00');
+      expect(queuedEmail()?.text).not.toContain('Observaciones del personal');
     });
 
     it('queues nothing when the day is a Sunday', async () => {

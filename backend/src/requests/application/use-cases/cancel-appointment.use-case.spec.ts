@@ -70,12 +70,14 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
 
   const CONTEXT: RequestNotificationContext = {
     trackingCode: 'SOL-2026-00042',
+    deliveryMode: 'PRESENCIAL',
     requester: {
       firstName: 'Juan',
       lastName: 'Pérez',
       email: 'juan@example.com',
     },
     materials: [{ catalogCode: 'AHB-001', title: 'Actas de 1890' }],
+    references: [],
   };
 
   beforeEach(() => {
@@ -116,7 +118,7 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
     useCase = new CancelAppointmentUseCase(repository, queries);
   });
 
-  it('cancels a PROGRAMADA appointment, moves the request back to DISPONIBLE, records the history change and queues an email', async () => {
+  it('cancels a PROGRAMADA appointment, moves the request back to DISPONIBLE, records the history change and queues CITA_CANCELADA without observations', async () => {
     const result = await useCase.execute({
       appointmentId: 'appointment-1',
       userId: 'staff-1',
@@ -135,8 +137,16 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
     });
     expect(email).toMatchObject({
       recipientEmail: 'juan@example.com',
-      subject: 'Su solicitud SOL-2026-00042 pasó a «Disponible»',
+      template: 'CITA_CANCELADA',
+      subject: 'La cita de su solicitud SOL-2026-00042 fue cancelada',
     });
+    expect(email?.text).toContain('Estado actual: Disponible');
+    expect(email?.text).toContain(
+      'Fecha de la cita cancelada: viernes, 20 de noviembre de 2026',
+    );
+    expect(email?.text).not.toContain('Observaciones del personal');
+    expect(email?.html).not.toContain('Observaciones del personal');
+    expect(email?.text).not.toContain('Cita del 2026-11-20 cancelada');
     expect(result).toMatchObject({
       id: 'request-1',
       status: 'DISPONIBLE',
@@ -154,16 +164,33 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
     });
   });
 
-  it('uses a custom cancellation comment when provided', async () => {
+  it('omits Observaciones del personal when cancellation comment is whitespace-only while keeping the automatic history note', async () => {
+    await useCase.execute({
+      appointmentId: 'appointment-1',
+      comment: '   \n\t  ',
+      userId: 'staff-1',
+    });
+
+    const [, change, email] = cancelAppointment.mock.calls[0];
+    expect(change.comment).toBe('Cita del 2026-11-20 cancelada');
+    expect(email?.text).not.toContain('Observaciones del personal');
+    expect(email?.html).not.toContain('Observaciones del personal');
+  });
+
+  it('uses a custom cancellation comment in both history and email Observaciones del personal when provided', async () => {
     await useCase.execute({
       appointmentId: 'appointment-1',
       comment: '  Cancelada por cambio de último momento  ',
       userId: 'staff-1',
     });
 
-    expect(cancelAppointment.mock.calls[0][1].comment).toBe(
-      'Cancelada por cambio de último momento',
+    const [, change, email] = cancelAppointment.mock.calls[0];
+    expect(change.comment).toBe('Cancelada por cambio de último momento');
+    expect(email?.text).toContain(
+      'Observaciones del personal:\nCancelada por cambio de último momento',
     );
+    expect(email?.html).toContain('Observaciones del personal:');
+    expect(email?.html).toContain('Cancelada por cambio de último momento');
   });
 
   it('throws AppointmentNotFoundError when the appointment does not exist', async () => {

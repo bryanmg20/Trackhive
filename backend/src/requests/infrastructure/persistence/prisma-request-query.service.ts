@@ -134,12 +134,24 @@ export class PrismaRequestQueryService implements IRequestQueryService {
       where: { id },
       select: {
         trackingCode: true,
+        deliveryMode: true,
         requester: {
           select: { firstName: true, lastName: true, email: true },
         },
         items: {
           select: { material: { select: { catalogCode: true, title: true } } },
           orderBy: { material: { catalogCode: 'asc' } },
+        },
+        references: {
+          where: { status: 'PENDIENTE' },
+          select: {
+            kind: true,
+            notary: true,
+            deedYear: true,
+            deedNumber: true,
+            description: true,
+          },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         },
       },
     });

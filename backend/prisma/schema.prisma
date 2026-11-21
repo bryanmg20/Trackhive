@@ -304,7 +304,10 @@ model NotificationModel {
   // The status change that triggered it
   statusHistoryId BigInt?             @unique @map("status_history_id")
   recipientEmail  String              @map("recipient_email") @db.VarChar(160)
-  // Allowed values (CHECK in the migration): CAMBIO_ESTADO
+  // Allowed values (CHECK in the migration): SOLICITUD_RECIBIDA,
+  // SOLICITUD_EN_BUSQUEDA, SOLICITUD_DISPONIBLE, SOLICITUD_AGENDADA,
+  // SOLICITUD_ATENDIDA, SOLICITUD_CERRADA, SOLICITUD_RECHAZADA,
+  // CITA_REPROGRAMADA, CITA_CANCELADA (plus legacy CAMBIO_ESTADO)
   template        String              @db.VarChar(25)
   subject         String              @db.VarChar(200)
   // Plain text version, always sent

@@ -1,7 +1,9 @@
 import type { Prisma } from '@prisma/client';
 import { isAppointmentStatus } from '../../domain/enums/appointment-status';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
+import { isMaterialReferenceKind } from '../../domain/enums/material-reference-kind';
 import { isRequestStatus } from '../../domain/enums/request-status';
+import { describeMaterialReference } from '../../domain/value-objects/material-reference';
 import { PrismaRequestReferenceMapper } from './prisma-request-reference.mapper';
 import type {
   AppointmentListItem,
@@ -501,16 +503,45 @@ export class PrismaRequestReadMapper {
     };
   }
 
-  /** What the status email needs of the request (HU-23). */
+  /** What the status email needs of the request (HU-23, HU-24). */
   static toNotificationContext(model: {
     trackingCode: string;
+    deliveryMode: string;
     requester: { firstName: string; lastName: string; email: string | null };
     items: { material: { catalogCode: string; title: string } }[];
+    references: {
+      kind: string;
+      notary: string | null;
+      deedYear: number | null;
+      deedNumber: string | null;
+      description: string | null;
+    }[];
   }): RequestNotificationContext {
+    if (!isDeliveryMode(model.deliveryMode)) {
+      throw new Error(
+        `Request ${model.trackingCode} has an invalid stored delivery mode`,
+      );
+    }
+    const references = model.references.map((row) => {
+      if (!isMaterialReferenceKind(row.kind)) {
+        throw new Error(
+          `Request ${model.trackingCode} reference has an invalid stored kind`,
+        );
+      }
+      return describeMaterialReference({
+        kind: row.kind,
+        notary: row.notary,
+        year: row.deedYear,
+        deedNumber: row.deedNumber,
+        description: row.description,
+      });
+    });
     return {
       trackingCode: model.trackingCode,
+      deliveryMode: model.deliveryMode,
       requester: model.requester,
       materials: model.items.map(({ material }) => material),
+      references,
     };
   }
 }
