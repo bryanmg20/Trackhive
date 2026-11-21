@@ -37,12 +37,14 @@ const FRIDAY = '2026-11-20';
 
 const CONTEXT: RequestNotificationContext = {
   trackingCode: 'SOL-2026-00042',
+  deliveryMode: 'PRESENCIAL',
   requester: {
     firstName: 'Juan',
     lastName: 'Pérez',
     email: 'juan@ejemplo.com',
   },
   materials: [{ catalogCode: 'AHB-001', title: 'Actas del concejo de 1890' }],
+  references: [],
 };
 
 const STAFF = {

@@ -70,12 +70,14 @@ describe('CancelAppointmentUseCase (HU-21)', () => {
 
   const CONTEXT: RequestNotificationContext = {
     trackingCode: 'SOL-2026-00042',
+    deliveryMode: 'PRESENCIAL',
     requester: {
       firstName: 'Juan',
       lastName: 'Pérez',
       email: 'juan@example.com',
     },
     materials: [{ catalogCode: 'AHB-001', title: 'Actas de 1890' }],
+    references: [],
   };
 
   beforeEach(() => {

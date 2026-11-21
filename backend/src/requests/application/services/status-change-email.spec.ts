@@ -3,6 +3,7 @@ import { buildStatusChangeEmail } from './status-change-email';
 
 const CONTEXT: RequestNotificationContext = {
   trackingCode: 'SOL-2026-00042',
+  deliveryMode: 'PRESENCIAL',
   requester: {
     firstName: 'Juan',
     lastName: 'Pérez',
@@ -12,6 +13,7 @@ const CONTEXT: RequestNotificationContext = {
     { catalogCode: 'AHB-001', title: 'Actas del concejo de 1890' },
     { catalogCode: 'AHB-002', title: 'El Heraldo, 1935' },
   ],
+  references: [],
 };
 
 describe('buildStatusChangeEmail (HU-23)', () => {

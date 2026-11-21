@@ -104,12 +104,14 @@ describe('RescheduleAppointmentUseCase (HU-21)', () => {
 
   const CONTEXT: RequestNotificationContext = {
     trackingCode: 'SOL-2026-00042',
+    deliveryMode: 'PRESENCIAL',
     requester: {
       firstName: 'Juan',
       lastName: 'Pérez',
       email: 'juan@example.com',
     },
     materials: MATERIALS,
+    references: [],
   };
 
   beforeEach(() => {

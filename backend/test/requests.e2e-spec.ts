@@ -63,12 +63,14 @@ describe('Request registration (e2e)', () => {
     // HU-23: who receives the email of a status change and what it lists
     findNotificationContext: jest.fn().mockResolvedValue({
       trackingCode: 'SOL-2026-00042',
+      deliveryMode: 'PRESENCIAL',
       requester: {
         firstName: 'Juan',
         lastName: 'Pérez',
         email: 'juan@ejemplo.com',
       },
       materials: [{ catalogCode: 'AHB-001', title: 'Actas de 1890' }],
+      references: [],
     }),
     saveStatusChange: jest.fn(),
     saveAppointment: jest.fn(),
