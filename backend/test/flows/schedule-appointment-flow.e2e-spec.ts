@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { formatAppointmentDate } from '../../src/requests/application/services/email-templates';
 import {
   API,
   E2eApp,
@@ -146,6 +147,7 @@ describe('Appointment scheduling flow, HU-18 (e2e, PostgreSQL)', () => {
       userId: staff.userId,
       notification: {
         recipientEmail: requester.email,
+        template: 'SOLICITUD_AGENDADA',
         deliveryStatus: 'PENDIENTE',
       },
     });
@@ -334,13 +336,33 @@ describe('Appointment scheduling flow, HU-18 (e2e, PostgreSQL)', () => {
       },
     });
 
-    const history = await historyOf(first.id);
-    expect(history[history.length - 1]).toMatchObject({
+    const lastReschedule = await e2e.prisma.statusHistoryModel.findFirstOrThrow(
+      {
+        where: { requestId: first.id },
+        orderBy: { id: 'desc' },
+        include: { notification: true },
+      },
+    );
+    expect(lastReschedule).toMatchObject({
       previousStatus: 'AGENDADA',
       newStatus: 'AGENDADA',
       userId: staff.userId,
       comment: `Cita reprogramada del ${originalDay} al ${freeDay}`,
+      notification: {
+        recipientEmail: requester.email,
+        template: 'CITA_REPROGRAMADA',
+        deliveryStatus: 'PENDIENTE',
+      },
     });
+    expect(lastReschedule.notification?.body).toContain(
+      `Fecha anterior: ${formatAppointmentDate(new Date(`${originalDay}T00:00:00.000Z`))}`,
+    );
+    expect(lastReschedule.notification?.body).toContain(
+      `Nueva fecha de la cita: ${formatAppointmentDate(new Date(`${freeDay}T00:00:00.000Z`))}`,
+    );
+    expect(lastReschedule.notification?.body).not.toContain(
+      'Observaciones del personal',
+    );
 
     // originalDay is now free for another request with that material
     const third = await availableRequest([material.id]);
@@ -392,13 +414,29 @@ describe('Appointment scheduling flow, HU-18 (e2e, PostgreSQL)', () => {
     expect(appointment.status).toBe('CANCELADA');
     expect(appointment.materials[0].bookedDate).toBeNull();
 
-    const history = await historyOf(created.id);
-    expect(history[history.length - 1]).toMatchObject({
+    const lastCancel = await e2e.prisma.statusHistoryModel.findFirstOrThrow({
+      where: { requestId: created.id },
+      orderBy: { id: 'desc' },
+      include: { notification: true },
+    });
+    expect(lastCancel).toMatchObject({
       previousStatus: 'AGENDADA',
       newStatus: 'DISPONIBLE',
       userId: staff.userId,
       comment: `Cita del ${day} cancelada`,
+      notification: {
+        recipientEmail: requester.email,
+        template: 'CITA_CANCELADA',
+        deliveryStatus: 'PENDIENTE',
+      },
     });
+    expect(lastCancel.notification?.body).toContain('se canceló');
+    expect(lastCancel.notification?.body).toContain(
+      `Fecha de la cita cancelada: ${formatAppointmentDate(new Date(`${day}T00:00:00.000Z`))}`,
+    );
+    expect(lastCancel.notification?.body).not.toContain(
+      'Observaciones del personal',
+    );
 
     // Another request can now book that material on the same day
     const other = await availableRequest([material.id]);

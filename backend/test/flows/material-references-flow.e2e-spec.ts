@@ -260,6 +260,19 @@ describe('Written references flow, HU-09.2 (e2e, PostgreSQL)', () => {
       userId: staff.userId,
       comment,
     });
+    const disponibleNotification =
+      await e2e.prisma.notificationModel.findUniqueOrThrow({
+        where: { statusHistoryId: history[history.length - 1].id },
+      });
+    expect(disponibleNotification).toMatchObject({
+      recipientEmail: requester.email,
+      template: 'SOLICITUD_DISPONIBLE',
+      deliveryStatus: 'PENDIENTE',
+    });
+    expect(disponibleNotification.body).toContain('- El Heraldo, 15-03-1950');
+    expect(disponibleNotification.body).toContain(
+      `Observaciones del personal:\n${comment}`,
+    );
     // Delivered without the catalog: the reference keeps no material
     const [reference] = await referencesOf(created.id);
     expect(reference).toMatchObject({ status: 'PENDIENTE', materialId: null });
@@ -335,6 +348,19 @@ describe('Written references flow, HU-09.2 (e2e, PostgreSQL)', () => {
     await changeStatus(e2e.server, staff, created.id, {
       status: 'DISPONIBLE',
     }).expect(200);
+    const disponibleNotification =
+      await e2e.prisma.notificationModel.findFirstOrThrow({
+        where: { requestId: created.id, template: 'SOLICITUD_DISPONIBLE' },
+      });
+    expect(disponibleNotification.body).toContain(
+      `- ${material.catalogCode} · El Heraldo, 15-03-1950`,
+    );
+    expect(
+      disponibleNotification.body.match(/El Heraldo, 15-03-1950/g),
+    ).toHaveLength(1);
+    expect(disponibleNotification.body).not.toContain(
+      '\n- El Heraldo, 15-03-1950',
+    );
     await schedule(created.id).expect(201);
     const [appointment] = await e2e.prisma.appointmentModel.findMany({
       where: { requestId: created.id },

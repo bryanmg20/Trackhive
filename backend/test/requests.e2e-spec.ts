@@ -846,10 +846,10 @@ describe('Request registration (e2e)', () => {
       );
       expect(queuedEmail()).toMatchObject({
         recipientEmail: 'juan@ejemplo.com',
-        template: 'CAMBIO_ESTADO',
-        subject: 'Su solicitud SOL-2026-00042 pasó a «Atendida»',
+        template: 'SOLICITUD_ATENDIDA',
+        subject: 'Su solicitud SOL-2026-00042 fue atendida',
       });
-      expect(queuedEmail()?.text).toContain('Nuevo estado: Atendida');
+      expect(queuedEmail()?.text).toContain('Estado actual: Atendida');
       expect(queuedEmail()?.text).toContain('AHB-001 · Actas de 1890');
     });
 
@@ -1256,10 +1256,11 @@ describe('Request registration (e2e)', () => {
         // The responsible comes from the token
         expect(change.changedBy).toBe('staff-1');
         expect(date).toEqual(new Date(`${FRIDAY}T00:00:00.000Z`));
-        // HU-23: the requester learns the day of the appointment by email
+        // HU-23 / HU-24: the requester learns the day of the appointment by email
         expect(email).toMatchObject({
           recipientEmail: 'juan@ejemplo.com',
-          subject: 'Su solicitud SOL-2026-00042 pasó a «Agendada»',
+          template: 'SOLICITUD_AGENDADA',
+          subject: 'Cita agendada para su solicitud SOL-2026-00042',
         });
         expect(email?.text).toContain(
           'Fecha de la cita: viernes, 20 de noviembre de 2026',

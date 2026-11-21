@@ -451,7 +451,7 @@ Creada en HU-18. La migración `20261114100000_material_day_booking` (HU-20) agr
 
 ### notifications
 
-Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla de salida de los correos (D-10): cada cambio de estado inserta aquí el correo en la misma transacción, y un proceso programado lo envía cada 10 segundos.
+Creada en HU-23 (migración `20261113000000_create_notifications`) y ampliada en HU-24 (migración `20261121000000_add_notification_templates`) con plantillas por estado y eventos de cita. Es la tabla de salida de los correos (D-10): cada cambio de estado, reprogramación o cancelación de cita inserta aquí el correo en la misma transacción, y un proceso programado lo envía cada 10 segundos.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -459,8 +459,8 @@ Creada en HU-23 (migración `20261113000000_create_notifications`). Es la tabla 
 | request_id | uuid | FK → requests, IDX | |
 | status_history_id | bigint | FK → status_history, UK, NULL | Cambio que la disparó |
 | recipient_email | varchar(160) | CHECK no vacío | Correo del solicitante en el momento del cambio |
-| template | varchar(25) | CHECK | `CAMBIO_ESTADO` |
-| subject | varchar(200) | | Asunto, con el radicado y el nuevo estado |
+| template | varchar(25) | CHECK | `SOLICITUD_RECIBIDA`, `SOLICITUD_EN_BUSQUEDA`, `SOLICITUD_DISPONIBLE`, `SOLICITUD_AGENDADA`, `SOLICITUD_ATENDIDA`, `SOLICITUD_CERRADA`, `SOLICITUD_RECHAZADA`, `CITA_REPROGRAMADA`, `CITA_CANCELADA`, y el valor heredado `CAMBIO_ESTADO` (HU-23) |
+| subject | varchar(200) | | Asunto de la plantilla con el radicado de la solicitud |
 | body | text | | Texto plano |
 | html_body | text | NULL | El mismo contenido en HTML |
 | delivery_status | varchar(10) | CHECK, DEFAULT `PENDIENTE`, IDX con scheduled_at | `PENDIENTE`, `ENVIADA`, `FALLIDA` |

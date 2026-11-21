@@ -89,15 +89,19 @@ describe('Status change flow, HU-15 (e2e, PostgreSQL)', () => {
       }),
     ]);
 
-    // The email waits in the outbox, tied to the history row (HU-23)
-    expect(await outboxOf(created.id)).toEqual([
+    // The email waits in the outbox, tied to the history row (HU-23, HU-24)
+    const outbox = await outboxOf(created.id);
+    expect(outbox).toEqual([
       expect.objectContaining({
         recipientEmail: requester.email,
-        template: 'CAMBIO_ESTADO',
+        template: 'SOLICITUD_EN_BUSQUEDA',
         deliveryStatus: 'PENDIENTE',
         statusHistoryId: history[1].id,
       }),
     ]);
+    expect(outbox[0].body).toContain('Observaciones del personal:');
+    expect(outbox[0].body).toContain('Se busca en el depósito 1');
+    expect(outbox[0].htmlBody).toContain('Se busca en el depósito 1');
   });
 
   it('shows the owner the whole history, with «Personal del CLENA» as the staff (HU-17)', async () => {
