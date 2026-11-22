@@ -127,7 +127,10 @@ describe('CSV export UI', () => {
         expect.anything(),
       );
       expect(createUrl).toHaveBeenCalledOnce();
-      expect(revokeUrl).toHaveBeenCalledWith('blob:report');
+      expect(revokeUrl).not.toHaveBeenCalled();
+      await waitFor(() => expect(revokeUrl).toHaveBeenCalledWith('blob:report'), {
+        timeout: 2000,
+      });
       expect(document.querySelector('a[download]')).toBeNull();
     },
   );

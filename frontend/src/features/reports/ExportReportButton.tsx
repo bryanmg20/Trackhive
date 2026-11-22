@@ -46,7 +46,8 @@ export function ExportReportButton({
         anchor.click();
       } finally {
         anchor.remove();
-        URL.revokeObjectURL(url);
+        // Safari/Firefox may cancel downloads when the URL is revoked synchronously.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       setFeedback({ key, done: true });
     } catch (caught: unknown) {
