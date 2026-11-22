@@ -16,6 +16,7 @@ import type {
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import styles from './MostRequestedMaterialsPage.module.css';
 import attentionStyles from './AttentionTimesPage.module.css';
+import { ExportReportButton } from './ExportReportButton';
 
 export function AttentionTimesPage() {
   const [from, setFrom] = useState('');
@@ -139,6 +140,11 @@ export function AttentionTimesPage() {
           {rangeError}
         </p>
       </form>
+      <ExportReportButton
+        report="attention-times"
+        params={params}
+        disabled={!data}
+      />
       <section
         className={styles.results}
         aria-labelledby="attention-results"

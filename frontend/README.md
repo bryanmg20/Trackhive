@@ -290,6 +290,28 @@ propia cuenta).
 
 ## Pruebas
 
+### Exportación CSV (HU-27)
+
+Ambos reportes ofrecen **Exportar CSV** solo a ADMIN. Se envía el access token
+a su endpoint `/api/v1/reports/<reporte>/export` usando los filtros aplicados,
+no los cambios pendientes de aplicar. El ranking incluye el límite seleccionado.
+El botón se deshabilita durante la carga del reporte y la descarga; errores de
+red, permisos o sesión se muestran sin descargar un archivo inválido. La URL
+temporal del archivo se libera después de iniciar la descarga.
+
+`ExportReportButton.spec.tsx` y `api/export-report.spec.ts` cubren autorización
+visible, filtros aplicados frente a borradores, teclado, descarga y errores.
+`e2e/report-export.spec.ts` guarda descargas reales del navegador y comprueba
+sus bytes UTF-8, nombre y filtros a 360 px. El e2e del backend compara el archivo
+con los datos JSON sobre PostgreSQL real y comprueba 401/403.
+
+Con Docker iniciado desde la raíz con `docker compose up -d --build`, ejecutar
+desde `frontend` `pnpm test:e2e:docker report-export.spec.ts`. Usa las cuentas
+demo de ADMIN (`admin@example.com`), personal y público y sus contraseñas de
+seed (`SEED_ADMIN_PASSWORD` / `SEED_DEMO_PASSWORD`, por defecto local `1`).
+No crea solicitudes. Guarda los CSV y capturas de ambas pantallas en
+`test-results/` usando el frontend servido por nginx en `localhost:8080`.
+
 ### Tiempos de atención (HU-25)
 
 La ruta `/reportes/tiempos-de-atencion` y su entrada de menú son exclusivas de

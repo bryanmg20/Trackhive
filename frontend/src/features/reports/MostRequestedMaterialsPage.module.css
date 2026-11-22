@@ -88,6 +88,11 @@
   min-width: 0;
 }
 
+.exportActions {
+  margin-bottom: 1rem;
+  align-items: flex-start;
+}
+
 .sectionTitle {
   margin: 0;
   font-family: var(--font-display);
