@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -
 COPY --from=build --chown=app:app /app/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/dist ./dist
 COPY --from=build --chown=app:app /app/prisma ./prisma
+# Folder convention of the CLENA for the Everything sync (HU-136)
+COPY --from=build --chown=app:app /app/config ./config
 COPY --from=build --chown=app:app /app/package.json ./package.json
 USER app
 EXPOSE 3000
