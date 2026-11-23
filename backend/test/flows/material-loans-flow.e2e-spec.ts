@@ -50,6 +50,8 @@ describe('Material delivery, return and history flow, HU-72 (e2e, PostgreSQL)', 
   let receiverStaff: Session;
   let admin: Session;
   let todayIso: string;
+  // True when the suite runs on a Sunday and Date stays frozen on Monday noon
+  let frozenClock = false;
 
   const scheduleForDay = async (materialIds: string[], dateIso: string) => {
     const created = await submitRequest(e2e.server, requester, materialIds);
@@ -88,6 +90,7 @@ describe('Material delivery, return and history flow, HU-72 (e2e, PostgreSQL)', 
         ],
         now: mondayNoonUtc,
       });
+      frozenClock = true;
     }
     todayIso = todayInBogota().toISOString().slice(0, 10);
 
@@ -212,7 +215,13 @@ describe('Material delivery, return and history flow, HU-72 (e2e, PostgreSQL)', 
     });
     expect(closedFirstLoan.returnedAt).toEqual(expect.any(String));
 
-    // 5. Same material can be delivered again in the same appointment after return
+    // 5. Same material can be delivered again in the same appointment after return.
+    // The second handover comes after the return: with the frozen clock of a
+    // Sunday run both loans would share handedOverAt, and the history order
+    // (handedOverAt desc, id asc) would depend on the random id
+    if (frozenClock) {
+      jest.setSystemTime(Date.now() + 60_000);
+    }
     const secondDelivered = await request(e2e.server)
       .post(
         `${API}/appointments/${appointmentId}/materials/${material.id}/deliver`,
