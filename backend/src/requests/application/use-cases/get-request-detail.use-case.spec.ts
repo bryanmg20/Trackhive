@@ -41,10 +41,28 @@ const buildDetail = (
       collection: 'Actas del Cabildo',
       status: 'DISPONIBLE',
       itemStatus: 'LOCALIZADO',
+      hasDigitalCopy: false,
     },
   ],
   references: [],
   ...overrides,
+});
+
+// A catalog material of the detail with its digital copy and status (HU-139)
+const material = (
+  id: string,
+  hasDigitalCopy: boolean,
+  status = 'DISPONIBLE',
+): RequestDetail['materials'][number] => ({
+  id,
+  catalogCode: `TH-PER-${id}`,
+  title: 'La Gaceta Ribereña - 1931 a 1933',
+  materialType: 'PERIODICO',
+  author: null,
+  collection: 'Periódicos',
+  status,
+  itemStatus: 'PENDIENTE',
+  hasDigitalCopy,
 });
 
 describe('GetRequestDetailUseCase', () => {
@@ -214,6 +232,59 @@ describe('GetRequestDetailUseCase', () => {
         status: 'PENDIENTE',
         displayStatus: 'SIN_MATERIAL',
       });
+    });
+  });
+
+  describe('direct DISPONIBLE with a digital copy (HU-139)', () => {
+    const received = (materials: RequestDetail['materials']) =>
+      buildDetail({
+        status: 'RECIBIDA',
+        deliveryMode: 'DIGITAL',
+        committedDate: null,
+        materials,
+      });
+
+    it('offers DISPONIBLE and RECHAZADA when every material has a consultable copy, one being restored', async () => {
+      findById.mockResolvedValue(
+        received([material('1', true), material('2', true, 'EN_RESTAURACION')]),
+      );
+
+      const result = await useCase.execute({ id: 'request-1' });
+
+      expect(result.allowedTransitions).toEqual(['DISPONIBLE', 'RECHAZADA']);
+      expect(result.commentRequiredFor).toEqual(['RECHAZADA']);
+      expect(result.materials.map((item) => item.hasDigitalCopy)).toEqual([
+        true,
+        true,
+      ]);
+    });
+
+    it.each([
+      [
+        'a material is not consultable',
+        [material('1', true, 'NO_CONSULTABLE')],
+      ],
+      ['a material has no copy', [material('1', true), material('2', false)]],
+    ])('keeps EN_BUSQUEDA when %s', async (_case, materials) => {
+      findById.mockResolvedValue(received(materials));
+
+      const result = await useCase.execute({ id: 'request-1' });
+
+      expect(result.allowedTransitions).toEqual(['EN_BUSQUEDA', 'RECHAZADA']);
+    });
+
+    it('keeps EN_BUSQUEDA for a presential delivery with every copy', async () => {
+      findById.mockResolvedValue(
+        buildDetail({
+          status: 'RECIBIDA',
+          deliveryMode: 'PRESENCIAL',
+          materials: [material('1', true)],
+        }),
+      );
+
+      const result = await useCase.execute({ id: 'request-1' });
+
+      expect(result.allowedTransitions).toEqual(['EN_BUSQUEDA', 'RECHAZADA']);
     });
   });
 

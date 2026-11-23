@@ -8,8 +8,13 @@ import {
   REQUEST_STATUSES,
   RequestStatus,
 } from '../enums/request-status';
+import { summarizeDigitalCopies } from '../policies/digital-copy';
+import type { MaterialReference } from '../value-objects/material-reference';
 import { Request } from './request.entity';
+import type { RequestProps } from './request.entity';
 
+// Without what the repository reads of the digital copies, as before HU-139:
+// RECIBIDA always goes through EN_BUSQUEDA. The direct step has its own block
 const buildRequest = (
   status: RequestStatus,
   deliveryMode: DeliveryMode = 'PRESENCIAL',
@@ -517,6 +522,179 @@ describe('Request', () => {
       );
 
       expect(change.rejectionReason).toBeNull();
+    });
+  });
+
+  describe('direct DISPONIBLE when the material has a digital copy (HU-139)', () => {
+    const NOW = new Date('2026-11-22T15:00:00.000Z');
+
+    // A request as the repository loads it, with what it read of the copies
+    const buildWithCopies = (overrides: Partial<RequestProps> = {}): Request =>
+      new Request({
+        id: '1',
+        status: 'RECIBIDA',
+        deliveryMode: 'DIGITAL',
+        allMaterialsHaveDigitalCopy: true,
+        anyMaterialNotConsultable: false,
+        ...overrides,
+      });
+
+    const pendingReference: MaterialReference = Object.freeze({
+      id: 'reference-1',
+      kind: 'TEXTO_LIBRE',
+      notary: null,
+      year: null,
+      deedNumber: null,
+      description: 'El Heraldo, 15-03-1950',
+      status: 'PENDIENTE',
+      materialId: null,
+    });
+
+    it('offers DISPONIBLE and RECHAZADA, not EN_BUSQUEDA, when every material has a consultable copy', () => {
+      const request = buildWithCopies();
+
+      expect(request.allowedTransitions).toEqual(['DISPONIBLE', 'RECHAZADA']);
+      // Only the rejection asks for a comment: there is nothing to explain
+      expect(request.commentRequiredFor).toEqual(['RECHAZADA']);
+    });
+
+    it('moves RECIBIDA to DISPONIBLE and records who did it, when and the comment', () => {
+      const request = buildWithCopies();
+
+      const change = request.changeStatus(
+        'DISPONIBLE',
+        'staff-1',
+        'Copia digital enviada por correo',
+        NOW,
+      );
+
+      expect(request.status).toBe('DISPONIBLE');
+      expect(change).toEqual({
+        requestId: '1',
+        previousStatus: 'RECIBIDA',
+        newStatus: 'DISPONIBLE',
+        changedBy: 'staff-1',
+        changedAt: NOW,
+        comment: 'Copia digital enviada por correo',
+        rejectionReason: null,
+        attendedAt: null,
+        closedAt: null,
+        appointmentOutcome: null,
+      });
+      // Then the digital delivery goes on as always
+      expect(request.allowedTransitions).toEqual(['ATENDIDA', 'CERRADA']);
+    });
+
+    it('does not need a comment to go straight to DISPONIBLE', () => {
+      const request = buildWithCopies();
+
+      request.changeStatus('DISPONIBLE', 'staff-1');
+
+      expect(request.status).toBe('DISPONIBLE');
+    });
+
+    it('rejects EN_BUSQUEDA with 409: the sync already found the material', () => {
+      const request = buildWithCopies();
+
+      expect(() => request.changeStatus('EN_BUSQUEDA', 'staff-1')).toThrow(
+        InvalidStatusTransitionError,
+      );
+      expect(() => request.startSearch()).toThrow(
+        'No se puede pasar una solicitud de Recibida a En búsqueda',
+      );
+      expect(request.status).toBe('RECIBIDA');
+    });
+
+    it('still lets the staff reject it', () => {
+      const request = buildWithCopies();
+
+      request.changeStatus('RECHAZADA', 'staff-1', 'Material restringido');
+
+      expect(request.status).toBe('RECHAZADA');
+    });
+
+    it('allows the direct step with a material being restored: the restoration affects the original, not the copy', () => {
+      const request = buildWithCopies(
+        summarizeDigitalCopies([
+          { hasDigitalCopy: true, status: 'EN_RESTAURACION' },
+          { hasDigitalCopy: true, status: 'DISPONIBLE' },
+        ]),
+      );
+
+      expect(request.allowedTransitions).toEqual(['DISPONIBLE', 'RECHAZADA']);
+      request.markAvailable();
+      expect(request.status).toBe('DISPONIBLE');
+    });
+
+    it.each<[string, Partial<RequestProps>]>([
+      [
+        'a material with its copy is not consultable',
+        summarizeDigitalCopies([
+          { hasDigitalCopy: true, status: 'DISPONIBLE' },
+          { hasDigitalCopy: true, status: 'NO_CONSULTABLE' },
+        ]),
+      ],
+      [
+        'a material has no digital copy',
+        summarizeDigitalCopies([
+          { hasDigitalCopy: true, status: 'DISPONIBLE' },
+          { hasDigitalCopy: false, status: 'DISPONIBLE' },
+        ]),
+      ],
+      [
+        'it has no catalog material, only a written reference',
+        {
+          ...summarizeDigitalCopies([]),
+          references: [pendingReference],
+        },
+      ],
+      [
+        'a reference is still pending its material (HU-09.2)',
+        { references: [pendingReference] },
+      ],
+      ['the delivery is presential', { deliveryMode: 'PRESENCIAL' }],
+      [
+        'the repository did not say anything about the copies',
+        {
+          allMaterialsHaveDigitalCopy: undefined,
+          anyMaterialNotConsultable: undefined,
+        },
+      ],
+    ])(
+      'offers EN_BUSQUEDA and RECHAZADA, as before, when %s',
+      (_case, overrides) => {
+        const request = buildWithCopies(overrides);
+
+        expect(request.allowedTransitions).toEqual([
+          'EN_BUSQUEDA',
+          'RECHAZADA',
+        ]);
+        expect(() => request.changeStatus('DISPONIBLE', 'staff-1')).toThrow(
+          InvalidStatusTransitionError,
+        );
+        expect(request.status).toBe('RECIBIDA');
+
+        request.changeStatus('EN_BUSQUEDA', 'staff-1');
+        expect(request.status).toBe('EN_BUSQUEDA');
+      },
+    );
+
+    it('only changes RECIBIDA: from EN_BUSQUEDA it goes to DISPONIBLE as always', () => {
+      const request = buildWithCopies({ status: 'EN_BUSQUEDA' });
+
+      expect(request.allowedTransitions).toEqual(['DISPONIBLE', 'RECHAZADA']);
+    });
+
+    it.each<RequestStatus>([
+      'DISPONIBLE',
+      'AGENDADA',
+      'ATENDIDA',
+      'CERRADA',
+      'RECHAZADA',
+    ])('never offers going back to EN_BUSQUEDA from %s', (status) => {
+      const request = buildWithCopies({ status });
+
+      expect(request.allowedTransitions).not.toContain('EN_BUSQUEDA');
     });
   });
 

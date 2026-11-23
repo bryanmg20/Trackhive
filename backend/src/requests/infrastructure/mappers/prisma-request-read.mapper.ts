@@ -379,6 +379,8 @@ export class PrismaRequestReadMapper {
         collection: material.collection,
         status: material.status,
         itemStatus,
+        // NULL digital_path = no digital copy (HU-134); the path stays here
+        hasDigitalCopy: Boolean(material.digitalPath),
       })),
       references: model.references.map((row) =>
         PrismaRequestReadMapper.toDetailReference(row),

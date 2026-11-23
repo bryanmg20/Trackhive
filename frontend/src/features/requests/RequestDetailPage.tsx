@@ -466,6 +466,9 @@ export function RequestDetailPage() {
                       {ITEM_STATUS_LABELS[material.itemStatus] ??
                         material.itemStatus}
                     </span>
+                    <span>
+                      Copia digital: {material.hasDigitalCopy ? 'Sí' : 'No'}
+                    </span>
                   </li>
                 ))}
               </ul>

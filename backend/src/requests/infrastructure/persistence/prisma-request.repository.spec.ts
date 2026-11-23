@@ -84,7 +84,12 @@ describe('PrismaRequestRepository', () => {
       requirementDescription: 'Consulta',
       desiredDate: new Date('2026-12-01T00:00:00.000Z'),
       rejectionReason: null,
-      items: [{ materialId: MATERIAL_ID }],
+      items: [
+        {
+          materialId: MATERIAL_ID,
+          material: { digitalPath: null, status: 'DISPONIBLE' },
+        },
+      ],
       references: [
         {
           id: 'reference-1',
@@ -127,6 +132,83 @@ describe('PrismaRequestRepository', () => {
       expect(request?.status).toBe('AGENDADA');
       expect(request?.allowedTransitions).toEqual(['DISPONIBLE', 'ATENDIDA']);
       expect(request?.registration?.materialIds).toEqual([MATERIAL_ID]);
+    });
+
+    describe('digital copy of the materials (HU-139)', () => {
+      const COPY_PATH =
+        'C:\\trackhive\\docs_simulados\\Aha\\Fondo - Periódicos\\La Gaceta Ribereña - 1931 a 1933';
+
+      // A digital RECIBIDA request without references and these materials
+      const digitalRow = (
+        materials: { digitalPath: string | null; status: string }[],
+      ) => ({
+        ...row('RECIBIDA'),
+        deliveryMode: 'DIGITAL',
+        items: materials.map((material, index) => ({
+          materialId: `material-${index + 1}`,
+          material,
+        })),
+        references: [],
+      });
+
+      it('loads the digital copy and the status of each material, so the entity decides', async () => {
+        const findUnique = jest.fn().mockResolvedValue(
+          digitalRow([
+            { digitalPath: COPY_PATH, status: 'DISPONIBLE' },
+            { digitalPath: COPY_PATH, status: 'EN_RESTAURACION' },
+          ]),
+        );
+        const repository = new PrismaRequestRepository({
+          requestModel: { findUnique },
+        } as unknown as PrismaService);
+
+        const request = await repository.findById('request-1');
+
+        expect(findUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            include: expect.objectContaining({
+              items: {
+                select: {
+                  materialId: true,
+                  material: { select: { digitalPath: true, status: true } },
+                },
+              },
+            }) as unknown,
+          }),
+        );
+        // A material being restored still lets the copy be sent
+        expect(request?.allowedTransitions).toEqual([
+          'DISPONIBLE',
+          'RECHAZADA',
+        ]);
+        expect(request?.registration?.materialIds).toEqual([
+          'material-1',
+          'material-2',
+        ]);
+      });
+
+      it.each([
+        [
+          'a material without a digital copy',
+          [
+            { digitalPath: COPY_PATH, status: 'DISPONIBLE' },
+            { digitalPath: null, status: 'DISPONIBLE' },
+          ],
+        ],
+        [
+          'a material that is not consultable',
+          [{ digitalPath: COPY_PATH, status: 'NO_CONSULTABLE' }],
+        ],
+      ])('keeps the search with %s', async (_case, materials) => {
+        const request = await repositoryWith(digitalRow(materials)).findById(
+          'request-1',
+        );
+
+        expect(request?.allowedTransitions).toEqual([
+          'EN_BUSQUEDA',
+          'RECHAZADA',
+        ]);
+      });
     });
 
     it('returns null when the request does not exist', async () => {

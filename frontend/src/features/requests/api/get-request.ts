@@ -19,6 +19,8 @@ export interface RequestDetailMaterial {
   collection: string;
   status: MaterialStatus;
   itemStatus: string;
+  // Whether the Everything sync found its digital copy (HU-139)
+  hasDigitalCopy: boolean;
 }
 
 export interface RequestDetailAppointmentMaterial {

@@ -76,6 +76,7 @@ function detail(overrides: Record<string, unknown> = {}) {
         collection: 'Actas del Cabildo',
         status: 'DISPONIBLE',
         itemStatus: 'LOCALIZADO',
+        hasDigitalCopy: false,
       },
     ],
     references: [],
@@ -464,6 +465,102 @@ describe('RequestDetailPage', () => {
       expect(
         within(section).queryByRole('radio', { name: 'Rechazada' }),
       ).not.toBeInTheDocument();
+    });
+
+    describe('direct Disponible with a digital copy (HU-139)', () => {
+      // What the backend answers for a digital RECIBIDA request whose
+      // material already has its copy: the entity decided the options
+      const withCopy = () =>
+        detail({
+          status: 'RECIBIDA',
+          deliveryMode: 'DIGITAL',
+          committedDate: null,
+          allowedTransitions: ['DISPONIBLE', 'RECHAZADA'],
+          materials: [
+            {
+              ...detail().materials[0],
+              status: 'EN_RESTAURACION',
+              itemStatus: 'PENDIENTE',
+              hasDigitalCopy: true,
+            },
+          ],
+        });
+
+      it('offers only the transitions of the backend: Disponible and Rechazada, not En búsqueda', async () => {
+        const { user, section } = await setup(withCopy());
+
+        const options = within(section).getAllByRole('radio');
+        expect(options.map((option) => option.getAttribute('value'))).toEqual([
+          'DISPONIBLE',
+          'RECHAZADA',
+        ]);
+        expect(
+          within(section).queryByRole('radio', { name: 'En búsqueda' }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(section).getByRole('radio', { name: 'Disponible' }),
+        ).toHaveAccessibleDescription(
+          'El material ya tiene copia digital: no hace falta buscarlo. Envíe la copia por correo.',
+        );
+        // Nothing to explain: only the rejection asks for a comment
+        await user.click(
+          within(section).getByRole('radio', { name: 'Disponible' }),
+        );
+        expect(
+          within(section).getByLabelText('Comentario (opcional)'),
+        ).toBeInTheDocument();
+      });
+
+      it('shows which materials have a digital copy', async () => {
+        await setup(withCopy());
+
+        const materials = await screen.findByRole('region', {
+          name: 'Material solicitado',
+        });
+        expect(materials).toHaveTextContent('Copia digital: Sí');
+      });
+
+      it('says when a material has no digital copy', async () => {
+        await setup();
+
+        const materials = await screen.findByRole('region', {
+          name: 'Material solicitado',
+        });
+        expect(materials).toHaveTextContent('Copia digital: No');
+      });
+
+      it('sends Disponible from Recibida and shows the confirmation', async () => {
+        const { user, section } = await setup(
+          withCopy(),
+          ok(
+            changed({
+              status: 'DISPONIBLE',
+              allowedTransitions: ['ATENDIDA', 'CERRADA'],
+              statusChange: {
+                ...changed().statusChange,
+                previousStatus: 'RECIBIDA',
+                newStatus: 'DISPONIBLE',
+              },
+            }),
+          ),
+        );
+
+        await user.click(
+          within(section).getByRole('radio', { name: 'Disponible' }),
+        );
+        await user.click(
+          within(section).getByRole('button', { name: 'Guardar cambio' }),
+        );
+
+        const [[url, init]] = patchCalls();
+        expect(url).toContain(STATUS_PATH);
+        expect(JSON.parse(init.body as string)).toEqual({
+          status: 'DISPONIBLE',
+        });
+        expect(await within(section).findByRole('status')).toHaveTextContent(
+          'La solicitud pasó de Recibida a Disponible',
+        );
+      });
     });
 
     it.each(['CERRADA', 'RECHAZADA'])(

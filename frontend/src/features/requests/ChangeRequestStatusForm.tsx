@@ -62,6 +62,13 @@ function describeTransition(
       hint: 'Vuelve a Disponible para agendar de nuevo.',
     };
   }
+  // The backend only offers it when the sync already found the copy (HU-139)
+  if (from === 'RECIBIDA' && to === 'DISPONIBLE') {
+    return {
+      label: REQUEST_STATUS_LABELS[to],
+      hint: 'El material ya tiene copia digital: no hace falta buscarlo. Envíe la copia por correo.',
+    };
+  }
   return { label: REQUEST_STATUS_LABELS[to], hint: TRANSITION_HINTS[to] ?? '' };
 }
 
