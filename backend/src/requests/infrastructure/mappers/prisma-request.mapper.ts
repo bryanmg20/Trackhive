@@ -3,9 +3,20 @@ import { Request } from '../../domain/entities/request.entity';
 import type { OriginChannel } from '../../domain/entities/request.entity';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isRequestStatus } from '../../domain/enums/request-status';
+import { summarizeDigitalCopies } from '../../domain/policies/digital-copy';
 import { PrismaRequestReferenceMapper } from './prisma-request-reference.mapper';
 import type { RequestReferenceRow } from './prisma-request-reference.mapper';
 import { PrismaStatusHistoryMapper } from './prisma-status-history.mapper';
+
+/**
+ * The items the entity needs: each material with its digital copy and its
+ * status, so RECIBIDA can go straight to DISPONIBLE (HU-139). The path
+ * itself never leaves the repository.
+ */
+export const REQUEST_ENTITY_ITEMS_SELECT = {
+  materialId: true,
+  material: { select: { digitalPath: true, status: true } },
+} satisfies Prisma.RequestItemModelSelect;
 
 /** The columns of a request that the entity needs, with its materials. */
 export interface RequestEntityRow {
@@ -20,7 +31,12 @@ export interface RequestEntityRow {
   requirementDescription: string;
   desiredDate: Date;
   rejectionReason: string | null;
-  items: { materialId: string }[];
+  // Required: without the copy and the status, RECIBIDA would never skip the
+  // search (HU-139)
+  items: {
+    materialId: string;
+    material: { digitalPath: string | null; status: string };
+  }[];
   // Written references (HU-09.2). Required: without them hasPendingReferences
   // would be false and the rule of the delivery comment would be skipped
   references: RequestReferenceRow[];
@@ -49,6 +65,13 @@ export class PrismaRequestMapper {
       },
       references: model.references.map((row) =>
         PrismaRequestReferenceMapper.toDomain(row),
+      ),
+      // NULL digital_path = no digital copy (HU-134)
+      ...summarizeDigitalCopies(
+        model.items.map(({ material }) => ({
+          hasDigitalCopy: Boolean(material.digitalPath),
+          status: material.status,
+        })),
       ),
     });
   }

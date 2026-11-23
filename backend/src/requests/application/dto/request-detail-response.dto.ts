@@ -59,6 +59,14 @@ export class RequestDetailMaterialDto {
     example: 'PENDIENTE',
   })
   itemStatus: string;
+
+  @ApiProperty({
+    description:
+      'Si la sincronización con Everything encontró su copia digital ' +
+      '(HU-139). La ruta del archivo nunca se envía',
+    example: true,
+  })
+  hasDigitalCopy: boolean;
 }
 
 export class RequestDetailAppointmentMaterialDto {

@@ -21,8 +21,9 @@ export interface IRequestRepository {
   save(request: Request): Promise<void>;
 
   /**
-   * The request as a domain entity, with its written references, to apply
-   * its transition rules (HU-15, HU-09.2).
+   * The request as a domain entity, with its written references and whether
+   * its materials all have a digital copy and any is NO_CONSULTABLE, to
+   * apply its transition rules (HU-15, HU-09.2, HU-139).
    */
   findById(id: string): Promise<Request | null>;
 

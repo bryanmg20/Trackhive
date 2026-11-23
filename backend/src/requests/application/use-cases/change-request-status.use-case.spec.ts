@@ -322,6 +322,80 @@ describe('ChangeRequestStatusUseCase', () => {
     });
   });
 
+  describe('direct DISPONIBLE with a digital copy (HU-139)', () => {
+    // As the repository loads it: digital delivery, every copy, none blocked
+    const receivedWithCopies = (anyMaterialNotConsultable = false) =>
+      new Request({
+        id: 'request-1',
+        status: 'RECIBIDA',
+        deliveryMode: 'DIGITAL',
+        allMaterialsHaveDigitalCopy: true,
+        anyMaterialNotConsultable,
+      });
+
+    it('saves RECIBIDA -> DISPONIBLE with who did it and queues the email, like any change', async () => {
+      findById.mockResolvedValue(receivedWithCopies());
+      findNotificationContext.mockResolvedValue({
+        ...CONTEXT,
+        deliveryMode: 'DIGITAL',
+      });
+
+      const result = await useCase.execute({
+        requestId: 'request-1',
+        status: 'DISPONIBLE',
+        userId: 'staff-1',
+      });
+
+      expect(saveStatusChange).toHaveBeenCalledTimes(1);
+      expect(saveStatusChange.mock.calls[0][0]).toMatchObject({
+        previousStatus: 'RECIBIDA',
+        newStatus: 'DISPONIBLE',
+        changedBy: 'staff-1',
+        appointmentOutcome: null,
+      });
+      expect(queuedEmail()).toMatchObject({
+        recipientEmail: 'juan@example.com',
+        template: 'SOLICITUD_DISPONIBLE',
+      });
+      expect(queuedEmail()?.text).toContain('le enviará la copia por correo');
+      expect(result).toMatchObject({
+        status: 'DISPONIBLE',
+        allowedTransitions: ['ATENDIDA', 'CERRADA'],
+        statusChange: {
+          previousStatus: 'RECIBIDA',
+          newStatus: 'DISPONIBLE',
+          changedBy: { id: 'staff-1', name: 'Ana María Gómez' },
+        },
+      });
+    });
+
+    it('refuses EN_BUSQUEDA with 409 and saves nothing when the copy was already found', async () => {
+      findById.mockResolvedValue(receivedWithCopies());
+
+      await expect(
+        useCase.execute({
+          requestId: 'request-1',
+          status: 'EN_BUSQUEDA',
+          userId: 'staff-1',
+        }),
+      ).rejects.toThrow(InvalidStatusTransitionError);
+      expect(saveStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('refuses DISPONIBLE with 409 and saves nothing when a material is not consultable', async () => {
+      findById.mockResolvedValue(receivedWithCopies(true));
+
+      await expect(
+        useCase.execute({
+          requestId: 'request-1',
+          status: 'DISPONIBLE',
+          userId: 'staff-1',
+        }),
+      ).rejects.toThrow(InvalidStatusTransitionError);
+      expect(saveStatusChange).not.toHaveBeenCalled();
+    });
+  });
+
   describe('reading-room custody loan safeguards (HU-72)', () => {
     it.each<AppointmentLoanCounts>([
       { totalLoans: 1, openLoans: 0 },

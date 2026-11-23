@@ -166,6 +166,8 @@ export interface RequestDetail {
     collection: string;
     status: string;
     itemStatus: string;
+    // Whether the sync found its digital copy (HU-139); never the path
+    hasDigitalCopy: boolean;
   }[];
   // Written references (HU-09.2), oldest first
   references: RequestDetailReference[];

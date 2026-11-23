@@ -33,7 +33,10 @@ import type {
 import type { SavedStatusChange } from '../../domain/value-objects/saved-status-change';
 import type { StatusChange } from '../../domain/value-objects/status-change';
 import { PrismaAppointmentMapper } from '../mappers/prisma-appointment.mapper';
-import { PrismaRequestMapper } from '../mappers/prisma-request.mapper';
+import {
+  PrismaRequestMapper,
+  REQUEST_ENTITY_ITEMS_SELECT,
+} from '../mappers/prisma-request.mapper';
 import {
   PrismaRequestReferenceMapper,
   REQUEST_REFERENCE_SELECT,
@@ -78,7 +81,7 @@ export class PrismaRequestRepository implements IRequestRepository {
     const model = await this.prisma.requestModel.findUnique({
       where: { id },
       include: {
-        items: { select: { materialId: true } },
+        items: { select: REQUEST_ENTITY_ITEMS_SELECT },
         references: { select: REQUEST_REFERENCE_SELECT },
       },
     });
@@ -139,7 +142,7 @@ export class PrismaRequestRepository implements IRequestRepository {
         materials: { select: { materialId: true } },
         request: {
           include: {
-            items: { select: { materialId: true } },
+            items: { select: REQUEST_ENTITY_ITEMS_SELECT },
             references: { select: REQUEST_REFERENCE_SELECT },
           },
         },

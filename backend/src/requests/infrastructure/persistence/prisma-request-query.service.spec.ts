@@ -343,6 +343,9 @@ describe('PrismaRequestQueryService', () => {
             author: null,
             collection: 'Actas del Cabildo',
             status: 'DISPONIBLE',
+            // Internal: the detail only says whether there is a copy (HU-139)
+            digitalPath:
+              'C:\\trackhive\\docs_simulados\\Aha\\Fondo - Correspondencia\\Telegramas\\1902',
           },
         },
       ],
@@ -405,11 +408,30 @@ describe('PrismaRequestQueryService', () => {
           {
             catalogCode: 'TH-DOC-0001',
             itemStatus: 'LOCALIZADO',
+            hasDigitalCopy: true,
           },
         ],
       });
       // The physical location no longer exists (#165)
       expect(detail?.materials[0]).not.toHaveProperty('location');
+      // The path of the copy never leaves the repository (HU-134, HU-139)
+      expect(detail?.materials[0]).not.toHaveProperty('digitalPath');
+    });
+
+    it('says a material has no digital copy when its path is NULL (HU-139)', async () => {
+      const { repository } = repositoryWith({
+        ...model,
+        items: [
+          {
+            ...model.items[0],
+            material: { ...model.items[0].material, digitalPath: null },
+          },
+        ],
+      });
+
+      const detail = await repository.findDetail('request-1');
+
+      expect(detail?.materials[0].hasDigitalCopy).toBe(false);
     });
 
     it('returns null when the request does not exist', async () => {
