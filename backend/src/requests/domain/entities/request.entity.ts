@@ -27,9 +27,11 @@ import type {
 import type { ReferenceResolution } from '../value-objects/reference-resolution';
 import type { StatusChange } from '../value-objects/status-change';
 
-// Business rule: the only status changes allowed (docs/modelo-dominio.md, section 4)
+// Business rule: the only status changes allowed (docs/modelo-dominio.md,
+// section 4). From RECIBIDA, canTransitionTo picks EN_BUSQUEDA or DISPONIBLE
+// by the digital copy of the material (HU-139)
 const ALLOWED_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
-  RECIBIDA: ['EN_BUSQUEDA', 'RECHAZADA'],
+  RECIBIDA: ['EN_BUSQUEDA', 'DISPONIBLE', 'RECHAZADA'],
   EN_BUSQUEDA: ['DISPONIBLE', 'RECHAZADA'],
   DISPONIBLE: ['AGENDADA', 'ATENDIDA', 'CERRADA'],
   AGENDADA: ['ATENDIDA', 'DISPONIBLE'],
@@ -92,6 +94,11 @@ export interface RequestProps {
   registration?: RequestRegistration | null;
   // Its written references (HU-09.2); none when omitted
   references?: readonly MaterialReference[];
+  // The digital copies of its catalog materials (HU-139), as the repository
+  // read them (policies/digital-copy). False when omitted: then RECIBIDA
+  // goes to EN_BUSQUEDA as before
+  allMaterialsHaveDigitalCopy?: boolean;
+  anyMaterialNotConsultable?: boolean;
 }
 
 export class Request {
@@ -101,6 +108,8 @@ export class Request {
   private currentRejectionReason: string | null;
   public readonly registration: RequestRegistration | null;
   private currentReferences: readonly MaterialReference[];
+  private readonly allMaterialsHaveDigitalCopy: boolean;
+  private readonly anyMaterialNotConsultable: boolean;
 
   constructor(props: RequestProps) {
     if (!isRequestStatus(props.status)) {
@@ -112,6 +121,9 @@ export class Request {
     this.currentRejectionReason = props.rejectionReason ?? null;
     this.registration = props.registration ?? null;
     this.currentReferences = props.references ?? [];
+    this.allMaterialsHaveDigitalCopy =
+      props.allMaterialsHaveDigitalCopy ?? false;
+    this.anyMaterialNotConsultable = props.anyMaterialNotConsultable ?? false;
   }
 
   /**
@@ -210,6 +222,23 @@ export class Request {
    */
   private get requiresDeliveryComment(): boolean {
     return this.currentStatus === 'EN_BUSQUEDA' && this.hasPendingReferences;
+  }
+
+  /**
+   * RECIBIDA → DISPONIBLE without a search (HU-139): a digital delivery
+   * whose catalog materials all have the digital copy the sync found, none
+   * NO_CONSULTABLE (it may also restrict the copy; EN_RESTAURACION only
+   * affects the original) and without a reference pending its material
+   * (HU-09.2). The staff confirms it with one click (RN-09). Then the
+   * search is not offered, because the system already found the material.
+   */
+  private get skipsSearch(): boolean {
+    return (
+      this.deliveryMode === 'DIGITAL' &&
+      this.allMaterialsHaveDigitalCopy &&
+      !this.anyMaterialNotConsultable &&
+      !this.hasPendingReferences
+    );
   }
 
   startSearch(): void {
@@ -432,6 +461,13 @@ export class Request {
   private canTransitionTo(next: RequestStatus): boolean {
     if (!ALLOWED_TRANSITIONS[this.currentStatus].includes(next)) {
       return false;
+    }
+    // From RECIBIDA, either the search or the copy already found (HU-139)
+    if (this.currentStatus === 'RECIBIDA' && next === 'DISPONIBLE') {
+      return this.skipsSearch;
+    }
+    if (this.currentStatus === 'RECIBIDA' && next === 'EN_BUSQUEDA') {
+      return !this.skipsSearch;
     }
     // From DISPONIBLE, the next step depends on how the material is delivered
     if (this.currentStatus === 'DISPONIBLE' && next === 'AGENDADA') {
