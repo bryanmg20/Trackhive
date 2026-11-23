@@ -87,7 +87,8 @@ Leyenda: azul, estado intermedio; azul oscuro, cierre normal; rojo, rechazo; cí
 | Transición | Condición |
 |---|---|
 | → `RECIBIDA` | Se pidió al menos un material y la fecha deseada cumple su regla. El usuario público ya aceptó el aviso de privacidad al crear su cuenta. |
-| `RECIBIDA` → `EN_BUSQUEDA` | El personal empieza a buscar el material. |
+| `RECIBIDA` → `EN_BUSQUEDA` | El personal empieza a buscar el material. No se ofrece cuando procede el paso directo a `DISPONIBLE`. |
+| `RECIBIDA` → `DISPONIBLE` | Paso directo sin búsqueda (HU-139): la entrega es digital, todos los materiales tienen la copia digital que encontró la sincronización con *Everything*, ninguno está «no consultable» y no queda ninguna referencia escrita sin material (HU-09.2). Un material «en restauración» sí lo permite, porque la restauración afecta al original y no a la copia. Lo confirma el personal con un clic y queda en el historial con quien lo hizo. Entonces no se ofrece `EN_BUSQUEDA`. |
 | `RECIBIDA` / `EN_BUSQUEDA` → `RECHAZADA` | Motivo obligatorio, que el solicitante lee en «Mis solicitudes» y en el correo. |
 | `EN_BUSQUEDA` → `DISPONIBLE` | El personal localizó el material. |
 | `DISPONIBLE` → `AGENDADA` | La entrega es presencial. Solo se llega agendando la cita, no desde «Cambiar estado». |
@@ -96,7 +97,9 @@ Leyenda: azul, estado intermedio; azul oscuro, cierre normal; rojo, rechazo; cí
 | `AGENDADA` → `DISPONIBLE` | El solicitante no asistió: la cita pasa a `NO_ASISTIO` y el material queda libre ese día. Solo procede si la cita no tiene entregas de material registradas (HU-72). |
 | `DISPONIBLE` / `ATENDIDA` → `CERRADA` | Cierre manual por el personal. |
 
-Cualquier otra transición se rechaza con HTTP 409. `CERRADA` y `RECHAZADA` son estados finales. La regla vive en la entidad `Request` (`backend/src/requests/domain/entities/request.entity.ts`).
+Cualquier otra transición se rechaza con HTTP 409. `CERRADA` y `RECHAZADA` son estados finales. La regla vive en la entidad `Request` (`backend/src/requests/domain/entities/request.entity.ts`). Para el paso directo de HU-139, el repositorio le indica a la entidad si todos sus materiales tienen copia digital (`allMaterialsHaveDigitalCopy`) y si alguno está no consultable (`anyMaterialNotConsultable`), con la política `domain/policies/digital-copy.ts`; la condición está en `canTransitionTo`.
+
+> Supuesto de HU-139: «no consultable» es una restricción que también aplica a la copia digital. No se confirmó con el CLENA.
 
 ## 5. Reglas de negocio
 
@@ -112,7 +115,7 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | RN-04 | Una solicitud pide al menos un material del catálogo o una referencia escrita de uno que aún no está: un protocolo notarial por notaría, año y número de escritura, o cualquier otro material en texto libre. La regla vive en la entidad `Request`; sin materiales ni referencias se responde 400. | HU-09, HU-09.2 | Vigente |
 | RN-04.1 | Asociar el material del catálogo a una referencia escrita es opcional (normalmente el que trajo la sincronización tras digitalizarlo) y solo se hace mientras la solicitud está recibida o en búsqueda; queda en el historial con quién lo hizo y el material se suma a la solicitud. Una referencia sin material no bloquea nada: la solicitud pasa de en búsqueda a disponible, pero entonces el comentario es obligatorio y explica qué se entrega y cómo (400 `DELIVERY_COMMENT_REQUIRED` sin él). La cita se arma con los materiales de la solicitud, aunque sean cero. Rechazar sigue siendo decisión del personal. | HU-09.2 | Vigente |
 | RN-05 | El personal puede registrar una solicitud a nombre de quien llega en persona o escribe por correo; el solicitante debe tener un correo para recibir los avisos. | HU-10 | Vigente |
-| RN-06 | Una solicitud solo avanza por los pasos de la figura 2; no se puede saltar ni devolver a un paso anterior, salvo volver a disponible cuando el solicitante no asiste. | HU-14 | Vigente |
+| RN-06 | Una solicitud solo avanza por los pasos de la figura 2; no se puede saltar ni devolver a un paso anterior, salvo volver a disponible cuando el solicitante no asiste. La búsqueda solo se salta cuando la entrega es digital y todo el material ya tiene una copia digital consultable y ninguna referencia está pendiente: entonces la solicitud pasa de recibida a disponible y no a en búsqueda. | HU-14, HU-139 | Vigente |
 | RN-07 | Una solicitud rechazada siempre lleva el motivo, porque el solicitante lo lee. | HU-16 | Vigente |
 | RN-08 | Las solicitudes cerradas o rechazadas ya no cambian. | HU-14 | Vigente |
 | RN-09 | Cada cambio de estado queda en el historial con quién lo hizo, cuándo y su comentario, y ese historial no se puede borrar ni corregir. | HU-15 | Vigente |

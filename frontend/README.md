@@ -209,6 +209,13 @@ hora de Bogotá sin volver a cargar la solicitud. Un `409` (transición no
 permitida u otra persona la cambió primero) muestra el mensaje del backend y
 deja el estado como estaba.
 
+**Disponible directo (HU-139):** una solicitud **Recibida** con entrega digital
+cuyo material ya tiene copia digital consultable recibe del backend
+`allowedTransitions: ['DISPONIBLE', 'RECHAZADA']`, así que la tarjeta ofrece
+Disponible (con la pista «El material ya tiene copia digital…») y no En
+búsqueda. La pantalla no decide nada: solo muestra lo que manda la entidad.
+Cada material del detalle dice «Copia digital: Sí/No» (`hasDigitalCopy`).
+
 ### Gestión de usuarios del personal (HU-05)
 
 `/admin/usuarios` solo la abre `ADMIN`, y el menú muestra «Usuarios» solo a ese
@@ -337,6 +344,18 @@ Con `docker compose up -d --build` iniciado desde la raíz, ejecutar desde
 los 403, sin crear solicitudes. Guarda capturas de escritorio y móvil en
 `test-results/`. Usa las contraseñas `SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD`
 del entorno de la prueba (por defecto local: `1`).
+
+### Disponible directo con copia digital (HU-139)
+
+Con `docker compose up -d --build` iniciado desde la raíz y la semilla
+(`RUN_SEED=true`), ejecutar desde `frontend`
+`pnpm test:e2e:docker direct-availability.spec.ts`. Con `personal1@example.com`
+crea tres solicitudes digitales ficticias para `publico1@example.com`: una con
+material con copia (uno en restauración), otra con material no consultable y
+otra con material sin copia. Comprueba en `localhost:8080` que solo la primera
+ofrece Disponible en vez de En búsqueda, la pasa a Disponible, revisa el
+historial y el correo en Mailpit (`localhost:8025`), y que la API responde 409
+a Disponible en las otras dos. Guarda capturas en `test-results/`.
 
 ### Calendario legible (HU-142)
 
