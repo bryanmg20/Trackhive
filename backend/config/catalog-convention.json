@@ -1,0 +1,65 @@
+{
+  "$comment": "Convención de carpetas del CLENA para el parseo (HU-136). Explicada en docs/everything-desarrollo.md, sección 2.",
+  "base": "C:\\trackhive\\docs_simulados",
+  "defaultMaterialType": "DOCUMENTO",
+  "materialTypes": {
+    "Notarías": "PROTOCOLO_NOTARIAL",
+    "Periódicos": "PERIODICO"
+  },
+  "excluded": [],
+  "funds": [
+    {
+      "root": "Aha\\Fondo - Notarías\\Notarías",
+      "collection": "Notarías",
+      "prefix": "NOT",
+      "pattern": "notarias"
+    },
+    {
+      "root": "Aha\\Fondo - Periódicos",
+      "collection": "Periódicos",
+      "prefix": "PER"
+    },
+    {
+      "root": "Aha\\Fondo - Correspondencia",
+      "collection": "Correspondencia",
+      "prefix": "DOC"
+    }
+  ],
+  "patterns": {
+    "notarias": {
+      "levels": [
+        {
+          "ignoredMarks": ["\\s*\\(\\d+\\)$"],
+          "pattern": "^\\d+(?:ra|da|ta|ma|va|na) - Notar[ií]a (?<nombre>.+?) - \\d{4} a \\d{4}$",
+          "title": "Notaría {nombre}"
+        },
+        {
+          "ignoredMarks": ["\\s*\\+(?:\\s*[Pp]tes)?$", "\\s*\\(\\d+\\)$"],
+          "pattern": "^\\d{4} - Esc \\d+-\\d+$"
+        },
+        {
+          "pattern": "^(?<notaria>\\d+)(?:ra|da|ta|ma|va|na)-(?<anio>\\d{4}) - Esc (?<inicio>\\d+)-(?<fin>\\d+) - (?<mes>Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)$"
+        }
+      ],
+      "ranges": [["inicio", "fin"]],
+      "values": {
+        "mes": {
+          "Ene": "enero",
+          "Feb": "febrero",
+          "Mar": "marzo",
+          "Abr": "abril",
+          "May": "mayo",
+          "Jun": "junio",
+          "Jul": "julio",
+          "Ago": "agosto",
+          "Sep": "septiembre",
+          "Oct": "octubre",
+          "Nov": "noviembre",
+          "Dic": "diciembre"
+        }
+      },
+      "code": "{prefix}{notaria}-{anio}-{inicio:4}-{fin:4}",
+      "title": "Notaría {nombre} · {anio} · Escrituras {inicio}–{fin} ({mes})"
+    }
+  }
+}

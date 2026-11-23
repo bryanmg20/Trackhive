@@ -88,6 +88,26 @@ Las reglas de referencia están en [`reglas.py`](../dev/simulador/reglas.py):
 6. **Código duplicado:** si dos hojas dan el mismo código, las dos quedan para revisión (`DUPLICATE_CODE`) con el código de respaldo de su ruta.
 7. **Raíz:** solo cuentan las hojas bajo una raíz de fondo, comparando por partes de la ruta. `Aha\Fondo - Notarías\Esc en PDF` no está bajo `Aha\Fondo - Notarías\Notarías`. Las carpetas de trabajo aparecen en `excluded`.
 
+### Parseo en el backend (HU-136)
+
+`LeafFolderParser` (`backend/src/everything/application/services/`) aplica esas reglas en TypeScript. Recibe los `DocumentRecord` de HU-135 (nunca el JSON de Everything) y devuelve una `ParsedLeaf` por carpeta hoja: ruta, código, título, colección, tipo y si queda para revisión. Necesita todas las carpetas de las raíces a la vez, porque una carpeta es hoja cuando ninguna otra cuelga de ella y un código se repite cuando lo dan dos hojas.
+
+Nada de la convención está en el código: sale de [`backend/config/catalog-convention.json`](../backend/config/catalog-convention.json), que `CatalogConventionMapper` valida al cargarlo (un error lanza `InvalidCatalogConventionError` y no se sincroniza nada):
+
+| Clave | Qué configura |
+|---|---|
+| `base` | Dónde están los fondos en este despliegue (`C:\trackhive\docs_simulados`, `Z:\`, `\\servidor\Multimedia`). Se puede reemplazar al cargarlo sin tocar el resto. |
+| `funds[]` | Raíz (relativa a `base`), colección, prefijo del código y, si se conoce, el patrón. Un fondo sin `pattern` usa siempre el respaldo. |
+| `materialTypes`, `defaultMaterialType` | Tabla colección → tipo de material; cualquier otra colección es `DOCUMENTO`. |
+| `excluded` | Expresiones regulares de nombres de carpeta que no son materiales, sin distinguir mayúsculas. Se quitan con todo lo que tienen dentro antes de calcular las hojas. |
+| `patterns.<nombre>` | Un nivel por carpeta bajo la raíz (`levels`). Cada nivel tiene su patrón con grupos con nombre (se compila como `^(?:…)$`), sus `ignoredMarks` (marcas que se borran antes de comparar: `(n)` en la notaría y `(n)`, `+` y `ptes` en el año, nunca en la hoja) y, si sirve en el respaldo, su `title`. Además: `ranges` (inicio ≤ fin), `values` (Ene → enero) y las plantillas `code` y `title` con `{grupo}` o `{grupo:N}` (N dígitos con ceros). Los números pierden los ceros a la izquierda antes de aplicar N. |
+
+Al cargarlo se rechazan las claves desconocidas (una errata no se ignora), dos fondos con la misma raíz o una dentro de otra, una colección de `materialTypes` que no es de ningún fondo, un prefijo de más de 23 caracteres y una plantilla `code` que no usa ningún grupo de los niveles. Un código parseado solo vale si tiene letras mayúsculas, dígitos y guiones y no pasa de 40.
+
+El código es la clave con la que la sincronización (HU-137) reconoce el material, así que el parseo garantiza que no se repite: si dos hojas acaban con el mismo código (dos hashes cortos iguales, o un código parseado igual a un hash), las dos toman 16 dígitos del hash en vez de 8 y quedan para revisión (`DUPLICATE_CODE`).
+
+Para agregar la regla de otro fondo (por ejemplo, periódicos) se añade un patrón en `patterns` y se pone su nombre en el fondo. Sus pruebas (`leaf-folder-parser.spec.ts`) recorren las 117 hojas del manifiesto con las páginas reales de los fixtures y comparan cada campo.
+
 Algunos códigos coinciden con materiales de la semilla (`NOT1-1931-0001-0109`, `NOT1-1931-0110-0206`, `NOT3-1950-0051-0160`), con su `digital_path` en `C:\trackhive\docs_simulados\…`. `NOT4-1956-0001-0180` no está en el árbol: representa un material cuya carpeta ya no aparece.
 
 ## 3. Everything portable en Windows (desarrollo)
