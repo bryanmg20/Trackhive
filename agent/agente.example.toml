@@ -26,9 +26,9 @@ timeout_seconds = 30
 # página pesa unos 60 kB, por debajo de su límite de 100 kB.
 page_size = 200
 
-# Si Everything todavía no arranca (la tarea corre al encender el PC cuando se
-# saltó su hora), lo espera hasta estos segundos antes de dar la corrida por
-# fallida. 0: no espera.
+# Si Everything todavía no arranca, o responde sin carpetas porque está
+# cargando su índice (la tarea corre al encender el PC cuando se saltó su
+# hora), lo espera hasta estos segundos. 0: no espera.
 startup_wait_seconds = 300
 
 # Raíces de los fondos tal como las informa Everything: las mismas de

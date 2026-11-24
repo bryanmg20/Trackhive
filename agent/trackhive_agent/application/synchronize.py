@@ -12,6 +12,7 @@ from .retrier import Retrier, seconds
 
 # While Everything is starting, it is asked again this often
 PROBE_INTERVAL_SECONDS = 10.0
+EMPTY_INDEX = 'Everything responde, pero aún no tiene carpetas bajo ninguna raíz (puede estar cargando su índice)'
 
 
 class SynchronizeUseCase:
@@ -19,7 +20,8 @@ class SynchronizeUseCase:
     funds, with the three ingest endpoints of HU-137:
 
     1. Waits for Everything if it is still starting (the task runs as soon
-       as the PC is turned on when it missed its time).
+       as the PC is turned on when it missed its time): while it does not
+       answer, or answers with its index still empty.
     2. Starts a run.
     3. For each root, asks Everything for its folders page by page (`offset`
        and `count`) and sends each page as it came, numbered from 1 across
@@ -70,33 +72,46 @@ class SynchronizeUseCase:
         return self._close(run)
 
     def _wait_for_everything(self) -> str | None:
-        """None when Everything answers; otherwise why it cannot be used.
+        """None when Everything is ready; otherwise why it cannot be used.
 
-        Only waits while it does not answer at all (not started yet), up to
-        startup_wait_seconds. A wrong password or a wrong answer will not fix
-        itself, so they are not waited for."""
+        Waits up to startup_wait_seconds while Everything is starting: while
+        it does not answer, and while it answers but has no folder under any
+        root. Just opened, the installed Everything answers at once with an
+        empty index until it loads its database. If the roots are still empty
+        when the time is up the run goes on, and Trackhive ends it with an
+        error because no leaf folder arrived. A wrong password or a wrong
+        answer will not fix itself, so they are not waited for."""
         started = self._clock.monotonic()
         deadline = started + self._settings.startup_wait_seconds
         waited = False
         while True:
             try:
-                self._everything.folders_under(self._settings.roots[0], 0, 1)
-                self._log.info('Everything responde')
-                return None
+                if self._some_root_has_folders():
+                    self._log.info('Everything responde')
+                    return None
+                problem: EverythingError | None = None
             except EverythingUnavailableError as error:
-                remaining = deadline - self._clock.monotonic()
-                if remaining <= 0:
-                    elapsed = round(self._clock.monotonic() - started)
-                    reason = f'{error} (se esperó {seconds(elapsed)} s a que arrancara)' if waited else str(error)
-                    self._log.error(reason)
-                    return reason
-                wait = min(PROBE_INTERVAL_SECONDS, remaining)
-                self._log.warning('%s. Puede estar arrancando: nuevo intento en %s s', error, seconds(wait))
-                self._clock.sleep(wait)
-                waited = True
+                problem = error
             except EverythingError as error:
                 self._log.error(str(error))
                 return str(error)
+            remaining = deadline - self._clock.monotonic()
+            if remaining <= 0:
+                elapsed = round(self._clock.monotonic() - started)
+                after = f' (se esperó {seconds(elapsed)} s a que arrancara)' if waited else ''
+                if problem is None:
+                    self._log.warning('Everything no tiene carpetas bajo ninguna raíz%s: se sincroniza igual', after)
+                    return None
+                self._log.error(f'{problem}{after}')
+                return f'{problem}{after}'
+            wait = min(PROBE_INTERVAL_SECONDS, remaining)
+            why = problem or EMPTY_INDEX
+            self._log.warning('%s. Puede estar arrancando: nuevo intento en %s s', why, seconds(wait))
+            self._clock.sleep(wait)
+            waited = True
+
+    def _some_root_has_folders(self) -> bool:
+        return any(self._everything.folders_under(root, 0, 1).total_results > 0 for root in self._settings.roots)
 
     def _start_attempt(self, attempt: int) -> str:
         try:

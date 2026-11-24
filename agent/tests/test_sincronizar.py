@@ -48,13 +48,15 @@ class FakeEverything:
         self.folders = folders
         self.calls: list[tuple[str, int, int]] = []
         self.failures: dict[int, Exception] = {}
+        # Calls answered with an empty index, as Everything just opened
+        self.empty: set[int] = set()
 
     def folders_under(self, root: str, offset: int, count: int) -> EverythingPage:
         self.calls.append((root, offset, count))
         failure = self.failures.get(len(self.calls))
         if failure is not None:
             raise failure
-        total = self.folders[root]
+        total = 0 if len(self.calls) in self.empty else self.folders[root]
         results = max(0, min(count, total - offset))
         body = json.dumps({'totalResults': total, 'results': [{}] * results, 'root': root, 'offset': offset})
         return EverythingPage(body.encode('utf-8'), total, results)
@@ -177,6 +179,26 @@ class EverythingFailsTest(SyncTestCase):
         report = self.use_case(startup_wait=300).execute()
         self.assertTrue(report.ok)
         self.assertEqual(self.clock.sleeps, [10, 10])
+
+    def test_an_everything_still_loading_its_index_is_waited_for(self) -> None:
+        # Just opened, the installed Everything answers with an empty index:
+        # the three roots come empty in the first check (calls 1 to 3)
+        self.everything.empty = {1, 2, 3}
+        with self.assertLogs(self.logger, 'WARNING') as logs:
+            report = self.use_case(startup_wait=300).execute()
+        self.assertTrue(report.ok)
+        self.assertEqual(self.clock.sleeps, [10])
+        self.assertIn('aún no tiene carpetas bajo ninguna raíz', '\n'.join(logs.output))
+        self.assertEqual(self.trackhive.closes, [CloseRequest('OK', page_count=5)])
+
+    def test_roots_still_empty_after_the_wait_are_sent_anyway(self) -> None:
+        # Trackhive ends that run with an error, because no leaf folder arrives
+        self.everything.empty = set(range(1, 50))
+        with self.assertLogs(self.logger, 'WARNING') as logs:
+            self.use_case(startup_wait=15).execute()
+        self.assertEqual(self.clock.sleeps, [10, 5])
+        self.assertIn('se sincroniza igual', '\n'.join(logs.output))
+        self.assertEqual(self.trackhive.sent, [1, 2, 3])
 
     def test_without_a_wait_it_closes_at_once_and_does_not_say_it_waited(self) -> None:
         self.everything.failures[1] = EverythingUnavailableError('Everything no responde: no respondió en 30 s')

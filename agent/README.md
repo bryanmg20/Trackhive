@@ -8,7 +8,7 @@ Programa de consola que se instala en el PC del CLENA. Consulta el servidor HTTP
 ## Qué hace en cada ejecución
 
 1. Lee `agente.toml` (junto al `.exe`) y se niega a correr si algo está mal o no es seguro: `trackhive.url` con `http://` que no sea `localhost`, un token de menos de 32 caracteres, Everything fuera de este PC, raíces que no son rutas de Windows…
-2. Espera a Everything hasta `startup_wait_seconds` si todavía no responde (la tarea corre al encender el PC).
+2. Espera a Everything hasta `startup_wait_seconds` si todavía no responde o si responde con el índice vacío: recién abierto, Everything contesta antes de cargar su base de datos (la tarea corre al encender el PC).
 3. Inicia una corrida en Trackhive.
 4. Por cada raíz pide a Everything **solo carpetas** (`folder:` + la raíz con la barra final) por páginas, con `offset` y `count=200`, y envía cada página sin transformarla. Las páginas se numeran desde 1 en toda la corrida, aunque cambie de raíz.
 5. Cierra la corrida **completa** (`{"result":"OK","pageCount":N}`) solo si llegaron todas las páginas de todas las raíces. Si Everything no responde o tarda más que `timeout_seconds`, la cierra **con error** y lo deja en el log: Trackhive no marca nada como no encontrado.
