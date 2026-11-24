@@ -78,6 +78,10 @@ model MaterialModel {
   digitalPath        String?                    @map("digital_path") @db.VarChar(1024)
   // Last time a sync saw the file in Everything (HU-134)
   lastSeenAt         DateTime?                  @map("last_seen_at") @db.Timestamptz
+  // Allowed values (CHECK in the migration): NO_PATTERN, DUPLICATE_CODE. The
+  // sync took the code from the path of the folder, so the staff should
+  // review it (HU-136, HU-137). NULL = nothing to review
+  reviewReason       String?                    @map("review_reason") @db.VarChar(20)
   // Allowed values (CHECK in the migration): DISPONIBLE, EN_USO, EN_RESTAURACION, NO_CONSULTABLE
   status             String                     @db.VarChar(20)
   // Last status change (HU-08). Null while the status was never changed
@@ -346,19 +350,41 @@ model ReadingRoomConfigModel {
 // One run of the Everything sync (HU-134, HU-137). Only one run can be
 // EN_CURSO at a time (partial unique index in the migration)
 model SyncRunModel {
-  id           String    @id @db.Uuid
-  startedAt    DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  id             String             @id @db.Uuid
+  startedAt      DateTime           @default(now()) @map("started_at") @db.Timestamptz
+  // Start of the run or last page from the agent. A run EN_CURSO without
+  // activity for EVERYTHING_RUN_TIMEOUT_MINUTES has expired (HU-137)
+  lastActivityAt DateTime           @default(now()) @map("last_activity_at") @db.Timestamptz
   // NULL while the run is EN_CURSO (CHECK in the migration)
-  finishedAt   DateTime? @map("finished_at") @db.Timestamptz
+  finishedAt     DateTime?          @map("finished_at") @db.Timestamptz
   // Allowed values (CHECK in the migration): EN_CURSO, OK, ERROR
-  status       String    @default("EN_CURSO") @db.VarChar(10)
+  status         String             @default("EN_CURSO") @db.VarChar(10)
   // Files Everything returned in the run
-  filesCount   Int       @default(0) @map("files_count")
+  filesCount     Int                @default(0) @map("files_count")
   // Only when status = ERROR (CHECK in the migration)
-  errorMessage String?   @map("error_message") @db.VarChar(1000)
+  errorMessage   String?            @map("error_message") @db.VarChar(1000)
+  pages          SyncRunPageModel[]
 
   @@index([startedAt(sort: Desc)])
   @@map("sync_runs")
+}
+
+// A page of folders the agent sent in a run (HU-137). It waits here until the
+// run closes, because the leaf folders and the repeated codes are only known
+// with every page (HU-136); closing the run deletes its pages
+model SyncRunPageModel {
+  syncRunId    String       @map("sync_run_id") @db.Uuid
+  // 1, 2, 3… as the agent numbers them. Sending a page again replaces it
+  pageNumber   Int          @map("page_number")
+  // Results Everything returned in the page, folders and files
+  resultsCount Int          @map("results_count")
+  // The folders of the page, already mapped (HU-135): [{ fullPath, modifiedAt }]
+  folders      Json
+  receivedAt   DateTime     @default(now()) @map("received_at") @db.Timestamptz
+  syncRun      SyncRunModel @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
+
+  @@id([syncRunId, pageNumber])
+  @@map("sync_run_pages")
 }
 
 // One physical handover and return of a material during an appointment (HU-72).

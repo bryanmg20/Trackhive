@@ -1,8 +1,10 @@
+import { InvalidMaterialReviewReasonError } from '../errors/invalid-material-review-reason.error';
 import { InvalidMaterialSourceError } from '../errors/invalid-material-source.error';
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
 import { MaterialInUseError } from '../errors/material-in-use.error';
 import { MaterialStatusNotManualError } from '../errors/material-status-not-manual.error';
+import type { MaterialReviewReason } from '../enums/material-review-reason';
 import type { MaterialSource } from '../enums/material-source';
 import type { MaterialStatus } from '../enums/material-status';
 import type { MaterialType } from '../enums/material-type';
@@ -146,6 +148,37 @@ describe('Material', () => {
     expect(() => new Material(props)).toThrow(InvalidMaterialSourceError);
     expect(new InvalidMaterialSourceError().code).toBe(
       'INVALID_MATERIAL_SOURCE',
+    );
+  });
+
+  it('has nothing to review when the sync gave its code (HU-137)', () => {
+    const material = buildMaterial();
+
+    expect(material.reviewReason).toBeNull();
+    expect(material.needsReview).toBe(false);
+  });
+
+  it.each(['NO_PATTERN', 'DUPLICATE_CODE'] as const)(
+    'keeps the review mark %s of the sync, also when the status changes',
+    (reviewReason) => {
+      const material = new Material({ ...buildMaterial(), reviewReason });
+
+      const changed = material.changeStatus('NO_CONSULTABLE', 'user-1', null);
+
+      expect(material.needsReview).toBe(true);
+      expect(changed.reviewReason).toBe(reviewReason);
+    },
+  );
+
+  it('rejects a review reason that does not exist', () => {
+    const props = {
+      ...buildMaterial(),
+      reviewReason: 'TITULO_RARO' as MaterialReviewReason,
+    };
+
+    expect(() => new Material(props)).toThrow(InvalidMaterialReviewReasonError);
+    expect(new InvalidMaterialReviewReasonError().code).toBe(
+      'INVALID_MATERIAL_REVIEW_REASON',
     );
   });
 });
