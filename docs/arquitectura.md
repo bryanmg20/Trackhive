@@ -14,7 +14,7 @@ Este documento describe su arquitectura con el modelo C4, que muestra el sistema
 
 El nivel 4 (código) no se dibuja: lo cubren la estructura de carpetas (sección 5) y el fragmento del módulo NestJS (sección 6).
 
-Las figuras son imágenes exportadas a `docs/img/`. Cada una incluye su leyenda, y cada relación lleva una etiqueta con lo que hace y, entre corchetes, el protocolo.
+Las figuras son imágenes exportadas a `docs/img/`. Cada una incluye su leyenda, y cada relación lleva una etiqueta con lo que hace y, entre corchetes, el protocolo. Las figuras 1 y 2 se generan con `node docs/tools/generar-c4.mjs` (necesita el Chromium de Playwright del frontend): para cambiarlas se edita ese script y se vuelve a ejecutar.
 
 ## 2. Nivel 1: Contexto
 
@@ -31,6 +31,7 @@ Leyenda: azul oscuro, persona; azul, el sistema Trackhive; gris, sistema externo
 | Administrador | Persona (rol `ADMIN`) | Tiene los permisos del personal y además puede enviar el correo de prueba que verifica la configuración SMTP. |
 | Trackhive | Sistema de software | El sistema que describe este documento. |
 | Servicio de correo | Sistema externo | Servidor SMTP que entrega al solicitante los correos de cambio de estado. En desarrollo es Mailpit, que guarda los correos sin enviarlos. |
+| *Everything* | Sistema externo | Programa del PC del CLENA que indexa las carpetas de las copias digitales. El agente de Trackhive (HU-166), instalado en ese mismo PC, le pregunta qué carpetas hay y se las envía a Trackhive (D-17). |
 
 ## 3. Nivel 2: Contenedores
 
@@ -46,6 +47,7 @@ Leyenda: azul oscuro, persona; azul, contenedor de Trackhive; gris, sistema exte
 | API REST | NestJS 11 sobre Node.js 22 | Expone `/api/v1` y la documentación Swagger en `/docs`. Aplica las reglas de negocio, la autenticación con JWT y la autorización por roles, y programa el envío de correos. |
 | Base de datos | PostgreSQL 15 | Guarda usuarios, sesiones, materiales, solicitantes, solicitudes, historial de estados, citas y la tabla de salida de notificaciones. |
 | Servicio de correo | Servidor SMTP (externo). Mailpit 1.32 en desarrollo. | Entrega los correos de cambio de estado. |
+| Agente de *Everything* | Python 3.13 empaquetado con PyInstaller (`trackhive-agente.exe`). Corre en el PC del CLENA, fuera de los servidores de Trackhive. | Una vez al día consulta *Everything* en ese PC y envía las carpetas de los fondos a los endpoints de ingesta (HU-166, D-17). |
 
 | Conexión | Protocolo | Detalle |
 |---|---|---|
@@ -53,6 +55,8 @@ Leyenda: azul oscuro, persona; azul, contenedor de Trackhive; gris, sistema exte
 | Aplicación web → API REST | HTTPS/JSON al desplegar; hoy HTTP/JSON | Peticiones a `/api/v1` con `Authorization: Bearer <accessToken>`. Nginx reenvía `/api/` y `/docs` a la API. |
 | API REST → Base de datos | SQL sobre TCP (puerto 5432) | Consultas de Prisma Client. Las migraciones se aplican con `prisma migrate deploy`. |
 | API REST → Servicio de correo | SMTP | Nodemailer, configurado con las variables `SMTP_*`. |
+| Agente de *Everything* → API REST | HTTPS/JSON, saliente desde el CLENA | `/api/v1/everything/sync-runs` con `Authorization: Bearer <EVERYTHING_AGENT_TOKEN>`. Trackhive nunca se conecta al PC del CLENA. |
+| Agente de *Everything* → *Everything* | HTTP en `127.0.0.1` | Búsquedas de solo carpetas con usuario y contraseña, en el mismo PC. Nunca por la red. |
 
 Trackhive no almacena archivos. Solo gestiona las solicitudes: las copias digitales del material las entrega el personal del CLENA fuera del sistema, por correo.
 
@@ -244,14 +248,14 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 | D-14 | Errores de dominio traducidos por un filtro global | Implementada |
 | D-15 | API REST versionada con OpenAPI; paginación por página y límite | Implementada |
 | D-16 | Búsqueda de material con `pg_trgm`, sin motor de búsqueda externo | Implementada |
-| D-17 | Sin integración automática con *Everything* ni lectura de buzón IMAP | Vigente (integración con *Everything* posible como mejora futura) |
+| D-17 | Sin integración automática con *Everything* ni lectura de buzón IMAP | Vigente para el buzón IMAP. La integración con *Everything* se hizo en el Sprint 2, con un agente en el PC del CLENA (HU-137, HU-166) |
 | D-18 | Fechas en UTC (`timestamptz`) y presentación en `America/Bogota` | Implementada |
 | D-19 | Cumplimiento de la Ley 1581: consentimiento versionado y anonimización | Parcial (faltan eliminar la cuenta, HU-33, y la aceptación del solicitante que registra el personal). **Validar con el CLENA** |
 | D-20 | Frontend con Vite, React Router y React Hook Form con Zod; sesión con access y refresh token | Implementada |
 | D-21 | Pruebas: fakes en memoria para unitarias y PostgreSQL real para e2e | Implementada (HU-41) |
 | D-22 | Docker, docker-compose y GitHub Actions | Implementada |
 | D-23 | Configuración por entorno validada al arrancar y logs estructurados | Parcial (faltan los logs en JSON) |
-| D-24 | Plataforma de despliegue | **Pendiente** |
+| D-24 | Plataforma de despliegue | Parcial (servidores de la universidad; falta el despliegue con HTTPS, HU-42) |
 | D-25 | Estructura de Clean Architecture del curso, verificada en el CI | Implementada |
 | D-26 | El catálogo solo crece por la sincronización con *Everything*; el material no digitalizado vive como referencia escrita | Implementada (HU-137) |
 
@@ -390,6 +394,9 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Justificación:** la integración con *Everything* es técnicamente posible: el programa incluye un servidor HTTP opcional que responde las búsquedas en JSON (`?search=...&json=1`). No se hace ahora por tres razones. El alcance acordado con el CLENA es que Trackhive solo gestiona las solicitudes, y el enunciado no la exige. La API tendría que alcanzar por red el equipo Windows donde corre *Everything*, y eso depende de la plataforma de despliegue (D-24). Y ese servidor expone los nombres y rutas de los archivos del CLENA, así que habría que activarlo y protegerlo con usuario y contraseña. Leer el buzón añade riesgo (credenciales institucionales, correos con formato libre, datos personales no controlados) para un beneficio que el formulario público ya cubre.
 - **Consecuencias:** la integración con *Everything* se documenta como mejora futura: Trackhive podría consultarlo para saber qué material tiene copia digital. Antes hay que validarlo con el CLENA. El formulario web es la vía que reduce la lectura manual de correos que describió el personal.
 - **Sprint 2 (épica E11):** la integración con *Everything* se retoma para registrar las copias digitales. El entorno para desarrollarla sin el equipo del CLENA (documentos simulados, Everything portable, fixtures reales y mock) está en [everything-desarrollo.md](everything-desarrollo.md) (HU-133).
+- **Conexión con el CLENA (decisión del 2026-11-20, HU-166):** Trackhive se aloja en servidores de la universidad (D-24) y el CLENA no pertenece a ella, así que solo se comunican por internet. *Everything* solo responde peticiones: no puede enviar resultados a una URL. El PC del CLENA está detrás de su router, con IP privada y sin IP pública, así que el servidor no puede iniciar la conexión hacia él. Abrir un puerto se descartó: el servidor HTTP de *Everything* no cifra y no es un servidor endurecido. Por eso un **agente** instalado en ese PC invierte la conexión: consulta *Everything* en `localhost` y solo hace conexiones salientes por HTTPS hacia Trackhive.
+  - **Alternativa descartada:** un túnel inverso (Cloudflare Tunnel con Access), con el que el backend consultaría *Everything* directamente. Depende de un servicio y un dominio externos, y si el PC está apagado a la hora de la consulta, ese día no se sincroniza.
+  - **Implementación (HU-166):** `agent/`, en Python, con las mismas capas que el backend (dominio, aplicación, infraestructura y presentación; una prueba verifica la regla de dependencia, como D-25). PyInstaller lo empaqueta como un único `trackhive-agente.exe`, que el CI construye y prueba en `windows-latest`: el PC no necesita nada instalado. Lee `agente.toml`: la URL, el usuario y la contraseña de *Everything* en `localhost`, las raíces, la URL de Trackhive y el token. En el repositorio solo va el ejemplo. Se niega a arrancar con una URL `http://` que no sea `localhost`, verifica el certificado con el almacén de Windows (`truststore`) y no sigue redirecciones, para no entregar el token a otro servidor. Pide solo carpetas bajo cada raíz (`folder:` + ruta) en páginas de 200, con `offset` y `count`, numeradas desde 1 en toda la corrida, y envía cada página sin transformarla. Cierra la corrida completa solo si llegaron todas. Si *Everything* no responde o pasa el tiempo de espera, la cierra con error y lo deja en su log, así que no se marca nada como no encontrado. Las peticiones a Trackhive se reintentan con espera creciente; si no lo logra, la siguiente ejecución vuelve a intentarlo. Corre una vez al día con el Programador de tareas de Windows, con «ejecutar la tarea lo antes posible si se omitió un inicio programado»: si el PC estaba apagado, sincroniza al encenderlo. Instalación y operación en [manual-operacion.md](manual-operacion.md), sección 10.
 - **Implementación (HU-137):** el backend no consulta Everything. El agente del CLENA (HU-166) llama a tres endpoints de ingesta (`/api/v1/everything/sync-runs`): iniciar corrida, enviar página y cerrar corrida. Están protegidos con `EVERYTHING_AGENT_TOKEN` por `EverythingAgentGuard`, un guard propio separado del inicio de sesión que compara en tiempo constante; sin el token responden 401, y si el token no está configurado, 503. El controlador es delgado: cada endpoint llama a una operación de `EverythingSynchronizer` (`application/services/`). Una página se valida (HU-135; 413 por encima de 500 resultados o 100 kB) y se guarda en su transacción en `sync_run_pages`. El parseo (HU-136) necesita todas las carpetas a la vez, porque Everything ordena por nombre y mezcla niveles entre páginas. Por eso, al cerrar la corrida completa (con las páginas 1..N), se parsea todo y se hace el *upsert* página por página, cada una en su transacción, por código de catalogación. Después se marcan como «copia digital no encontrada» (`digital_path = NULL`) los materiales de Everything que no aparecieron, sin borrar ninguno. Una corrida con error, cortada o vencida (`EVERYTHING_RUN_TIMEOUT_MINUTES`) no marca nada. El índice único parcial de `sync_runs` impide dos corridas a la vez (409). Detalle en [everything-desarrollo.md](everything-desarrollo.md), sección 7.
 
 ### D-18. Fechas en UTC y presentación en `America/Bogota`
@@ -441,12 +448,17 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Consecuencias:** hay que evitar registrar datos personales en los logs.
 - **Estado actual:** existen `.env.example` y `GET /api/v1/health`, y no hay secretos en el código. Los logs salen como texto con el `Logger` de NestJS (sección 7.3); pasarlos a JSON está pendiente y el curso lo exige para la entrega final. Validar las variables al arrancar es una meta del equipo; hoy `docker-compose` ya se niega a levantar si falta una variable.
 
-### D-24. Plataforma de despliegue *(pendiente)*
+### D-24. Plataforma de despliegue *(parcial)*
 
-- **Decisión:** pendiente de definir.
-- **Opciones:** un servicio gestionado con contenedores (Render, Railway, Fly.io) o un VPS con docker-compose.
+- **Decisión (2026-11-20):** Trackhive se aloja en servidores de la universidad. El servidor, el dominio, el certificado TLS y el despliegue se completan en HU-42.
+- **Opciones evaluadas:** un servicio gestionado con contenedores (Render, Railway, Fly.io) o un VPS con docker-compose.
 - **Criterios:** costo (idealmente gratuito o muy bajo para la demo), soporte de PostgreSQL 15+, URL pública estable y facilidad para que el CLENA lo mantenga.
 - **Consecuencias:** debe resolverse antes del Sprint 3. Cualquier opción debe poder reproducirse a partir del `docker-compose` del repositorio.
+- **Requisitos del agente de *Everything* (HU-166):** el CLENA no pertenece a la universidad y su PC no tiene IP pública, así que la sincronización depende de que el agente llegue a Trackhive desde internet (D-17):
+  - Los endpoints de ingesta (`/api/v1/everything/sync-runs`, a través del nginx del frontend) se publican por HTTPS con un certificado válido. El agente se niega a usar `http://` y verifica el certificado.
+  - El cierre de una corrida actualiza todo el catálogo, así que el tiempo de espera del proxy (`proxy_read_timeout` de nginx, 60 s por defecto) debe alcanzar para ese endpoint.
+  - El servidor nunca se conecta al PC del CLENA: allí no se abre ningún puerto.
+  - Al desplegar, `base` de `backend/config/catalog-convention.json` deja de ser `C:\trackhive\docs_simulados` y pasa a ser la unidad o la ruta de red que informa *Everything* en el CLENA (`Z:\` o `\\<servidor>\Multimedia`). Las raíces de `agente.toml` usan esa misma ruta.
 
 ### D-25. Estructura de Clean Architecture del curso, verificada en el CI
 

@@ -219,7 +219,7 @@ Uno por acción del negocio. Cada caso de uso es una clase con un método `execu
 | `RegistrarEntregaMaterial` | Anotar que el material salió a la sala en una cita del día y pasarlo a `EN_USO` | Personal | HU-72 | `DeliverMaterialUseCase` |
 | `RegistrarDevolucionMaterial` | Anotar que el material volvió de sala y devolverlo a `DISPONIBLE` | Personal | HU-72 | `ReturnMaterialUseCase` |
 | `ConsultarHistorialMaterial` | Ver quién tuvo el material por última vez y el historial de entregas/devoluciones | Personal | HU-72 | `GetMaterialHistoryUseCase` |
-| `SincronizarConEverything` | Recibir del agente las carpetas que indexa *Everything* y actualizar el catálogo: iniciar la corrida, procesar cada página y cerrarla | Agente de *Everything* | HU-137 | `EverythingSynchronizer` (servicio de `application/services/` con las tres operaciones) |
+| `SincronizarConEverything` | Recibir del agente las carpetas que indexa *Everything* y actualizar el catálogo: iniciar la corrida, procesar cada página y cerrarla | Agente de *Everything* del PC del CLENA (HU-166), una vez al día | HU-137 | `EverythingSynchronizer` (servicio de `application/services/` con las tres operaciones) |
 
 Hay dos casos de uso técnicos que no son acciones del negocio: `GetHealthUseCase` (estado del servicio, HU-38) y `PurgeExpiredTokensUseCase` (limpieza diaria de sesiones vencidas, HU-3.1).
 

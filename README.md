@@ -222,8 +222,8 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `SMTP_FROM` | Remitente de los correos | `"Trackhive <no-reply@example.com>"` |
 | `EVERYTHING_AGENT_TOKEN` | Token con el que el agente de Everything (HU-166) llama a los endpoints de ingesta (HU-137). Vacío: la sincronización está desactivada y esos endpoints responden 503. Mínimo 32 caracteres (`openssl rand -hex 32`); nunca se sube al repositorio ([guía](docs/everything-desarrollo.md#7-sincronización-con-el-backend-hu-137)) | *(vacío)* |
 | `EVERYTHING_RUN_TIMEOUT_MINUTES` | Minutos sin recibir páginas tras los que una corrida de sincronización vence con error | `30` |
-| `EVERYTHING_USER` | Usuario del mock de Everything (y del servidor HTTP de Everything que consulta el agente). El backend no lo usa | `trackhive` |
-| `EVERYTHING_PASSWORD` | Contraseña del mock de Everything. El backend no la usa | `trackhive-dev` |
+| `EVERYTHING_USER` | Usuario del mock de Everything. El backend no lo usa; el agente (HU-166) lleva el de Everything en su `agente.toml` | `trackhive` |
+| `EVERYTHING_PASSWORD` | Contraseña del mock de Everything. El backend no la usa; el agente lleva la suya en `agente.toml` | `trackhive-dev` |
 | `EVERYTHING_MOCK_PORT` | Puerto local del mock de Everything | `8081` |
 | `DATABASE_URL` | Conexión de Prisma cuando el backend corre fuera de Docker | `postgresql://...@localhost:5432/trackhive?schema=public` |
 
@@ -299,6 +299,14 @@ python -m unittest discover -s dev/tests -t dev/tests
 
 El CI las corre en Linux y en Windows: los dos deben generar el mismo árbol, y el mock debe responder igual que el Everything real ([guía](docs/everything-desarrollo.md)).
 
+```bash
+# Agente de sincronización con Everything (desde la raíz; Python 3.11+)
+pip install -r dev/requirements.txt -r agent/requirements.txt
+python -m unittest discover -s agent/tests -t agent
+```
+
+El CI también las corre en Linux y en Windows, contra el mock de Everything. En Windows construye `trackhive-agente.exe` con PyInstaller, lo prueba y lo publica como artefacto `trackhive-agente` ([agent/README.md](agent/README.md)).
+
 ## Estructura del repositorio
 
 ```text
@@ -318,6 +326,10 @@ Trackhive/
 │   ├── src/styles/          # tokens, breakpoints y estilos globales
 │   ├── e2e/                 # pruebas Playwright
 │   └── nginx.conf           # servidor estático y proxy hacia la API
+├── agent/                   # agente de sincronización con Everything del PC del CLENA (HU-166)
+│   ├── trackhive_agent/     # dominio, aplicación, infraestructura y presentación
+│   ├── agente.example.toml  # configuración de ejemplo (la real, agente.toml, no se sube)
+│   └── instalar-tarea.ps1   # tarea diaria del Programador de tareas de Windows
 ├── dev/                     # entorno de Everything sin el CLENA (HU-133)
 │   ├── simulador/           # convención y generador de docs_simulados y del manifiesto
 │   ├── everything-mock/     # mock del servidor HTTP de Everything
@@ -341,7 +353,7 @@ referencia con revisión y validación de G6 pendientes.
 | [`docs/arquitectura.md`](docs/arquitectura.md) / [`docs/arquitectura.pdf`](docs/arquitectura.pdf) | Arquitectura C4, estructura del código y decisiones técnicas. |
 | [`docs/modelo-dominio.md`](docs/modelo-dominio.md) / [`docs/modelo-dominio.pdf`](docs/modelo-dominio.pdf) | Diagrama de clases, estados de la solicitud, reglas de negocio, glosario y casos de uso. |
 | [`docs/modelo-datos.md`](docs/modelo-datos.md) / [`docs/modelo-datos.pdf`](docs/modelo-datos.pdf) | Diagrama entidad-relación, tablas, índices, migraciones y datos personales. |
-| [`docs/manual-operacion.md`](docs/manual-operacion.md) | Operación, variables de entorno, correos, respaldos y diagnóstico. |
+| [`docs/manual-operacion.md`](docs/manual-operacion.md) | Operación, variables de entorno, correos, respaldos, diagnóstico e instalación del agente de Everything en el PC del CLENA (HU-166). |
 | [`docs/everything-desarrollo.md`](docs/everything-desarrollo.md) | Entorno de Everything con documentos simulados: estructura del CLENA, Everything portable e instalado, fixtures, mock y sincronización con el backend (HU-137). |
 | [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía del personal del CLENA (en elaboración). |
 | [`docs/sprint-planning.md`](docs/sprint-planning.md), [`docs/daily-scrum.md`](docs/daily-scrum.md), [`docs/sprint-review.md`](docs/sprint-review.md), [`docs/sprint-retrospective.md`](docs/sprint-retrospective.md) | Ceremonias y evidencias Scrum. |
