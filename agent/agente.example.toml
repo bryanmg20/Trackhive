@@ -33,7 +33,8 @@ startup_wait_seconds = 300
 
 # Raíces de los fondos tal como las informa Everything: las mismas de
 # base + root en backend/config/catalog-convention.json. Una raíz que falte
-# aquí deja sus materiales como «copia digital no encontrada».
+# aquí deja sus materiales como «copia digital no encontrada», y una raíz sin
+# carpetas hace fallar la corrida: un fondo que aún no tiene carpetas no va.
 # En el CLENA serán, por ejemplo, 'Z:\Aha\Fondo - Notarías\Notarías' o, si
 # Everything indexa la ruta de red, '\\servidor\Multimedia\Aha\Fondo - Notarías\Notarías'.
 roots = [
