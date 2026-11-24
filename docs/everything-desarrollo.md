@@ -11,6 +11,7 @@ Guía de HU-133 (#133, épica E11). Sirve para desarrollar y probar la integraci
 | Mock | `dev/everything-mock/` | Responde igual que Everything, sin Windows |
 | Scripts | `dev/scripts/` | Capturar los fixtures y comparar cualquier servidor con ellos |
 | Pruebas | `dev/tests/` | Generador, manifiesto y mock frente a los fixtures; corren en el CI en Linux y Windows |
+| Agente | `agent/` | Programa del PC del CLENA que consulta Everything y envía las páginas al backend (HU-166, sección 7) |
 
 Todo usa Python 3.10 o superior y una sola dependencia, PyYAML:
 
@@ -228,7 +229,7 @@ python dev/scripts/comparar_everything.py --url http://127.0.0.1:8081 --bytes
 
 ## 7. Sincronización con el backend (HU-137)
 
-El backend **no tiene cliente HTTP hacia Everything** y ya no usa `EVERYTHING_URL`, `EVERYTHING_USER` ni `EVERYTHING_PASSWORD`: esas variables pasaron al agente (HU-166). Everything solo responde peticiones y el PC del CLENA no se alcanza desde los servidores de la universidad, así que el agente, instalado en ese PC, consulta Everything en `localhost` y envía al backend cada página **sin transformarla** (por HTTPS en producción, HU-42). El navegador nunca llama a Everything.
+El backend **no tiene cliente HTTP hacia Everything** y ya no usa `EVERYTHING_URL`, `EVERYTHING_USER` ni `EVERYTHING_PASSWORD`: esos datos están en la configuración del agente (`agente.toml`, claves `everything.url`, `user` y `password`; HU-166). Everything solo responde peticiones y el PC del CLENA no se alcanza desde los servidores de la universidad, así que el agente, instalado en ese PC, consulta Everything en `localhost` y envía al backend cada página **sin transformarla** (por HTTPS en producción, HU-42). El navegador nunca llama a Everything. El código del agente está en [`agent/`](../agent/README.md), y su instalación en el CLENA en el [manual de operación](manual-operacion.md), sección 10.
 
 ### Endpoints de ingesta
 
@@ -274,14 +275,26 @@ Una corrida cerrada con `result: "ERROR"`, cortada (el agente dejó de enviar p�
 
 La convención de carpetas (raíces, patrones, tipos y exclusiones) se lee de `backend/config/catalog-convention.json` al arrancar. Un error en ese archivo detiene el arranque (sección 2).
 
-### Probar sin el agente
+### Probar con el agente
 
-Mientras no exista el agente, su trabajo se puede hacer con `curl` contra el backend y el mock en Docker. Por defecto el token está vacío y la sincronización desactivada, así que primero se arranca el backend con uno:
+El agente (HU-166) hace la corrida completa contra el backend y el mock en Docker. Por defecto el token está vacío y la sincronización desactivada, así que primero se arranca el backend con uno:
 
 ```bash
-export EVERYTHING_AGENT_TOKEN=$(openssl rand -hex 32)   # o ponlo en el .env
+# En el .env: EVERYTHING_AGENT_TOKEN=<openssl rand -hex 32>
 docker compose --profile everything up -d --build backend everything-mock
 
+pip install -r agent/requirements.txt
+cp agent/agente.example.toml agent/agente.toml   # agente.toml no se sube (.gitignore)
+# En agent/agente.toml: [trackhive] url = 'http://127.0.0.1:3000' y token = el EVERYTHING_AGENT_TOKEN del .env
+python agent/agente.py
+```
+
+Escribe cada paso en la consola y en `agent/logs/agente.log`, y termina con `Corrida … completa con 3 páginas: 117 carpetas hoja: …` y el código de salida 0. `http://` solo se acepta contra este mismo PC (`localhost`, `127.0.0.1`); en el CLENA la URL es `https://`. En Windows sirve igual, también el `.exe`, contra el Everything portable de la sección 3, que escucha en `127.0.0.1:8081` (con el mock detenido) y el backend de Docker. Ahí conviene `http://127.0.0.1:3000`: con `localhost`, Windows prueba primero `::1` y cada petición tarda unos 2 s más.
+
+Para probar los endpoints sin el agente, su trabajo se puede hacer con `curl`:
+
+```bash
+set -a; . ./.env; set +a   # EVERYTHING_AGENT_TOKEN
 API=http://localhost:3000/api/v1/everything/sync-runs
 AUTH="Authorization: Bearer $EVERYTHING_AGENT_TOKEN"
 RUN=$(curl -s -X POST -H "$AUTH" "$API" | python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])')
@@ -327,6 +340,15 @@ cd backend && pnpm exec jest src/everything
 cd backend && pnpm exec jest src/everything
 cd backend && pnpm test:e2e -- everything-sync   # borra y recrea la base trackhive_e2e
 ```
+
+### Agente (HU-166)
+
+```bash
+pip install -r dev/requirements.txt -r agent/requirements.txt
+python -m unittest discover -s agent/tests -t agent -v
+```
+
+Prueban las reglas de la corrida (numeración, nunca completa tras un fallo), la configuración (`http://` solo contra `localhost`, token de 32 caracteres o más, raíces iguales a las de `backend/config/catalog-convention.json`), el caso de uso con fakes (reintentos con espera creciente, Everything caído o lento) y el agente como proceso contra el **mock de esta guía** y un Trackhive falso, también por HTTPS con un certificado de prueba. La consulta del agente es la misma de los fixtures (`carpetas_notarias_p1`), y la página que envía es, byte a byte, la que responde Everything. El job `agente` del CI las corre en Ubuntu y Windows; en Windows además construye `trackhive-agente.exe`, lo prueba igual y revisa la tarea programada ([agent/README.md](../agent/README.md)).
 
 ### Árbol, mock y fixtures
 

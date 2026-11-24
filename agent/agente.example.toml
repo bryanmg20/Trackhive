@@ -1,0 +1,68 @@
+# Configuración del agente de sincronización con Everything (HU-166).
+#
+# Copia este archivo como agente.toml en la carpeta de trackhive-agente.exe y
+# completa los valores. agente.toml lleva el token del agente y la contraseña
+# de Everything: no lo subas al repositorio ni lo compartas. En el PC del
+# CLENA, solo el usuario de la tarea programada debe poder leerlo.
+#
+# Escribe las rutas y las contraseñas entre comillas simples ('...'): así la
+# barra invertida (\) de Windows se lee tal cual.
+#
+# Guía de instalación y operación: docs/manual-operacion.md, sección 10.
+
+[everything]
+# Servidor HTTP de Everything en este mismo PC (Herramientas > Opciones >
+# Servidor HTTP). Solo se acepta localhost o 127.0.0.1: ese servidor no cifra
+# nada, así que nunca se consulta por la red.
+url = 'http://127.0.0.1:8081'
+user = 'trackhive'
+password = 'trackhive-dev'
+
+# Segundos que espera cada respuesta de Everything. Si no responde a tiempo,
+# la corrida se cierra con error y Trackhive no marca nada como no encontrado.
+timeout_seconds = 30
+
+# Carpetas por página (count). Trackhive acepta hasta 500; con 200 cada
+# página pesa unos 60 kB, por debajo de su límite de 100 kB.
+page_size = 200
+
+# Si Everything todavía no arranca, o responde sin carpetas porque está
+# cargando su índice (la tarea corre al encender el PC cuando se saltó su
+# hora), lo espera hasta estos segundos. 0: no espera.
+startup_wait_seconds = 300
+
+# Raíces de los fondos tal como las informa Everything: las mismas de
+# base + root en backend/config/catalog-convention.json. Una raíz que falte
+# aquí deja sus materiales como «copia digital no encontrada», y una raíz sin
+# carpetas hace fallar la corrida: un fondo que aún no tiene carpetas no va.
+# En el CLENA serán, por ejemplo, 'Z:\Aha\Fondo - Notarías\Notarías' o, si
+# Everything indexa la ruta de red, '\\servidor\Multimedia\Aha\Fondo - Notarías\Notarías'.
+roots = [
+  'C:\trackhive\docs_simulados\Aha\Fondo - Notarías\Notarías',
+  'C:\trackhive\docs_simulados\Aha\Fondo - Periódicos',
+  'C:\trackhive\docs_simulados\Aha\Fondo - Correspondencia',
+]
+
+[trackhive]
+# Dirección de Trackhive, con https://: el agente verifica su certificado.
+# Solo en desarrollo se acepta http:// contra este mismo PC
+# (http://127.0.0.1:3000 con docker compose).
+url = 'https://trackhive.example.org'
+
+# El mismo valor de EVERYTHING_AGENT_TOKEN en el servidor de Trackhive, de al
+# menos 32 caracteres (openssl rand -hex 32). Vacío: el agente no arranca.
+token = ''
+
+# Segundos que espera la respuesta al iniciar la corrida y a cada página.
+timeout_seconds = 60
+# Segundos que espera el cierre: ahí Trackhive actualiza todo el catálogo.
+close_timeout_seconds = 600
+
+# Si Trackhive no responde: intentos de cada petición (el primero incluido) y
+# espera antes del segundo, que se duplica en cada intento (5, 10, 20 y 40 s).
+attempts = 5
+retry_delay_seconds = 5
+
+# Solo si el certificado de Trackhive lo emite una CA propia, no pública: su
+# certificado raíz en PEM. Vacío: se confía en lo mismo que Windows.
+ca_file = ''
