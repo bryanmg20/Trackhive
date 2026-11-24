@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import unittest
 
-from trackhive_agent.domain.agent_run import MAX_ERROR_MESSAGE_LENGTH, NO_PAGES, AgentRun, fit_error_message
+from trackhive_agent.domain.agent_run import (
+    MAX_ERROR_MESSAGE_LENGTH,
+    NO_PAGES,
+    AgentRun,
+    fit_error_message,
+    utf16_length,
+)
 from trackhive_agent.domain.connection_policy import is_loopback, local_everything_url, secure_trackhive_url
 from trackhive_agent.domain.errors import EverythingError, InvalidConfigError
 from trackhive_agent.domain.everything_page import EverythingPage
@@ -51,6 +57,14 @@ class AgentRunTest(unittest.TestCase):
         self.assertTrue(long.endswith('…'))
         self.assertEqual(fit_error_message('  corto  '), 'corto')
         self.assertTrue(fit_error_message('   '))
+
+    def test_the_limit_counts_utf16_units_like_the_backend(self) -> None:
+        # An emoji is one character in Python and two UTF-16 units in JavaScript
+        fitted = fit_error_message('😀' * 600)
+        self.assertLessEqual(utf16_length(fitted), MAX_ERROR_MESSAGE_LENGTH)
+        self.assertEqual(set(fitted[:-1]), {'😀'})
+        self.assertEqual(fitted[-1], '…')
+        self.assertEqual(fit_error_message('😀' * 500), '😀' * 500)
 
     def test_needs_the_id_of_the_run(self) -> None:
         with self.assertRaises(ValueError):

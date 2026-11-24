@@ -11,12 +11,27 @@ NO_PAGES = 'El agente no envió ninguna página'
 UNKNOWN_FAILURE = 'La corrida falló sin detalle'
 
 
+def utf16_length(text: str) -> int:
+    """Length as JavaScript counts it: a character outside the BMP (an
+    emoji) is two UTF-16 units, one Python character."""
+    return len(text.encode('utf-16-le')) // 2
+
+
 def fit_error_message(reason: str) -> str:
-    """The reason as Trackhive accepts it: never empty, at most 1000 characters."""
+    """The reason as Trackhive accepts it: never empty, at most 1000 UTF-16
+    units, as @MaxLength counts in the backend. Never cuts a character in two."""
     text = reason.strip() or UNKNOWN_FAILURE
-    if len(text) <= MAX_ERROR_MESSAGE_LENGTH:
+    if utf16_length(text) <= MAX_ERROR_MESSAGE_LENGTH:
         return text
-    return text[: MAX_ERROR_MESSAGE_LENGTH - 1] + '…'
+    kept, units = [], 0
+    for char in text:
+        width = utf16_length(char)
+        # One unit stays for the ellipsis
+        if units + width > MAX_ERROR_MESSAGE_LENGTH - 1:
+            break
+        kept.append(char)
+        units += width
+    return ''.join(kept) + '…'
 
 
 @dataclass(frozen=True)
