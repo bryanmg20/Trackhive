@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/auth.module';
+import { EverythingModule } from './everything/everything.module';
 import { HealthModule } from './health/health.module';
 import { MaterialsModule } from './materials/materials.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -26,6 +27,8 @@ import { UsersModule } from './users/users.module';
     MaterialsModule,
     NotificationsModule,
     RequestsModule,
+    // Ingest endpoints of the Everything agent (HU-137)
+    EverythingModule,
   ],
 })
 export class AppModule {}
