@@ -48,6 +48,7 @@ erDiagram
     varchar source "max 20"
     varchar digital_path "max 1024; NULL"
     timestamptz last_seen_at "NULL"
+    varchar review_reason "max 20; NULL"
     varchar status "max 20"
     timestamptz status_changed_at "NULL"
     uuid status_changed_by FK "NULL"
@@ -174,10 +175,18 @@ erDiagram
   sync_runs {
     uuid id PK
     timestamptz started_at
+    timestamptz last_activity_at
     timestamptz finished_at "NULL"
     varchar status "max 10"
     int files_count "CHECK >= 0"
     varchar error_message "max 1000; NULL"
+  }
+  sync_run_pages {
+    uuid sync_run_id PK, FK
+    int page_number PK "CHECK >= 1"
+    int results_count "CHECK >= 0"
+    jsonb folders
+    timestamptz received_at
   }
   material_loans {
     uuid id PK
@@ -216,9 +225,10 @@ erDiagram
   materials ||--o{ material_loans : prestamos
   appointments ||--o{ material_loans : entregas
   users ||--o{ material_loans : entrega_o_recibe
+  sync_runs ||--o{ sync_run_pages : recibe
 ```
 
-**Figura 1.** Diagrama ER actualizado para HU-134, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
+**Figura 1.** Diagrama ER actualizado para HU-137, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
 
 | Relación | Cardinalidad | Clave foránea |
 |---|---|---|
@@ -245,6 +255,7 @@ erDiagram
 | materials – material_loans | 1 : 0..N | `material_loans.material_id` |
 | appointments – material_loans | 1 : 0..N | `material_loans.appointment_id` |
 | users – material_loans | 1 : 0..N (entrega) y 0..1 : 0..N (devolución) | `material_loans.handed_over_by_id`, `material_loans.returned_by_id` |
+| sync_runs – sync_run_pages | 1 : 0..N (solo mientras la corrida está en curso) | `sync_run_pages.sync_run_id` (`ON DELETE CASCADE`) |
 
 Decisiones principales:
 
@@ -325,7 +336,7 @@ catálogo y finalidades pendientes se documentan en [datos-personales.md](datos-
 
 ### materials
 
-Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó las tres columnas `status_change*`. HU-134 (migración `20261118120000_material_digital_copy`) volvió opcional la ubicación física y agregó `source`, `digital_path` y `last_seen_at` para la copia digital que trae la sincronización con Everything. HU-165 (migración `20261120180000_drop_material_location_and_access_type`) quitó la ubicación física (`depot`, `shelf`, `box` y `materials_location_check`): el catálogo solo crece por la sincronización y el original se ubica por la convención de su código de catalogación (notaría, año y rango de escrituras).
+Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó las tres columnas `status_change*`. HU-134 (migración `20261118120000_material_digital_copy`) volvió opcional la ubicación física y agregó `source`, `digital_path` y `last_seen_at` para la copia digital que trae la sincronización con Everything. HU-165 (migración `20261120180000_drop_material_location_and_access_type`) quitó la ubicación física (`depot`, `shelf`, `box` y `materials_location_check`): el catálogo solo crece por la sincronización y el original se ubica por la convención de su código de catalogación (notaría, año y rango de escrituras). HU-137 (migración `20261123000000_everything_sync_ingest`) agregó `review_reason`. La sincronización reconoce el material por `catalog_code`, nunca por la ruta, y no borra ninguno.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -338,8 +349,9 @@ Creada en HU-07 (migración `20261108035559_create_materials`). HU-08 agregó la
 | publication_date | date | NULL | Solo periódicos |
 | publisher | varchar(150) | NULL | Empresa editora; solo periódicos |
 | source | varchar(20) | CHECK, DEFAULT `MANUAL` | `MANUAL` (registrado por el personal) o `EVERYTHING` (traído por la sincronización, HU-137). Los materiales previos a HU-134 quedaron en `MANUAL` |
-| digital_path | varchar(1024) | NULL, CHECK no vacío | Ruta completa de la copia digital, tal como la da Everything. Uso interno: la API nunca la envía. `NULL` = sin copia digital |
+| digital_path | varchar(1024) | NULL, CHECK no vacío | Ruta completa de la copia digital (la carpeta hoja), tal como la da Everything. Uso interno: la API nunca la envía. `NULL` = sin copia digital; en un material de Everything, «copia digital no encontrada»: una sincronización completa no vio su carpeta (HU-137) |
 | last_seen_at | timestamptz | NULL | Última vez que una sincronización vio el archivo. `NULL` si nunca lo vio |
+| review_reason | varchar(20) | NULL, CHECK | Por qué el personal debe revisar el código (HU-137): `NO_PATTERN` (la carpeta no sigue la convención de su fondo) o `DUPLICATE_CODE` (otra carpeta da el mismo código). En los dos casos el código sale de la ruta de la carpeta. `NULL` = nada que revisar |
 | status | varchar(20) | CHECK | `DISPONIBLE`, `EN_USO`, `EN_RESTAURACION`, `NO_CONSULTABLE` |
 | status_changed_at | timestamptz | NULL | Fecha del último cambio de estado. `NULL` si nunca se cambió |
 | status_changed_by | uuid | FK → users, NULL | Responsable del último cambio de estado |
@@ -472,18 +484,31 @@ Creada en HU-23 (migración `20261113000000_create_notifications`) y ampliada en
 
 ### sync_runs
 
-Creada en HU-134 (migración `20261118120000_material_digital_copy`). Cada fila es una corrida de la sincronización con Everything (HU-137), lanzada por el job periódico o por el botón «Sincronizar ahora» (HU-138).
+Creada en HU-134 (migración `20261118120000_material_digital_copy`). Cada fila es una corrida de la sincronización con Everything (HU-137), que inicia, alimenta y cierra el agente (HU-166) por los endpoints de ingesta, una vez al día o cuando se pide «Sincronizar ahora» (HU-138). HU-137 agregó `last_activity_at`.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
 | started_at | timestamptz | DEFAULT now(), IDX | Inicio de la corrida |
+| last_activity_at | timestamptz | DEFAULT now() | Inicio o última página recibida. Una corrida `EN_CURSO` sin actividad por más de `EVERYTHING_RUN_TIMEOUT_MINUTES` vence: al iniciar otra queda en `ERROR` sin marcar nada como no encontrado |
 | finished_at | timestamptz | NULL, CHECK | Fin. `NULL` si, y solo si, la corrida está `EN_CURSO`; nunca antes de `started_at` |
 | status | varchar(10) | CHECK, DEFAULT `EN_CURSO` | `EN_CURSO`, `OK`, `ERROR` |
-| files_count | int | DEFAULT 0, CHECK ≥ 0 | Archivos que devolvió Everything en la corrida |
+| files_count | int | DEFAULT 0, CHECK ≥ 0 | Resultados que devolvió Everything en las páginas de la corrida (una página reenviada cuenta una vez) |
 | error_message | varchar(1000) | NULL, CHECK | Motivo del error. Tiene valor si, y solo si, `status = 'ERROR'` |
 
-Un índice único parcial (`sync_runs_single_running_idx`, sobre `status = 'EN_CURSO'`) impide que haya dos corridas a la vez, aunque el job y el botón arranquen una al mismo tiempo.
+Un índice único parcial (`sync_runs_single_running_idx`, sobre `status = 'EN_CURSO'`) impide que haya dos corridas a la vez, aunque dos instancias del backend reciban el inicio al mismo tiempo: la segunda responde 409.
+
+### sync_run_pages
+
+Creada en HU-137 (migración `20261123000000_everything_sync_ingest`). Guarda las páginas que el agente envía en una corrida hasta que la cierra. Los materiales se crean o actualizan al cerrar la corrida completa, porque las carpetas hoja y los códigos repetidos solo se conocen con todas las páginas (HU-136). Al cerrar la corrida, con cualquier resultado, o al vencer, se borran sus páginas.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| sync_run_id | uuid | PK, FK → sync_runs (`ON DELETE CASCADE`) | Corrida |
+| page_number | int | PK, CHECK ≥ 1 | Número de la página que da el agente. Reenviar el mismo número la reemplaza |
+| results_count | int | CHECK ≥ 0 | Resultados de Everything en la página, carpetas y archivos |
+| folders | jsonb | CHECK es una lista | Las carpetas de la página ya mapeadas (HU-135): `[{ "fullPath", "modifiedAt" }]`. Nunca el JSON de Everything |
+| received_at | timestamptz | DEFAULT now() | Cuándo llegó |
 
 ### material_loans
 
@@ -538,6 +563,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | notifications | status_history_id (UK) | Un cambio de estado dispara a lo sumo un correo |
 | sync_runs | started_at DESC | Última corrida, para el estado de la sincronización (HU-138) |
 | sync_runs | Único parcial `WHERE status = 'EN_CURSO'` | Una sola sincronización a la vez (HU-137) |
+| sync_run_pages | (sync_run_id, page_number) (PK) | Reemplazar una página reenviada y leer las páginas de la corrida en orden al cerrarla (HU-137) |
 | material_loans | (material_id, handed_over_at DESC) | Historial de custodia del material del más reciente al más antiguo (HU-72) |
 | material_loans | (appointment_id, material_id) | Préstamos registrados en una cita y salvaguardas del ciclo de vida (HU-72) |
 | material_loans | handed_over_by_id, returned_by_id | Claves foráneas de funcionarios responsables |
@@ -571,11 +597,13 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261119140000_create_material_loans` | HU-72 | Tabla `material_loans` para entregas, devoluciones e historial de custodia de materiales en sala |
 | `20261120120000_create_request_references` | HU-09.2 | Tabla `request_references` (referencias escritas de material no catalogado) y permite `RECIBIDA → RECIBIDA` y `EN_BUSQUEDA → EN_BUSQUEDA` en `status_history` al asociar su material |
 | `20261120180000_drop_material_location_and_access_type` | HU-165 | Quita la ubicación física (`depot`, `shelf`, `box` y su `CHECK`) de `materials` y `access_type` de `request_items` |
+| `20261121000000_add_notification_templates` | HU-24 | Amplía el `CHECK` de `notifications.template` con las plantillas por estado y de cita |
+| `20261123000000_everything_sync_ingest` | HU-137 | `review_reason` en `materials`, `last_activity_at` en `sync_runs` y la tabla `sync_run_pages` |
 
 **Semillas:**
 
 - Van en `backend/prisma/seed.ts` y se ejecutan con `pnpm db:seed`. Son idempotentes.
-- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos) y 34 materiales, todos con `source = EVERYTHING`, como si los hubiera traído la sincronización (HU-165). Usan los códigos, títulos, tipos, colecciones y rutas de carpeta hoja del árbol simulado de HU-133 (`dev/manifiesto.json`, por ejemplo `NOT1-1931-0001-0109`), así que una sincronización contra el mock los actualiza por su código y no los duplica. Son protocolos notariales, periódicos (uno con fecha de publicación y editora) y correspondencia, en los cuatro estados. Todos tienen `digital_path` salvo `NOT4-1956-0001-0180`, que no está en el árbol: representa un material cuya carpeta ya no aparece.
+- Contenido: 7 usuarios (1 administrador, 2 funcionarios y 4 usuarios públicos) y 34 materiales, todos con `source = EVERYTHING`, como si los hubiera traído la sincronización (HU-165). Usan los códigos, títulos, tipos, colecciones y rutas de carpeta hoja del árbol simulado de HU-133 (`dev/manifiesto.json`, por ejemplo `NOT1-1931-0001-0109`), así que una sincronización contra el mock los actualiza por su código y no los duplica. Son protocolos notariales, periódicos (uno con fecha de publicación y editora) y correspondencia, en los cuatro estados. Todos tienen `digital_path` salvo `NOT4-1956-0001-0180`, que no está en el árbol: representa un material cuya carpeta ya no aparece. Los seis de correspondencia y periódicos, fondos sin patrón conocido, tienen `review_reason = NO_PATTERN`, como en el manifiesto.
 - 15 solicitudes repartidas en los 7 estados; las digitales solo piden material con copia digital. Tres tienen referencias escritas (HU-09.2): una solo con referencias (protocolo notarial y texto libre, pendientes), una que mezcla material del catálogo con una referencia ya asociada al material que trajo la sincronización, y una disponible con una referencia sin material y el comentario de entrega obligatorio.
 - 4 citas y 3 préstamos en sala (HU-72): los dos materiales `EN_USO` tienen su préstamo abierto en la cita programada de `SOL-2026-90007`, y la cita cumplida de `SOL-2026-90010` tiene su préstamo devuelto.
 - Las contraseñas salen de variables de entorno (`SEED_ADMIN_PASSWORD`, `SEED_DEMO_PASSWORD`).

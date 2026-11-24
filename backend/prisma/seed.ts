@@ -88,6 +88,9 @@ type SeedMaterial = {
   digitalPath?: string;
   // Last time a sync saw it; by default, when the seed runs
   lastSeenAt?: string;
+  // The leaf does not give its own code (dev/manifiesto.json): the sync
+  // leaves it for review (HU-137)
+  reviewReason?: 'NO_PATTERN' | 'DUPLICATE_CODE';
 };
 
 // Root of the simulated tree as Everything reports it on Windows
@@ -108,6 +111,7 @@ const MATERIALS: SeedMaterial[] = [
     collection: 'Correspondencia',
     status: 'DISPONIBLE',
     digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Correspondencia\\Cartas del cabildo - 1890 a 1895`,
+    reviewReason: 'NO_PATTERN',
   },
   {
     catalogCode: 'DOC-AF12775E',
@@ -116,6 +120,7 @@ const MATERIALS: SeedMaterial[] = [
     collection: 'Correspondencia',
     status: 'NO_CONSULTABLE',
     digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Correspondencia\\Telegramas\\1902`,
+    reviewReason: 'NO_PATTERN',
   },
   // Periodicals: some issues lack the publication date
   {
@@ -127,6 +132,7 @@ const MATERIALS: SeedMaterial[] = [
     publicationDate: '1925-03-01',
     publisher: 'El Correo del Litoral',
     digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\El Correo del Litoral\\1925\\1925-03 Marzo`,
+    reviewReason: 'NO_PATTERN',
   },
   {
     catalogCode: 'PER-98EA1A48',
@@ -137,6 +143,7 @@ const MATERIALS: SeedMaterial[] = [
     publicationDate: '1925-04-01',
     publisher: 'El Correo del Litoral',
     digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\El Correo del Litoral\\1925\\1925-04 Abril`,
+    reviewReason: 'NO_PATTERN',
   },
   {
     catalogCode: 'PER-A0CBF1ED',
@@ -146,6 +153,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'DISPONIBLE',
     publisher: 'El Correo del Litoral',
     digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\El Correo del Litoral\\Suplemento dominical 1926`,
+    reviewReason: 'NO_PATTERN',
   },
   {
     catalogCode: 'PER-2D9B489C',
@@ -155,6 +163,7 @@ const MATERIALS: SeedMaterial[] = [
     status: 'DISPONIBLE',
     publisher: 'La Gaceta Ribereña',
     digitalPath: `${DIGITAL_ROOT}\\Aha\\Fondo - Periódicos\\La Gaceta Ribereña - 1931 a 1933`,
+    reviewReason: 'NO_PATTERN',
   },
   // Notarial protocols: Notaría Primera, 1931
   {
@@ -818,6 +827,7 @@ async function main() {
       publisher,
       digitalPath,
       lastSeenAt,
+      reviewReason,
       ...material
     } of MATERIALS) {
       const data = {
@@ -829,6 +839,7 @@ async function main() {
         source: 'EVERYTHING',
         digitalPath: digitalPath ?? null,
         lastSeenAt: lastSeenAt ? new Date(lastSeenAt) : seenAt,
+        reviewReason: reviewReason ?? null,
       };
       // Upsert by catalog code: running the seed again does not duplicate material
       await prisma.materialModel.upsert({

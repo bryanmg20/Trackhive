@@ -40,6 +40,7 @@ Leyenda: azul oscuro, raíz de agregado; azul, entidad interna de un agregado; o
 | **PréstamoMaterial** | Registro de entrega física y devolución de un material durante una cita en sala: quién lo entregó, cuándo, quién recibió la devolución, cuándo y observaciones opcionales (HU-72). | Material |
 | **Usuario** | Cuenta para entrar al sistema, con rol `ADMIN`, `PERSONAL` o `PUBLICO`. | Usuario (raíz) |
 | **Notificación** | Correo al solicitante que dispara un cambio de estado. Se envía y reintenta aparte del cambio. | Notificación (raíz) |
+| **CorridaSincronizacion** | Una sincronización con *Everything* que inicia, alimenta y cierra el agente del CLENA (HU-137): inicio, última actividad, fin, resultado (en curso, OK o error), resultados recibidos y motivo del error. Guarda las páginas recibidas hasta cerrarse. | CorridaSincronizacion (raíz) |
 
 ### 2.2 Objetos de valor
 
@@ -145,6 +146,15 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | RN-23 | El solicitante debe dejar un correo o un teléfono para contactarlo. | HU-10 | Vigente |
 | RN-24 | Quien elimina su cuenta deja de ser identificable, pero sus solicitudes se conservan para las estadísticas. | HU-33 | Prevista |
 
+### 5.4 Sincronización con *Everything*
+
+| # | Regla | HU | Estado |
+|---|---|---|---|
+| RN-25 | Cada carpeta hoja bajo la raíz de un fondo es un material con copia digital, porque el CLENA solo coloca lo que ya digitalizó. La sincronización lo reconoce por su código de catalogación, no por la ruta: una carpeta renombrada o movida con el mismo código actualiza el mismo material. | HU-136, HU-137 | Vigente |
+| RN-26 | Una carpeta sin código válido, o con el mismo código que otra, usa el código derivado de su ruta y queda para revisión del personal. | HU-136, HU-137 | Vigente |
+| RN-27 | Solo una sincronización que termina completa y sin errores deja como «copia digital no encontrada» los materiales de *Everything* que no aparecieron. Una que termina con error, se corta o vence no marca nada. Ningún material se borra por no aparecer, porque puede tener solicitudes. | HU-137 | Vigente |
+| RN-28 | Solo corre una sincronización a la vez. Una que pasa más de `EVERYTHING_RUN_TIMEOUT_MINUTES` sin recibir páginas vence con error. | HU-137 | Vigente |
+
 ## 6. Glosario
 
 | Término | Significado |
@@ -153,8 +163,11 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | **Agendar** | Fijar el día en que el solicitante consulta el material en la sala. Lleva la solicitud a `AGENDADA`. |
 | **Aviso de privacidad** | Texto que explica qué datos personales se piden y para qué. Aceptarlo es el consentimiento de la Ley 1581. |
 | **Bandeja de solicitudes** | Pantalla del personal con todas las solicitudes, sus filtros y su orden. |
+| **Carpeta hoja** | Carpeta de *Everything* sin subcarpetas bajo la raíz de un fondo. Cada una es un material, y su ruta es la copia digital. |
 | **Cita** | Día completo reservado para que el solicitante consulte el material en la sala, sin hora. |
-| **Código de catalogación** | Identificador único del material en el catálogo del archivo. |
+| **Código de catalogación** | Identificador único del material en el catálogo del archivo. La sincronización lo saca del nombre de sus carpetas (notaría, año y rango de escrituras) y con él reconoce el material. |
+| **Copia digital no encontrada** | Material de *Everything* cuya carpeta no apareció en la última sincronización completa. Conserva sus datos y sus solicitudes, pero no tiene copia que enviar. |
+| **Corrida de sincronización** | Una vez que el agente envía a Trackhive lo que indexa *Everything*: se inicia, recibe páginas y se cierra completa o con error. |
 | **Doble reserva** | Dos citas del mismo material el mismo día. El sistema la impide. |
 | **Entrega digital** | Modalidad en que el material se entrega sin cita, fuera del sistema, por correo. |
 | **Entrega presencial** | Modalidad en que el solicitante consulta el material en la sala, con cita. |
@@ -166,6 +179,7 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | **Inasistencia** | El solicitante no fue a su cita. La solicitud vuelve a `DISPONIBLE`. |
 | **Material** | Documento, periódico, protocolo notarial u otra pieza del acervo que se puede pedir. |
 | **Motivo de rechazo** | Explicación obligatoria que el solicitante lee cuando su solicitud se rechaza. |
+| **Para revisión** | Material cuyo código salió de la ruta de su carpeta, porque la carpeta no sigue la convención o repite el código de otra. El personal debe revisarlo. |
 | **Personal del CLENA** | Funcionarios que atienden las solicitudes (rol `PERSONAL`). |
 | **Radicado** | Número único de la solicitud (`SOL-AAAA-NNNNN`) para consultarla. |
 | **Sala de consulta** | Lugar del CLENA donde el solicitante revisa el material el día de su cita. |
@@ -205,6 +219,7 @@ Uno por acción del negocio. Cada caso de uso es una clase con un método `execu
 | `RegistrarEntregaMaterial` | Anotar que el material salió a la sala en una cita del día y pasarlo a `EN_USO` | Personal | HU-72 | `DeliverMaterialUseCase` |
 | `RegistrarDevolucionMaterial` | Anotar que el material volvió de sala y devolverlo a `DISPONIBLE` | Personal | HU-72 | `ReturnMaterialUseCase` |
 | `ConsultarHistorialMaterial` | Ver quién tuvo el material por última vez y el historial de entregas/devoluciones | Personal | HU-72 | `GetMaterialHistoryUseCase` |
+| `SincronizarConEverything` | Recibir del agente las carpetas que indexa *Everything* y actualizar el catálogo: iniciar la corrida, procesar cada página y cerrarla | Agente de *Everything* | HU-137 | `EverythingSynchronizer` (servicio de `application/services/` con las tres operaciones) |
 
 Hay dos casos de uso técnicos que no son acciones del negocio: `GetHealthUseCase` (estado del servicio, HU-38) y `PurgeExpiredTokensUseCase` (limpieza diaria de sesiones vencidas, HU-3.1).
 

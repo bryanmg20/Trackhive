@@ -40,15 +40,11 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:?Missing SMTP_FROM in .env}
-      # Everything HTTP server (E11). Only the URL changes between the mock
-      # (http://everything-mock:8081) and Everything on the host
-      # (http://host.docker.internal:<port>); docs/everything-desarrollo.md
-      EVERYTHING_URL: ${EVERYTHING_URL:-}
-      EVERYTHING_USER: ${EVERYTHING_USER:-trackhive}
-      EVERYTHING_PASSWORD: ${EVERYTHING_PASSWORD:-trackhive-dev}
-    extra_hosts:
-      # Docker Desktop defines host.docker.internal; on Linux it is added here
-      - "host.docker.internal:host-gateway"
+      # Sync with Everything (HU-137). The backend never calls Everything: the
+      # agent (HU-166) sends it the pages with this token. Empty = disabled
+      # (the ingest endpoints answer 503); docs/everything-desarrollo.md
+      EVERYTHING_AGENT_TOKEN: ${EVERYTHING_AGENT_TOKEN:-}
+      EVERYTHING_RUN_TIMEOUT_MINUTES: ${EVERYTHING_RUN_TIMEOUT_MINUTES:-30}
     ports:
       - "127.0.0.1:${BACKEND_PORT:?Missing BACKEND_PORT in .env}:3000"
     depends_on:

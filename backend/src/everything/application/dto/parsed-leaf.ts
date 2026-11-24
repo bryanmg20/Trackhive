@@ -1,10 +1,12 @@
+import type { MaterialReviewReason } from '../../../materials/domain/enums/material-review-reason';
 import type { MaterialType } from '../../../materials/domain/enums/material-type';
 
 /**
  * NO_PATTERN: the folder does not follow the pattern of its fund (or the fund
- * has none). DUPLICATE_CODE: another leaf gave the same code.
+ * has none). DUPLICATE_CODE: another leaf gave the same code. The sync saves
+ * it in materials.review_reason (HU-137).
  */
-export type ReviewReason = 'NO_PATTERN' | 'DUPLICATE_CODE';
+export type ReviewReason = MaterialReviewReason;
 
 /**
  * A leaf folder turned into a material (HU-136). Every leaf has a digital

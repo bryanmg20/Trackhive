@@ -5,6 +5,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DomainError } from '../errors/domain.error';
+import { EverythingPageTooLargeError } from '../../everything/domain/errors/everything-page-too-large.error';
+import { EverythingSyncDisabledError } from '../../everything/domain/errors/everything-sync-disabled.error';
+import { InvalidAgentTokenError } from '../../everything/domain/errors/invalid-agent-token.error';
+import { SyncRunAlreadyRunningError } from '../../everything/domain/errors/sync-run-already-running.error';
+import { SyncRunExpiredError } from '../../everything/domain/errors/sync-run-expired.error';
+import { SyncRunNotFoundError } from '../../everything/domain/errors/sync-run-not-found.error';
+import { SyncRunNotRunningError } from '../../everything/domain/errors/sync-run-not-running.error';
 import { InvalidRefreshTokenError } from '../../auth/domain/errors/invalid-refresh-token.error';
 import { MailDeliveryFailedError } from '../../notifications/domain/errors/mail-delivery-failed.error';
 import { EmailAlreadyExistsError } from '../../users/domain/errors/email-already-exists.error';
@@ -231,6 +238,69 @@ describe('AllExceptionsFilter', () => {
       path: '/api/v1/users',
     });
     expect(logSpy).toHaveBeenCalled();
+  });
+
+  describe('errors of the JSON body parser of Express', () => {
+    /** What body-parser raises (http-errors), before the request reaches Nest. */
+    const bodyParserError = (status: number, type: string, expose = true) =>
+      Object.assign(new Error(type), {
+        status,
+        statusCode: status,
+        expose,
+        type,
+      });
+
+    it('answers 413 PAYLOAD_TOO_LARGE to a body above the limit, instead of 500', () => {
+      run(bodyParserError(413, 'entity.too.large'));
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.PAYLOAD_TOO_LARGE);
+      expect(payload()).toMatchObject({
+        statusCode: HttpStatus.PAYLOAD_TOO_LARGE,
+        code: 'PAYLOAD_TOO_LARGE',
+        message:
+          'El cuerpo de la petición supera el tamaño máximo permitido (100 kB)',
+      });
+      expect(logSpy).not.toHaveBeenCalled();
+    });
+
+    it('answers another client error of the body parser with its status', () => {
+      run(bodyParserError(415, 'charset.unsupported'));
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+      expect(payload()).toMatchObject({ code: 'UNSUPPORTED_MEDIA_TYPE' });
+    });
+
+    it('still answers 500 to an error that is not meant to be shown', () => {
+      run(bodyParserError(500, 'stream.not.readable', false));
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(logSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('ingest of the Everything agent (HU-137)', () => {
+    it.each([
+      [new SyncRunAlreadyRunningError(), HttpStatus.CONFLICT],
+      [new SyncRunNotRunningError(), HttpStatus.CONFLICT],
+      [new SyncRunExpiredError(30), HttpStatus.CONFLICT],
+      [new SyncRunNotFoundError(), HttpStatus.NOT_FOUND],
+      [new EverythingPageTooLargeError(501, 500), HttpStatus.PAYLOAD_TOO_LARGE],
+      [new InvalidAgentTokenError(), HttpStatus.UNAUTHORIZED],
+    ])('maps %s to %s', (error, expected) => {
+      run(error);
+
+      expect(status).toHaveBeenCalledWith(expected);
+      expect(payload()).toMatchObject({ code: error.code });
+      expect(logSpy).not.toHaveBeenCalled();
+    });
+
+    it('answers 503 when the sync is disabled, without logging it as a failure', () => {
+      run(new EverythingSyncDisabledError());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
+      expect(payload()).toMatchObject({ code: 'EVERYTHING_SYNC_DISABLED' });
+      expect(logSpy).not.toHaveBeenCalled();
+    });
   });
 
   it('does not leak internal details for an unknown error', () => {

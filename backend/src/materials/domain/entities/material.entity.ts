@@ -1,8 +1,13 @@
+import { InvalidMaterialReviewReasonError } from '../errors/invalid-material-review-reason.error';
 import { InvalidMaterialSourceError } from '../errors/invalid-material-source.error';
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
 import { MaterialInUseError } from '../errors/material-in-use.error';
 import { MaterialStatusNotManualError } from '../errors/material-status-not-manual.error';
+import {
+  isMaterialReviewReason,
+  MaterialReviewReason,
+} from '../enums/material-review-reason';
 import { isMaterialSource, MaterialSource } from '../enums/material-source';
 import {
   isManualMaterialStatus,
@@ -27,6 +32,8 @@ export interface MaterialProps {
   // Full path of the digital copy; internal, never sent by the API
   digitalPath?: string | null;
   lastSeenAt?: Date | null;
+  // HU-137. Why the staff should review its code; null (default) = nothing
+  reviewReason?: MaterialReviewReason | null;
   // Last status change (HU-08); null while it was never changed
   statusChangedAt?: Date | null;
   statusChangedBy?: string | null;
@@ -48,6 +55,7 @@ export class Material {
   public readonly source: MaterialSource;
   public readonly digitalPath: string | null;
   public readonly lastSeenAt: Date | null;
+  public readonly reviewReason: MaterialReviewReason | null;
   public readonly statusChangedAt: Date | null;
   public readonly statusChangedBy: string | null;
   public readonly statusChangeReason: string | null;
@@ -65,6 +73,10 @@ export class Material {
     if (!isMaterialSource(source)) {
       throw new InvalidMaterialSourceError();
     }
+    const reviewReason = props.reviewReason ?? null;
+    if (reviewReason !== null && !isMaterialReviewReason(reviewReason)) {
+      throw new InvalidMaterialReviewReasonError();
+    }
 
     this.id = props.id;
     this.catalogCode = props.catalogCode;
@@ -78,11 +90,20 @@ export class Material {
     this.source = source;
     this.digitalPath = props.digitalPath ?? null;
     this.lastSeenAt = props.lastSeenAt ?? null;
+    this.reviewReason = reviewReason;
     this.statusChangedAt = props.statusChangedAt ?? null;
     this.statusChangedBy = props.statusChangedBy ?? null;
     this.statusChangeReason = props.statusChangeReason ?? null;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+  }
+
+  /**
+   * The sync could not take its code from the folder name (HU-137): the
+   * staff should review it.
+   */
+  get needsReview(): boolean {
+    return this.reviewReason !== null;
   }
 
   /**

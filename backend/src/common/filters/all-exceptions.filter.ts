@@ -27,10 +27,26 @@ const CODE_BY_STATUS: Record<number, string> = {
   [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
   [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
   [HttpStatus.CONFLICT]: 'CONFLICT',
+  [HttpStatus.PAYLOAD_TOO_LARGE]: 'PAYLOAD_TOO_LARGE',
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: 'UNSUPPORTED_MEDIA_TYPE',
   [HttpStatus.UNPROCESSABLE_ENTITY]: 'UNPROCESSABLE_ENTITY',
   [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'INTERNAL_ERROR',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
 };
+
+/**
+ * Messages of the errors the body parser of Express raises before the
+ * request reaches Nest (http-errors): a body above the 100 kB JSON limit, an
+ * unsupported charset or encoding…
+ */
+const BODY_ERROR_MESSAGES: Record<number, string> = {
+  [HttpStatus.PAYLOAD_TOO_LARGE]:
+    'El cuerpo de la petición supera el tamaño máximo permitido (100 kB)',
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]:
+    'El cuerpo de la petición tiene una codificación que no se admite',
+};
+const BODY_ERROR_MESSAGE = 'No se pudo leer el cuerpo de la petición';
 
 /**
  * Domain code -> HTTP status. Every new domain error requires a line here;
@@ -101,6 +117,17 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   REQUESTER_EMAIL_MISMATCH: HttpStatus.BAD_REQUEST,
   // The agent (HU-166) sent a page without the shape of Everything (HU-135)
   INVALID_EVERYTHING_PAGE: HttpStatus.BAD_REQUEST,
+  // Ingest of the Everything agent (HU-137). Without EVERYTHING_AGENT_TOKEN
+  // the sync is disabled: an expected state, answered without logging it
+  INVALID_AGENT_TOKEN: HttpStatus.UNAUTHORIZED,
+  EVERYTHING_SYNC_DISABLED: HttpStatus.SERVICE_UNAVAILABLE,
+  EVERYTHING_PAGE_TOO_LARGE: HttpStatus.PAYLOAD_TOO_LARGE,
+  SYNC_RUN_NOT_FOUND: HttpStatus.NOT_FOUND,
+  SYNC_RUN_ALREADY_RUNNING: HttpStatus.CONFLICT,
+  SYNC_RUN_NOT_RUNNING: HttpStatus.CONFLICT,
+  SYNC_RUN_EXPIRED: HttpStatus.CONFLICT,
+  // NO_PATTERN or DUPLICATE_CODE (HU-137); same reasoning as INVALID_MATERIAL_TYPE
+  INVALID_MATERIAL_REVIEW_REASON: HttpStatus.BAD_REQUEST,
   // The mail server failed, not the request: like a proxy, answer 502
   MAIL_DELIVERY_FAILED: HttpStatus.BAD_GATEWAY,
 };
@@ -111,6 +138,26 @@ function codeFromStatus(statusCode: number): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+/**
+ * A client error of http-errors, as the body parser of Express raises it
+ * (for example `entity.too.large`, 413): a 4xx `status` meant to be shown.
+ */
+function clientHttpErrorStatus(exception: unknown): number | null {
+  if (!(exception instanceof Error) || !isRecord(exception)) {
+    return null;
+  }
+  const { status, expose } = exception as {
+    status?: unknown;
+    expose?: unknown;
+  };
+  return typeof status === 'number' &&
+    status >= 400 &&
+    status < 500 &&
+    expose === true
+    ? status
+    : null;
 }
 
 function normalizeDetails(value: unknown): ErrorDetail[] | undefined {
@@ -169,6 +216,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
     if (exception instanceof HttpException) {
       return this.fromHttpException(exception);
+    }
+    const bodyErrorStatus = clientHttpErrorStatus(exception);
+    if (bodyErrorStatus !== null) {
+      return {
+        statusCode: bodyErrorStatus,
+        code: codeFromStatus(bodyErrorStatus),
+        message: BODY_ERROR_MESSAGES[bodyErrorStatus] ?? BODY_ERROR_MESSAGE,
+      };
     }
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,

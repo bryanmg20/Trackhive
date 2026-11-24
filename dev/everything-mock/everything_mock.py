@@ -2,8 +2,8 @@
 
 Indexes the same dev/docs_simulados folder and answers like Everything
 1.4.1.1032 (dev/fixtures): same parameters, same search, same JSON bytes and
-HTTP basic authentication. The backend reaches it, or the real Everything,
-only by changing EVERYTHING_URL.
+HTTP basic authentication. The agent (HU-166) queries it, or the real
+Everything, only by changing its URL; the backend never calls it (HU-137).
 
     python dev/everything-mock/everything_mock.py
     python dev/everything-mock/everything_mock.py --host 0.0.0.0 --puerto 8081
