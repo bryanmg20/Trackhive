@@ -27,6 +27,8 @@ docker-compose up -d
 | SMTP_USER | Usuario del servidor de correo. Vacío si no pide inicio de sesión, como Mailpit | notificaciones@example.com | No |
 | SMTP_PASSWORD | Contraseña del servidor de correo | | No |
 | SMTP_FROM | Remitente de los correos | Trackhive <no-reply@example.com> | Sí |
+| EVERYTHING_AGENT_TOKEN | Token con el que el agente de Everything (HU-166) envía las carpetas a los endpoints de ingesta (HU-137). Al menos 32 caracteres: `openssl rand -hex 32`. El mismo valor va en la configuración del agente. Vacío: la sincronización está desactivada y esos endpoints responden 503 | | No |
+| EVERYTHING_RUN_TIMEOUT_MINUTES | Minutos sin recibir páginas tras los que una corrida de sincronización vence con error, sin marcar nada como no encontrado | 30 | No (30) |
 
 No escribir secretos reales en este documento.
 

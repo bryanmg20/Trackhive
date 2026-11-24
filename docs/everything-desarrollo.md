@@ -1,6 +1,6 @@
 # Entorno de Everything para desarrollo
 
-Guía de HU-133 (#133, épica E11). Sirve para desarrollar y probar la integración con *Everything* sin el equipo ni la red del CLENA: un árbol de **documentos simulados** con la misma forma que el del CLENA, un **Everything real** (portable) que lo indexa en Windows, las **respuestas reales** guardadas como fixtures y un **mock** en Python para quien no tiene Windows.
+Guía de HU-133 (#133, épica E11). Sirve para desarrollar y probar la integración con *Everything* sin el equipo ni la red del CLENA: un árbol de **documentos simulados** con la misma forma que el del CLENA, un **Everything real** (portable) que lo indexa en Windows, las **respuestas reales** guardadas como fixtures y un **mock** en Python para quien no tiene Windows. La sección 7 explica cómo se sincroniza el backend (HU-137).
 
 | Pieza | Dónde | Para qué |
 |---|---|---|
@@ -170,7 +170,7 @@ Diferencias que hay que tener en cuenta en el despliegue en el CLENA:
 
 - Las copias están en una **unidad de red**. Las letras de unidad (`Z:`) son de cada sesión de Windows. Si Everything corre como servicio, conviene indexar la ruta UNC (`\\<servidor>\Multimedia\Aha\…`) en **Indexes → Folders**, y las rutas que devuelva serán UNC. Las raíces de los fondos del parseo (HU-136) son configurables por eso.
 - En una carpeta de red, Everything no siempre ve los cambios al instante. Conviene programar una reindexación (*rescan*) periódica en **Indexes → Folders**.
-- Si el backend no corre en el mismo equipo, el servidor HTTP tiene que escuchar en la IP de la red local (no solo en `127.0.0.1`), con una regla de firewall que deje entrar solo al servidor de Trackhive. Depende de la plataforma de despliegue (D-24).
+- El servidor HTTP escucha solo en `127.0.0.1`: lo consulta el agente (HU-166) en el mismo equipo y el backend nunca llega a él (sección 7). No hace falta abrir puertos ni reglas de firewall de entrada.
 - Siempre con usuario y contraseña y sin «Allow file download»: el servidor expone los nombres y las rutas de los archivos.
 
 ## 5. Fixtures del servidor HTTP
@@ -226,22 +226,87 @@ La prueba `dev/tests/test_mock.py` levanta el mock y repite las 24 consultas de 
 python dev/scripts/comparar_everything.py --url http://127.0.0.1:8081 --bytes
 ```
 
-## 7. Conectar el backend
+## 7. Sincronización con el backend (HU-137)
 
-El backend llega al mock o a Everything **cambiando solo `EVERYTHING_URL`** en el `.env`. El usuario y la contraseña son los del servidor HTTP. El backend no tiene cliente HTTP hacia Everything: con HU-137 estas variables pasan al agente (HU-166), que consulta Everything y envía al backend cada página sin transformarla.
+El backend **no tiene cliente HTTP hacia Everything** y ya no usa `EVERYTHING_URL`, `EVERYTHING_USER` ni `EVERYTHING_PASSWORD`: esas variables pasaron al agente (HU-166). Everything solo responde peticiones y el PC del CLENA no se alcanza desde los servidores de la universidad, así que el agente, instalado en ese PC, consulta Everything en `localhost` y envía al backend cada página **sin transformarla** (por HTTPS en producción, HU-42). El navegador nunca llama a Everything.
 
-| Backend | Everything | `EVERYTHING_URL` |
-|---|---|---|
-| Docker | mock en Docker (`--profile everything`) | `http://everything-mock:8081` |
-| Docker | mock o Everything en la máquina anfitriona | `http://host.docker.internal:8081` |
-| `pnpm start:dev` | mock o Everything en la misma máquina | `http://localhost:8081` |
+### Endpoints de ingesta
 
-- `docker-compose.yml` agrega `host.docker.internal:host-gateway` al backend, porque en Linux ese nombre no existe por defecto. El mock en la anfitriona tiene que escuchar en todas las interfaces: `--host 0.0.0.0`.
-- **Docker Desktop en Windows:** `host.docker.internal` llega a Windows, y con él al Everything que escucha en `127.0.0.1`.
-- **Docker Engine dentro de WSL 2 en modo NAT:** `host.docker.internal` y `localhost` son WSL, **no** Windows, así que el Everything de Windows no se alcanza con esos nombres. Hay dos opciones:
-  - usar el mock en Docker;
-  - agregar a «bind to interfaces» la IP de Windows en la red de WSL (`ip route show default` dentro de WSL, por ejemplo `172.21.16.1`) con una regla de firewall para esa red, y usar `EVERYTHING_URL=http://<esa IP>:8081`. La IP cambia al reiniciar.
-- El navegador nunca llama a Everything: solo el backend.
+Todos llevan `Authorization: Bearer <EVERYTHING_AGENT_TOKEN>`. Los protege un guard propio (`EverythingAgentGuard`), separado del inicio de sesión de los usuarios, que compara el token en tiempo constante. Sin el token o con otro responden **401** y no guardan nada.
+
+| Paso | Endpoint | Cuerpo | Respuesta |
+|---|---|---|---|
+| 1. Iniciar corrida | `POST /api/v1/everything/sync-runs` | — | 201, con el `id` de la corrida |
+| 2. Enviar página | `PUT /api/v1/everything/sync-runs/{id}/pages/{n}` | la respuesta de Everything, tal cual | 200 |
+| 3. Cerrar corrida | `POST /api/v1/everything/sync-runs/{id}/close` | `{"result":"OK","pageCount":N}` o `{"result":"ERROR","errorMessage":"…"}` | 200, con el resultado |
+
+- El agente busca solo carpetas bajo cada raíz de `backend/config/catalog-convention.json` (`folder:` + la raíz con la barra final, sección 5), con `json=1&path_column=1&size_column=1&date_modified_column=1`, por páginas con `offset` y `count`. Numera las páginas de la corrida desde 1, seguidas aunque cambie de raíz. Reenviar un número reemplaza esa página, así que puede reintentarla.
+- Una página puede traer hasta **500 resultados** y pesar hasta **100 kB**, el límite de JSON de toda la API. Si no, responde **413** (`EVERYTHING_PAGE_TOO_LARGE` o `PAYLOAD_TOO_LARGE`) y no guarda nada. Con `count=200` cabe con holgura: cada carpeta ocupa unos 300 bytes.
+- La página se valida con el mapeo de HU-135. Si no tiene la forma de Everything responde 400 `INVALID_EVERYTHING_PAGE` y tampoco guarda nada. Si pasa, sus carpetas se guardan en su propia transacción en `sync_run_pages` hasta que la corrida se cierre.
+- Swagger (`/docs`) documenta los tres endpoints con el esquema de seguridad `everything-agent`.
+
+### Por qué los materiales se guardan al cerrar
+
+El parseo de HU-136 necesita **todas** las carpetas a la vez: una carpeta es hoja cuando ninguna cuelga de ella, y un código se repite cuando lo dan dos hojas. Everything ordena por nombre y mezcla niveles entre páginas. En los fixtures, el año `1930 - Esc 1-0640 (12)` de la notaría segunda llega en la página 1 y sus meses en la 2, y los duplicados `1ra-1940 - Esc 0001-0161 - Ene` y `1ra-1940 - Esc 1-161 - Ene` llegan en páginas distintas. Parseando página por página, 8 carpetas de año o de notaría quedarían como materiales, que nunca se borran, y los dos duplicados se fundirían en uno solo, sin marca de revisión.
+
+Por eso, al **cerrar una corrida completa** (`result: "OK"`):
+
+1. Comprueba que llegaron exactamente las páginas 1..`pageCount`. Si falta o sobra alguna, la corrida termina en `ERROR` y no se marca nada.
+2. Parsea todas las carpetas de la corrida con la convención. Si no queda ninguna carpeta hoja (por ejemplo, Everything no ve la unidad de red), termina en `ERROR` y no se marca nada.
+3. Guarda los materiales **de cada página en su propia transacción**, con *upsert* por **código de catalogación**, nunca por ruta. Si el material no existe lo crea, disponible. Si existe, actualiza `source = EVERYTHING`, `digital_path` (la ruta de la carpeta hoja), `last_seen_at`, el título, la colección, el tipo y `review_reason`; su estado, autor, datos de publicación y solicitudes no cambian. Una carpeta renombrada o movida con el mismo código actualiza el mismo material.
+4. Una hoja sin código válido usa el código derivado de su ruta y queda con `review_reason = NO_PATTERN`. Si dos hojas dan el mismo código, las dos usan el de su ruta y quedan con `DUPLICATE_CODE`. HU-140 lo muestra al personal.
+5. En una sola transacción, deja como **«copia digital no encontrada»** (`digital_path = NULL`) cada material de Everything que esta corrida no vio, y cierra la corrida en `OK`. **Ningún material se borra**: puede tener solicitudes. Sin copia, HU-139 deja de ofrecer su paso directo a Disponible.
+
+Una corrida cerrada con `result: "ERROR"`, cortada (el agente dejó de enviar páginas) o incompleta no cambia ningún material ni marca nada.
+
+### Corridas y bloqueo
+
+- Cada corrida queda en `sync_runs` con su inicio, su última actividad, su fin, el resultado (`EN_CURSO`, `OK` o `ERROR`), los resultados recibidos (`files_count`) y el motivo del error.
+- Dos sincronizaciones no corren a la vez, aunque haya dos instancias del backend: lo impide el índice único parcial `sync_runs_single_running_idx` de PostgreSQL. Iniciar otra mientras hay una abierta responde **409** `SYNC_RUN_ALREADY_RUNNING`.
+- Una corrida que lleva más de `EVERYTHING_RUN_TIMEOUT_MINUTES` sin recibir páginas vence: cuando se inicia otra, o si el agente vuelve a escribirle (409 `SYNC_RUN_EXPIRED`), queda en `ERROR`, se borran sus páginas y no se marca nada.
+
+### Configuración
+
+| Variable | Qué hace |
+|---|---|
+| `EVERYTHING_AGENT_TOKEN` | Token del agente, de al menos 32 caracteres (`openssl rand -hex 32`). Va en el `.env` del servidor y en la configuración del agente, **nunca en el repositorio**. Vacío: la integración está desactivada y los endpoints responden **503** `EVERYTHING_SYNC_DISABLED` sin aceptar nada. Un token más corto detiene el arranque. |
+| `EVERYTHING_RUN_TIMEOUT_MINUTES` | Minutos sin páginas tras los que una corrida vence. Por defecto, 30. |
+
+La convención de carpetas (raíces, patrones, tipos y exclusiones) se lee de `backend/config/catalog-convention.json` al arrancar. Un error en ese archivo detiene el arranque (sección 2).
+
+### Probar sin el agente
+
+Mientras no exista el agente, su trabajo se puede hacer con `curl` contra el backend y el mock en Docker. Por defecto el token está vacío y la sincronización desactivada, así que primero se arranca el backend con uno:
+
+```bash
+export EVERYTHING_AGENT_TOKEN=$(openssl rand -hex 32)   # o ponlo en el .env
+docker compose --profile everything up -d --build backend everything-mock
+
+API=http://localhost:3000/api/v1/everything/sync-runs
+AUTH="Authorization: Bearer $EVERYTHING_AGENT_TOKEN"
+RUN=$(curl -s -X POST -H "$AUTH" "$API" | python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])')
+
+# Una página por raíz, tal como la responde el mock (count=200 basta para el árbol simulado)
+n=0
+for raiz in 'Aha\Fondo - Notarías\Notarías\' 'Aha\Fondo - Periódicos\' 'Aha\Fondo - Correspondencia\'; do
+  n=$((n+1))
+  curl -s -u trackhive:trackhive-dev -G http://localhost:8081/ \
+    --data-urlencode "search=folder: \"C:\trackhive\docs_simulados\\$raiz\"" \
+    -d json=1 -d path_column=1 -d size_column=1 -d date_modified_column=1 -d offset=0 -d count=200 |
+    curl -s -X PUT -H "$AUTH" -H 'Content-Type: application/json' --data-binary @- "$API/$RUN/pages/$n"
+  echo
+done
+
+curl -s -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+  -d "{\"result\":\"OK\",\"pageCount\":$n}" "$API/$RUN/close"
+```
+
+El cierre devuelve qué hizo (`leaves`, `created`, `updated`, `notFound`, `forReview`). Con la semilla recién cargada responde `leaves: 117` y `forReview: 11`, como el manifiesto, más `updated: 33` (los materiales de la semilla, reconocidos por su código) y `created: 84` (el resto del árbol simulado). `NOT4-1956-0001-0180` no está en el árbol y ya viene sin copia, así que sigue igual: `notFound` solo cuenta los materiales que tenían copia y esta corrida no vio. Para ver el resultado en la base:
+
+```bash
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT status, files_count, error_message, finished_at FROM sync_runs ORDER BY started_at DESC LIMIT 3;"'
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT catalog_code, review_reason, digital_path IS NOT NULL AS con_copia FROM materials ORDER BY catalog_code;"'
+```
 
 ## 8. Pruebas
 
@@ -251,6 +316,16 @@ El backend llega al mock o a Everything **cambiando solo `EVERYTHING_URL`** en e
 
 ```bash
 cd backend && pnpm exec jest src/everything
+```
+
+### Sincronización (HU-137)
+
+- `src/everything/application/services/everything-synchronizer.spec.ts` prueba el servicio con un repositorio en memoria, el parseo y la convención reales y las páginas de los fixtures. Cubre la corrida completa, el renombre, los duplicados entre páginas, el vencimiento, el 409, el 413, el cierre con error, el cierre incompleto y el fallo a mitad del cierre. Junto a ella están las pruebas de la entidad `SyncRun`, del guard del agente, de la configuración y de los DTOs.
+- `test/flows/everything-sync-flow.e2e-spec.ts` envía las páginas reales de los fixtures a los endpoints contra PostgreSQL. Cubre una corrida completa, una carpeta renombrada, una corrida cortada que no marca nada, llamadas sin token o con el de un usuario que no guardan nada, el 503 sin `EVERYTHING_AGENT_TOKEN`, dos inicios a la vez (409) y las páginas que se rechazan (413 y 400).
+
+```bash
+cd backend && pnpm exec jest src/everything
+cd backend && pnpm test:e2e -- everything-sync   # borra y recrea la base trackhive_e2e
 ```
 
 ### Árbol, mock y fixtures

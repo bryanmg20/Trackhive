@@ -220,9 +220,10 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `SMTP_USER` | Usuario SMTP. Vacío si el servidor no pide autenticación | *(vacío)* |
 | `SMTP_PASSWORD` | Contraseña SMTP | *(vacío)* |
 | `SMTP_FROM` | Remitente de los correos | `"Trackhive <no-reply@example.com>"` |
-| `EVERYTHING_URL` | Servidor HTTP de Everything o su mock ([guía](docs/everything-desarrollo.md)). Es lo único que cambia entre ambos | `http://everything-mock:8081` |
-| `EVERYTHING_USER` | Usuario del servidor HTTP de Everything | `trackhive` |
-| `EVERYTHING_PASSWORD` | Contraseña del servidor HTTP de Everything | `trackhive-dev` |
+| `EVERYTHING_AGENT_TOKEN` | Token con el que el agente de Everything (HU-166) llama a los endpoints de ingesta (HU-137). Vacío: la sincronización está desactivada y esos endpoints responden 503. Mínimo 32 caracteres (`openssl rand -hex 32`); nunca se sube al repositorio ([guía](docs/everything-desarrollo.md#7-sincronización-con-el-backend-hu-137)) | *(vacío)* |
+| `EVERYTHING_RUN_TIMEOUT_MINUTES` | Minutos sin recibir páginas tras los que una corrida de sincronización vence con error | `30` |
+| `EVERYTHING_USER` | Usuario del mock de Everything (y del servidor HTTP de Everything que consulta el agente). El backend no lo usa | `trackhive` |
+| `EVERYTHING_PASSWORD` | Contraseña del mock de Everything. El backend no la usa | `trackhive-dev` |
 | `EVERYTHING_MOCK_PORT` | Puerto local del mock de Everything | `8081` |
 | `DATABASE_URL` | Conexión de Prisma cuando el backend corre fuera de Docker | `postgresql://...@localhost:5432/trackhive?schema=public` |
 
@@ -341,7 +342,7 @@ referencia con revisión y validación de G6 pendientes.
 | [`docs/modelo-dominio.md`](docs/modelo-dominio.md) / [`docs/modelo-dominio.pdf`](docs/modelo-dominio.pdf) | Diagrama de clases, estados de la solicitud, reglas de negocio, glosario y casos de uso. |
 | [`docs/modelo-datos.md`](docs/modelo-datos.md) / [`docs/modelo-datos.pdf`](docs/modelo-datos.pdf) | Diagrama entidad-relación, tablas, índices, migraciones y datos personales. |
 | [`docs/manual-operacion.md`](docs/manual-operacion.md) | Operación, variables de entorno, correos, respaldos y diagnóstico. |
-| [`docs/everything-desarrollo.md`](docs/everything-desarrollo.md) | Entorno de Everything con documentos simulados: estructura del CLENA, Everything portable e instalado, fixtures, mock y conexión del backend. |
+| [`docs/everything-desarrollo.md`](docs/everything-desarrollo.md) | Entorno de Everything con documentos simulados: estructura del CLENA, Everything portable e instalado, fixtures, mock y sincronización con el backend (HU-137). |
 | [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía del personal del CLENA (en elaboración). |
 | [`docs/sprint-planning.md`](docs/sprint-planning.md), [`docs/daily-scrum.md`](docs/daily-scrum.md), [`docs/sprint-review.md`](docs/sprint-review.md), [`docs/sprint-retrospective.md`](docs/sprint-retrospective.md) | Ceremonias y evidencias Scrum. |
 | [`docs/evidencias.md`](docs/evidencias.md) | Grabaciones y material recibido de G6. |

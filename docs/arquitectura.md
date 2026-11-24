@@ -70,7 +70,7 @@ Leyenda: azul claro, componente de la API; azul, contenedor de Trackhive; gris, 
 
 | Capa | Componentes | Contiene | No puede importar |
 |---|---|---|---|
-| Presentación | Controladores; guards, validación y filtro de errores | Diez controladores bajo `/api/v1`, `JwtAuthGuard` y `RolesGuard` globales, `@Roles()`, `@Public()`, `ValidationPipe` global y `AllExceptionsFilter` global | Repositorios |
+| Presentación | Controladores; guards, validación y filtro de errores | Doce controladores bajo `/api/v1`, `JwtAuthGuard` y `RolesGuard` globales, `EverythingAgentGuard` (token del agente de Everything, HU-137), `@Roles()`, `@Public()`, `ValidationPipe` global y `AllExceptionsFilter` global | Repositorios |
 | Aplicación | Casos de uso; entradas, DTOs y mapeadores; puertos y servicios | 25 casos de uso con un método `execute` que recibe una interfaz `...Input`, DTOs de petición y de respuesta, mapeadores de respuesta, puertos (`IMailSender`, `ITokenService`, `IPasswordHasher`, `IRequestQueryService`, `INotificationQueue`…), servicios (`SessionTokenIssuer`, `RequesterResolver`) y los tokens de inyección | Prisma, controladores, infraestructura |
 | Dominio | Entidades, enumeraciones, objetos de valor, políticas y errores; interfaces de repositorio | `User`, `RefreshToken`, `Material`, `Request` (con su máquina de estados y `Request.create()`), `Requester`, `StatusChange`, errores que extienden `DomainError`, `IUserRepository`, `IRefreshTokenRepository`, `IMaterialRepository`, `IRequestRepository`, `IRequesterRepository` | NestJS, Prisma, librerías externas |
 | Infraestructura | Repositorios Prisma; mapeadores de Prisma; adaptadores y tareas programadas | `Prisma…Repository`, `PrismaRequestQueryService`, `PrismaNotificationQueue`, mapeadores de Prisma de cada módulo, `SmtpMailSender`, `JwtTokenService`, `Sha256TokenHasher`, `Argon2PasswordHasher`, `PrismaTrackingCodeGenerator`, `SendPendingNotificationsJob`, `PurgeExpiredTokensJob` | Controladores |
@@ -132,6 +132,12 @@ backend/
 │   │   ├── application/         # use-cases/  dto/  mappers/  ports/  tokens.ts
 │   │   ├── infrastructure/      # persistence/  mappers/  mail/  jobs/
 │   │   └── presentation/        # controllers/
+│   ├── everything/              # sincronización con Everything (E11)
+│   │   ├── everything.module.ts
+│   │   ├── domain/              # entities/  enums/  errors/  policies/  repositories/  value-objects/
+│   │   ├── application/         # dto/  mappers/  services/  tokens.ts  sync-limits.ts
+│   │   ├── infrastructure/      # config/  persistence/  mappers/
+│   │   └── presentation/        # controllers/  guards/  decorators/
 │   └── health/
 │       ├── health.module.ts
 │       ├── application/         # use-cases/  dto/  mappers/  ports/  tokens.ts
@@ -247,7 +253,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 | D-23 | Configuración por entorno validada al arrancar y logs estructurados | Parcial (faltan los logs en JSON) |
 | D-24 | Plataforma de despliegue | **Pendiente** |
 | D-25 | Estructura de Clean Architecture del curso, verificada en el CI | Implementada |
-| D-26 | El catálogo solo crece por la sincronización con *Everything*; el material no digitalizado vive como referencia escrita | Implementada en la semilla (la sincronización es HU-137) |
+| D-26 | El catálogo solo crece por la sincronización con *Everything*; el material no digitalizado vive como referencia escrita | Implementada (HU-137) |
 
 ---
 
@@ -384,6 +390,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Justificación:** la integración con *Everything* es técnicamente posible: el programa incluye un servidor HTTP opcional que responde las búsquedas en JSON (`?search=...&json=1`). No se hace ahora por tres razones. El alcance acordado con el CLENA es que Trackhive solo gestiona las solicitudes, y el enunciado no la exige. La API tendría que alcanzar por red el equipo Windows donde corre *Everything*, y eso depende de la plataforma de despliegue (D-24). Y ese servidor expone los nombres y rutas de los archivos del CLENA, así que habría que activarlo y protegerlo con usuario y contraseña. Leer el buzón añade riesgo (credenciales institucionales, correos con formato libre, datos personales no controlados) para un beneficio que el formulario público ya cubre.
 - **Consecuencias:** la integración con *Everything* se documenta como mejora futura: Trackhive podría consultarlo para saber qué material tiene copia digital. Antes hay que validarlo con el CLENA. El formulario web es la vía que reduce la lectura manual de correos que describió el personal.
 - **Sprint 2 (épica E11):** la integración con *Everything* se retoma para registrar las copias digitales. El entorno para desarrollarla sin el equipo del CLENA (documentos simulados, Everything portable, fixtures reales y mock) está en [everything-desarrollo.md](everything-desarrollo.md) (HU-133).
+- **Implementación (HU-137):** el backend no consulta Everything. El agente del CLENA (HU-166) llama a tres endpoints de ingesta (`/api/v1/everything/sync-runs`): iniciar corrida, enviar página y cerrar corrida. Están protegidos con `EVERYTHING_AGENT_TOKEN` por `EverythingAgentGuard`, un guard propio separado del inicio de sesión que compara en tiempo constante; sin el token responden 401, y si el token no está configurado, 503. El controlador es delgado: cada endpoint llama a una operación de `EverythingSynchronizer` (`application/services/`). Una página se valida (HU-135; 413 por encima de 500 resultados o 100 kB) y se guarda en su transacción en `sync_run_pages`. El parseo (HU-136) necesita todas las carpetas a la vez, porque Everything ordena por nombre y mezcla niveles entre páginas. Por eso, al cerrar la corrida completa (con las páginas 1..N), se parsea todo y se hace el *upsert* página por página, cada una en su transacción, por código de catalogación. Después se marcan como «copia digital no encontrada» (`digital_path = NULL`) los materiales de Everything que no aparecieron, sin borrar ninguno. Una corrida con error, cortada o vencida (`EVERYTHING_RUN_TIMEOUT_MINUTES`) no marca nada. El índice único parcial de `sync_runs` impide dos corridas a la vez (409). Detalle en [everything-desarrollo.md](everything-desarrollo.md), sección 7.
 
 ### D-18. Fechas en UTC y presentación en `America/Bogota`
 
@@ -465,7 +472,9 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
   - `IMaterialRepository.search()` e `IUserRepository.search()` (HU-05) devuelven entidades con su paginación.
   - `IRefreshTokenRepository.revoke()` y `deleteExpired()` devuelven una confirmación o un conteo.
   - `IRequestRepository.saveStatusChange()` y `saveAppointment()` no reciben la entidad `Request` sino el `StatusChange` que ella produce, más el correo (`NotificationDraft`). Así el cambio de estado, su fila de historial y su correo se guardan en una sola transacción (D-08, D-10). Toda decisión de negocio está en el `StatusChange`: el estado nuevo, `attendedAt`, `closedAt`, el motivo del rechazo y el resultado de la cita (`appointmentOutcome`); el repositorio no decide nada. Devuelven el registro guardado (`SavedStatusChange`, `SavedAppointment`), que es un objeto de valor del dominio.
-  - Se mantienen las diferencias que ya estaban documentadas: errores que extienden `DomainError` (D-14), guards globales (D-12) y las carpetas `application/services/` e `infrastructure/jobs|mail|database|security/`.
+  - `ISyncRunRepository` (HU-137) trabaja con la entidad `SyncRun`, pero `savePage()` recibe la página (`ReceivedSyncPage`), `saveMaterials()` recibe los materiales de una página (`SyncedMaterial`) y devuelve un conteo, y `complete()` devuelve cuántas copias marcó como no encontradas. Así cada paso (la página, los materiales de una página, el cierre con sus marcas) se guarda en una sola transacción.
+  - La sincronización con Everything (HU-137) vive en un servicio de `application/services/`, `EverythingSynchronizer`, con tres operaciones (iniciar corrida, procesar página y cerrar corrida) que el controlador llama directamente, como pide la historia de usuario, en vez de tres casos de uso. Cumple las mismas reglas: recibe interfaces `...Input`, arma las respuestas con `SyncRunResponseMapper` y no conoce HTTP.
+  - Se mantienen las diferencias que ya estaban documentadas: errores que extienden `DomainError` (D-14), guards globales (D-12) y las carpetas `application/services/` e `infrastructure/jobs|mail|database|security|config/`.
 - **Alternativas:** dejar la estructura solo en la documentación y la revisión de los PR; usar una herramienta externa de dependencias (dependency-cruiser).
 - **Justificación:** al terminar el Sprint 1 convivían dos estilos de organización, aunque la regla de dependencia se cumplía: archivos sueltos en el dominio, entradas definidas dentro de los casos de uso y respuestas armadas a mano. Una revisión no basta para evitar que vuelva a pasar, y una prueba con el compilador de TypeScript no agrega dependencias.
 - **Consecuencias:**
@@ -487,3 +496,4 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Alternativas:** mantener el formulario de alta de material (WF-05) junto a la sincronización; conservar el depósito, la estantería y la caja como datos opcionales.
 - **Justificación:** el CLENA no pidió la ubicación física (fue un supuesto del equipo en HU-07 y D-17) y nadie la podría llenar sin un formulario de alta. Dos vías de alta duplicarían materiales con códigos distintos para la misma carpeta. La referencia escrita ya cubre el material que aún no tiene carpeta.
 - **Consecuencias:** HU-165 quitó `depot`, `shelf`, `box` y `materials_location_check` de `materials`, y `access_type` de `request_items`, que siempre valía `FISICO`. RN-12 queda derogada. La semilla carga todo el material con `source = EVERYTHING` y las carpetas hoja de `dev/manifiesto.json` (HU-133), así que una sincronización contra el mock lo actualiza por su código y no lo duplica.
+- **Implementación (HU-137):** la sincronización crea cada material desde su carpeta hoja y lo actualiza por su código de catalogación. Si la carpeta no aparece en una corrida completa, queda con «copia digital no encontrada»; nunca se borra (D-17).
