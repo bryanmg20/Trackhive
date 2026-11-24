@@ -1,0 +1,4 @@
+# Agent of the Everything sync (HU-166). Everything else is the standard library.
+# truststore verifies the certificate of Trackhive with the certificate store of
+# Windows, as the browser does.
+truststore==0.10.5
