@@ -82,9 +82,11 @@ class CompleteRunTest(AgentTestCase):
             result = run_agent(config)
 
         self.assertExit(result, EXIT_OK)
-        # The first query only checks that Everything answers
-        self.assertEqual(queries, [folders_query(NOTARIES, 0, 1), *(folders_query(root, 0, 200) for root in ROOTS)])
-        self.assertTrue(all(f'folder%3A%20%22{quote(root, safe="")}%5C%22' in query for root, query in zip(ROOTS, queries[1:])))
+        # The first three queries check that every root has folders
+        self.assertEqual(
+            queries, [*(folders_query(root, 0, 1) for root in ROOTS), *(folders_query(root, 0, 200) for root in ROOTS)]
+        )
+        self.assertTrue(all(f'folder%3A%20%22{quote(root, safe="")}%5C%22' in query for root, query in zip(ROOTS, queries[3:])))
         self.assertEqual(trackhive.closes(), [{'result': 'OK', 'pageCount': 3}])
 
     def test_trackhive_answering_again_after_a_while_gets_the_same_page_again(self) -> None:
@@ -124,6 +126,19 @@ class EverythingFailsTest(AgentTestCase):
             result = run_agent(config)
         self.assertExit(result, EXIT_SYNC_FAILED)
         self.assertClosedWithError(trackhive, config, 'no respondió en 1 s')
+
+    def test_a_root_with_a_typo_ends_the_run_with_an_error_and_never_complete(self) -> None:
+        # Everything finds nothing under it: closing complete would leave the
+        # whole fund as «copia digital no encontrada»
+        typo = LETTERS.replace('Correspondencia', 'Corespondencia')
+        with RunningMock() as mock, FakeTrackhive() as trackhive:
+            config = write_config(self.folder, mock.url, trackhive.url, everything={'roots': [NOTARIES, PERIODICALS, typo]})
+            result = run_agent(config)
+        self.assertExit(result, EXIT_SYNC_FAILED)
+        self.assertEqual(trackhive.operations(), ['start', 'page:1', 'page:2', 'close'])
+        [close] = trackhive.closes()
+        self.assertEqual(close['result'], 'ERROR')
+        self.assertIn(f'ninguna carpeta bajo {typo}', close['errorMessage'])
 
     def test_a_wrong_password_of_everything_ends_the_run_with_an_error(self) -> None:
         with RunningMock(password='otra-contraseña') as mock, FakeTrackhive() as trackhive:

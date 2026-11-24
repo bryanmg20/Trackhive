@@ -50,13 +50,15 @@ class FakeEverything:
         self.failures: dict[int, Exception] = {}
         # Calls answered with an empty index, as Everything just opened
         self.empty: set[int] = set()
+        # Calls whose totalResults changed: folders created or deleted meanwhile
+        self.totals: dict[int, int] = {}
 
     def folders_under(self, root: str, offset: int, count: int) -> EverythingPage:
         self.calls.append((root, offset, count))
         failure = self.failures.get(len(self.calls))
         if failure is not None:
             raise failure
-        total = 0 if len(self.calls) in self.empty else self.folders[root]
+        total = 0 if len(self.calls) in self.empty else self.totals.get(len(self.calls), self.folders[root])
         results = max(0, min(count, total - offset))
         body = json.dumps({'totalResults': total, 'results': [{}] * results, 'root': root, 'offset': offset})
         return EverythingPage(body.encode('utf-8'), total, results)
@@ -102,7 +104,7 @@ def unavailable(message: str = 'Trackhive no responde en https://t: rechazó la 
 
 class SyncTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.everything = FakeEverything({NOTARIES: 450, PERIODICALS: 6, LETTERS: 0})
+        self.everything = FakeEverything({NOTARIES: 450, PERIODICALS: 6, LETTERS: 3})
         self.trackhive = FakeTrackhive()
         self.clock = FakeClock()
         self.logger = LOGGER
@@ -122,13 +124,13 @@ class CompleteRunTest(SyncTestCase):
 
         self.assertTrue(report.ok)
         self.assertEqual((report.run_id, report.pages, report.summary), ('run-1', 5, SUMMARY))
-        # 450 notaries in pages of 200, then the 6 periodicals; an empty root still sends its page
+        # 450 notaries in pages of 200, then the 6 periodicals and the 3 letters
         self.assertEqual(self.trackhive.sent, [1, 2, 3, 4, 5])
         self.assertEqual(
             self.sent_pages(), [(NOTARIES, 0), (NOTARIES, 200), (NOTARIES, 400), (PERIODICALS, 0), (LETTERS, 0)]
         )
-        # count=200 in every query after the check that Everything answers
-        self.assertEqual({count for _, _, count in self.everything.calls[1:]}, {200})
+        # count=200 in every query after the check of the three roots
+        self.assertEqual({count for _, _, count in self.everything.calls[3:]}, {200})
         self.assertEqual(self.trackhive.closes, [CloseRequest('OK', page_count=5)])
 
     def test_the_page_goes_as_everything_answered_it(self) -> None:
@@ -146,8 +148,8 @@ class CompleteRunTest(SyncTestCase):
 
 class EverythingFailsTest(SyncTestCase):
     def test_everything_failing_in_the_middle_closes_with_an_error_never_complete(self) -> None:
-        # Call 1 checks Everything, call 3 asks for page 2
-        self.everything.failures[3] = EverythingUnavailableError('Everything no responde en http://127.0.0.1:8081: no respondió en 30 s')
+        # Calls 1 to 3 check the roots, call 5 asks for page 2
+        self.everything.failures[5] = EverythingUnavailableError('Everything no responde en http://127.0.0.1:8081: no respondió en 30 s')
         with self.assertLogs(self.logger, 'ERROR') as logs:
             report = self.use_case().execute()
 
@@ -180,25 +182,50 @@ class EverythingFailsTest(SyncTestCase):
         self.assertTrue(report.ok)
         self.assertEqual(self.clock.sleeps, [10, 10])
 
-    def test_an_everything_still_loading_its_index_is_waited_for(self) -> None:
-        # Just opened, the installed Everything answers with an empty index:
-        # the three roots come empty in the first check (calls 1 to 3)
-        self.everything.empty = {1, 2, 3}
+    def test_an_index_loaded_halfway_is_waited_for(self) -> None:
+        # Just opened, the installed Everything has the notaries but not yet
+        # the periodicals (call 2 of the first check): it waits for all roots
+        self.everything.empty = {2}
         with self.assertLogs(self.logger, 'WARNING') as logs:
             report = self.use_case(startup_wait=300).execute()
         self.assertTrue(report.ok)
         self.assertEqual(self.clock.sleeps, [10])
-        self.assertIn('aún no tiene carpetas bajo ninguna raíz', '\n'.join(logs.output))
+        self.assertIn('aún no tiene carpetas bajo todas las raíces', '\n'.join(logs.output))
         self.assertEqual(self.trackhive.closes, [CloseRequest('OK', page_count=5)])
 
-    def test_roots_still_empty_after_the_wait_are_sent_anyway(self) -> None:
-        # Trackhive ends that run with an error, because no leaf folder arrives
-        self.everything.empty = set(range(1, 50))
+    def test_an_empty_root_fails_the_run_while_the_others_have_folders(self) -> None:
+        # Periodicals on a drive that is not connected: closing complete would
+        # mark all its materials as not found
+        self.everything.folders[PERIODICALS] = 0
         with self.assertLogs(self.logger, 'WARNING') as logs:
-            self.use_case(startup_wait=15).execute()
+            report = self.use_case(startup_wait=15).execute()
+
+        self.assertFalse(report.ok)
         self.assertEqual(self.clock.sleeps, [10, 5])
-        self.assertIn('se sincroniza igual', '\n'.join(logs.output))
+        self.assertIn('sigue sin carpetas bajo alguna raíz', '\n'.join(logs.output))
+        # The notaries went; the empty root is never sent and the run never closes complete
         self.assertEqual(self.trackhive.sent, [1, 2, 3])
+        [close] = self.trackhive.closes
+        self.assertEqual(close.result, 'ERROR')
+        self.assertIn(f'ninguna carpeta bajo {PERIODICALS}', close.error_message)
+
+    def test_a_root_that_comes_empty_during_the_run_fails_it(self) -> None:
+        # The check saw every root (calls 1 to 3); the first page of the
+        # periodicals (call 7) comes empty
+        self.everything.empty = {7}
+        report = self.use_case().execute()
+        self.assertFalse(report.ok)
+        self.assertEqual(self.trackhive.sent, [1, 2, 3])
+        self.assertEqual(self.trackhive.closes[0].result, 'ERROR')
+
+    def test_folders_that_change_while_a_root_is_read_fail_the_run(self) -> None:
+        # Someone creates a folder under the notaries between page 1 (call 4)
+        # and page 2 (call 5): with offsets, a folder could be skipped
+        self.everything.totals = {5: 451}
+        report = self.use_case().execute()
+        self.assertFalse(report.ok)
+        self.assertEqual(self.trackhive.sent, [1])
+        self.assertIn('cambiaron mientras se leían (de 450 a 451)', self.trackhive.closes[0].error_message)
 
     def test_without_a_wait_it_closes_at_once_and_does_not_say_it_waited(self) -> None:
         self.everything.failures[1] = EverythingUnavailableError('Everything no responde: no respondió en 30 s')
@@ -216,7 +243,7 @@ class EverythingFailsTest(SyncTestCase):
         self.assertEqual(self.trackhive.closes[0].error_message, 'Everything rechazó el usuario o la contraseña (401)')
 
     def test_an_unexpected_error_never_closes_complete(self) -> None:
-        self.everything.failures[2] = RuntimeError('fallo del programa')
+        self.everything.failures[4] = RuntimeError('fallo del programa')
         with self.assertLogs(self.logger, 'ERROR'):
             report = self.use_case().execute()
         self.assertFalse(report.ok)
@@ -253,6 +280,15 @@ class TrackhiveFailsTest(SyncTestCase):
         self.assertEqual(self.trackhive.sent, [1])
         self.assertEqual(self.clock.sleeps, [])
         self.assertIn('413', self.trackhive.closes[0].error_message)
+
+    def test_a_close_that_fails_after_an_error_says_both(self) -> None:
+        self.trackhive.failures[1] = [TrackhiveError('Trackhive rechazó la página 1: 413 PAYLOAD_TOO_LARGE', 413)]
+        self.trackhive.failures['close'] = [unavailable()] * 5
+        report = self.use_case().execute()
+        self.assertFalse(report.ok)
+        self.assertIn('No se pudo cerrar la corrida run-1', report.error)
+        self.assertIn('la corrida había fallado', report.error)
+        self.assertIn('413', report.error)
 
     def test_without_a_run_there_is_nothing_to_close(self) -> None:
         self.trackhive.failures['start'] = [unavailable()] * 5

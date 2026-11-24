@@ -12,7 +12,7 @@ from .retrier import Retrier, seconds
 
 # While Everything is starting, it is asked again this often
 PROBE_INTERVAL_SECONDS = 10.0
-EMPTY_INDEX = 'Everything responde, pero aún no tiene carpetas bajo ninguna raíz (puede estar cargando su índice)'
+EMPTY_INDEX = 'Everything responde, pero aún no tiene carpetas bajo todas las raíces (puede estar cargando su índice)'
 
 
 class SynchronizeUseCase:
@@ -30,6 +30,14 @@ class SynchronizeUseCase:
     4. Closes the run: complete with pageCount only if every page of every
        root arrived; with an error otherwise, so that Trackhive marks nothing
        as not found.
+
+    Trackhive marks as not found every copy the run did not see, whatever
+    its root. So a root that comes back empty (a network drive not
+    connected, an index loaded halfway, a typo in agente.toml) fails the
+    run: closing it complete would mark the whole fund as not found. And a
+    root whose number of folders changes between its pages (folders created
+    or deleted while it is read with offsets) fails it too: a folder could
+    be skipped. A fund without folders yet is not put in the roots.
 
     Everything is never retried during the run: if it does not answer, or
     takes longer than the timeout, the run closes with an error. Trackhive is
@@ -75,18 +83,18 @@ class SynchronizeUseCase:
         """None when Everything is ready; otherwise why it cannot be used.
 
         Waits up to startup_wait_seconds while Everything is starting: while
-        it does not answer, and while it answers but has no folder under any
-        root. Just opened, the installed Everything answers at once with an
-        empty index until it loads its database. If the roots are still empty
-        when the time is up the run goes on, and Trackhive ends it with an
-        error because no leaf folder arrived. A wrong password or a wrong
-        answer will not fix itself, so they are not waited for."""
+        it does not answer, and while some root has no folder. Just opened,
+        the installed Everything answers at once with its index empty or
+        loaded halfway. If a root is still empty when the time is up the run
+        goes on, and the empty root ends it with an error (_send_pages), so
+        that Trackhive records why. A wrong password or a wrong answer will
+        not fix itself, so they are not waited for."""
         started = self._clock.monotonic()
         deadline = started + self._settings.startup_wait_seconds
         waited = False
         while True:
             try:
-                if self._some_root_has_folders():
+                if self._every_root_has_folders():
                     self._log.info('Everything responde')
                     return None
                 problem: EverythingError | None = None
@@ -100,7 +108,7 @@ class SynchronizeUseCase:
                 elapsed = round(self._clock.monotonic() - started)
                 after = f' (se esperó {seconds(elapsed)} s a que arrancara)' if waited else ''
                 if problem is None:
-                    self._log.warning('Everything no tiene carpetas bajo ninguna raíz%s: se sincroniza igual', after)
+                    self._log.warning('Everything sigue sin carpetas bajo alguna raíz%s: la corrida se cerrará con error', after)
                     return None
                 self._log.error(f'{problem}{after}')
                 return f'{problem}{after}'
@@ -110,8 +118,8 @@ class SynchronizeUseCase:
             self._clock.sleep(wait)
             waited = True
 
-    def _some_root_has_folders(self) -> bool:
-        return any(self._everything.folders_under(root, 0, 1).total_results > 0 for root in self._settings.roots)
+    def _every_root_has_folders(self) -> bool:
+        return all(self._everything.folders_under(root, 0, 1).total_results > 0 for root in self._settings.roots)
 
     def _start_attempt(self, attempt: int) -> str:
         try:
@@ -131,6 +139,7 @@ class SynchronizeUseCase:
         Stops at the first failure, which the run keeps."""
         for root in self._settings.roots:
             offset: int | None = 0
+            first_total: int | None = None
             while offset is not None:
                 number = run.next_page_number()
                 where = f'página {number} de la corrida: {root}, desde el resultado {offset}'
@@ -139,6 +148,24 @@ class SynchronizeUseCase:
                 except EverythingError as error:
                     self._fail(run, f'{error} ({where})')
                     return
+                if first_total is None and page.total_results == 0:
+                    self._fail(
+                        run,
+                        f'Everything no devolvió ninguna carpeta bajo {root}: la unidad no está conectada, Everything '
+                        'aún no la carga o la raíz está mal escrita en agente.toml. La corrida se cierra con error '
+                        'para no marcar los materiales de ese fondo como no encontrados (un fondo sin carpetas no va '
+                        'en everything.roots)',
+                    )
+                    return
+                if first_total is not None and page.total_results != first_total:
+                    self._fail(
+                        run,
+                        f'Las carpetas bajo {root} cambiaron mientras se leían (de {first_total} a '
+                        f'{page.total_results}): alguien creó o borró carpetas durante la corrida y una podría '
+                        'saltarse. La próxima ejecución sincroniza',
+                    )
+                    return
+                first_total = page.total_results
                 try:
                     self._retrier.run(
                         lambda _attempt: self._trackhive.send_page(run.id, number, page.body), f'Enviar la página {number}'
@@ -170,7 +197,8 @@ class SynchronizeUseCase:
         except TrackhiveError as error:
             reason = f'No se pudo cerrar la corrida {run.id} en Trackhive: {error}'
             self._log.error('%s. Si quedó abierta, vencerá sin marcar nada como no encontrado', reason)
-            return SyncReport(ok=False, run_id=run.id, pages=run.pages_sent, error=request.error_message or reason)
+            error_text = f'{reason} (la corrida había fallado: {request.error_message})' if request.error_message else reason
+            return SyncReport(ok=False, run_id=run.id, pages=run.pages_sent, error=error_text)
 
         if not request.complete:
             self._log.error('Corrida %s cerrada con ERROR: %s', run.id, request.error_message)
