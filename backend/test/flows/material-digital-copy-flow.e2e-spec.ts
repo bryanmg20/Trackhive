@@ -80,7 +80,8 @@ describe('Material digital copy, HU-134 (e2e, PostgreSQL)', () => {
   });
 
   afterAll(async () => {
-    // Only this file writes sync_runs: leave no run EN_CURSO behind
+    // This file and the sync flow (HU-137) write sync_runs: leave no run
+    // EN_CURSO behind, or the other one would get 409
     await finishRunning();
     await e2e.app.close();
   });
