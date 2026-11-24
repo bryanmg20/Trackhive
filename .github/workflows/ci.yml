@@ -78,6 +78,44 @@ jobs:
       - name: Generador, manifiesto y mock contra los fixtures de Everything real
         run: python -m unittest discover -s dev/tests -t dev/tests -v
 
+  # Agent of the Everything sync (HU-166): its tests against the Everything
+  # mock (HU-133) on Linux and on Windows. On Windows it also builds
+  # trackhive-agente.exe with PyInstaller, repeats the run tests against the
+  # .exe, checks the scheduled task and publishes the package for the CLENA
+  agente:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r dev/requirements.txt -r agent/requirements.txt
+      - name: Pruebas del agente contra el mock de Everything
+        run: python -m unittest discover -s agent/tests -t agent -v
+      - name: Construir trackhive-agente.exe con PyInstaller
+        if: runner.os == 'Windows'
+        run: |
+          pip install -r agent/requirements-build.txt
+          python agent/construir_exe.py
+      - name: Pruebas del .exe contra el mock de Everything y de la tarea programada
+        if: runner.os == 'Windows'
+        working-directory: agent
+        env:
+          TRACKHIVE_AGENTE_EXE: dist/trackhive-agente.exe
+          TRACKHIVE_PROBAR_TAREA: '1'
+        run: python -m unittest tests.test_agente tests.test_tarea_windows -v
+      - name: Publicar el paquete del agente (.exe, configuración de ejemplo y script de la tarea)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trackhive-agente
+          path: agent/dist/
+          retention-days: 30
+          if-no-files-found: error
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
