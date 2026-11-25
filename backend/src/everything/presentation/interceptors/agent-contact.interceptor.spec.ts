@@ -34,12 +34,12 @@ describe('AgentContactInterceptor (HU-138)', () => {
     );
 
     expect(answer).toBe('respuesta del endpoint');
-    expect(agent.lastContactAt).toEqual(NOW);
+    expect(agent.agent?.lastContactAt).toEqual(NOW);
   });
 
   it('si no puede registrarlo, lo deja en el log y la llamada sigue: la sincronización no se detiene', async () => {
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    agent.failRecording = new Error('se cayó la base');
+    agent.failSaving = new Error('se cayó la base');
 
     const answer = await lastValueFrom(
       await interceptor.intercept(context, handler),

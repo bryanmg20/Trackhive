@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { SyncAgent } from '../../domain/entities/sync-agent.entity';
 import type { ISyncAgentRepository } from '../../domain/repositories/sync-agent.repository';
 import { SYNC_AGENT_REPOSITORY } from '../tokens';
 
@@ -15,6 +16,6 @@ export class RecordAgentContactUseCase {
   ) {}
 
   execute(): Promise<void> {
-    return this.agent.recordContact(new Date());
+    return this.agent.save(SyncAgent.contact(new Date()));
   }
 }

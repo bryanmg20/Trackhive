@@ -1,19 +1,20 @@
 import { Prisma, SyncAgentModel } from '@prisma/client';
+import { SyncAgent } from '../../domain/entities/sync-agent.entity';
 
 // sync_agent has a single row (CHECK id = 1 in the migration)
 export const SYNC_AGENT_ROW = 1;
 
-/** sync_agent ↔ the last contact of the agent (HU-138, D-05). */
+/** sync_agent ↔ SyncAgent (HU-138, D-05). */
 export class PrismaSyncAgentMapper {
-  static toCreate(at: Date): Prisma.SyncAgentModelUncheckedCreateInput {
-    return { id: SYNC_AGENT_ROW, lastContactAt: at };
+  static toDomain(model: SyncAgentModel): SyncAgent {
+    return new SyncAgent({ lastContactAt: model.lastContactAt });
   }
 
-  static toContact(at: Date): Prisma.SyncAgentModelUncheckedUpdateInput {
-    return { lastContactAt: at };
+  static toCreate(agent: SyncAgent): Prisma.SyncAgentModelUncheckedCreateInput {
+    return { id: SYNC_AGENT_ROW, lastContactAt: agent.lastContactAt };
   }
 
-  static toLastContact(model: SyncAgentModel | null): Date | null {
-    return model?.lastContactAt ?? null;
+  static toUpdate(agent: SyncAgent): Prisma.SyncAgentModelUncheckedUpdateInput {
+    return { lastContactAt: agent.lastContactAt };
   }
 }

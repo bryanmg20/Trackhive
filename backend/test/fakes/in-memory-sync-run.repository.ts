@@ -66,15 +66,6 @@ export class InMemorySyncRunRepository implements ISyncRunRepository {
     );
   }
 
-  findLastFinished(): Promise<SyncRun | null> {
-    const finished = [...this.runs.values()]
-      .filter((run) => run.status === 'OK' || run.status === 'ERROR')
-      .sort(
-        (a, b) => (b.startedAt?.getTime() ?? 0) - (a.startedAt?.getTime() ?? 0),
-      );
-    return Promise.resolve(finished[0] ?? null);
-  }
-
   take(run: SyncRun): Promise<void> {
     if (!this.runs.get(run.id)?.isRequested) {
       return Promise.reject(new SyncRunAlreadyRunningError());

@@ -14,6 +14,6 @@ describe('RecordAgentContactUseCase (HU-138)', () => {
 
     await new RecordAgentContactUseCase(agent).execute();
 
-    expect(await agent.findLastContact()).toEqual(NOW);
+    expect(agent.agent?.lastContactAt).toEqual(NOW);
   });
 });

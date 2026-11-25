@@ -16,7 +16,6 @@ import { PrismaSyncedMaterialMapper } from '../mappers/prisma-synced-material.ma
 
 const REQUESTED = 'PEDIDA';
 const RUNNING = 'EN_CURSO';
-const FINISHED = ['OK', 'ERROR'];
 const UNIQUE_CONSTRAINT_ERROR = 'P2002';
 
 /**
@@ -60,16 +59,6 @@ export class PrismaSyncRunRepository implements ISyncRunRepository {
   async findRequested(): Promise<SyncRun | null> {
     const model = await this.prisma.syncRunModel.findFirst({
       where: { status: REQUESTED },
-    });
-    return model ? PrismaSyncRunMapper.toDomain(model) : null;
-  }
-
-  async findLastFinished(): Promise<SyncRun | null> {
-    // Two runs never overlap, so the last one started is the last one ended
-    // (sync_runs_started_at_idx)
-    const model = await this.prisma.syncRunModel.findFirst({
-      where: { status: { in: FINISHED } },
-      orderBy: { startedAt: 'desc' },
     });
     return model ? PrismaSyncRunMapper.toDomain(model) : null;
   }

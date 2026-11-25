@@ -1,5 +1,7 @@
 import { InMemorySyncAgentRepository } from '../../../../test/fakes/in-memory-sync-agent.repository';
 import { InMemorySyncRunRepository } from '../../../../test/fakes/in-memory-sync-run.repository';
+import { InMemorySyncStatusQuery } from '../../../../test/fakes/in-memory-sync-status.query';
+import { SyncAgent } from '../../domain/entities/sync-agent.entity';
 import { SyncRun } from '../../domain/entities/sync-run.entity';
 import type { EverythingSyncConfig } from '../dto/everything-sync-config';
 import { SyncRunExpirer } from '../services/sync-run-expirer';
@@ -20,8 +22,7 @@ describe('GetSyncStatusUseCase (pantalla de la sincronización, HU-138)', () => 
 
   const status = (config: EverythingSyncConfig = ENABLED) =>
     new GetSyncStatusUseCase(
-      runs,
-      agent,
+      new InMemorySyncStatusQuery(runs, agent),
       config,
       new SyncRunExpirer(runs, config),
     ).execute();
@@ -113,7 +114,7 @@ describe('GetSyncStatusUseCase (pantalla de la sincronización, HU-138)', () => 
   });
 
   it('muestra la última vez que el agente se comunicó', async () => {
-    agent.lastContactAt = later(59);
+    agent.agent = SyncAgent.contact(later(59));
 
     expect((await status()).agentLastContactAt).toBe(later(59).toISOString());
   });

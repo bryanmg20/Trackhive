@@ -29,9 +29,6 @@ export interface ISyncRunRepository {
   /** The run PEDIDA that waits for the agent, if there is one (HU-138). */
   findRequested(): Promise<SyncRun | null>;
 
-  /** The last run that ended, OK or ERROR (HU-138). */
-  findLastFinished(): Promise<SyncRun | null>;
-
   /**
    * Saves that the agent took the run PEDIDA: it is EN_CURSO from now on
    * (HU-138). SyncRunAlreadyRunningError if it was no longer PEDIDA: another

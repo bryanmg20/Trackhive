@@ -193,10 +193,7 @@ describe('EverythingSynchronizer', () => {
         requestedAt: T0.toISOString(),
         filesCount: 124 + 6,
       });
-      expect(await repo.findLastFinished()).toMatchObject({
-        id: 'pedida-1',
-        status: 'OK',
-      });
+      expect(repo.runs.get('pedida-1')).toMatchObject({ status: 'OK' });
       expect(await repo.findRequested()).toBeNull();
     });
 

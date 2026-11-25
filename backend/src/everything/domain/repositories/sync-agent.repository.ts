@@ -1,13 +1,11 @@
+import { SyncAgent } from '../entities/sync-agent.entity';
+
 /**
- * The agent of the CLENA (HU-166) as Trackhive knows it (HU-138): only when
- * it last called with its token. The screen of the sync shows it, so the
- * administrator knows whether the PC of the CLENA is on. There is no entity
- * of the agent: a single row, sync_agent, keeps that moment.
+ * The agent of the CLENA as Trackhive knows it (HU-138), in a single row,
+ * sync_agent. The screen of the sync reads it with the rest of its state
+ * through ISyncStatusQueryService, so the repository only saves it.
  */
 export interface ISyncAgentRepository {
-  /** The agent called Trackhive at `at`. */
-  recordContact(at: Date): Promise<void>;
-
-  /** When the agent last called Trackhive; null if it never did. */
-  findLastContact(): Promise<Date | null>;
+  /** Saves the agent: the first contact creates the row, the next ones update it. */
+  save(agent: SyncAgent): Promise<void>;
 }

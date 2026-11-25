@@ -7,6 +7,7 @@ import {
   EVERYTHING_SYNC_CONFIG,
   SYNC_AGENT_REPOSITORY,
   SYNC_RUN_REPOSITORY,
+  SYNC_STATUS_QUERY_SERVICE,
 } from './application/tokens';
 import { GetRequestedSyncRunUseCase } from './application/use-cases/get-requested-sync-run.use-case';
 import { GetSyncStatusUseCase } from './application/use-cases/get-sync-status.use-case';
@@ -16,6 +17,7 @@ import { loadCatalogConvention } from './infrastructure/config/catalog-conventio
 import { loadEverythingSyncConfig } from './infrastructure/config/everything-sync.config';
 import { PrismaSyncAgentRepository } from './infrastructure/persistence/prisma-sync-agent.repository';
 import { PrismaSyncRunRepository } from './infrastructure/persistence/prisma-sync-run.repository';
+import { PrismaSyncStatusQueryService } from './infrastructure/persistence/prisma-sync-status-query.service';
 import { EverythingSyncAdminController } from './presentation/controllers/everything-sync-admin.controller';
 import { EverythingSyncController } from './presentation/controllers/everything-sync.controller';
 import { EverythingAgentGuard } from './presentation/guards/everything-agent.guard';
@@ -39,6 +41,11 @@ import { AgentContactInterceptor } from './presentation/interceptors/agent-conta
     {
       provide: SYNC_AGENT_REPOSITORY,
       useClass: PrismaSyncAgentRepository,
+    },
+    {
+      // The screen of the sync, read at one same moment (HU-138, D-D)
+      provide: SYNC_STATUS_QUERY_SERVICE,
+      useClass: PrismaSyncStatusQueryService,
     },
     {
       // A short token or a wrong timeout stops the backend at startup (D-23)
