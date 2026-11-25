@@ -40,6 +40,7 @@ Leyenda: azul oscuro, raíz de agregado; azul, entidad interna de un agregado; o
 | **PréstamoMaterial** | Registro de entrega física y devolución de un material durante una cita en sala: quién lo entregó, cuándo, quién recibió la devolución, cuándo y observaciones opcionales (HU-72). | Material |
 | **Usuario** | Cuenta para entrar al sistema, con rol `ADMIN`, `PERSONAL` o `PUBLICO`. | Usuario (raíz) |
 | **Notificación** | Correo al solicitante que dispara un cambio de estado. Se envía y reintenta aparte del cambio. | Notificación (raíz) |
+| **AgenteSincronizacion** | El agente del PC del CLENA tal como lo conoce Trackhive (HU-138): la última vez que se comunicó con su token. Hay uno solo. | AgenteSincronizacion (raíz) |
 | **CorridaSincronizacion** | Una sincronización con *Everything* que inicia, alimenta y cierra el agente del CLENA (HU-137): inicio, última actividad, fin, resultado (pedida, en curso, OK o error), resultados recibidos y motivo del error. Un administrador puede pedirla con «Sincronizar ahora» (HU-138): queda pedida, con quién y cuándo la pidió, hasta que el agente la toma. Guarda las páginas recibidas hasta cerrarse. | CorridaSincronizacion (raíz) |
 
 ### 2.2 Objetos de valor
