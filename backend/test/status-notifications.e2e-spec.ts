@@ -1,3 +1,4 @@
+import { USER_REPOSITORY } from '../src/users/application/tokens';
 import { INestApplication, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -210,6 +211,11 @@ describe('Status change emails (e2e)', () => {
       .useValue(mailSender)
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
+      // HTTP fakes still need an active account for the global session check (HU-33).
+      .overrideProvider(USER_REPOSITORY)
+      .useValue({
+        findById: (id: string) => Promise.resolve({ id, active: true }),
+      })
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();

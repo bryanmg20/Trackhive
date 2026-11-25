@@ -1,4 +1,7 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Patch } from '@nestjs/common';
+import { ApiNoContentResponse } from '@nestjs/swagger';
+import { DeleteMyAccountDto } from '../../application/dto/delete-my-account.dto';
+import { DeleteMyAccountUseCase } from '../../application/use-cases/delete-my-account.use-case';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -23,9 +26,27 @@ export class ProfileController {
   constructor(
     private readonly getProfile: GetMyProfileUseCase,
     private readonly updateProfile: UpdateMyProfileUseCase,
+    private readonly deleteAccount: DeleteMyAccountUseCase,
   ) {}
 
   // All authenticated roles can access their own profile. No client-supplied id.
+  @Delete()
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Elimina mi cuenta y anonimiza mis datos (HU-33)' })
+  @ApiNoContentResponse({
+    description: 'Cuenta eliminada y sesiones invalidadas',
+  })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeleteMyAccountDto,
+  ): Promise<void> {
+    await this.deleteAccount.execute({
+      userId: user.id,
+      confirmation: dto.confirmation,
+    });
+  }
+
   @Get()
   @ApiOperation({
     summary: 'Consulta mi perfil y mis datos de caracterización',

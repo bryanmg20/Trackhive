@@ -67,6 +67,7 @@ La edición actual de perfil comprende caracterización, no identidad ni contact
 | Dato y ubicación | Justificación | Minimización y acceso |
 |---|---|---|
 | Hash de contraseña (`users.password_hash`) | Verificar credenciales sin persistir la clave en claro | No devolverlo en API, correos, logs ni exportaciones |
+| Marca de supresión (`users.deleted_at`, `requesters.anonymized_at`) | Impedir el acceso y la restauración accidental de una identidad suprimida | Fecha generada por el servidor al confirmar la eliminación; sin conservar el correo, documento o caracterización anteriores. No se pide al titular |
 | Access token; hash y fechas del refresh token (`refresh_tokens`) | Autenticar, renovar y revocar sesiones | Tokens son secretos; no incluir caracterización. No guardarlos en evidencias. El refresh token se persiste como hash; no afirmar que el access token es anónimo |
 | Identificadores de cuenta/solicitante y vínculos de solicitud | Asociar atención y aplicar autorización al titular correcto | Los genera el servidor o reutiliza un registro; no pedirlos como un dato personal adicional al usuario |
 | Rol, activo y último inicio de sesión (`users`) | Controlar permisos, desactivar acceso y administrar cuentas del personal | Solo ADMIN gestiona cuentas de personal; la sesión usa el rol para autorización. No pedir información de caracterización al crear una cuenta de personal |
@@ -201,8 +202,42 @@ capturas, issues o reportes de fallos.
   «No solicitamos datos sensibles», incompatible con las opciones del grupo
   poblacional. Requiere revisión del aviso y de su versionado en el alcance de
   privacidad; este inventario no cambia el texto ni reinterpreta autorizaciones.
-- HU-33 debe concretar conservación y anonimización, incluidas copias de
+- La conservación pendiente debe concretar copias de
   seguridad, notificaciones, historiales y datos de caracterización. No se
   promete borrado automático ni plazo de retención que el código no implemente.
 - HU-140 debe implementar/verificar el indicador por rol. La revisión del origen
   y de títulos/colecciones es necesaria incluso sin exponer rutas completas.
+
+## Supresión desde Mi perfil (HU-33)
+
+La confirmación de eliminación es una decisión del titular sobre su propia cuenta:
+no pide documento, teléfono, motivo de baja ni otros datos personales. Se envía
+solo `confirmation: true`; la cuenta se toma de la sesión. Cancelar no envía la
+petición. Todos los roles autenticados pueden ejercerla, sin `@Roles()`.
+
+La captura mínima se verifica en el [diálogo de confirmación](../frontend/src/features/profile/DeleteAccountSection.tsx)
+y el [DTO de eliminación](../backend/src/requests/application/dto/delete-my-account.dto.ts).
+
+La operación elimina o neutraliza identidad, contacto y caracterización tanto en
+cuenta como en solicitante vinculado, suprime textos personales y notificaciones
+almacenadas del trámite y deja sin uso sus credenciales. Se conservan relaciones,
+estados y fechas para estadísticas y auditoría con identidad neutralizada. No se
+conserva una tabla de equivalencia al correo o documento anterior. Es irreversible
+desde la aplicación: no existe reactivación de esa cuenta ni de su solicitante.
+
+El alcance se determina por la cuenta de la sesión y `requesters.user_id`, no por
+una coincidencia de correo con otra ficha. La supresión de fichas de visitantes
+sin cuenta requiere verificar su titularidad con CLENA; este endpoint no permite
+seleccionarlas ni eliminar registros de otro solicitante.
+
+Al fallar la transacción no se confirma la eliminación ni se borran parcialmente
+los datos. Al completarla, se retiran los tokens del navegador; el backend rechaza
+también tokens anteriores de otras pestañas o dispositivos. No se comunica un plazo
+legal de retención ni se crea una aceptación nueva durante la eliminación.
+
+El alcance es la base operativa de Trackhive. No borra documentos del archivo
+histórico/Everything, correos que el proveedor o el destinatario ya recibieron,
+exportaciones descargadas, logs históricos ni copias de seguridad externas. Esos
+soportes requieren el procedimiento de conservación y supresión que acuerde CLENA.
+Una restauración de backup debe reaplicar las supresiones antes de habilitar el
+servicio. No prometer que el botón borra copias fuera de la aplicación.

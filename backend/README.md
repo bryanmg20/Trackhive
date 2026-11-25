@@ -196,3 +196,24 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Supresión de cuenta (HU-33)
+
+`DELETE /api/v1/users/me/profile`, con access token y `{ "confirmation": true }`,
+responde 204. Sin sesión devuelve 401; confirmación ausente/falsa o campos ajenos
+se rechazan con 400. No usa `@Roles()` y toma el titular exclusivamente del token.
+Swagger documenta la operación. Aplicar la migración con `pnpm db:migrate` antes
+de arrancar el backend actualizado; Docker la aplica con su arranque habitual.
+
+`PrismaAccountErasure` coordina una transacción serializable y mapeadores de
+infraestructura para supresión. La excepción al historial inmutable permite solo
+limpiar comentarios en el alcance verificado por el trigger; conserva los datos
+para ranking y tiempos. Triggers impiden modificar identidades ya suprimidas.
+La autenticación consulta el estado de la cuenta en cada petición para invalidar
+access tokens previos, además de eliminar todos sus refresh tokens.
+
+Pruebas de flujo y rollback con PostgreSQL:
+`pnpm test:e2e -- --runInBand --testPathPatterns=account-erasure-flow`.
+Para la integración desde nginx: en frontend,
+`pnpm test:e2e:docker account-erasure.spec.ts` después de
+`docker compose up -d --build`; crea y suprime solo una cuenta ficticia de prueba.
