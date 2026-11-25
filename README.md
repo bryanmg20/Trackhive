@@ -109,7 +109,7 @@ Estas instrucciones están pensadas para un **clon limpio** del repositorio.
 ### Requisitos
 
 - [Git](https://git-scm.com/).
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) con Docker Compose. En Windows o macOS, Docker Desktop debe estar iniciado.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) con Docker Compose **2.24 o superior** (el comando `docker compose`). En Windows o macOS, Docker Desktop debe estar iniciado.
 - Puertos libres: `8080` (frontend), `3000` (API), `5432` (PostgreSQL), `8025` y `1025` (Mailpit). Si alguno está ocupado, se cambia en el `.env` (ver [Solución de problemas](#solución-de-problemas)).
 
 No hace falta instalar Node.js, pnpm ni PostgreSQL para levantar el sistema con Docker.
@@ -136,16 +136,18 @@ Copy-Item .env.example .env
 ```bash
 # 3. Levanta backend, frontend, PostgreSQL y Mailpit.
 #    La primera vez construye las imágenes y puede tardar varios minutos.
-docker-compose up --build
+docker compose up --build
 ```
 
-> **Docker Compose v2:** si tu instalación solo tiene el comando moderno, usa `docker compose up --build`. El comando clásico `docker-compose up` también funciona: construye las imágenes si no existen y deja los contenedores en primer plano. Añade `-d` (`docker compose up -d --build`) para ejecutarlos en segundo plano.
+Añade `-d` (`docker compose up -d --build`) para dejarlos en segundo plano.
+
+> **Producción y desarrollo (HU-42):** [`docker-compose.yml`](docker-compose.yml) es la configuración de **producción**: solo el frontend publica sus puertos (80, que redirige a HTTPS, y 443), y no se levantan Mailpit ni el mock de Everything. [`docker-compose.dev.yml`](docker-compose.dev.yml) le agrega lo de desarrollo: los puertos de depuración en `127.0.0.1` (PostgreSQL y la API), Mailpit, el mock de Everything y el frontend por HTTP en `FRONTEND_PORT`. El `.env` copiado de `.env.example` carga los dos con `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml` (y `COMPOSE_PATH_SEPARATOR=:`), así que `docker compose up` levanta todo sin más. El despliegue en el servidor está en el [manual de operación](docs/manual-operacion.md). El comando antiguo `docker-compose` (v1) no entiende `docker-compose.dev.yml`.
 
 Al arrancar, el contenedor del backend ejecuta automáticamente:
 
 1. `prisma migrate deploy` — aplica las migraciones pendientes.
 2. `prisma db seed` — carga datos ficticios de demostración si `RUN_SEED=true`.
-3. `node dist/main` — inicia la API.
+3. `node dist/main` — crea el administrador inicial con `ADMIN_EMAIL` y `ADMIN_PASSWORD` si todavía no hay ningún `ADMIN`, e inicia la API.
 
 ### Verifica que todo quedó arriba
 
@@ -189,15 +191,15 @@ docker compose up -d --build
 
 El frontend también reenvía `/api/`, `/docs` y `/docs-json` al backend, así que <http://localhost:8080/api/v1/health> y <http://localhost:8080/docs> funcionan igual.
 
-Con la semilla de demostración (`RUN_SEED=true`) se crean estos usuarios ficticios:
+El administrador inicial se crea siempre al arrancar el backend, con `RUN_SEED=true` o `false`, a partir de `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env`, solo si no existe ningún `ADMIN`; en los arranques siguientes no se cambia su contraseña. Con la semilla de demostración (`RUN_SEED=true`) se crean además estos usuarios ficticios:
 
 | Rol | Correos | Contraseña |
 |---|---|---|
-| `ADMIN` | `admin@example.com` | `1` |
-| `PERSONAL` | `personal1@example.com`, `personal2@example.com` | `1` |
-| `PUBLICO` | `publico1@example.com`, `publico2@example.com`, `publico3@example.com`, `publico4@example.com` | `1` |
+| `ADMIN` (administrador inicial) | `admin@example.com` (`ADMIN_EMAIL`) | `1` (`ADMIN_PASSWORD`) |
+| `PERSONAL` | `personal1@example.com`, `personal2@example.com` | `1` (`SEED_DEMO_PASSWORD`) |
+| `PUBLICO` | `publico1@example.com`, `publico2@example.com`, `publico3@example.com`, `publico4@example.com` | `1` (`SEED_DEMO_PASSWORD`) |
 
-Las contraseñas salen de `SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD` en el `.env`. Son valores **solo para desarrollo**: cámbialos antes de cualquier despliegue real. Para arrancar sin datos de demostración, usa `RUN_SEED=false`.
+Son valores **solo para desarrollo**. En producción, `RUN_SEED=false` no carga datos de demostración y exige un `ADMIN_PASSWORD` de al menos 12 caracteres ([manual de operación](docs/manual-operacion.md#8-administrador-inicial-y-cambio-de-contraseñas)).
 
 ## Variables de entorno
 
@@ -210,10 +212,13 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `POSTGRES_PASSWORD` | Contraseña de PostgreSQL | `1234` |
 | `POSTGRES_PORT` | Puerto local de PostgreSQL | `5432` |
 | `BACKEND_PORT` | Puerto local de la API | `3000` |
-| `FRONTEND_PORT` | Puerto local de la aplicación web | `8080` |
-| `RUN_SEED` | Carga la semilla de demostración al arrancar | `true` |
-| `SEED_ADMIN_PASSWORD` | Contraseña del usuario administrador de la semilla | `1` |
-| `SEED_DEMO_PASSWORD` | Contraseña de los demás usuarios de la semilla | `1` |
+| `FRONTEND_PORT` | Puerto local de la aplicación web (solo desarrollo; en producción, 80 y 443) | `8080` |
+| `COMPOSE_FILE` | Archivos de Docker Compose. En desarrollo, el de producción más `docker-compose.dev.yml`; en producción se quita | `docker-compose.yml:docker-compose.dev.yml` |
+| `COMPOSE_PATH_SEPARATOR` | Separador de `COMPOSE_FILE`, igual en Linux, macOS y Windows | `:` |
+| `RUN_SEED` | Carga la semilla de demostración al arrancar. En producción, `false` | `true` |
+| `ADMIN_EMAIL` | Correo del administrador inicial, creado al arrancar si no hay ningún `ADMIN` | `admin@example.com` |
+| `ADMIN_PASSWORD` | Contraseña del administrador inicial. Con `RUN_SEED=false`, al menos 12 caracteres | `1` |
+| `SEED_DEMO_PASSWORD` | Contraseña de los usuarios de la semilla. No se exige con `RUN_SEED=false` | `1` |
 | `JWT_SECRET` | Secreto para firmar el access token | `change-me-access-secret` |
 | `JWT_REFRESH_SECRET` | Secreto para firmar el refresh token | `change-me-refresh-secret` |
 | `SMTP_HOST` | Servidor de correo. En Docker, `mailpit` | `mailpit` |
@@ -227,6 +232,8 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `EVERYTHING_PASSWORD` | Contraseña del mock de Everything. El backend no la usa; el agente lleva la suya en `agente.toml` | `trackhive-dev` |
 | `EVERYTHING_MOCK_PORT` | Puerto local del mock de Everything | `8081` |
 | `DATABASE_URL` | Conexión de Prisma cuando el backend corre fuera de Docker | `postgresql://...@localhost:5432/trackhive?schema=public` |
+
+Las variables propias del servidor (`FRONTEND_TLS`, `TLS_CERT_DIR`) y los valores de producción están en el [manual de operación](docs/manual-operacion.md#3-variables-de-entorno).
 
 ## Desarrollo local sin Docker
 
@@ -326,7 +333,7 @@ Trackhive/
 │   ├── src/features/        # pantallas y lógica por funcionalidad
 │   ├── src/styles/          # tokens, breakpoints y estilos globales
 │   ├── e2e/                 # pruebas Playwright
-│   └── nginx.conf           # servidor estático y proxy hacia la API
+│   └── nginx/               # sitio HTTPS (producción) o HTTP (desarrollo) y proxy hacia la API
 ├── agent/                   # agente de sincronización con Everything del PC del CLENA (HU-166)
 │   ├── trackhive_agent/     # dominio, aplicación, infraestructura y presentación
 │   ├── agente.example.toml  # configuración de ejemplo (la real, agente.toml, no se sube)
@@ -338,7 +345,9 @@ Trackhive/
 │   └── manifiesto.json      # lo que el parseo debe sacar de cada carpeta hoja
 ├── docs/                    # arquitectura, modelo de datos, manuales y Scrum
 │   └── img/                 # imágenes incrustadas en este README y en los informes
-├── docker-compose.yml       # PostgreSQL, backend, frontend, Mailpit y el mock de Everything
+├── deploy/                  # certificado TLS y webroot de certbot del servidor (HU-42; no se suben)
+├── docker-compose.yml       # producción: PostgreSQL, backend y frontend con HTTPS
+├── docker-compose.dev.yml   # desarrollo: puertos de depuración, Mailpit y el mock de Everything
 ├── .env.example             # plantilla del entorno local
 └── README.md
 ```
@@ -372,6 +381,8 @@ Mensaje similar a `Missing POSTGRES_DB in .env`. Falta el archivo `.env` o está
 ```bash
 cp .env.example .env
 ```
+
+Si el `.env` es anterior a HU-42, el mensaje es `Missing ADMIN_EMAIL in .env` o Mailpit no se levanta: agrega `COMPOSE_FILE`, `COMPOSE_PATH_SEPARATOR`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` como en `.env.example` y quita `SEED_ADMIN_PASSWORD`, que ya no se usa.
 
 ### Un puerto ya está en uso
 

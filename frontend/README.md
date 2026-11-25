@@ -98,8 +98,11 @@ sin simular la API.
 
 En desarrollo, Vite reenvía las peticiones `/api` a `http://localhost:3000`
 (ver `vite.config.ts`). En el despliegue con Docker, nginx reenvía `/api/`,
-`/docs` y `/docs-json` al servicio `backend:3000` (ver `nginx.conf`), así que
-no hace falta definir `VITE_API_URL` en `docker compose`. Para desplegar el
+`/docs` y `/docs-json` al servicio `backend:3000` (ver `nginx/locations.conf`), así que
+no hace falta definir `VITE_API_URL` en `docker compose`. En producción nginx
+sirve HTTPS en el 443 con HSTS y redirige el 80 (`nginx/https.conf`); con
+`FRONTEND_TLS=off`, como en `docker-compose.dev.yml`, sirve HTTP en el 80
+(`nginx/http.conf`). Ver el manual de operación, sección 4. Para desplegar el
 frontend separado del backend, defina `VITE_API_URL` con el origen de la API
 (ver `.env.example`); si se omite, se usan rutas relativas.
 
@@ -336,9 +339,10 @@ sus bytes UTF-8, nombre y filtros a 360 px. El e2e del backend compara el archiv
 con los datos JSON sobre PostgreSQL real y comprueba 401/403.
 
 Con Docker iniciado desde la raíz con `docker compose up -d --build`, ejecutar
-desde `frontend` `pnpm test:e2e:docker report-export.spec.ts`. Usa las cuentas
-demo de ADMIN (`admin@example.com`), personal y público y sus contraseñas de
-seed (`SEED_ADMIN_PASSWORD` / `SEED_DEMO_PASSWORD`, por defecto local `1`).
+desde `frontend` `pnpm test:e2e:docker report-export.spec.ts`. Usa el
+administrador inicial (`ADMIN_EMAIL` / `ADMIN_PASSWORD`, por defecto local
+`admin@example.com` y `1`) y las cuentas demo de personal y público
+(`SEED_DEMO_PASSWORD`, por defecto local `1`).
 No crea solicitudes. Guarda los CSV y capturas de ambas pantallas en
 `test-results/` usando el frontend servido por nginx en `localhost:8080`.
 
@@ -362,11 +366,11 @@ pnpm test:e2e
 ```
 
 Con `docker compose up -d --build` iniciado desde la raíz, ejecutar desde
-`frontend` `pnpm test:e2e:docker attention-times.spec.ts`. Usa el seed de ADMIN
-(`admin@example.com`) y las cuentas demo de personal/público para comprobar
-los 403, sin crear solicitudes. Guarda capturas de escritorio y móvil en
-`test-results/`. Usa las contraseñas `SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD`
-del entorno de la prueba (por defecto local: `1`).
+`frontend` `pnpm test:e2e:docker attention-times.spec.ts`. Usa el administrador
+inicial (`ADMIN_EMAIL`, por defecto `admin@example.com`) y las cuentas demo de
+personal/público para comprobar los 403, sin crear solicitudes. Guarda capturas
+de escritorio y móvil en `test-results/`. Usa las contraseñas `ADMIN_PASSWORD` y
+`SEED_DEMO_PASSWORD` del entorno de la prueba (por defecto local: `1`).
 
 ### Disponible directo con copia digital (HU-139)
 
