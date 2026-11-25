@@ -4,6 +4,7 @@ import { DeleteMyAccountDto } from '../../application/dto/delete-my-account.dto'
 import { DeleteMyAccountUseCase } from '../../application/use-cases/delete-my-account.use-case';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
@@ -29,7 +30,7 @@ export class ProfileController {
     private readonly deleteAccount: DeleteMyAccountUseCase,
   ) {}
 
-  // All authenticated roles can access their own profile. No client-supplied id.
+  // Authenticated self-erasure, with confirmation and the last-admin safeguard.
   @Delete()
   @HttpCode(204)
   @ApiOperation({ summary: 'Elimina mi cuenta y anonimiza mis datos (HU-33)' })
@@ -37,6 +38,11 @@ export class ProfileController {
     description: 'Cuenta eliminada y sesiones invalidadas',
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({
+    description:
+      'Último ADMIN activo o conflicto concurrente; no se completó la eliminación',
+    type: ErrorResponseDto,
+  })
   async remove(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: DeleteMyAccountDto,
@@ -47,6 +53,7 @@ export class ProfileController {
     });
   }
 
+  // All authenticated roles can access their own profile. No client-supplied id.
   @Get()
   @ApiOperation({
     summary: 'Consulta mi perfil y mis datos de caracterización',

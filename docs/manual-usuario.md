@@ -170,3 +170,8 @@ cerrado sus sesiones. Ya no podrá iniciar sesión con la cuenta anterior. Sus
 solicitudes se conservan con identidad neutralizada para mantener los reportes.
 Si ocurre un error, no se muestra éxito y puede reintentar. El botón no elimina
 archivos del fondo ni correos o CSV que ya estén fuera de Trackhive.
+
+Si es la última cuenta ADMIN activa, la eliminación se rechaza y su cuenta sigue
+funcionando: debe existir otro administrador activo. Si aparece un conflicto por
+otra operación simultánea, no se completó la eliminación y puede reintentar la
+confirmación. Ninguno de estos errores cierra la sesión ni muestra éxito.

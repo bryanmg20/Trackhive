@@ -217,3 +217,11 @@ Pruebas de flujo y rollback con PostgreSQL:
 Para la integración desde nginx: en frontend,
 `pnpm test:e2e:docker account-erasure.spec.ts` después de
 `docker compose up -d --build`; crea y suprime solo una cuenta ficticia de prueba.
+
+### Ajustes de revisión HU-33
+
+- La última cuenta ADMIN activa no puede suprimirse: 409 `LAST_ADMIN_CANNOT_BE_DELETED`, comprobado dentro de la transacción.
+- Prisma `P2034` devuelve 409 `ACCOUNT_ERASURE_CONFLICT`; no hay supresión parcial y el usuario puede reintentar.
+- Borrar PERSONAL/ADMIN conserva las notificaciones ajenas, incluidas pendientes; solo neutraliza el comentario del actor en texto/HTML. Los avisos propios sí se borran.
+- Cambio global de autenticación: el guard consulta la cuenta en PostgreSQL por cada petición autenticada. Desactivadas y suprimidas reciben 401 inmediatamente, incluso con JWT vigente. Detalles y coste de la lectura en D-12 de `docs/arquitectura.md`.
+- Las fichas no vinculadas por `requesters.user_id` no se suprimen por mera coincidencia de correo/documento: véase el límite y la verificación de titularidad en `docs/datos-personales.md`.

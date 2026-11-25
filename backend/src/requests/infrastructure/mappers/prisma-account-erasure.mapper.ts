@@ -1,7 +1,39 @@
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { escapeHtml } from '../../../common/html/escape-html';
 /** Scrub payloads preserve technical relationships, never the former identity. */
 export class PrismaAccountErasureMapper {
+  /** Replace only the known staff-comment slots; keep the citizen's mail intact. */
+  static notification(
+    row: { body: string; htmlBody: string | null },
+    comment: string,
+  ): Prisma.NotificationModelUpdateInput {
+    const replacement = '[Comentario del personal suprimido]';
+    const htmlComment = escapeHtml(comment).replace(/\r?\n/g, '<br>');
+    return {
+      body: row.body
+        .replace(
+          `Observaciones del personal:\n${comment}`,
+          `Observaciones del personal:\n${replacement}`,
+        )
+        .replace(
+          `Motivo del rechazo: ${comment}`,
+          `Motivo del rechazo: ${replacement}`,
+        ),
+      htmlBody:
+        row.htmlBody === null
+          ? null
+          : row.htmlBody
+              .replace(
+                `<p style="margin:0;color:#1e293b;">${htmlComment}</p>`,
+                `<p style="margin:0;color:#1e293b;">${replacement}</p>`,
+              )
+              .replace(
+                `Motivo del rechazo: <strong>${htmlComment}</strong>`,
+                `Motivo del rechazo: <strong>${replacement}</strong>`,
+              ),
+    };
+  }
   static user(now: Date): Prisma.UserModelUpdateInput {
     return {
       firstName: 'Persona',

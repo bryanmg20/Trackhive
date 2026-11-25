@@ -668,10 +668,12 @@ todos sus cambios. No marca solicitudes como atendidas o cerradas artificialment
    login, consulta de cuenta y administración de personal.
 3. Elimina sus refresh tokens y comprueba en cada petición autenticada que la
    cuenta sigue existiendo y activa: tampoco se reutiliza un access token anterior.
-4. Borra las notificaciones almacenadas de sus solicitudes o de sus comentarios,
-   incluidos cuerpos y errores; limpia motivo, descripción y notas de solicitudes,
-   ítems, referencias y observaciones de préstamo. Un rechazo conserva solo una
-   explicación neutra para cumplir el CHECK de ese estado.
+4. Borra solo las notificaciones de las solicitudes propias, incluidos cuerpos y
+   errores. En avisos de otros titulares neutraliza el comentario del funcionario
+   en texto/HTML, conservando fila, destinatario, asunto, estado y registro de envío.
+   Limpia también motivo, descripción y notas de las solicitudes propias, ítems,
+   referencias y observaciones de préstamo. Un rechazo conserva una explicación
+   neutra para cumplir el CHECK de ese estado.
 5. Limpia los comentarios del historial de sus solicitudes y los escritos por esa
    cuenta. La excepción D-08 usa una variable local de transacción y el trigger
    solo permite ese borrado de texto: no modifica eventos, fechas, actores ni estados.

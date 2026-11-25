@@ -213,7 +213,7 @@ capturas, issues o reportes de fallos.
 La confirmación de eliminación es una decisión del titular sobre su propia cuenta:
 no pide documento, teléfono, motivo de baja ni otros datos personales. Se envía
 solo `confirmation: true`; la cuenta se toma de la sesión. Cancelar no envía la
-petición. Todos los roles autenticados pueden ejercerla, sin `@Roles()`.
+petición. Todos los roles autenticados pueden solicitarla, sin `@Roles()`; el último ADMIN activo recibe 409 para conservar la administración del sistema.
 
 La captura mínima se verifica en el [diálogo de confirmación](../frontend/src/features/profile/DeleteAccountSection.tsx)
 y el [DTO de eliminación](../backend/src/requests/application/dto/delete-my-account.dto.ts).
@@ -226,7 +226,7 @@ conserva una tabla de equivalencia al correo o documento anterior. Es irreversib
 desde la aplicación: no existe reactivación de esa cuenta ni de su solicitante.
 
 El alcance se determina por la cuenta de la sesión y `requesters.user_id`, no por
-una coincidencia de correo con otra ficha. La supresión de fichas de visitantes
+una coincidencia de correo o documento con otra ficha. La supresión de fichas de visitantes
 sin cuenta requiere verificar su titularidad con CLENA; este endpoint no permite
 seleccionarlas ni eliminar registros de otro solicitante.
 
@@ -241,3 +241,10 @@ exportaciones descargadas, logs históricos ni copias de seguridad externas. Eso
 soportes requieren el procedimiento de conservación y supresión que acuerde CLENA.
 Una restauración de backup debe reaplicar las supresiones antes de habilitar el
 servicio. No prometer que el botón borra copias fuera de la aplicación.
+
+Al suprimir una cuenta de PERSONAL/ADMIN no se borran los correos de otros
+ciudadanos: se conserva la fila, incluidos estado pendiente, destinatario y registro
+de entrega, y solo se neutraliza el comentario del funcionario en los cuerpos de
+texto/HTML. Las notificaciones de las solicitudes propias sí se eliminan.
+Un conflicto de serialización devuelve 409 y revierte todos los cambios; se puede
+reintentar sin que el sistema anuncie una supresión incompleta como exitosa.

@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { SendPendingNotificationsUseCase } from '../../src/notifications/application/use-cases/send-pending-notifications.use-case';
 import { randomUUID } from 'crypto';
 import {
   API,
@@ -235,14 +236,41 @@ describe('HU-33 account erasure (PostgreSQL)', () => {
       const filed = await submitRequest(e2e.server, visitor, [material.id]);
       await changeStatus(e2e.server, user, filed.id, {
         status: 'EN_BUSQUEDA',
-        comment: user.email,
+        comment: `Correo: ${user.email}\n<dato & privado>`,
       }).expect(200);
+      const queued = await e2e.prisma.notificationModel.findFirstOrThrow({
+        where: { statusHistory: { userId: user.userId }, requestId: filed.id },
+      });
+      const before = await e2e.prisma.notificationModel.update({
+        where: { id: queued.id },
+        data: { scheduledAt: new Date(0) },
+      });
+      expect(before.deliveryStatus).toBe('PENDIENTE');
       await remove(user).expect(204);
+      const after = await e2e.prisma.notificationModel.findUniqueOrThrow({
+        where: { id: queued.id },
+      });
+      expect({
+        ...after,
+        body: before.body,
+        htmlBody: before.htmlBody,
+      }).toEqual(before);
+      expect(after.body).not.toContain(user.email);
+      expect(after.htmlBody).not.toContain(user.email);
+      expect(after.body).toContain('Ana Pérez');
+      await e2e.app.get(SendPendingNotificationsUseCase).execute();
       expect(
-        await e2e.prisma.notificationModel.count({
-          where: { statusHistory: { userId: user.userId } },
-        }),
-      ).toBe(0);
+        (
+          await e2e.prisma.notificationModel.findUniqueOrThrow({
+            where: { id: queued.id },
+          })
+        ).deliveryStatus,
+      ).toBe('ENVIADA');
+      expect(
+        e2e.mail.sent.find(
+          (mail) => mail.to === visitor.email && mail.subject === after.subject,
+        ),
+      ).toMatchObject({ text: after.body, html: after.htmlBody });
       expect(
         await e2e.prisma.statusHistoryModel.findMany({
           where: { userId: user.userId },
@@ -262,6 +290,94 @@ describe('HU-33 account erasure (PostgreSQL)', () => {
         .expect(401);
     },
   );
+  it('rejects deletion of the last active ADMIN without changing data or sessions', async () => {
+    const user = await signInStaffUser(e2e, 'ADMIN');
+    const others = await e2e.prisma.userModel.findMany({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        deletedAt: null,
+        id: { not: user.userId },
+      },
+      select: { id: true },
+    });
+    const ids = others.map((other) => other.id);
+    const before = await e2e.prisma.userModel.findUniqueOrThrow({
+      where: { id: user.userId },
+    });
+    const tokensBefore = await e2e.prisma.refreshTokenModel.count({
+      where: { userId: user.userId },
+    });
+    await e2e.prisma.userModel.updateMany({
+      where: { id: { in: ids } },
+      data: { active: false },
+    });
+    try {
+      const response = await remove(user).expect(409);
+      expect(response.body).toMatchObject({
+        code: 'LAST_ADMIN_CANNOT_BE_DELETED',
+      });
+      expect(
+        await e2e.prisma.userModel.findUniqueOrThrow({
+          where: { id: user.userId },
+        }),
+      ).toEqual(before);
+      expect(
+        await e2e.prisma.refreshTokenModel.count({
+          where: { userId: user.userId },
+        }),
+      ).toBe(tokensBefore);
+      await request(e2e.server)
+        .get(`${API}/users/me/profile`)
+        .set('Authorization', bearer(user))
+        .expect(200);
+    } finally {
+      await e2e.prisma.userModel.updateMany({
+        where: { id: { in: ids } },
+        data: { active: true },
+      });
+    }
+  });
+  it('keeps an active ADMIN when two administrators erase themselves concurrently', async () => {
+    const first = await signInStaffUser(e2e, 'ADMIN');
+    const second = await signInStaffUser(e2e, 'ADMIN');
+    const others = await e2e.prisma.userModel.findMany({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        deletedAt: null,
+        id: { notIn: [first.userId, second.userId] },
+      },
+      select: { id: true },
+    });
+    const ids = others.map((other) => other.id);
+    await e2e.prisma.userModel.updateMany({
+      where: { id: { in: ids } },
+      data: { active: false },
+    });
+    try {
+      const responses = await Promise.all([remove(first), remove(second)]);
+      expect(responses.map((response) => response.status).sort()).toEqual([
+        204, 409,
+      ]);
+      expect(
+        await e2e.prisma.userModel.count({
+          where: { role: 'ADMIN', active: true, deletedAt: null },
+        }),
+      ).toBe(1);
+      const conflict = responses.find((response) => response.status === 409);
+      expect([
+        'ACCOUNT_ERASURE_CONFLICT',
+        'LAST_ADMIN_CANNOT_BE_DELETED',
+      ]).toContain((conflict?.body as { code: string }).code);
+    } finally {
+      await e2e.prisma.userModel.updateMany({
+        where: { id: { in: ids } },
+        data: { active: true },
+      });
+    }
+  });
+
   it('rolls back every erasure step if the final write fails', async () => {
     const user = await signUpPublicUser(e2e.server, 'erase-rollback');
     const requesterBefore = await e2e.prisma.requesterModel.findUniqueOrThrow({
