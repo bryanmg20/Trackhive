@@ -1,3 +1,8 @@
+# Production (HU-42): only the frontend publishes its ports (80 redirects to
+# HTTPS on 443). PostgreSQL and the backend are reachable only inside the
+# Docker network, and neither Mailpit nor the Everything mock start.
+# In development, COMPOSE_FILE in .env adds docker-compose.dev.yml
+# (docs/manual-operacion.md, section 2).
 services:
   postgres:
     networks:
@@ -8,8 +13,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:?Missing POSTGRES_DB in .env}
       POSTGRES_USER: ${POSTGRES_USER:?Missing POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD in .env}
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:?Missing POSTGRES_PORT in .env}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,9 +32,14 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:?Missing POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:?Missing POSTGRES_DB in .env}?schema=public
+      # true only in development: also loads the fictitious demo data
       RUN_SEED: ${RUN_SEED:?Missing RUN_SEED in .env}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Missing SEED_ADMIN_PASSWORD in .env}
-      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:?Missing SEED_DEMO_PASSWORD in .env}
+      # Initial administrator, created when the backend starts if there is no
+      # ADMIN yet (HU-42). With RUN_SEED=false, at least 12 characters
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Missing ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Missing ADMIN_PASSWORD in .env}
+      # Password of the demo accounts; only the seed uses it (RUN_SEED=true)
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:?Missing JWT_SECRET in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Missing JWT_REFRESH_SECRET in .env}
       SMTP_HOST: ${SMTP_HOST:?Missing SMTP_HOST in .env}
@@ -45,39 +53,9 @@ services:
       # (the ingest endpoints answer 503); docs/everything-desarrollo.md
       EVERYTHING_AGENT_TOKEN: ${EVERYTHING_AGENT_TOKEN:-}
       EVERYTHING_RUN_TIMEOUT_MINUTES: ${EVERYTHING_RUN_TIMEOUT_MINUTES:-30}
-    ports:
-      - "127.0.0.1:${BACKEND_PORT:?Missing BACKEND_PORT in .env}:3000"
     depends_on:
       postgres:
         condition: service_healthy
-
-  # Development mail server (D-10): keeps the emails without sending them.
-  # Inbox at http://localhost:8025; the backend sends to mailpit:1025.
-  mailpit:
-    networks:
-      - trackhive-network
-    image: axllent/mailpit:v1.32.0
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8025:8025"
-      - "127.0.0.1:1025:1025"
-
-  # Mock of the Everything HTTP server over the simulated documents (HU-133),
-  # for those without Windows. Starts only with the profile:
-  #   docker compose --profile everything up -d
-  everything-mock:
-    profiles: ["everything"]
-    networks:
-      - trackhive-network
-    build:
-      context: .
-      dockerfile: dev/everything-mock/Dockerfile
-    restart: unless-stopped
-    environment:
-      EVERYTHING_USER: ${EVERYTHING_USER:-trackhive}
-      EVERYTHING_PASSWORD: ${EVERYTHING_PASSWORD:-trackhive-dev}
-    ports:
-      - "127.0.0.1:${EVERYTHING_MOCK_PORT:-8081}:8081"
 
   frontend:
     networks:
@@ -86,8 +64,18 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
+    environment:
+      # on: HTTPS on 443 with the certificate of TLS_CERT_DIR and HSTS, and 80
+      # only redirects. off: plain HTTP on 80, behind a proxy that serves HTTPS
+      FRONTEND_TLS: ${FRONTEND_TLS:-on}
     ports:
-      - "${FRONTEND_PORT:?Missing FRONTEND_PORT in .env}:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      # fullchain.pem and privkey.pem (docs/manual-operacion.md, section 4)
+      - ${TLS_CERT_DIR:-./deploy/tls}:/etc/nginx/tls:ro
+      # Webroot of certbot, to renew the certificate
+      - ./deploy/acme-challenge:/var/www/acme-challenge:ro
     depends_on:
       - backend
 

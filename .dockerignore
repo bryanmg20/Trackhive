@@ -12,3 +12,5 @@
 **/uploads
 dev/docs_simulados
 **/__pycache__
+# TLS certificate and key of production (HU-42), never in an image
+deploy/tls
