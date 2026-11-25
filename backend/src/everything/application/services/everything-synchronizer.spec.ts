@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import type { MaterialReviewReason } from '../../../materials/domain/enums/material-review-reason';
+import { InMemorySyncRunRepository } from '../../../../test/fakes/in-memory-sync-run.repository';
 import { SyncRun } from '../../domain/entities/sync-run.entity';
 import { EverythingPageTooLargeError } from '../../domain/errors/everything-page-too-large.error';
 import { InvalidEverythingPageError } from '../../domain/errors/invalid-everything-page.error';
@@ -9,16 +9,11 @@ import { SyncRunAlreadyRunningError } from '../../domain/errors/sync-run-already
 import { SyncRunExpiredError } from '../../domain/errors/sync-run-expired.error';
 import { SyncRunNotFoundError } from '../../domain/errors/sync-run-not-found.error';
 import { SyncRunNotRunningError } from '../../domain/errors/sync-run-not-running.error';
-import type {
-  ISyncRunRepository,
-  SavedMaterialsCount,
-} from '../../domain/repositories/sync-run.repository';
-import type { ReceivedSyncPage } from '../../domain/value-objects/received-sync-page';
-import type { SyncedMaterial } from '../../domain/value-objects/synced-material';
 import { CatalogConventionMapper } from '../mappers/catalog-convention.mapper';
 import { MAX_RESULTS_PER_PAGE } from '../sync-limits';
 import { EverythingSynchronizer } from './everything-synchronizer';
 import { LeafFolderParser } from './leaf-folder-parser';
+import { SyncRunExpirer } from './sync-run-expirer';
 
 // Real answers of Everything, the manifest (HU-133) and the convention (HU-136)
 const DEV = join(__dirname, '../../../../../dev');
@@ -68,171 +63,6 @@ const EXPECTED_LEAVES = manifest.leaves.filter(
   (leaf) => leaf.collection !== 'Correspondencia',
 );
 
-interface StoredMaterial {
-  id: string;
-  catalogCode: string;
-  title: string;
-  collection: string;
-  materialType: string;
-  status: string;
-  source: 'MANUAL' | 'EVERYTHING';
-  digitalPath: string | null;
-  lastSeenAt: Date | null;
-  reviewReason: MaterialReviewReason | null;
-  author: string | null;
-}
-
-/**
- * ISyncRunRepository in memory (D-21), with the same rules as PostgreSQL:
- * one run EN_CURSO, guards on the status, upsert by catalog code and the
- * marking of the copies not seen.
- */
-class InMemorySyncRunRepository implements ISyncRunRepository {
-  readonly runs = new Map<string, SyncRun>();
-  readonly pages = new Map<string, Map<number, ReceivedSyncPage>>();
-  readonly materials = new Map<string, StoredMaterial>();
-  readonly savedGroups: SyncedMaterial[][] = [];
-  failSavingMaterials: Error | null = null;
-  private nextId = 1;
-
-  create(run: SyncRun): Promise<void> {
-    if ([...this.runs.values()].some((stored) => stored.isRunning)) {
-      return Promise.reject(new SyncRunAlreadyRunningError());
-    }
-    this.runs.set(run.id, run);
-    this.pages.set(run.id, new Map());
-    return Promise.resolve();
-  }
-
-  findById(id: string): Promise<SyncRun | null> {
-    return Promise.resolve(this.runs.get(id) ?? null);
-  }
-
-  findRunning(): Promise<SyncRun | null> {
-    return Promise.resolve(
-      [...this.runs.values()].find((run) => run.isRunning) ?? null,
-    );
-  }
-
-  savePage(run: SyncRun, page: ReceivedSyncPage): Promise<SyncRun> {
-    const stored = this.runs.get(run.id);
-    if (!stored?.isRunning) {
-      return Promise.reject(new SyncRunNotRunningError());
-    }
-    const pages = this.pages.get(run.id)!;
-    pages.set(page.number, page);
-    const filesCount = [...pages.values()].reduce(
-      (sum, saved) => sum + saved.resultsCount,
-      0,
-    );
-    const updated = new SyncRun({
-      ...stored,
-      lastActivityAt: run.lastActivityAt,
-      filesCount,
-    });
-    this.runs.set(run.id, updated);
-    return Promise.resolve(updated);
-  }
-
-  findPages(runId: string): Promise<ReceivedSyncPage[]> {
-    return Promise.resolve(
-      [...(this.pages.get(runId)?.values() ?? [])].sort(
-        (a, b) => a.number - b.number,
-      ),
-    );
-  }
-
-  saveMaterials(materials: SyncedMaterial[]): Promise<SavedMaterialsCount> {
-    this.savedGroups.push(materials);
-    if (this.failSavingMaterials) {
-      return Promise.reject(this.failSavingMaterials);
-    }
-    let created = 0;
-    for (const material of materials) {
-      const existing = this.materials.get(material.catalogCode);
-      if (!existing) {
-        created++;
-      }
-      this.materials.set(material.catalogCode, {
-        // What the sync does not know stays as it was
-        id: existing?.id ?? `material-${this.nextId++}`,
-        status: existing?.status ?? 'DISPONIBLE',
-        author: existing?.author ?? null,
-        catalogCode: material.catalogCode,
-        title: material.title,
-        collection: material.collection,
-        materialType: material.materialType,
-        source: 'EVERYTHING',
-        digitalPath: material.digitalPath,
-        lastSeenAt: material.seenAt,
-        reviewReason: material.reviewReason,
-      });
-    }
-    return Promise.resolve({ created, updated: materials.length - created });
-  }
-
-  finish(run: SyncRun, inactiveBefore?: Date): Promise<void> {
-    const stored = this.runs.get(run.id);
-    if (
-      !stored?.isRunning ||
-      (inactiveBefore && !(stored.lastActivityAt < inactiveBefore))
-    ) {
-      return Promise.reject(new SyncRunNotRunningError());
-    }
-    this.end(stored, run);
-    return Promise.resolve();
-  }
-
-  complete(run: SyncRun, seenAt: Date): Promise<number> {
-    const stored = this.runs.get(run.id);
-    if (!stored?.isRunning) {
-      return Promise.reject(new SyncRunNotRunningError());
-    }
-    let notFound = 0;
-    for (const material of this.materials.values()) {
-      if (
-        material.source === 'EVERYTHING' &&
-        material.digitalPath !== null &&
-        (material.lastSeenAt === null || material.lastSeenAt < seenAt)
-      ) {
-        material.digitalPath = null;
-        notFound++;
-      }
-    }
-    this.end(stored, run);
-    return Promise.resolve(notFound);
-  }
-
-  addMaterial(material: Partial<StoredMaterial> & { catalogCode: string }) {
-    this.materials.set(material.catalogCode, {
-      id: `seed-${material.catalogCode}`,
-      title: material.catalogCode,
-      collection: 'Notarías',
-      materialType: 'PROTOCOLO_NOTARIAL',
-      status: 'DISPONIBLE',
-      source: 'EVERYTHING',
-      digitalPath: null,
-      lastSeenAt: new Date('2026-11-01T00:00:00.000Z'),
-      reviewReason: null,
-      author: null,
-      ...material,
-    });
-  }
-
-  private end(stored: SyncRun, ended: SyncRun): void {
-    this.runs.set(
-      stored.id,
-      new SyncRun({
-        ...stored,
-        status: ended.status,
-        finishedAt: ended.finishedAt,
-        errorMessage: ended.errorMessage,
-      }),
-    );
-    this.pages.set(stored.id, new Map());
-  }
-}
-
 describe('EverythingSynchronizer', () => {
   let repo: InMemorySyncRunRepository;
   let sync: EverythingSynchronizer;
@@ -264,8 +94,11 @@ describe('EverythingSynchronizer', () => {
     repo = new InMemorySyncRunRepository();
     sync = new EverythingSynchronizer(
       repo,
-      { agentToken: 'token', runTimeoutMinutes: TIMEOUT },
       new LeafFolderParser(convention),
+      new SyncRunExpirer(repo, {
+        agentToken: 'token',
+        runTimeoutMinutes: TIMEOUT,
+      }),
     );
   });
 
@@ -318,6 +151,95 @@ describe('EverythingSynchronizer', () => {
         `${BASE}\\vieja`,
       );
       expect(repo.pages.get(cut)?.size).toBe(0);
+    });
+  });
+
+  describe('iniciar corrida con una pedida por «Sincronizar ahora» (HU-138)', () => {
+    const ADMIN_ID = 'admin-1';
+
+    it('el agente toma la corrida pedida: la misma corrida pasa a EN_CURSO y no se crea otra', async () => {
+      const requested = SyncRun.request('pedida-1', ADMIN_ID, T0);
+      await repo.create(requested);
+
+      const run = await sync.startRun(later(5));
+
+      expect(run).toMatchObject({
+        id: 'pedida-1',
+        status: 'EN_CURSO',
+        requestedAt: T0.toISOString(),
+        startedAt: later(5).toISOString(),
+        lastActivityAt: later(5).toISOString(),
+        finishedAt: null,
+      });
+      expect(repo.runs.size).toBe(1);
+      expect(repo.runs.get('pedida-1')).toMatchObject({
+        status: 'EN_CURSO',
+        requestedById: ADMIN_ID,
+      });
+    });
+
+    it('la corrida tomada recibe páginas y se cierra como cualquier otra, con su resultado', async () => {
+      await repo.create(SyncRun.request('pedida-1', ADMIN_ID, T0));
+      const id = await sendPages(fixturePages(), later(1));
+
+      const closed = await sync.closeRun(
+        { runId: id, result: 'OK', pageCount: 4 },
+        later(20),
+      );
+
+      expect(id).toBe('pedida-1');
+      expect(closed).toMatchObject({
+        status: 'OK',
+        requestedAt: T0.toISOString(),
+        filesCount: 124 + 6,
+      });
+      expect(await repo.findLastFinished()).toMatchObject({
+        id: 'pedida-1',
+        status: 'OK',
+      });
+      expect(await repo.findRequested()).toBeNull();
+    });
+
+    it('una corrida pedida hace días no vence: el agente la toma cuando vuelve a encenderse el PC', async () => {
+      await repo.create(SyncRun.request('pedida-1', ADMIN_ID, T0));
+
+      const run = await sync.startRun(later(3 * 24 * 60));
+
+      expect(run).toMatchObject({ id: 'pedida-1', status: 'EN_CURSO' });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('si un administrador la pide justo mientras el agente inicia su corrida diaria, el agente toma esa', async () => {
+      // The agent read «nothing open»; the request is saved first
+      jest.spyOn(repo, 'create').mockImplementationOnce(() => {
+        repo.runs.set('pedida-1', SyncRun.request('pedida-1', ADMIN_ID, T0));
+        return Promise.reject(new SyncRunAlreadyRunningError());
+      });
+
+      const run = await sync.startRun(later(1));
+
+      expect(run).toMatchObject({ id: 'pedida-1', status: 'EN_CURSO' });
+      expect(repo.runs.size).toBe(1);
+    });
+
+    it('otro error al crear la corrida no se oculta', async () => {
+      jest
+        .spyOn(repo, 'create')
+        .mockRejectedValueOnce(new Error('se cayó la base'));
+
+      await expect(sync.startRun(later(1))).rejects.toThrow('se cayó la base');
+    });
+
+    it('si otra ejecución del agente la tomó primero, responde 409 y no crea otra', async () => {
+      await repo.create(SyncRun.request('pedida-1', ADMIN_ID, T0));
+      jest
+        .spyOn(repo, 'take')
+        .mockRejectedValueOnce(new SyncRunAlreadyRunningError());
+
+      await expect(sync.startRun(later(1))).rejects.toThrow(
+        SyncRunAlreadyRunningError,
+      );
+      expect(repo.runs.size).toBe(1);
     });
   });
 

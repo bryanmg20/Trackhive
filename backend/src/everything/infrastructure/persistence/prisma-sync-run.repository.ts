@@ -14,10 +14,15 @@ import type { SyncedMaterial } from '../../domain/value-objects/synced-material'
 import { PrismaSyncRunMapper } from '../mappers/prisma-sync-run.mapper';
 import { PrismaSyncedMaterialMapper } from '../mappers/prisma-synced-material.mapper';
 
+const REQUESTED = 'PEDIDA';
 const RUNNING = 'EN_CURSO';
+const FINISHED = ['OK', 'ERROR'];
 const UNIQUE_CONSTRAINT_ERROR = 'P2002';
 
-/** sync_runs, sync_run_pages and the materials a run brings (HU-137). */
+/**
+ * sync_runs, sync_run_pages and the materials a run brings (HU-137), and the
+ * runs an administrator asks for (HU-138).
+ */
 @Injectable()
 export class PrismaSyncRunRepository implements ISyncRunRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -28,8 +33,8 @@ export class PrismaSyncRunRepository implements ISyncRunRepository {
         data: PrismaSyncRunMapper.toCreate(run),
       });
     } catch (error) {
-      // sync_runs_single_running_idx: another run is EN_CURSO, maybe
-      // started by another instance of the backend at the same time
+      // sync_runs_single_open_idx: another run is EN_CURSO or PEDIDA, maybe
+      // started or asked for at the same time through another instance
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === UNIQUE_CONSTRAINT_ERROR
@@ -50,6 +55,35 @@ export class PrismaSyncRunRepository implements ISyncRunRepository {
       where: { status: RUNNING },
     });
     return model ? PrismaSyncRunMapper.toDomain(model) : null;
+  }
+
+  async findRequested(): Promise<SyncRun | null> {
+    const model = await this.prisma.syncRunModel.findFirst({
+      where: { status: REQUESTED },
+    });
+    return model ? PrismaSyncRunMapper.toDomain(model) : null;
+  }
+
+  async findLastFinished(): Promise<SyncRun | null> {
+    // Two runs never overlap, so the last one started is the last one ended
+    // (sync_runs_started_at_idx)
+    const model = await this.prisma.syncRunModel.findFirst({
+      where: { status: { in: FINISHED } },
+      orderBy: { startedAt: 'desc' },
+    });
+    return model ? PrismaSyncRunMapper.toDomain(model) : null;
+  }
+
+  async take(run: SyncRun): Promise<void> {
+    // Only a run still PEDIDA: the daily run and the watch of the agent may
+    // start at the same time, and only one of them takes it
+    const { count } = await this.prisma.syncRunModel.updateMany({
+      where: { id: run.id, status: REQUESTED },
+      data: PrismaSyncRunMapper.toTake(run),
+    });
+    if (count === 0) {
+      throw new SyncRunAlreadyRunningError();
+    }
   }
 
   async savePage(run: SyncRun, page: ReceivedSyncPage): Promise<SyncRun> {

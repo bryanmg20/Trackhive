@@ -10,7 +10,6 @@ import { incompleteRunReason } from '../../domain/policies/sync-completeness';
 import type { ISyncRunRepository } from '../../domain/repositories/sync-run.repository';
 import type { ReceivedSyncPage } from '../../domain/value-objects/received-sync-page';
 import type { CloseSyncRunInput } from '../dto/close-sync-run.input';
-import type { EverythingSyncConfig } from '../dto/everything-sync-config';
 import type { ParsedLeaf } from '../dto/parsed-leaf';
 import type { ReceiveSyncPageInput } from '../dto/receive-sync-page.input';
 import { SyncPageResponseDto } from '../dto/sync-page-response.dto';
@@ -23,8 +22,9 @@ import { SyncPageMapper } from '../mappers/sync-page.mapper';
 import { SyncRunResponseMapper } from '../mappers/sync-run-response.mapper';
 import { SyncedMaterialMapper } from '../mappers/synced-material.mapper';
 import { MAX_RESULTS_PER_PAGE } from '../sync-limits';
-import { EVERYTHING_SYNC_CONFIG, SYNC_RUN_REPOSITORY } from '../tokens';
+import { SYNC_RUN_REPOSITORY } from '../tokens';
 import { LeafFolderParser } from './leaf-folder-parser';
+import { SyncRunExpirer } from './sync-run-expirer';
 
 const NO_LEAVES =
   'La corrida no trajo ninguna carpeta hoja bajo las raíces de los fondos ' +
@@ -35,7 +35,8 @@ const NO_LEAVES =
  * The Everything sync (HU-137). The agent (HU-166) drives it with three
  * operations, one per ingest endpoint:
  *
- * 1. startRun: the lock and the row of sync_runs.
+ * 1. startRun: the lock and the row of sync_runs. If an administrator asked
+ *    for «Sincronizar ahora» (HU-138), the agent takes that run instead.
  * 2. receivePage: maps the page (HU-135) and keeps its folders, in its own
  *    transaction, until the run closes.
  * 3. closeRun: when the run is complete, parses every folder at once
@@ -55,25 +56,42 @@ export class EverythingSynchronizer {
   constructor(
     @Inject(SYNC_RUN_REPOSITORY)
     private readonly runs: ISyncRunRepository,
-    @Inject(EVERYTHING_SYNC_CONFIG)
-    private readonly config: EverythingSyncConfig,
     private readonly parser: LeafFolderParser,
+    private readonly expirer: SyncRunExpirer,
   ) {}
 
   /**
    * Starts a run. Another run EN_CURSO that has not expired answers 409;
    * one that expired ends with an error first, marking nothing as not found.
+   * A run PEDIDA (HU-138) is the one that starts: the agent takes it, so the
+   * daily run also serves the request of the administrator.
    */
   async startRun(now: Date = new Date()): Promise<SyncRunResponseDto> {
     const running = await this.runs.findRunning();
     if (running) {
-      if (!running.isExpired(this.timeoutMinutes, now)) {
+      if (!this.expirer.isExpired(running, now)) {
         throw new SyncRunAlreadyRunningError();
       }
-      await this.expire(running, now);
+      await this.expirer.expire(running, now);
+    }
+    const requested = await this.runs.findRequested();
+    if (requested) {
+      return this.take(requested, now);
     }
     const run = SyncRun.start(randomUUID(), now);
-    await this.runs.create(run);
+    try {
+      await this.runs.create(run);
+    } catch (error) {
+      // An administrator asked for one at the same moment: that one starts
+      const askedMeanwhile =
+        error instanceof SyncRunAlreadyRunningError
+          ? await this.runs.findRequested()
+          : null;
+      if (!askedMeanwhile) {
+        throw error;
+      }
+      return this.take(askedMeanwhile, now);
+    }
     this.logger.log(`Sync run ${run.id} started`);
     return SyncRunResponseMapper.toDto(run);
   }
@@ -127,8 +145,17 @@ export class EverythingSynchronizer {
     }
   }
 
-  private get timeoutMinutes(): number {
-    return this.config.runTimeoutMinutes;
+  /** The agent takes the run an administrator asked for (HU-138). */
+  private async take(
+    requested: SyncRun,
+    now: Date,
+  ): Promise<SyncRunResponseDto> {
+    const taken = requested.take(now);
+    await this.runs.take(taken);
+    this.logger.log(
+      `Sync run ${taken.id} taken by the agent: an administrator asked for it`,
+    );
+    return SyncRunResponseMapper.toDto(taken);
   }
 
   /** The run takes pages and its close: it exists, is EN_CURSO and alive. */
@@ -137,11 +164,12 @@ export class EverythingSynchronizer {
     if (!run) {
       throw new SyncRunNotFoundError();
     }
-    if (run.isExpired(this.timeoutMinutes, now)) {
-      await this.expire(run, now);
-      throw new SyncRunExpiredError(this.timeoutMinutes);
+    const timeoutMinutes = this.expirer.timeoutMinutes;
+    if (run.isExpired(timeoutMinutes, now)) {
+      await this.expirer.expire(run, now);
+      throw new SyncRunExpiredError(timeoutMinutes);
     }
-    run.assertOpen(this.timeoutMinutes, now);
+    run.assertOpen(timeoutMinutes, now);
     return run;
   }
 
@@ -219,26 +247,6 @@ export class EverythingSynchronizer {
       this.logger.error(
         `Sync run ${run.id} could not be ended with an error: ${EverythingSynchronizer.messageOf(error)}`,
       );
-    }
-  }
-
-  /**
-   * Ends a run that spent the timeout without pages. If another instance
-   * ended it first, or a page arrived meanwhile, there is nothing to do.
-   */
-  private async expire(run: SyncRun, now: Date): Promise<void> {
-    try {
-      await this.runs.finish(
-        run.expire(this.timeoutMinutes, now),
-        SyncRun.inactiveBefore(this.timeoutMinutes, now),
-      );
-      this.logger.warn(
-        `Sync run ${run.id} expired after ${this.timeoutMinutes} minutes without pages; nothing was marked as not found`,
-      );
-    } catch (error) {
-      if (!(error instanceof SyncRunNotRunningError)) {
-        throw error;
-      }
     }
   }
 
