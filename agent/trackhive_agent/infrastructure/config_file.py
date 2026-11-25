@@ -49,6 +49,8 @@ class TrackhiveSettings:
     attempts: int
     retry_delay_seconds: float
     ca_file: Path | None
+    # With --vigilar: how often it asks whether a run is requested (HU-138)
+    poll_seconds: float = 60
 
 
 @dataclass(frozen=True)
@@ -191,7 +193,16 @@ def parse_config(text: str, folder: Path) -> AgentConfig:
     trackhive = _Section(
         'trackhive',
         document.get('trackhive'),
-        {'url', 'token', 'timeout_seconds', 'close_timeout_seconds', 'attempts', 'retry_delay_seconds', 'ca_file'},
+        {
+            'url',
+            'token',
+            'timeout_seconds',
+            'close_timeout_seconds',
+            'attempts',
+            'retry_delay_seconds',
+            'ca_file',
+            'poll_seconds',
+        },
     )
     return AgentConfig(
         everything=EverythingSettings(
@@ -211,6 +222,7 @@ def parse_config(text: str, folder: Path) -> AgentConfig:
             attempts=trackhive.integer('attempts', 5, 1, 10),
             retry_delay_seconds=trackhive.number('retry_delay_seconds', 5, 0, 300, exclusive_minimum=True),
             ca_file=_ca_file(trackhive, folder),
+            poll_seconds=trackhive.number('poll_seconds', 60, 0, 3600, exclusive_minimum=True),
         ),
     )
 

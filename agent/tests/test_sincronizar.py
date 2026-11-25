@@ -6,7 +6,7 @@ import json
 import logging
 import unittest
 
-from trackhive_agent.application.dto import ClosedRun, RunSummary, SyncSettings
+from trackhive_agent.application.dto import ClosedRun, RequestedRun, RunSummary, SyncSettings
 from trackhive_agent.application.retrier import MAX_DELAY_SECONDS, Retrier, RetryPolicy
 from trackhive_agent.application.synchronize import SynchronizeUseCase
 from trackhive_agent.domain.agent_run import CloseRequest
@@ -65,24 +65,34 @@ class FakeEverything:
 
 
 class FakeTrackhive:
-    """The port of Trackhive in memory. failures['start'|'close'|n] are raised in order."""
+    """The port of Trackhive in memory. failures['requested'|'start'|'close'|n]
+    are raised in order. requested: the run an administrator asked for
+    (HU-138), until the start takes it."""
 
     def __init__(self) -> None:
+        self.asked = 0
         self.started = 0
         self.sent: list[int] = []
         self.pages: dict[int, bytes] = {}
         self.closes: list[CloseRequest] = []
         self.failures: dict[object, list[Exception]] = {}
         self.close_answer = ClosedRun('OK', None, SUMMARY)
+        self.requested: RequestedRun | None = None
 
     def _maybe_fail(self, key: object) -> None:
         pending = self.failures.get(key)
         if pending:
             raise pending.pop(0)
 
+    def requested_run(self) -> RequestedRun | None:
+        self.asked += 1
+        self._maybe_fail('requested')
+        return self.requested
+
     def start_run(self) -> str:
         self.started += 1
         self._maybe_fail('start')
+        self.requested = None
         return 'run-1'
 
     def send_page(self, run_id: str, number: int, body: bytes) -> None:

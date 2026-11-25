@@ -6,8 +6,10 @@ TRACKHIVE_AGENTE_EXE (CI on Windows) it runs trackhive-agente.exe instead."""
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,6 +28,9 @@ from tests.apoyo_agente import (
     read_log,
     record_requests,
     run_agent,
+    start_watch,
+    stop,
+    wait_until,
     write_config,
 )
 
@@ -198,6 +203,100 @@ class RefusesToRunTest(AgentTestCase):
         result = subprocess.run([*agent_command(), '--version'], capture_output=True, text=True, timeout=60)
         self.assertExit(result, EXIT_OK)
         self.assertIn(__version__, result.stdout)
+
+
+class WatchTest(AgentTestCase):
+    """--vigilar, as the task «Atender Sincronizar ahora» starts it (HU-138):
+    the agent keeps asking Trackhive until it is stopped."""
+
+    def test_takes_the_run_an_administrator_asked_for_and_keeps_asking(self) -> None:
+        with RunningMock() as mock, FakeTrackhive() as trackhive:
+            trackhive.requested_at = '2026-11-24T15:00:00.000Z'
+            config = write_config(self.folder, mock.url, trackhive.url, trackhive={'poll_seconds': 0.2})
+            process = start_watch(config)
+            try:
+                closed = wait_until(lambda: 'close' in trackhive.operations())
+                # After the run it goes on asking: the run is no longer PEDIDA
+                asked_again = wait_until(lambda: trackhive.operations()[-1] == 'requested')
+                running = process.poll() is None
+            finally:
+                stop(process)
+
+        self.assertTrue(closed, trackhive.operations())
+        self.assertTrue(asked_again, trackhive.operations())
+        self.assertTrue(running, 'el agente con --vigilar no debe terminar solo')
+        operations = trackhive.operations()
+        self.assertEqual(operations[: operations.index('close') + 1], ['requested', 'start', 'page:1', 'page:2', 'page:3', 'close'])
+        self.assertEqual(operations.count('start'), 1)
+        self.assertEqual(trackhive.closes(), [{'result': 'OK', 'pageCount': 3}])
+
+        log = read_log(config, 'vigilancia.log')
+        self.assertIn('Atendiendo «Sincronizar ahora»', log)
+        self.assertIn('Un administrador pidió «Sincronizar ahora»', log)
+        self.assertIn(f'Corrida {trackhive.run_id} completa con 3 páginas', log)
+        self.assertNotIn(TOKEN, log)
+        self.assertNotIn(EVERYTHING_PASSWORD, log)
+        # The daily run keeps its own log
+        self.assertEqual(read_log(config), '')
+
+    def test_without_a_requested_run_it_only_asks(self) -> None:
+        with RunningMock() as mock, FakeTrackhive() as trackhive:
+            config = write_config(self.folder, mock.url, trackhive.url, trackhive={'poll_seconds': 0.1})
+            queries = record_requests(mock)
+            process = start_watch(config)
+            try:
+                asked = wait_until(lambda: trackhive.operations().count('requested') >= 3)
+            finally:
+                stop(process)
+
+        self.assertTrue(asked, trackhive.operations())
+        self.assertEqual(set(trackhive.operations()), {'requested'})
+        self.assertEqual(queries, [])
+
+    def test_trackhive_down_does_not_stop_the_watch(self) -> None:
+        config = write_config(self.folder, 'http://127.0.0.1:8081', f'http://127.0.0.1:{closed_port()}', trackhive={'poll_seconds': 0.1})
+        process = start_watch(config)
+        try:
+            logged = wait_until(lambda: 'No se pudo preguntar a Trackhive' in read_log(config, 'vigilancia.log'))
+            alive = wait_until(lambda: process.poll() is None, timeout=1)
+        finally:
+            stop(process)
+
+        self.assertTrue(logged)
+        self.assertTrue(alive)
+        # Logged once, not at every question
+        self.assertEqual(read_log(config, 'vigilancia.log').count('No se pudo preguntar a Trackhive'), 1)
+
+    @unittest.skipUnless(
+        sys.platform == 'win32' and os.environ.get('TRACKHIVE_AGENTE_EXE'),
+        'Solo el .exe de Windows es un lanzador con el agente como hijo',
+    )
+    def test_when_the_task_ends_the_launcher_the_agent_ends_too(self) -> None:
+        # The Task Scheduler stops a task by ending the process it started:
+        # the launcher of the .exe, not the agent it started
+        with FakeTrackhive() as trackhive:
+            config = write_config(self.folder, 'http://127.0.0.1:8081', trackhive.url, trackhive={'poll_seconds': 30})
+            process = start_watch(config)
+            try:
+                asked = wait_until(lambda: 'requested' in trackhive.operations())
+                process.terminate()
+                process.wait(timeout=30)
+                ended = wait_until(lambda: 'se deja de atender' in read_log(config, 'vigilancia.log'), timeout=15)
+            finally:
+                stop(process)
+
+        self.assertTrue(asked)
+        self.assertTrue(ended, read_log(config, 'vigilancia.log'))
+
+    def test_a_wrong_configuration_ends_it_at_once_with_code_2(self) -> None:
+        with FakeTrackhive() as trackhive:
+            config = write_config(self.folder, 'http://127.0.0.1:8081', trackhive.url, trackhive={'token': 'corto'})
+            result = subprocess.run(
+                [*agent_command(), '--vigilar', '--config', str(config)], capture_output=True, text=True, timeout=60
+            )
+        self.assertExit(result, EXIT_INVALID_CONFIG)
+        self.assertEqual(trackhive.calls, [])
+        self.assertIn('al menos 32 caracteres', read_log(config, 'vigilancia.log'))
 
 
 class HttpsTest(AgentTestCase):

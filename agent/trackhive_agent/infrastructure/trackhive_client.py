@@ -1,4 +1,4 @@
-"""The ingest endpoints of Trackhive (HU-137), with the token of the agent."""
+"""The endpoints of Trackhive for the agent (HU-137, HU-138), with its token."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import quote
 
 from .. import __version__
-from ..application.dto import ClosedRun
+from ..application.dto import ClosedRun, RequestedRun
 from ..domain.agent_run import CloseRequest
 from ..domain.errors import TrackhiveError, TrackhiveUnavailableError
 from .http import HttpAnswer, TransportError, build_opener, send
@@ -45,6 +45,10 @@ class TrackhiveHttpClient:
             'User-Agent': f'trackhive-agente/{__version__}',
         }
         self._opener = build_opener(context, use_proxy=True)
+
+    def requested_run(self) -> RequestedRun | None:
+        answer = self._request('GET', f'{self._runs}/requested', None, self._timeout)
+        return TrackhiveMapper.to_requested_run(self._json(answer, 200, 'la pregunta por una sincronización pedida'))
 
     def start_run(self) -> str:
         body = self._json(self._request('POST', self._runs, None, self._timeout), 201, 'el inicio de la corrida')
