@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -23,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
 import { CloseSyncRunDto } from '../../application/dto/close-sync-run.dto';
+import { RequestedSyncRunResponseDto } from '../../application/dto/requested-sync-run-response.dto';
 import { SyncPageParamsDto } from '../../application/dto/sync-page-params.dto';
 import { SyncPageResponseDto } from '../../application/dto/sync-page-response.dto';
 import {
@@ -31,6 +33,7 @@ import {
 } from '../../application/dto/sync-run-response.dto';
 import { EverythingSynchronizer } from '../../application/services/everything-synchronizer';
 import { MAX_RESULTS_PER_PAGE } from '../../application/sync-limits';
+import { GetRequestedSyncRunUseCase } from '../../application/use-cases/get-requested-sync-run.use-case';
 import { EverythingAgentAuth } from '../decorators/everything-agent-auth.decorator';
 
 const INTERNAL_ERROR = {
@@ -75,23 +78,48 @@ const EVERYTHING_PAGE_SCHEMA = {
 };
 
 /**
- * Ingest endpoints of the Everything agent (HU-137, HU-166). Each one calls
- * one operation of EverythingSynchronizer and nothing else.
+ * Endpoints of the Everything agent (HU-137, HU-166), with its token. Each
+ * ingest endpoint calls one operation of EverythingSynchronizer, and the
+ * question whether a run is requested calls its use case (HU-138); nothing
+ * else.
  */
 @ApiTags('Everything')
 @EverythingAgentAuth()
 @Controller('everything/sync-runs')
 export class EverythingSyncController {
-  constructor(private readonly synchronizer: EverythingSynchronizer) {}
+  constructor(
+    private readonly synchronizer: EverythingSynchronizer,
+    private readonly getRequestedSyncRunUseCase: GetRequestedSyncRunUseCase,
+  ) {}
+
+  @Get('requested')
+  @ApiOperation({
+    summary: 'Dice si un administrador pidió «Sincronizar ahora»',
+    description:
+      'Solo para el agente de Everything (HU-166), con su token. El agente lo ' +
+      'pregunta cada minuto mientras el PC del CLENA está encendido. Si hay una ' +
+      'corrida PEDIDA (HU-138), inicia la sincronización (POST ' +
+      '/everything/sync-runs), y ese inicio la toma. Cada llamada del agente ' +
+      'queda como su último contacto.',
+  })
+  @ApiOkResponse({
+    description: 'Si hay una corrida pedida y desde cuándo',
+    type: RequestedSyncRunResponseDto,
+  })
+  @ApiInternalServerErrorResponse(INTERNAL_ERROR)
+  findRequested(): Promise<RequestedSyncRunResponseDto> {
+    return this.getRequestedSyncRunUseCase.execute();
+  }
 
   @Post()
   @ApiOperation({
     summary: 'Inicia una corrida de sincronización con Everything',
     description:
-      'Solo para el agente de Everything (HU-166), con su token. Crea la corrida ' +
-      'EN_CURSO en sync_runs. Si otra corrida lleva más de ' +
-      'EVERYTHING_RUN_TIMEOUT_MINUTES sin recibir páginas, primero la cierra con ' +
-      'error, sin marcar nada como no encontrado.',
+      'Solo para el agente de Everything (HU-166), con su token. Si un ' +
+      'administrador pidió «Sincronizar ahora» (HU-138), esa corrida PEDIDA pasa ' +
+      'a EN_CURSO; si no, crea una corrida EN_CURSO en sync_runs. Si otra corrida ' +
+      'lleva más de EVERYTHING_RUN_TIMEOUT_MINUTES sin recibir páginas, primero la ' +
+      'cierra con error, sin marcar nada como no encontrado.',
   })
   @ApiCreatedResponse({
     description: 'Corrida EN_CURSO',

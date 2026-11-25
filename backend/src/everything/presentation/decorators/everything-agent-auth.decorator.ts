@@ -1,4 +1,4 @@
-import { applyDecorators, UseGuards } from '@nestjs/common';
+import { applyDecorators, UseGuards, UseInterceptors } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiServiceUnavailableResponse,
@@ -8,16 +8,19 @@ import { Public } from '../../../auth/presentation/decorators/public.decorator';
 import { ErrorResponseDto } from '../../../common/errors/error-response.dto';
 import { AGENT_BEARER_AUTH } from '../../../common/swagger/setup-swagger';
 import { EverythingAgentGuard } from '../guards/everything-agent.guard';
+import { AgentContactInterceptor } from '../interceptors/agent-contact.interceptor';
 
 /**
  * The endpoints of the Everything agent (HU-137): no user session (the
  * global JwtAuthGuard and RolesGuard let them through), the token of the
- * agent instead, checked by its own guard.
+ * agent instead, checked by its own guard. Each call that passes it is a
+ * contact of the agent, which the screen of the sync shows (HU-138).
  */
 export const EverythingAgentAuth = (): ReturnType<typeof applyDecorators> =>
   applyDecorators(
     Public(),
     UseGuards(EverythingAgentGuard),
+    UseInterceptors(AgentContactInterceptor),
     ApiBearerAuth(AGENT_BEARER_AUTH),
     ApiUnauthorizedResponse({
       description:
