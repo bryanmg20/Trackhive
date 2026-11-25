@@ -301,6 +301,70 @@ describe('Sincronizar ahora, HU-138 (e2e, PostgreSQL)', () => {
       expect(await openRuns()).toHaveLength(1);
     });
 
+    // The races repeat a few rounds: the order the two calls reach
+    // PostgreSQL changes from one round to the next
+    const ROUNDS = 5;
+
+    it('takes the run PEDIDA only once when two starts of the agent race (the daily task and --vigilar)', async () => {
+      for (let round = 0; round < ROUNDS; round++) {
+        await endOpenRuns();
+        const asked = (await requestSync().expect(201)).body as RunBody;
+
+        const [first, second] = await Promise.all([
+          agentStarts(),
+          agentStarts(),
+        ]);
+
+        expect([first.status, second.status].sort()).toEqual([201, 409]);
+        const taken = (first.status === 201 ? first : second).body as RunBody;
+        const refused = (first.status === 409 ? first : second)
+          .body as ErrorBody;
+        expect(taken).toMatchObject({ id: asked.id, status: 'EN_CURSO' });
+        expect(refused.code).toBe('SYNC_RUN_ALREADY_RUNNING');
+        // One run open: the one asked for, taken, with who asked for it
+        const open = await openRuns();
+        expect(open).toHaveLength(1);
+        expect(open[0]).toMatchObject({
+          id: asked.id,
+          status: 'EN_CURSO',
+          requestedById: admin.userId,
+        });
+        expect(open[0].startedAt).not.toBeNull();
+      }
+    });
+
+    it('leaves one run open when the agent starts while an administrator asks, whatever reaches PostgreSQL first', async () => {
+      for (let round = 0; round < ROUNDS; round++) {
+        await endOpenRuns();
+
+        const [started, asked] = await Promise.all([
+          agentStarts(),
+          requestSync(),
+        ]);
+
+        // Never a 500: the agent always starts, taking the request if it
+        // arrived first; the request is refused if the run started first
+        expect(started.status).toBe(201);
+        expect([201, 409]).toContain(asked.status);
+        const open = await openRuns();
+        expect(open).toHaveLength(1);
+        expect(open[0]).toMatchObject({
+          id: (started.body as RunBody).id,
+          status: 'EN_CURSO',
+        });
+        if (asked.status === 201) {
+          // The agent took the run the administrator asked for
+          expect((asked.body as RunBody).id).toBe(open[0].id);
+          expect(open[0].requestedById).toBe(admin.userId);
+        } else {
+          expect((asked.body as ErrorBody).code).toBe(
+            'SYNC_RUN_ALREADY_RUNNING',
+          );
+          expect(open[0].requestedById).toBeNull();
+        }
+      }
+    });
+
     it('a run EN_CURSO the agent abandoned does not block it: it ends with an error and the new one stays PEDIDA', async () => {
       const cut = (await agentStarts().expect(201)).body as RunBody;
       await e2e.prisma.syncRunModel.update({
