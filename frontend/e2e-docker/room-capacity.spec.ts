@@ -22,8 +22,8 @@ test('configures room daily capacity through Nginx and enforces ADMIN permission
   };
 
   const adminSession = await loginAs(
-    'admin@example.com',
-    process.env.SEED_ADMIN_PASSWORD ?? '1',
+    process.env.ADMIN_EMAIL ?? 'admin@example.com',
+    process.env.ADMIN_PASSWORD ?? '1',
   );
   const personalSession = await loginAs(
     'personal1@example.com',

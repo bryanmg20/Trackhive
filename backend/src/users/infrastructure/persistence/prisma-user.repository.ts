@@ -9,6 +9,7 @@ import {
   UserSearchResult,
   UserSortField,
 } from '../../domain/repositories/user.repository';
+import type { UserRole } from '../../domain/enums/user-role';
 import { PrismaUserMapper } from '../mappers/prisma-user.mapper';
 
 // After the chosen field, rows are ordered by name so pages read naturally
@@ -55,6 +56,11 @@ export class PrismaUserRepository implements IUserRepository {
       // Registration normalizes emails, but existing rows may not be lowercase
       where: { email: { equals: email, mode: 'insensitive' } },
     });
+    return model ? PrismaUserMapper.toDomain(model) : null;
+  }
+
+  async findFirstByRole(role: UserRole): Promise<User | null> {
+    const model = await this.prisma.userModel.findFirst({ where: { role } });
     return model ? PrismaUserMapper.toDomain(model) : null;
   }
 

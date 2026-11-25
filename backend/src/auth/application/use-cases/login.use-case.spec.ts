@@ -32,6 +32,7 @@ describe('LoginUseCase', () => {
     const repository: IUserRepository = {
       save: jest.fn(),
       findAll: jest.fn(),
+      findFirstByRole: jest.fn(),
       search: jest.fn(),
       findById: jest.fn(),
       findByEmail: jest.fn((email: string) =>

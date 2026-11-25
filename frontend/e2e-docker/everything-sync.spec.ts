@@ -40,7 +40,11 @@ async function signIn(
 }
 
 const admin = (request: APIRequestContext) =>
-  signIn(request, 'admin@example.com', process.env.SEED_ADMIN_PASSWORD ?? '1');
+  signIn(
+    request,
+    process.env.ADMIN_EMAIL ?? 'admin@example.com',
+    process.env.ADMIN_PASSWORD ?? '1',
+  );
 
 const agentHeaders = { Authorization: `Bearer ${AGENT_TOKEN}` };
 

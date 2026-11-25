@@ -7,8 +7,8 @@ test('ADMIN downloads both filtered CSV reports through Nginx and other roles re
 }, testInfo) => {
   const login = await request.post('/api/v1/auth/login', {
     data: {
-      email: 'admin@example.com',
-      password: process.env.SEED_ADMIN_PASSWORD ?? '1',
+      email: process.env.ADMIN_EMAIL ?? 'admin@example.com',
+      password: process.env.ADMIN_PASSWORD ?? '1',
     },
   });
   expect(login.ok()).toBeTruthy();

@@ -36,5 +36,7 @@ export interface IUserRepository {
   findAll(): Promise<User[]>;
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
+  // Any account with that role, active or not (HU-42)
+  findFirstByRole(role: UserRole): Promise<User | null>;
   search(criteria: UserSearchCriteria): Promise<UserSearchResult>;
 }
