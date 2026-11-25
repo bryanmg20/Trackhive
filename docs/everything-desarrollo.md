@@ -1,6 +1,6 @@
 # Entorno de Everything para desarrollo
 
-Guía de HU-133 (#133, épica E11). Sirve para desarrollar y probar la integración con *Everything* sin el equipo ni la red del CLENA: un árbol de **documentos simulados** con la misma forma que el del CLENA, un **Everything real** (portable) que lo indexa en Windows, las **respuestas reales** guardadas como fixtures y un **mock** en Python para quien no tiene Windows. La sección 7 explica cómo se sincroniza el backend (HU-137).
+Guía de HU-133 (#133, épica E11). Sirve para desarrollar y probar la integración con *Everything* sin el equipo ni la red del CLENA: un árbol de **documentos simulados** con la misma forma que el del CLENA, un **Everything real** (portable) que lo indexa en Windows, las **respuestas reales** guardadas como fixtures y un **mock** en Python para quien no tiene Windows. La sección 7 explica cómo se sincroniza el backend (HU-137) y «Sincronizar ahora» (HU-138).
 
 | Pieza | Dónde | Para qué |
 |---|---|---|
@@ -262,9 +262,30 @@ Una corrida cerrada con `result: "ERROR"`, cortada (el agente dejó de enviar p�
 
 ### Corridas y bloqueo
 
-- Cada corrida queda en `sync_runs` con su inicio, su última actividad, su fin, el resultado (`EN_CURSO`, `OK` o `ERROR`), los resultados recibidos (`files_count`) y el motivo del error.
-- Dos sincronizaciones no corren a la vez, aunque haya dos instancias del backend: lo impide el índice único parcial `sync_runs_single_running_idx` de PostgreSQL. Iniciar otra mientras hay una abierta responde **409** `SYNC_RUN_ALREADY_RUNNING`.
+- Cada corrida queda en `sync_runs` con su inicio, su última actividad, su fin, el resultado (`PEDIDA`, `EN_CURSO`, `OK` o `ERROR`), los resultados recibidos (`files_count`) y el motivo del error.
+- Dos sincronizaciones no corren a la vez, aunque haya dos instancias del backend: lo impide el índice único parcial `sync_runs_single_open_idx` de PostgreSQL, que cubre las corridas `PEDIDA` y `EN_CURSO` (HU-138). Iniciar otra mientras hay una abierta responde **409** `SYNC_RUN_ALREADY_RUNNING`; si la abierta es una `PEDIDA`, el inicio la toma.
 - Una corrida que lleva más de `EVERYTHING_RUN_TIMEOUT_MINUTES` sin recibir páginas vence: cuando se inicia otra, o si el agente vuelve a escribirle (409 `SYNC_RUN_EXPIRED`), queda en `ERROR`, se borran sus páginas y no se marca nada.
+
+### «Sincronizar ahora» (HU-138)
+
+El servidor no puede llamar al PC del CLENA, así que «Sincronizar ahora» deja una corrida **pedida** y el agente la toma la próxima vez que pregunta:
+
+1. El administrador abre **Sincronización** (`/admin/sincronizacion`, WF-14), pulsa «Sincronizar ahora» y confirma. El backend crea en `sync_runs` una corrida `PEDIDA` con quién y cuándo la pidió, sin inicio. La pantalla muestra «Pedida, esperando al agente» y desde cuándo.
+2. El agente, iniciado con `--vigilar` por la tarea «Atender Sincronizar ahora» mientras la sesión está iniciada, pregunta cada `trackhive.poll_seconds` (60 s) `GET /api/v1/everything/sync-runs/requested`.
+3. Si hay una, hace la misma sincronización que la tarea diaria. El inicio (`POST /everything/sync-runs`) toma la corrida pedida (la misma fila pasa a `EN_CURSO`), y sigue con páginas y cierre como siempre. La corrida diaria también la toma si llega antes.
+4. La pantalla se actualiza sola, cada 5 s mientras hay una corrida pedida o en curso y cada 30 s si no. Cuando el agente termina, muestra el resultado nuevo: cuándo, cuántas carpetas, si terminó bien o con error y el motivo.
+
+| Quién | Endpoint | Respuesta |
+|---|---|---|
+| Administrador (`@Roles('ADMIN')`) | `GET /api/v1/everything/sync-status` | 200: `enabled` (hay `EVERYTHING_AGENT_TOKEN`), `currentRun` (la `PEDIDA` o `EN_CURSO`, con `expired`), `lastRun` (la última `OK` o `ERROR`) y `agentLastContactAt` |
+| Administrador (`@Roles('ADMIN')`) | `POST /api/v1/everything/sync-requests` | 201 con la corrida `PEDIDA`. **409** `SYNC_RUN_ALREADY_REQUESTED` o `SYNC_RUN_ALREADY_RUNNING` si ya hay una (no se pide otra). **503** `EVERYTHING_SYNC_DISABLED` sin token |
+| Agente (su token) | `GET /api/v1/everything/sync-runs/requested` | 200: `{"requested": true, "requestedAt": "…"}` o `{"requested": false, "requestedAt": null}` |
+
+- `PERSONAL` y `PUBLICO` reciben **403** en los dos endpoints del administrador; sin sesión, **401**. El token del agente no sirve como sesión, ni la sesión de un usuario como token del agente.
+- Una corrida pedida **no vence**: si el PC del CLENA está apagado, sigue pedida y la pantalla dice desde cuándo. Una corrida `EN_CURSO` que el agente abandonó (más de `EVERYTHING_RUN_TIMEOUT_MINUTES` sin páginas) sale en la pantalla como «sin noticias del agente». Pedir otra la cierra con error, sin marcar nada como no encontrado, y deja la nueva pedida.
+- **Último contacto del agente:** cada llamada que pasa `EverythingAgentGuard` (la pregunta y los endpoints de ingesta) guarda la hora en la tabla de una sola fila `sync_agent`. La pantalla la muestra para saber si el PC del CLENA está encendido.
+- Sin `EVERYTHING_AGENT_TOKEN`, la pantalla dice que la integración está desactivada y el botón no está disponible.
+- `trackhive-agente.exe` es un lanzador de PyInstaller con el agente como proceso hijo. Cuando Windows detiene la tarea (al reinstalarla o terminarla a mano) solo termina el lanzador, así que el agente espera sobre él y termina en ese momento («La tarea que inició al agente terminó…» en `logs\vigilancia.log`). Al cerrar sesión Windows termina los dos.
 
 ### Configuración
 
@@ -289,7 +310,16 @@ cp agent/agente.example.toml agent/agente.toml   # agente.toml no se sube (.giti
 python agent/agente.py
 ```
 
-Escribe cada paso en la consola y en `agent/logs/agente.log`, y termina con `Corrida … completa con 3 páginas: 117 carpetas hoja: …` y el código de salida 0. `http://` solo se acepta contra este mismo PC (`localhost`, `127.0.0.1`); en el CLENA la URL es `https://`. En Windows sirve igual, también el `.exe`, contra el Everything portable de la sección 3, que escucha en `127.0.0.1:8081` (con el mock detenido) y el backend de Docker. Ahí conviene `http://127.0.0.1:3000`: con `localhost`, Windows prueba primero `::1` y cada petición tarda unos 2 s más.
+Escribe cada paso en la consola y en `agent/logs/agente.log`, y termina con `Corrida … completa con 3 páginas: 117 carpetas hoja: …` y el código de salida 0.
+
+Para probar «Sincronizar ahora» (HU-138) de punta a punta, con el frontend de Docker:
+
+```bash
+docker compose --profile everything up -d --build   # backend, frontend y mock
+python agent/agente.py --vigilar                    # pregunta cada trackhive.poll_seconds (60 s); Ctrl+C lo detiene
+```
+
+En `http://localhost:8080`, con `admin@example.com`, abre **Sincronización**, pulsa «Sincronizar ahora» y confirma. La pantalla muestra «Pedida, esperando al agente». En el siguiente minuto el agente la toma: en `agent/logs/vigilancia.log` aparece `Un administrador pidió «Sincronizar ahora»…` y luego la corrida completa. La pantalla muestra sola el resultado nuevo. Si detienes el agente antes de pedirla, que es como tener el PC del CLENA apagado, la corrida sigue pedida y la pantalla dice desde cuándo. Con `poll_seconds = 10` en `agente.toml` se espera menos. `http://` solo se acepta contra este mismo PC (`localhost`, `127.0.0.1`); en el CLENA la URL es `https://`. En Windows sirve igual, también el `.exe`, contra el Everything portable de la sección 3, que escucha en `127.0.0.1:8081` (con el mock detenido) y el backend de Docker. Ahí conviene `http://127.0.0.1:3000`: con `localhost`, Windows prueba primero `::1` y cada petición tarda unos 2 s más.
 
 Para probar los endpoints sin el agente, su trabajo se puede hacer con `curl`:
 
@@ -339,6 +369,18 @@ cd backend && pnpm exec jest src/everything
 ```bash
 cd backend && pnpm exec jest src/everything
 cd backend && pnpm test:e2e -- everything-sync   # borra y recrea la base trackhive_e2e
+```
+
+### Sincronizar ahora (HU-138)
+
+- Unitarias: `sync-run.entity.spec.ts` (estado `PEDIDA`, tomarla, que no vence), los casos de uso `request-sync-run`, `get-sync-status`, `get-requested-sync-run` y `record-agent-contact`, el `SyncRunExpirer`, el `AgentContactInterceptor` y el inicio que toma la corrida pedida en `everything-synchronizer.spec.ts`.
+- `test/flows/everything-sync-now-flow.e2e-spec.ts`, contra PostgreSQL: pedir y ver «pedida», el 409 al pedir otra (pedida o en curso), que el agente la toma y la cierra y el estado muestra el resultado nuevo, una pedida que espera días, dos administradores a la vez, una corrida abandonada que no bloquea, el 403 de `PERSONAL` y `PUBLICO`, el 401 sin token o sesión, el 503 sin `EVERYTHING_AGENT_TOKEN` y las reglas de `sync_runs` (índice y `CHECK`).
+- Frontend: `EverythingSyncPage.spec.tsx` y, con Docker, `frontend/e2e-docker/everything-sync.spec.ts` a través de nginx (`localhost:8080`).
+- Agente: `agent/tests/test_vigilar.py` (el caso de uso con fakes) y la clase `WatchTest` de `test_agente.py` (el agente como proceso con `--vigilar`).
+
+```bash
+cd backend && pnpm exec jest src/everything
+cd backend && pnpm test:e2e -- everything-sync      # borra y recrea la base trackhive_e2e
 ```
 
 ### Agente (HU-166)

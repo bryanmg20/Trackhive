@@ -113,8 +113,47 @@ devolverle el acceso, pulse «Activar».
 
 No puede desactivar su propia cuenta.
 
-## 8. Protección de datos personales
+## 8. Sincronización con Everything (solo administrador)
+
+Las copias digitales del material están en las carpetas que indexa
+*Everything* en el PC del CLENA. Un programa instalado en ese PC, el agente,
+las envía a Trackhive una vez al día. Solo el administrador ve la opción
+**Sincronización** en el menú.
+
+**Qué muestra.**
+
+- **Última sincronización:** hace cuánto terminó, cuántas carpetas recibió y
+  si terminó correctamente o con error. Si terminó con error, muestra el
+  motivo, por ejemplo que *Everything* no respondía o que la unidad de red no
+  estaba conectada. Si no hubo ninguna, dice «Todavía no hay
+  sincronizaciones».
+- **Sincronizar ahora:** si hay una sincronización pedida o en curso.
+- **Agente del CLENA:** la última vez que el agente se comunicó con Trackhive.
+  Si lleva mucho tiempo sin comunicarse, el PC del CLENA puede estar apagado
+  o sin internet.
+
+**Sincronizar ahora.** Pulse «Sincronizar ahora» y confirme con «Sí,
+sincronizar ahora». La sincronización queda **pedida, esperando al agente**:
+el agente pregunta a Trackhive cada minuto mientras el PC del CLENA está
+encendido y la hace en ese momento. No hace falta recargar la página: cuando
+el agente termina, aparece el resultado nuevo y un aviso dice cómo terminó.
+
+- Si el PC está apagado, la sincronización sigue pedida y la pantalla dice
+  hace cuánto se pidió. Se hace cuando el PC se encienda.
+- Si ya hay una sincronización pedida o en curso, no se pide otra: la
+  pantalla le avisa y basta con esperar el resultado.
+- Si la pantalla dice «En curso, sin noticias del agente», el agente dejó de
+  enviar carpetas, porque se cerró o perdió la conexión. Puede pedir otra: la
+  anterior termina con error sin cambiar nada del catálogo.
+- Si dice que la integración con *Everything* está desactivada, el botón no
+  está disponible: quien administra el servidor debe configurar el token del
+  agente (manual de operación, sección 3).
+
+Una sincronización que termina con error nunca marca materiales como «copia
+digital no encontrada». Solo lo hace una que termina completa.
+
+## 9. Protección de datos personales
 
 (Aviso de privacidad, consentimiento y eliminación de cuenta.)
 
-## 9. Preguntas frecuentes y solución de problemas
+## 10. Preguntas frecuentes y solución de problemas
