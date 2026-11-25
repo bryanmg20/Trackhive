@@ -367,6 +367,43 @@ describe('Versioned API (e2e)', () => {
     expect(userResponse.properties.secondLastName.nullable).toBe(true);
   });
 
+  it('documents every operation with a tag, a summary and its responses (HU-42)', async () => {
+    const response = await request(server).get('/docs-json').expect(200);
+    const paths = (
+      response.body as {
+        paths: Record<
+          string,
+          Record<
+            string,
+            {
+              tags?: string[];
+              summary?: string;
+              responses?: Record<string, unknown>;
+            }
+          >
+        >;
+      }
+    ).paths;
+
+    const operations = Object.entries(paths).flatMap(([path, methods]) =>
+      Object.entries(methods).map(([method, operation]) => ({
+        operation: `${method.toUpperCase()} ${path}`,
+        ...operation,
+      })),
+    );
+    expect(operations.length).toBeGreaterThan(40);
+
+    const undocumented = operations
+      .filter(
+        ({ tags, summary, responses }) =>
+          !tags?.length ||
+          !summary?.trim() ||
+          !Object.keys(responses ?? {}).some((status) => /^2/.test(status)),
+      )
+      .map(({ operation }) => operation);
+    expect(undocumented).toEqual([]);
+  });
+
   it('reports health without an access token', async () => {
     await request(server).get('/api/v1/health').expect(200).expect({
       status: 'ok',
