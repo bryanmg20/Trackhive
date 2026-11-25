@@ -14,6 +14,7 @@ import ssl
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -113,8 +114,41 @@ def run_agent(config: Path, timeout: float = 120) -> subprocess.CompletedProcess
     )
 
 
-def read_log(config: Path) -> str:
-    return (config.parent / 'logs' / 'agente.log').read_text(encoding='utf-8')
+def read_log(config: Path, name: str = 'agente.log') -> str:
+    """The log of the daily run, or vigilancia.log of the watch (HU-138)."""
+    path = config.parent / 'logs' / name
+    return path.read_text(encoding='utf-8') if path.exists() else ''
+
+
+def start_watch(config: Path) -> subprocess.Popen[bytes]:
+    """The agent with --vigilar, as the task «Atender Sincronizar ahora»
+    starts it: it only stops when it is told to."""
+    return subprocess.Popen(
+        [*agent_command(), '--vigilar', '--config', str(config)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def stop(process: subprocess.Popen[bytes]) -> None:
+    """Ends the agent and whatever it started. On Windows the .exe is a
+    launcher with the agent as its child, so the whole tree goes."""
+    if process.poll() is None:
+        if sys.platform == 'win32':
+            subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'], capture_output=True, check=False)
+        else:
+            process.terminate()
+    process.wait(timeout=30)
+
+
+def wait_until(condition: Any, timeout: float = 60) -> bool:
+    """True as soon as condition() is; False if timeout seconds go by."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if condition():
+            return True
+        time.sleep(0.05)
+    return condition()
 
 
 def record_requests(mock: RunningMock) -> list[str]:
@@ -169,6 +203,8 @@ class Call:
 
     @property
     def operation(self) -> str:
+        if self.method == 'GET' and self.path.endswith('/sync-runs/requested'):
+            return 'requested'
         if self.method == 'POST' and self.path.endswith('/sync-runs'):
             return 'start'
         page = re.search(r'/pages/(\d+)$', self.path)
@@ -196,14 +232,18 @@ class _QuietServer(ThreadingHTTPServer):
 
 
 class FakeTrackhive:
-    """The ingest endpoints of HU-137 with the contract of the backend, enough
-    to test the agent: they keep every call. fail('page:2', (503, None)) makes
-    that operation answer 503 once before answering as usual."""
+    """The endpoints of the agent (HU-137, HU-138) with the contract of the
+    backend, enough to test the agent: they keep every call. fail('page:2',
+    (503, None)) makes that operation answer 503 once before answering as
+    usual. With requested_at, an administrator asked for «Sincronizar ahora»:
+    the question says so until the start takes the run."""
 
     def __init__(self, tls: ssl.SSLContext | None = None, token: str = TOKEN) -> None:
         self.token = token
         self.calls: list[Call] = []
         self.run_id = str(uuid.uuid4())
+        # When the run PEDIDA was asked for; None: nothing asked for
+        self.requested_at: str | None = None
         # What the close of a run sent as complete answers
         self.close_status = 'OK'
         self.close_error: str | None = None
@@ -254,7 +294,14 @@ class FakeTrackhive:
                 # Like nginx when the backend is down: HTML, not the error of the API
                 return status, f'<html><body>{status}</body></html>'.encode('ascii')
             return status, {'statusCode': status, 'code': code, 'message': f'Fallo de prueba {status}'}
+        if call.operation == 'requested':
+            with self._lock:
+                requested_at = self.requested_at
+            return 200, {'requested': requested_at is not None, 'requestedAt': requested_at}
         if call.operation == 'start':
+            with self._lock:
+                # Starting takes the run PEDIDA, if there is one (HU-138)
+                self.requested_at = None
             return 201, {'id': self.run_id, 'status': 'EN_CURSO', 'filesCount': 0, 'errorMessage': None}
         if call.operation.startswith('page:'):
             results = len(json.loads(call.body)['results'])
@@ -295,7 +342,7 @@ class FakeTrackhive:
                 self.end_headers()
                 self.wfile.write(data)
 
-            do_POST = do_PUT = _serve  # noqa: N815
+            do_GET = do_POST = do_PUT = _serve  # noqa: N815
 
             def log_message(self, format: str, *args: object) -> None:  # noqa: A002
                 pass

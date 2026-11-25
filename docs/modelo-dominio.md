@@ -40,7 +40,8 @@ Leyenda: azul oscuro, raíz de agregado; azul, entidad interna de un agregado; o
 | **PréstamoMaterial** | Registro de entrega física y devolución de un material durante una cita en sala: quién lo entregó, cuándo, quién recibió la devolución, cuándo y observaciones opcionales (HU-72). | Material |
 | **Usuario** | Cuenta para entrar al sistema, con rol `ADMIN`, `PERSONAL` o `PUBLICO`. | Usuario (raíz) |
 | **Notificación** | Correo al solicitante que dispara un cambio de estado. Se envía y reintenta aparte del cambio. | Notificación (raíz) |
-| **CorridaSincronizacion** | Una sincronización con *Everything* que inicia, alimenta y cierra el agente del CLENA (HU-137): inicio, última actividad, fin, resultado (en curso, OK o error), resultados recibidos y motivo del error. Guarda las páginas recibidas hasta cerrarse. | CorridaSincronizacion (raíz) |
+| **AgenteSincronizacion** | El agente del PC del CLENA tal como lo conoce Trackhive (HU-138): la última vez que se comunicó con su token. Hay uno solo. | AgenteSincronizacion (raíz) |
+| **CorridaSincronizacion** | Una sincronización con *Everything* que inicia, alimenta y cierra el agente del CLENA (HU-137): inicio, última actividad, fin, resultado (pedida, en curso, OK o error), resultados recibidos y motivo del error. Un administrador puede pedirla con «Sincronizar ahora» (HU-138): queda pedida, con quién y cuándo la pidió, hasta que el agente la toma. Guarda las páginas recibidas hasta cerrarse. | CorridaSincronizacion (raíz) |
 
 ### 2.2 Objetos de valor
 
@@ -153,7 +154,8 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | RN-25 | Cada carpeta hoja bajo la raíz de un fondo es un material con copia digital, porque el CLENA solo coloca lo que ya digitalizó. La sincronización lo reconoce por su código de catalogación, no por la ruta: una carpeta renombrada o movida con el mismo código actualiza el mismo material. | HU-136, HU-137 | Vigente |
 | RN-26 | Una carpeta sin código válido, o con el mismo código que otra, usa el código derivado de su ruta y queda para revisión del personal. | HU-136, HU-137 | Vigente |
 | RN-27 | Solo una sincronización que termina completa y sin errores deja como «copia digital no encontrada» los materiales de *Everything* que no aparecieron. Una que termina con error, se corta o vence no marca nada. Ningún material se borra por no aparecer, porque puede tener solicitudes. | HU-137 | Vigente |
-| RN-28 | Solo corre una sincronización a la vez. Una que pasa más de `EVERYTHING_RUN_TIMEOUT_MINUTES` sin recibir páginas vence con error. | HU-137 | Vigente |
+| RN-28 | Solo hay una sincronización pedida o en curso a la vez. Una en curso que pasa más de `EVERYTHING_RUN_TIMEOUT_MINUTES` sin recibir páginas vence con error. | HU-137, HU-138 | Vigente |
+| RN-29 | El administrador pide «Sincronizar ahora» y la sincronización queda pedida hasta que el agente del CLENA la toma, aunque el PC esté apagado días: una corrida pedida no vence. Si ya hay una pedida o en curso, no se pide otra y se avisa. Si la en curso venció, se cierra con error, sin marcar nada como no encontrado, y se pide la nueva. | HU-138 | Vigente |
 
 ## 6. Glosario
 
@@ -168,6 +170,7 @@ Escritas como las diría el CLENA. «Vigente» significa que el sistema ya la ha
 | **Código de catalogación** | Identificador único del material en el catálogo del archivo. La sincronización lo saca del nombre de sus carpetas (notaría, año y rango de escrituras) y con él reconoce el material. |
 | **Copia digital no encontrada** | Material de *Everything* cuya carpeta no apareció en la última sincronización completa. Conserva sus datos y sus solicitudes, pero no tiene copia que enviar. |
 | **Corrida de sincronización** | Una vez que el agente envía a Trackhive lo que indexa *Everything*: se inicia, recibe páginas y se cierra completa o con error. |
+| **Corrida pedida** | Corrida que un administrador pidió con «Sincronizar ahora» y que espera a que el agente la tome. El agente pregunta cada minuto mientras el PC del CLENA está encendido. |
 | **Doble reserva** | Dos citas del mismo material el mismo día. El sistema la impide. |
 | **Entrega digital** | Modalidad en que el material se entrega sin cita, fuera del sistema, por correo. |
 | **Entrega presencial** | Modalidad en que el solicitante consulta el material en la sala, con cita. |
@@ -219,9 +222,12 @@ Uno por acción del negocio. Cada caso de uso es una clase con un método `execu
 | `RegistrarEntregaMaterial` | Anotar que el material salió a la sala en una cita del día y pasarlo a `EN_USO` | Personal | HU-72 | `DeliverMaterialUseCase` |
 | `RegistrarDevolucionMaterial` | Anotar que el material volvió de sala y devolverlo a `DISPONIBLE` | Personal | HU-72 | `ReturnMaterialUseCase` |
 | `ConsultarHistorialMaterial` | Ver quién tuvo el material por última vez y el historial de entregas/devoluciones | Personal | HU-72 | `GetMaterialHistoryUseCase` |
-| `SincronizarConEverything` | Recibir del agente las carpetas que indexa *Everything* y actualizar el catálogo: iniciar la corrida, procesar cada página y cerrarla | Agente de *Everything* del PC del CLENA (HU-166), una vez al día | HU-137 | `EverythingSynchronizer` (servicio de `application/services/` con las tres operaciones) |
+| `SincronizarConEverything` | Recibir del agente las carpetas que indexa *Everything* y actualizar el catálogo: iniciar la corrida (o tomar la pedida), procesar cada página y cerrarla | Agente de *Everything* del PC del CLENA (HU-166), una vez al día o cuando hay una corrida pedida | HU-137, HU-138 | `EverythingSynchronizer` (servicio de `application/services/` con las tres operaciones) |
+| `ConsultarEstadoSincronizacion` | Ver la última sincronización (cuándo, cuántas carpetas, si terminó bien o con error y el motivo), la pedida o en curso y el último contacto del agente | Administrador | HU-138 | `GetSyncStatusUseCase` |
+| `PedirSincronizacion` | «Sincronizar ahora»: dejar una corrida pedida para el agente, sin pedir otra si ya hay una pedida o en curso | Administrador | HU-138 | `RequestSyncRunUseCase` |
+| `ConsultarCorridaPedida` | Saber si un administrador pidió una sincronización, para ejecutarla | Agente de *Everything* del PC del CLENA, cada minuto mientras el PC está encendido | HU-138 | `GetRequestedSyncRunUseCase` |
 
-Hay dos casos de uso técnicos que no son acciones del negocio: `GetHealthUseCase` (estado del servicio, HU-38) y `PurgeExpiredTokensUseCase` (limpieza diaria de sesiones vencidas, HU-3.1).
+Hay tres casos de uso técnicos que no son acciones del negocio: `GetHealthUseCase` (estado del servicio, HU-38), `PurgeExpiredTokensUseCase` (limpieza diaria de sesiones vencidas, HU-3.1) y `RecordAgentContactUseCase` (guarda el último contacto del agente de *Everything*, HU-138).
 
 ### 7.2 Previstos
 

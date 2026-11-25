@@ -38,6 +38,7 @@ model UserModel {
   handedOverMaterialLoans   MaterialLoanModel[]      @relation("MaterialLoanHandedOverBy")
   returnedMaterialLoans     MaterialLoanModel[]      @relation("MaterialLoanReturnedBy")
   resolvedRequestReferences RequestReferenceModel[]  @relation("RequestReferenceResolvedBy")
+  requestedSyncRuns         SyncRunModel[]           @relation("SyncRunRequestedBy")
 
   @@map("users")
 }
@@ -347,26 +348,46 @@ model ReadingRoomConfigModel {
   @@map("reading_room_config")
 }
 
-// One run of the Everything sync (HU-134, HU-137). Only one run can be
-// EN_CURSO at a time (partial unique index in the migration)
+// One run of the Everything sync (HU-134, HU-137). An administrator may ask
+// for one with «Sincronizar ahora» (HU-138): it waits PEDIDA until the agent
+// takes it. Only one run can be PEDIDA or EN_CURSO at a time (partial unique
+// index in the migration)
 model SyncRunModel {
   id             String             @id @db.Uuid
-  startedAt      DateTime           @default(now()) @map("started_at") @db.Timestamptz
-  // Start of the run or last page from the agent. A run EN_CURSO without
-  // activity for EVERYTHING_RUN_TIMEOUT_MINUTES has expired (HU-137)
+  // NULL while the run is PEDIDA: the agent has not taken it yet (CHECK in
+  // the migration). A run asked for sets it NULL explicitly
+  startedAt      DateTime?          @default(now()) @map("started_at") @db.Timestamptz
+  // Start of the run or last page from the agent; the request while PEDIDA.
+  // A run EN_CURSO without activity for EVERYTHING_RUN_TIMEOUT_MINUTES has
+  // expired (HU-137)
   lastActivityAt DateTime           @default(now()) @map("last_activity_at") @db.Timestamptz
-  // NULL while the run is EN_CURSO (CHECK in the migration)
+  // NULL while the run is PEDIDA or EN_CURSO (CHECK in the migration)
   finishedAt     DateTime?          @map("finished_at") @db.Timestamptz
-  // Allowed values (CHECK in the migration): EN_CURSO, OK, ERROR
+  // Allowed values (CHECK in the migration): PEDIDA, EN_CURSO, OK, ERROR
   status         String             @default("EN_CURSO") @db.VarChar(10)
+  // «Sincronizar ahora» (HU-138): when and who asked for the run. Both NULL in
+  // the runs the agent starts on its own (CHECK in the migration)
+  requestedAt    DateTime?          @map("requested_at") @db.Timestamptz
+  requestedById  String?            @map("requested_by_id") @db.Uuid
   // Files Everything returned in the run
   filesCount     Int                @default(0) @map("files_count")
   // Only when status = ERROR (CHECK in the migration)
   errorMessage   String?            @map("error_message") @db.VarChar(1000)
   pages          SyncRunPageModel[]
+  requestedBy    UserModel?         @relation("SyncRunRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
 
   @@index([startedAt(sort: Desc)])
   @@map("sync_runs")
+}
+
+// The agent of the CLENA (HU-166), as Trackhive knows it (HU-138): a single
+// row with the last time it called with its token. The screen of the sync
+// shows it, so the administrator knows whether the PC of the CLENA is on
+model SyncAgentModel {
+  id            Int      @id @default(1)
+  lastContactAt DateTime @map("last_contact_at") @db.Timestamptz
+
+  @@map("sync_agent")
 }
 
 // A page of folders the agent sent in a run (HU-137). It waits here until the

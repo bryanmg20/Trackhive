@@ -126,6 +126,10 @@ const STATUS_BY_DOMAIN_CODE: Record<string, HttpStatus> = {
   SYNC_RUN_ALREADY_RUNNING: HttpStatus.CONFLICT,
   SYNC_RUN_NOT_RUNNING: HttpStatus.CONFLICT,
   SYNC_RUN_EXPIRED: HttpStatus.CONFLICT,
+  // «Sincronizar ahora» (HU-138): a run already waits for the agent, or the
+  // agent tried to take one that is no longer PEDIDA
+  SYNC_RUN_ALREADY_REQUESTED: HttpStatus.CONFLICT,
+  SYNC_RUN_NOT_REQUESTED: HttpStatus.CONFLICT,
   // NO_PATTERN or DUPLICATE_CODE (HU-137); same reasoning as INVALID_MATERIAL_TYPE
   INVALID_MATERIAL_REVIEW_REASON: HttpStatus.BAD_REQUEST,
   // The mail server failed, not the request: like a proxy, answer 502

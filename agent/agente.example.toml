@@ -63,6 +63,11 @@ close_timeout_seconds = 600
 attempts = 5
 retry_delay_seconds = 5
 
+# «Sincronizar ahora» (HU-138): con --vigilar (la tarea «Atender Sincronizar
+# ahora», que corre mientras la sesión está iniciada), cada cuántos segundos
+# pregunta a Trackhive si un administrador pidió una sincronización.
+poll_seconds = 60
+
 # Solo si el certificado de Trackhive lo emite una CA propia, no pública: su
 # certificado raíz en PEM. Vacío: se confía en lo mismo que Windows.
 ca_file = ''

@@ -12,6 +12,7 @@ export const ROUTES = {
   calendar: '/calendario',
   adminRoomCapacity: '/admin/capacidad-sala',
   staffUsers: '/admin/usuarios',
+  adminEverythingSync: '/admin/sincronizacion',
   mostRequestedMaterials: '/reportes/material-mas-solicitado',
   attentionTimes: '/reportes/tiempos-de-atencion',
 } as const;

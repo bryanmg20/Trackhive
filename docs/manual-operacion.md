@@ -27,7 +27,7 @@ docker-compose up -d
 | SMTP_USER | Usuario del servidor de correo. Vacío si no pide inicio de sesión, como Mailpit | notificaciones@example.com | No |
 | SMTP_PASSWORD | Contraseña del servidor de correo | | No |
 | SMTP_FROM | Remitente de los correos | Trackhive <no-reply@example.com> | Sí |
-| EVERYTHING_AGENT_TOKEN | Token con el que el agente de Everything (HU-166) envía las carpetas a los endpoints de ingesta (HU-137). Al menos 32 caracteres: `openssl rand -hex 32`. El mismo valor va en `trackhive.token` de la configuración del agente (sección 10). Vacío: la sincronización está desactivada y esos endpoints responden 503 | | No |
+| EVERYTHING_AGENT_TOKEN | Token con el que el agente de Everything (HU-166) envía las carpetas a los endpoints de ingesta (HU-137). Al menos 32 caracteres: `openssl rand -hex 32`. El mismo valor va en `trackhive.token` de la configuración del agente (sección 10). Vacío: la sincronización está desactivada, esos endpoints responden 503 y la pantalla **Sincronización** lo indica con el botón «Sincronizar ahora» inactivo (HU-138) | | No |
 | EVERYTHING_RUN_TIMEOUT_MINUTES | Minutos sin recibir páginas tras los que una corrida de sincronización vence con error, sin marcar nada como no encontrado | 30 | No (30) |
 
 No escribir secretos reales en este documento.
@@ -60,7 +60,7 @@ Frecuencia recomendada y dónde se guardan los respaldos:
 
 - Endpoint de salud: `/health`
 - Dónde ver los logs:
-- Sincronización con *Everything*: cada corrida queda en la tabla `sync_runs` con su resultado y, si falló, el motivo. El agente guarda su propio log en el PC del CLENA (sección 10.3).
+- Sincronización con *Everything*: el administrador la ve en **Sincronización** (`/admin/sincronizacion`, HU-138). Ahí aparecen la última sincronización (cuándo, cuántas carpetas, si terminó bien o con error y el motivo), la que está pedida o en curso y la última vez que el agente se comunicó. Cada corrida queda en la tabla `sync_runs` con su resultado. El agente guarda su propio log en el PC del CLENA (sección 10.3).
 
 ## 8. Usuarios iniciales y cambio de contraseñas
 
@@ -91,7 +91,7 @@ Para enviar correos reales con una cuenta de Gmail, la cuenta necesita la verifi
 
 ## 10. Agente de sincronización con Everything (HU-166)
 
-El agente es un programa de consola, `trackhive-agente.exe`, que se instala en el PC del CLENA donde corre *Everything*. Una vez al día consulta el servidor HTTP de *Everything* en ese mismo PC y envía a Trackhive las carpetas de los fondos, para que el catálogo sepa qué materiales tienen copia digital (HU-137). Solo hace conexiones **salientes** por HTTPS: Trackhive nunca se conecta al PC del CLENA, así que no hay que abrir puertos ni crear reglas de firewall de entrada (D-17 en [arquitectura.md](arquitectura.md)).
+El agente es un programa de consola, `trackhive-agente.exe`, que se instala en el PC del CLENA donde corre *Everything*. Una vez al día consulta el servidor HTTP de *Everything* en ese mismo PC y envía a Trackhive las carpetas de los fondos, para que el catálogo sepa qué materiales tienen copia digital (HU-137). Además, mientras la sesión está iniciada, pregunta a Trackhive cada minuto si un administrador pidió «Sincronizar ahora» y, si lo hizo, sincroniza en ese momento (HU-138). Solo hace conexiones **salientes** por HTTPS: Trackhive nunca se conecta al PC del CLENA, así que no hay que abrir puertos ni crear reglas de firewall de entrada (D-17 en [arquitectura.md](arquitectura.md)).
 
 ### 10.1 Requisitos en el PC del CLENA
 
@@ -131,30 +131,33 @@ El agente es un programa de consola, `trackhive-agente.exe`, que se instala en e
 
    Muestra cada paso y termina con una línea como `Corrida … completa con 3 páginas: 117 carpetas hoja: …`. Si algo falla, dice por qué (sección 10.4).
 
-6. **Programar la tarea** diaria. Por defecto a las 12:00; con `-Hora` se elige otra:
+6. **Programar las tareas.** La diaria, por defecto a las 12:00 (con `-Hora` se elige otra), y la que atiende «Sincronizar ahora»:
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\instalar-tarea.ps1            # o -Hora 13:30
    ```
 
-   Crea la tarea **Trackhive → Sincronizar con Everything** en el Programador de tareas:
-   - Se ejecuta una vez al día.
-   - Tiene marcada «**Ejecutar la tarea lo antes posible si se omitió un inicio programado**». Si el PC estaba apagado a esa hora, sincroniza al encenderlo e iniciar sesión, así que el PC no necesita estar siempre encendido.
-   - Corre con ese usuario y solo mientras tiene la sesión iniciada, que es cuando Everything está abierto. No guarda ninguna contraseña ni necesita permisos de administrador.
-   - No abre ninguna ventana, nunca corre dos veces a la vez y se detiene si pasa de una hora.
+   Crea dos tareas en la carpeta **Trackhive** del Programador de tareas:
+   - **Sincronizar con Everything** (HU-166): se ejecuta una vez al día. Tiene marcada «**Ejecutar la tarea lo antes posible si se omitió un inicio programado**», así que si el PC estaba apagado a esa hora, sincroniza al encenderlo e iniciar sesión. El PC no necesita estar siempre encendido. Nunca corre dos veces a la vez y se detiene si pasa de una hora.
+   - **Atender Sincronizar ahora** (HU-138): empieza al iniciar sesión y sigue mientras la sesión está iniciada (`trackhive-agente.exe --vigilar`). Pregunta a Trackhive cada minuto (`trackhive.poll_seconds`) si un administrador pidió «Sincronizar ahora» y, si lo hizo, sincroniza. No tiene límite de tiempo, y si el programa falla, Windows lo vuelve a iniciar (hasta 3 veces, cada minuto). El script la deja iniciada, sin cerrar sesión.
+   - Las dos corren con ese usuario y solo mientras tiene la sesión iniciada, que es cuando Everything está abierto. No guardan ninguna contraseña, no necesitan permisos de administrador y no abren ninguna ventana.
 
 7. **Comprobarla.** En el Programador de tareas (`taskschd.msc`), **Biblioteca → Trackhive**: clic derecho en la tarea, **Ejecutar**. Al terminar, la columna «Resultado de la última ejecución» muestra `(0x0)`. También desde PowerShell:
 
    ```powershell
    Start-ScheduledTask -TaskPath '\Trackhive\' -TaskName 'Sincronizar con Everything'
    (Get-ScheduledTaskInfo -TaskPath '\Trackhive\' -TaskName 'Sincronizar con Everything').LastTaskResult   # 0
+   (Get-ScheduledTask -TaskPath '\Trackhive\' -TaskName 'Atender Sincronizar ahora').State                # Running
    ```
+
+   Para comprobar la segunda, un administrador entra a Trackhive, abre **Sincronización** y pulsa «Sincronizar ahora». En menos de un minuto la pantalla pasa de «Pedida, esperando al agente» al resultado, y `logs\vigilancia.log` muestra la corrida.
 
 ### 10.3 Operación
 
-- **Cada día**, a la hora programada (o al encender el PC si estaba apagado), el agente hace una sincronización completa y termina. Para sincronizar en otro momento, se ejecuta la tarea a mano (paso 7). La pantalla «Sincronizar ahora» llega con HU-138.
+- **Cada día**, a la hora programada (o al encender el PC si estaba apagado), el agente hace una sincronización completa y termina.
+- **«Sincronizar ahora» (HU-138):** para sincronizar en otro momento, un administrador abre **Sincronización** en Trackhive, pulsa «Sincronizar ahora» y confirma. La sincronización queda pedida y la tarea **Atender Sincronizar ahora** la toma en el siguiente minuto. La pantalla muestra el resultado sola, sin recargar. Si el PC está apagado, la sincronización sigue pedida (la pantalla dice desde cuándo y cuándo se comunicó el agente por última vez) y se hace al encender el PC. Mientras hay una pedida o en curso, no se pide otra.
 - **Resultado:** «Resultado de la última ejecución» de la tarea es el código de salida del agente: `0x0` corrida completa; `0x1` la sincronización falló (el motivo está en el log y, si la corrida alcanzó a iniciarse, en Trackhive); `0x2` la configuración está mal y no se conectó a nada.
-- **Log:** `C:\Trackhive\agente\logs\agente.log`. Guarda 1 MB y los 5 archivos anteriores, y nunca escribe el token ni la contraseña. Una corrida normal:
+- **Log:** `C:\Trackhive\agente\logs\agente.log` para la tarea diaria y `logs\vigilancia.log` para «Sincronizar ahora». Así las dos tareas nunca comparten un archivo, que Windows no dejaría rotar. Cada uno guarda 1 MB y los 5 archivos anteriores, y nunca escribe el token ni la contraseña. La vigilancia solo escribe lo que cambia: una sincronización pedida, que Trackhive no responde y que vuelve a responder. Una corrida normal:
 
   ```text
   2026-11-24 12:00:01 INFO Everything responde
@@ -185,6 +188,9 @@ Una corrida que termina con error nunca marca materiales como «copia digital no
 | `No se pudo verificar el certificado de Trackhive` | No envió nada ni reintentó | Revisar el certificado del servidor (HU-42). Solo si lo emite una CA propia, poner su certificado raíz en `trackhive.ca_file` |
 | `El agente no se ejecuta: …` (código 2) | No se conectó a nada | Corregir `agente.toml` según el mensaje: `https://`, token de 32 caracteres o más, raíces entre comillas simples… |
 | El antivirus bloquea `trackhive-agente.exe` | — | Es un ejecutable sin firma digital que construye el CI. Agregar una exclusión para `C:\Trackhive\agente\` |
+| En **Sincronización** la corrida sigue «Pedida, esperando al agente» y el agente lleva tiempo sin comunicarse | — | El PC del CLENA está apagado, sin sesión iniciada o sin internet: la corrida se hace al volver. Si el PC está encendido, revisar que la tarea **Atender Sincronizar ahora** esté `Running` (paso 7) y `logs\vigilancia.log` |
+| `No se pudo preguntar a Trackhive si hay una sincronización pedida: …` (en `vigilancia.log`) | Sigue preguntando cada minuto; lo escribe una vez y, cuando Trackhive vuelve, `Trackhive responde de nuevo` | Lo mismo que para la tarea diaria según el motivo: internet, token o sincronización desactivada |
+| `La tarea que inició al agente terminó: se deja de atender «Sincronizar ahora»` | La tarea se detuvo (se reinstaló o se terminó a mano) y el agente terminó con ella | Nada, si fue a propósito. Para volver a iniciarla: `Start-ScheduledTask -TaskPath '\Trackhive\' -TaskName 'Atender Sincronizar ahora'` |
 
 ### 10.5 Rotar el token
 
@@ -199,8 +205,8 @@ Una corrida que termina con error nunca marca materiales como «copia digital no
 
 ### 10.6 Actualizar o desinstalar
 
-- **Actualizar:** reemplazar `trackhive-agente.exe` por el nuevo. La configuración, el log y la tarea se conservan.
-- **Desinstalar:** `powershell -ExecutionPolicy Bypass -File .\instalar-tarea.ps1 -Quitar` y borrar la carpeta `C:\Trackhive\agente`.
+- **Actualizar:** detener la vigilancia, que tiene el `.exe` en uso (`Stop-ScheduledTask -TaskPath '\Trackhive\' -TaskName 'Atender Sincronizar ahora'`), reemplazar `trackhive-agente.exe` por el nuevo y volver a ejecutar `instalar-tarea.ps1`, que vuelve a crear las dos tareas y deja la vigilancia iniciada. La configuración y los logs se conservan. Después de cambiar `agente.toml` también se vuelve a ejecutar el script, para que la vigilancia lea la configuración nueva.
+- **Desinstalar:** `powershell -ExecutionPolicy Bypass -File .\instalar-tarea.ps1 -Quitar` (quita las dos tareas) y borrar la carpeta `C:\Trackhive\agente`.
 
 ## 11. Contactos y licencia
 

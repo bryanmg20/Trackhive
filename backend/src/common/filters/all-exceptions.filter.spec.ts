@@ -8,9 +8,11 @@ import { DomainError } from '../errors/domain.error';
 import { EverythingPageTooLargeError } from '../../everything/domain/errors/everything-page-too-large.error';
 import { EverythingSyncDisabledError } from '../../everything/domain/errors/everything-sync-disabled.error';
 import { InvalidAgentTokenError } from '../../everything/domain/errors/invalid-agent-token.error';
+import { SyncRunAlreadyRequestedError } from '../../everything/domain/errors/sync-run-already-requested.error';
 import { SyncRunAlreadyRunningError } from '../../everything/domain/errors/sync-run-already-running.error';
 import { SyncRunExpiredError } from '../../everything/domain/errors/sync-run-expired.error';
 import { SyncRunNotFoundError } from '../../everything/domain/errors/sync-run-not-found.error';
+import { SyncRunNotRequestedError } from '../../everything/domain/errors/sync-run-not-requested.error';
 import { SyncRunNotRunningError } from '../../everything/domain/errors/sync-run-not-running.error';
 import { InvalidRefreshTokenError } from '../../auth/domain/errors/invalid-refresh-token.error';
 import { MailDeliveryFailedError } from '../../notifications/domain/errors/mail-delivery-failed.error';
@@ -286,6 +288,9 @@ describe('AllExceptionsFilter', () => {
       [new SyncRunNotFoundError(), HttpStatus.NOT_FOUND],
       [new EverythingPageTooLargeError(501, 500), HttpStatus.PAYLOAD_TOO_LARGE],
       [new InvalidAgentTokenError(), HttpStatus.UNAUTHORIZED],
+      // «Sincronizar ahora» (HU-138)
+      [new SyncRunAlreadyRequestedError(), HttpStatus.CONFLICT],
+      [new SyncRunNotRequestedError(), HttpStatus.CONFLICT],
     ])('maps %s to %s', (error, expected) => {
       run(error);
 

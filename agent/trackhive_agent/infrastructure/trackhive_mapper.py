@@ -5,11 +5,26 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..application.dto import ClosedRun, RunSummary
+from ..application.dto import ClosedRun, RequestedRun, RunSummary
 from ..domain.agent_run import CloseRequest
+from ..domain.errors import TrackhiveError
 
 
 class TrackhiveMapper:
+    @staticmethod
+    def to_requested_run(body: dict[str, Any]) -> RequestedRun | None:
+        """RequestedSyncRunResponseDto: the run PEDIDA (HU-138), or None."""
+        requested = body.get('requested')
+        if not isinstance(requested, bool):
+            raise TrackhiveError(
+                'La respuesta de Trackhive no dice si hay una sincronización pedida: ¿trackhive.url es la dirección '
+                'de Trackhive, en una versión con «Sincronizar ahora» (HU-138)?'
+            )
+        if not requested:
+            return None
+        requested_at = body.get('requestedAt')
+        return RequestedRun(requested_at=requested_at if isinstance(requested_at, str) else 'sin fecha')
+
     @staticmethod
     def close_body(request: CloseRequest) -> bytes:
         """`{"result":"OK","pageCount":N}` or `{"result":"ERROR","errorMessage":"…"}` (CloseSyncRunDto)."""

@@ -66,6 +66,7 @@ El trabajo se organiza en sprints de dos semanas con el tablero [Trackhive - Tab
 - **Máquina de estados** con transiciones válidas, motivo de rechazo e historial de cambios.
 - **Control de disponibilidad** y **agenda de citas** sin dobles reservas.
 - **Notificaciones por correo** al solicitante en cada cambio de estado (Mailpit en desarrollo).
+- **Sincronización con Everything:** un agente en el PC del CLENA envía las carpetas de las copias digitales. El administrador ve cómo terminó la última sincronización y pide «Sincronizar ahora».
 - **Diseño responsive** usable a 360 px, con etiquetas accesibles y operación por teclado.
 
 ## Arquitectura
@@ -220,7 +221,7 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `SMTP_USER` | Usuario SMTP. Vacío si el servidor no pide autenticación | *(vacío)* |
 | `SMTP_PASSWORD` | Contraseña SMTP | *(vacío)* |
 | `SMTP_FROM` | Remitente de los correos | `"Trackhive <no-reply@example.com>"` |
-| `EVERYTHING_AGENT_TOKEN` | Token con el que el agente de Everything (HU-166) llama a los endpoints de ingesta (HU-137). Vacío: la sincronización está desactivada y esos endpoints responden 503. Mínimo 32 caracteres (`openssl rand -hex 32`); nunca se sube al repositorio ([guía](docs/everything-desarrollo.md#7-sincronización-con-el-backend-hu-137)) | *(vacío)* |
+| `EVERYTHING_AGENT_TOKEN` | Token con el que el agente de Everything (HU-166) llama a los endpoints de ingesta (HU-137). Vacío: la sincronización está desactivada, esos endpoints responden 503 y la pantalla Sincronización lo indica (HU-138). Mínimo 32 caracteres (`openssl rand -hex 32`); nunca se sube al repositorio ([guía](docs/everything-desarrollo.md#7-sincronización-con-el-backend-hu-137)) | *(vacío)* |
 | `EVERYTHING_RUN_TIMEOUT_MINUTES` | Minutos sin recibir páginas tras los que una corrida de sincronización vence con error | `30` |
 | `EVERYTHING_USER` | Usuario del mock de Everything. El backend no lo usa; el agente (HU-166) lleva el de Everything en su `agente.toml` | `trackhive` |
 | `EVERYTHING_PASSWORD` | Contraseña del mock de Everything. El backend no la usa; el agente lleva la suya en `agente.toml` | `trackhive-dev` |

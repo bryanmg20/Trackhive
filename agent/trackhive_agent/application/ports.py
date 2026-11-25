@@ -6,7 +6,7 @@ from typing import Protocol
 
 from ..domain.agent_run import CloseRequest
 from ..domain.everything_page import EverythingPage
-from .dto import ClosedRun
+from .dto import ClosedRun, RequestedRun
 
 
 class IEverythingClient(Protocol):
@@ -22,14 +22,21 @@ class IEverythingClient(Protocol):
 
 
 class ITrackhiveClient(Protocol):
-    """The ingest endpoints of Trackhive (HU-137), with the token of the agent.
+    """The endpoints of Trackhive for the agent (HU-137, HU-138), with its
+    token.
 
     Each method makes one request. It raises TrackhiveUnavailableError when
     trying again may work (network, timeout, 5xx) and TrackhiveError when it
     will not."""
 
+    def requested_run(self) -> RequestedRun | None:
+        """The run an administrator asked for with «Sincronizar ahora»
+        (HU-138), or None when there is none."""
+        ...
+
     def start_run(self) -> str:
-        """Starts a run and returns its id."""
+        """Starts a run and returns its id. If a run is requested, the start
+        takes it (HU-138)."""
         ...
 
     def send_page(self, run_id: str, number: int, body: bytes) -> None:
@@ -47,4 +54,14 @@ class IClock(Protocol):
         ...
 
     def sleep(self, seconds: float) -> None:
+        ...
+
+
+class ILifeline(Protocol):
+    """What keeps the watch of «Sincronizar ahora» going (HU-138): the
+    program that started the agent, as the task of Windows."""
+
+    def wait(self, seconds: float) -> bool:
+        """Waits up to `seconds` before the next question. False as soon as
+        the program that started the agent is gone: the watch ends."""
         ...

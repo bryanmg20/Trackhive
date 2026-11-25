@@ -103,7 +103,7 @@ es orientativo y no constituye un contrato de API o de navegación.
 | WF-11 | Calendario | PERSONAL, ADMIN | `/calendario` | HU-19, HU-142, HU-74 · existente | [Escritorio](wireframes/wf-11-calendario.png) · [Móvil 360 px](wireframes/wf-11-calendario-movil.png) |
 | WF-12 | Gestión de usuarios del personal | ADMIN | `/admin/usuarios` | HU-05 · existente | [Escritorio](wireframes/wf-12-gestion-usuarios.png) · [Móvil 360 px](wireframes/wf-12-gestion-usuarios-movil.png) |
 | WF-13 | Capacidad de la sala | ADMIN | `/admin/capacidad-sala` | HU-20.1 / HU-74 · existente | [Escritorio](wireframes/wf-13-capacidad-sala.png) · [Móvil 360 px](wireframes/wf-13-capacidad-sala-movil.png) |
-| WF-14 | Sincronización con Everything | ADMIN | `/admin/sincronizacion` **propuesta** | HU-138; depende de HU-137 · propuesta | [Escritorio](wireframes/wf-14-sincronizacion-everything.png) · [Móvil 360 px](wireframes/wf-14-sincronizacion-everything-movil.png) |
+| WF-14 | Sincronización con Everything | ADMIN | `/admin/sincronizacion` | HU-138 · existente | [Escritorio](wireframes/wf-14-sincronizacion-everything.png) · [Móvil 360 px](wireframes/wf-14-sincronizacion-everything-movil.png) |
 | WF-15 | Material para el personal | PERSONAL, ADMIN | `/personal/materiales` | HU-08, HU-109 · existente; HU-140 propuesto | [Escritorio](wireframes/wf-15-material-personal.png) · [Móvil 360 px](wireframes/wf-15-material-personal-movil.png) |
 
 Las rutas existentes se contrastaron con
@@ -134,7 +134,7 @@ flowchart TD
   Mostrador -->|cambiar materiales| Material
   Bandeja -->|ADMIN| Usuarios[WF-12 Usuarios del personal]
   Calendario -->|ADMIN| Sala[WF-13 Capacidad]
-  Material -->|ADMIN: propuesta| Everything[WF-14 Everything]
+  Material -->|ADMIN| Everything[WF-14 Sincronización]
 ```
 
 - Al iniciar sesión, PUBLICO llega al buscador y PERSONAL/ADMIN a la bandeja.
@@ -146,9 +146,9 @@ flowchart TD
   solicitudes en WF-06. El backend limita la consulta a su propia cuenta.
 - Desde el calendario se abre el detalle; el agendamiento se hace desde una
   solicitud disponible con modalidad presencial.
-- La administración de usuarios, capacidad y la propuesta de Everything no se ofrecen a
-  PUBLICO ni PERSONAL. Para HU-138, el endpoint declara `@Roles('ADMIN')` y
-  responde 403 a esos dos roles, conforme al criterio suministrado.
+- La administración de usuarios, la capacidad y la sincronización con Everything no se
+  ofrecen a PUBLICO ni PERSONAL. En HU-138 los dos endpoints de la pantalla declaran
+  `@Roles('ADMIN')` y responden 403 a esos dos roles.
 - Cerrar sesión lleva a WF-01. Una sesión rechazada muestra un enlace al login.
 
 ## Bocetos por pantalla
@@ -374,6 +374,31 @@ Según los criterios de HU-138 suministrados para esta tarea:
 Las tarjetas inferiores representan variantes, no estados simultáneos. La HU
 depende de #137 y debe verificarse con Nginx/Docker cuando se implemente. Este
 issue de wireframes no implementa la integración ni cambia D-17 de arquitectura.
+
+**Implementada en HU-138** en `/admin/sincronizacion`, con la opción
+«Sincronización» del menú solo para ADMIN. Tres tarjetas apiladas, también a
+360 px:
+
+- **Última sincronización:** hace cuánto terminó (con la fecha en hora de
+  Bogotá), las carpetas recibidas, «Terminó correctamente» o «Terminó con
+  error» con su motivo, y si fue pedida con «Sincronizar ahora» o la diaria
+  del agente. Sin ninguna: «Todavía no hay sincronizaciones».
+- **Sincronizar ahora:** el botón pide confirmación y deja la corrida
+  «Pedida, esperando al agente», con desde cuándo. El agente del CLENA la
+  toma la próxima vez que pregunta (cada minuto mientras el PC está
+  encendido). Con una corrida pedida o en curso, el botón no pide otra y avisa
+  por qué. Una en curso que el agente abandonó sale como «sin noticias del
+  agente» y no impide pedir otra.
+- **Agente del CLENA:** la última vez que el agente se comunicó.
+
+La pantalla se actualiza sola, cada 5 s mientras hay una corrida pedida o en
+curso, y anuncia el resultado nuevo cuando el agente termina. La variante
+desactivada no depende de `EVERYTHING_ENABLED`, que no existe: sale cuando el
+servidor no tiene `EVERYTHING_AGENT_TOKEN`, y deja el botón inactivo. No se
+muestran credenciales ni rutas de materiales. El motivo del error es el que
+informa el agente: puede nombrar la raíz de un fondo (por ejemplo, una unidad
+que no estaba conectada), que es lo que el administrador necesita para
+corregirlo.
 
 ### WF-15 Material para el personal
 

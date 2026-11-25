@@ -15,6 +15,15 @@ Programa de consola que se instala en el PC del CLENA. Consulta el servidor HTTP
 
 Si Trackhive no responde (red, tiempo de espera, 5xx), cada petición se reintenta hasta `attempts` veces con una espera que se duplica (5, 10, 20, 40 s). Una página se reenvía con el mismo número, que la reemplaza. Un error que reintentar no arregla (401, 409, 413, certificado inválido…) no se reintenta. Si no lo logra, termina con error y la siguiente ejecución vuelve a intentarlo.
 
+## «Sincronizar ahora» (HU-138): `--vigilar`
+
+Con `--vigilar` el agente no termina después de una sincronización. Pregunta a Trackhive cada `trackhive.poll_seconds` (60 s por defecto) si un administrador pidió «Sincronizar ahora» (`GET /api/v1/everything/sync-runs/requested`). Si hay una corrida pedida, hace la misma sincronización de arriba, y al iniciar la corrida Trackhive le entrega la pedida. Lo inicia la tarea **Atender Sincronizar ahora** al iniciar sesión, y sigue mientras la sesión está iniciada.
+
+- Si Trackhive no responde, o una sincronización falla, la siguiente pregunta vuelve a intentarlo. Nunca termina por eso.
+- Escribe en `logs\vigilancia.log`, aparte del log de la tarea diaria, y solo lo que cambia: una sincronización pedida, que Trackhive no responde y que vuelve a responder.
+- `trackhive-agente.exe` es un lanzador de PyInstaller, y el agente es su proceso hijo. Cuando Windows detiene la tarea, solo termina el lanzador, así que el agente espera sobre él (`infrastructure/lifeline.py`) y termina en ese momento. Así una tarea detenida no deja un agente suelto con el `.exe` en uso.
+- Con una configuración inválida termina de inmediato con el código 2. Si no, solo termina cuando termina la tarea (o con Ctrl+C en una consola), con el código 0.
+
 | Código de salida | Significado |
 |---|---|
 | 0 | Corrida completa |
@@ -32,13 +41,13 @@ agent/
 ├── agente.py                 # punto de entrada (python agent/agente.py y el .exe)
 ├── agente.example.toml       # configuración de ejemplo, sin secretos
 ├── construir_exe.py          # trackhive-agente.exe con PyInstaller
-├── instalar-tarea.ps1        # la tarea diaria del Programador de tareas
+├── instalar-tarea.ps1        # las tareas del Programador de tareas: la diaria y la de «Sincronizar ahora»
 ├── requirements.txt          # truststore (certificados con el almacén de Windows)
 ├── requirements-build.txt    # + PyInstaller
 ├── trackhive_agent/
 │   ├── domain/               # AgentRun (reglas del cierre), EverythingPage, política de conexión, errores
-│   ├── application/          # SynchronizeUseCase, Retrier, puertos (IEverythingClient, ITrackhiveClient, IClock) y DTOs
-│   ├── infrastructure/       # clientes HTTP, TLS, agente.toml, log y reloj
+│   ├── application/          # SynchronizeUseCase, WatchRequestsUseCase (HU-138), Retrier, puertos (IEverythingClient, ITrackhiveClient, IClock, ILifeline) y DTOs
+│   ├── infrastructure/       # clientes HTTP, TLS, agente.toml, log, reloj y el lanzador del .exe (lifeline)
 │   └── presentation/         # cli.py: argumentos, composición y códigos de salida
 └── tests/
 ```
@@ -57,9 +66,10 @@ python -m unittest discover -s agent/tests -t agent -v
 | `test_dominio.py` | Numeración de páginas, que una corrida con un fallo nunca cierra completa, paginación y la política HTTPS |
 | `test_configuracion.py` | `agente.toml`: valores por defecto, rechazos (http://, token corto, raíces), el ejemplo sin secretos y con las raíces de `backend/config/catalog-convention.json` |
 | `test_sincronizar.py` | El caso de uso con fakes en memoria y un reloj falso: corrida completa, Everything caído o lento, reintentos con espera creciente, errores que no se reintentan |
+| `test_vigilar.py` | «Sincronizar ahora» (HU-138): la vigilancia con fakes, que sincroniza solo si hay una corrida pedida, sigue aunque Trackhive no responda o algo falle, escribe cada problema una vez y termina con la tarea; y la espera sobre el lanzador del `.exe` |
 | `test_clientes.py` | Los clientes HTTP contra el mock de Everything (HU-133) y los fixtures del real, un Trackhive falso y HTTPS con un certificado de prueba |
-| `test_agente.py` | El agente como proceso, igual que lo ejecuta el Programador de tareas, contra el mock y el Trackhive falso |
-| `test_tarea_windows.py` | `instalar-tarea.ps1` crea una tarea real y revisa su XML. Solo en Windows con `TRACKHIVE_PROBAR_TAREA=1` |
+| `test_agente.py` | El agente como proceso, igual que lo ejecuta el Programador de tareas, contra el mock y el Trackhive falso. Con `--vigilar`: toma la corrida pedida y sigue preguntando, y con el `.exe` en Windows termina cuando termina su lanzador |
+| `test_tarea_windows.py` | `instalar-tarea.ps1` crea las dos tareas reales y revisa su XML (la diaria y la de «Sincronizar ahora», que empieza al iniciar sesión sin límite de tiempo), y `-Quitar` las elimina. Solo en Windows con `TRACKHIVE_PROBAR_TAREA=1` |
 | `test_arquitectura.py` | Ninguna capa importa una exterior; el dominio y la aplicación no hacen E/S |
 
 Las pruebas de HTTPS crean una CA y un certificado de prueba con `openssl` en cada ejecución; sin `openssl` se omiten.
@@ -74,7 +84,8 @@ docker compose --profile everything up -d --build backend everything-mock
 
 cp agent/agente.example.toml agent/agente.toml   # agente.toml no se sube (.gitignore)
 # En agent/agente.toml: [trackhive] url = 'http://127.0.0.1:3000' y token = el del .env
-python agent/agente.py
+python agent/agente.py             # una sincronización
+python agent/agente.py --vigilar   # atiende «Sincronizar ahora» de http://localhost:8080/admin/sincronizacion
 ```
 
 ## Construir el .exe

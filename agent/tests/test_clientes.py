@@ -149,6 +149,41 @@ class TrackhiveClientTest(unittest.TestCase):
         self.assertEqual(closed.status, 'OK')
         self.assertEqual(closed.summary.leaves, 117)
 
+    def test_asks_whether_an_administrator_pressed_sincronizar_ahora(self) -> None:
+        with FakeTrackhive() as fake:
+            client = self.client(fake.url)
+            nothing = client.requested_run()
+            fake.requested_at = '2026-11-24T15:00:00.000Z'
+            asked = client.requested_run()
+
+        self.assertIsNone(nothing)
+        self.assertEqual(asked.requested_at, '2026-11-24T15:00:00.000Z')
+        first, second = fake.calls
+        self.assertEqual((first.method, first.path), ('GET', '/api/v1/everything/sync-runs/requested'))
+        self.assertEqual(second.headers['Authorization'], f'Bearer {TOKEN}')
+        # A GET carries no body
+        self.assertEqual(first.body, b'')
+        self.assertNotIn('Content-Type', first.headers)
+
+    def test_an_answer_without_requested_is_not_from_this_trackhive(self) -> None:
+        with StaticServer(200, b'{"status": "ok"}', {'Content-Type': 'application/json'}) as other:
+            with self.assertRaises(TrackhiveError) as wrong:
+                self.client(other.url).requested_run()
+        self.assertNotIsInstance(wrong.exception, TrackhiveUnavailableError)
+        self.assertIn('Sincronizar ahora', str(wrong.exception))
+
+    def test_the_question_fails_like_the_other_requests(self) -> None:
+        for failure, expected in (
+            ((503, None), TrackhiveUnavailableError),
+            ((401, 'INVALID_AGENT_TOKEN'), TrackhiveError),
+            ((503, 'EVERYTHING_SYNC_DISABLED'), TrackhiveError),
+        ):
+            with self.subTest(failure=failure), FakeTrackhive() as fake:
+                fake.fail('requested', failure)
+                with self.assertRaises(TrackhiveError) as raised:
+                    self.client(fake.url).requested_run()
+                self.assertIs(type(raised.exception), expected)
+
     def test_closing_with_an_error_sends_the_reason(self) -> None:
         with FakeTrackhive() as fake:
             closed = self.client(fake.url).close_run(fake.run_id, CloseRequest('ERROR', error_message='Everything no respondió en 30 s'))

@@ -19,6 +19,7 @@ import { RoomCapacityPage } from './features/requests/RoomCapacityPage';
 import { ROUTES } from './routes';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { StaffUsersPage } from './features/users/StaffUsersPage';
+import { EverythingSyncPage } from './features/everything/EverythingSyncPage';
 import { MostRequestedMaterialsPage } from './features/reports/MostRequestedMaterialsPage';
 import { AttentionTimesPage } from './features/reports/AttentionTimesPage';
 
@@ -61,6 +62,10 @@ function App() {
           element={<RoomCapacityPage />}
         />
         <Route path={ROUTES.staffUsers} element={<StaffUsersPage />} />
+        <Route
+          path={ROUTES.adminEverythingSync}
+          element={<EverythingSyncPage />}
+        />
       </Route>
       <Route path="*" element={<HomeRedirect />} />
     </Routes>

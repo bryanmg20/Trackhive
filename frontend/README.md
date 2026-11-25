@@ -40,6 +40,7 @@ pnpm test:e2e:docker # Con Docker activo: pruebas de integración a través de l
 | `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
 | `/solicitudes/:id`               | Detalle de una solicitud, cambio de estado y agendar cita (HU-13, HU-15, HU-18) | `PERSONAL`/`ADMIN` |
 | `/admin/usuarios`                | Gestión de usuarios del personal: crear, editar, desactivar y activar (HU-05) | `ADMIN`          |
+| `/admin/sincronizacion`          | Sincronización con Everything: última sincronización, contacto del agente y «Sincronizar ahora» (HU-138) | `ADMIN`          |
 
 Las rutas del usuario público viven dentro de `ProtectedRoute`; cualquier otro
 rol o una sesión vencida redirige a `/login`. Las rutas de personal viven dentro
@@ -243,6 +244,28 @@ cada campo y los demás en la tarjeta (por ejemplo, `409 EMAIL_ALREADY_EXISTS` o
 `409 CANNOT_CHANGE_OWN_ACCESS` cuando el administrador intenta desactivar su
 propia cuenta).
 
+### Sincronización con Everything (HU-138)
+
+`/admin/sincronizacion` (WF-14) solo la abre `ADMIN`, y el menú muestra
+«Sincronización» solo a ese rol. El backend responde `403` a `PERSONAL` y a
+`PUBLICO` en sus dos endpoints.
+
+- **Estado:** `GET /api/v1/everything/sync-status` trae si la integración está
+  activa (`enabled`), la corrida pedida o en curso (`currentRun`, con `expired`
+  si el agente la abandonó), la última que terminó (`lastRun`) y la última vez
+  que el agente se comunicó (`agentLastContactAt`). Las fechas se muestran como
+  «hace 15 minutos» y, al lado, en hora de Bogotá (`sync-times.ts`).
+- **Sincronizar ahora:** el botón pide confirmación y llama a
+  `POST /api/v1/everything/sync-requests`. Si la pantalla ya muestra una
+  corrida pedida o en curso, no llama a la API y avisa que no se pidió otra. Si
+  la pantalla estaba desactualizada, el `409` del backend
+  (`SYNC_RUN_ALREADY_REQUESTED` o `SYNC_RUN_ALREADY_RUNNING`) muestra el mismo
+  aviso. Con la integración desactivada, el botón está inactivo.
+- **Actualización:** como la bandeja (HU-12.1), vuelve a pedir el estado al
+  volver a la pestaña. Lo hace cada 5 s mientras hay una corrida pedida o en
+  curso, y cada 30 s si no, así que el resultado nuevo aparece sin recargar
+  cuando el agente termina. Se anuncia en una región `status`.
+
 ## Estado y alcance
 
 - **HU-01 integrado:** el `POST /api/v1/users` acepta `firstName`,
@@ -356,6 +379,25 @@ otra con material sin copia. Comprueba en `localhost:8080` que solo la primera
 ofrece Disponible en vez de En búsqueda, la pasa a Disponible, revisa el
 historial y el correo en Mailpit (`localhost:8025`), y que la API responde 409
 a Disponible en las otras dos. Guarda capturas en `test-results/`.
+
+### Sincronización con Everything (HU-138)
+
+Con `docker compose up -d --build` iniciado desde la raíz y la semilla, ejecutar
+desde `frontend`:
+
+```bash
+set -a; . ../.env; set +a   # SEED_*_PASSWORD y EVERYTHING_AGENT_TOKEN
+pnpm test:e2e:docker everything-sync.spec.ts
+```
+
+A través de Nginx (`localhost:8080`), comprueba que `PERSONAL` y `PUBLICO`
+reciben `403` en los dos endpoints y que la pantalla de `ADMIN` recibe su
+estado del backend. Con `EVERYTHING_AGENT_TOKEN`, la prueba también hace de
+agente: pide «Sincronizar ahora» en la pantalla, ve «Pedida, esperando al
+agente» y el aviso al pulsar de nuevo, y luego toma la corrida y la cierra con
+error, para no cambiar el catálogo. La pantalla muestra sola el resultado
+nuevo. Sin el token, esa segunda prueba se omite. Guarda capturas en
+`test-results/`.
 
 ### Calendario legible (HU-142)
 

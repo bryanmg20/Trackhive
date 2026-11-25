@@ -1,9 +1,11 @@
 /**
  * A run of the Everything sync (HU-137) is EN_CURSO while the agent sends its
  * pages, and ends OK (closed complete) or ERROR (closed with an error, or
- * expired). Only one run can be EN_CURSO at a time.
+ * expired). An administrator may ask for one with «Sincronizar ahora»
+ * (HU-138): it is PEDIDA until the agent takes it. Only one run can be PEDIDA
+ * or EN_CURSO at a time.
  */
-export const SYNC_RUN_STATUSES = ['EN_CURSO', 'OK', 'ERROR'] as const;
+export const SYNC_RUN_STATUSES = ['PEDIDA', 'EN_CURSO', 'OK', 'ERROR'] as const;
 
 export type SyncRunStatus = (typeof SYNC_RUN_STATUSES)[number];
 

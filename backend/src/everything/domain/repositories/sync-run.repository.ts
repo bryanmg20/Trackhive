@@ -15,9 +15,9 @@ export interface SavedMaterialsCount {
  */
 export interface ISyncRunRepository {
   /**
-   * Saves a new run EN_CURSO. SyncRunAlreadyRunningError if another run is
-   * EN_CURSO: the partial unique index of sync_runs decides, even with two
-   * instances of the backend.
+   * Saves a new run, EN_CURSO or PEDIDA (HU-138). SyncRunAlreadyRunningError
+   * if another run is EN_CURSO or PEDIDA: the partial unique index of
+   * sync_runs decides, even with two instances of the backend.
    */
   create(run: SyncRun): Promise<void>;
 
@@ -25,6 +25,16 @@ export interface ISyncRunRepository {
 
   /** The run EN_CURSO, if there is one. */
   findRunning(): Promise<SyncRun | null>;
+
+  /** The run PEDIDA that waits for the agent, if there is one (HU-138). */
+  findRequested(): Promise<SyncRun | null>;
+
+  /**
+   * Saves that the agent took the run PEDIDA: it is EN_CURSO from now on
+   * (HU-138). SyncRunAlreadyRunningError if it was no longer PEDIDA: another
+   * execution of the agent took it first.
+   */
+  take(run: SyncRun): Promise<void>;
 
   /**
    * Saves the page (replacing one with the same number, so the agent may

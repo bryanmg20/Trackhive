@@ -149,7 +149,7 @@ function context() {
   const body = [
     person(30, 50, 300, 150, ['Usuario público'], ['Investigador o ciudadano que pide', 'consultar material del archivo.']),
     person(410, 50, 300, 150, ['Personal del CLENA'], ['Atiende las solicitudes, ubica el', 'material y agenda las citas.']),
-    person(790, 50, 300, 150, ['Administrador'], ['Personal con permisos extra:', 'verifica la configuración del correo.']),
+    person(790, 50, 300, 150, ['Administrador'], ['Personal con permisos extra: correo', 'de prueba y «Sincronizar ahora».']),
     box(270, 420, 520, 190, COLOR.system, COLOR.systemStroke, ['Trackhive'], ['[Sistema de software]'], [
       'Registra las solicitudes de consulta, sigue su estado,',
       'controla la disponibilidad del material y agenda las citas.',
@@ -165,7 +165,7 @@ function context() {
     ]),
     edge([[230, 200], [380, 420]], 300, 268, ['Registra solicitudes y', 'consulta su estado [HTTPS*]']),
     edge([[560, 200], [560, 420]], 560, 302, ['Gestiona solicitudes, materiales', 'y citas [HTTPS*]']),
-    edge([[890, 200], [700, 420]], 840, 268, ['Hace lo mismo que el personal y', 'envía el correo de prueba [HTTPS*]']),
+    edge([[890, 200], [700, 420]], 840, 268, ['Hace lo mismo que el personal,', 'prueba el correo y pide', 'sincronizar [HTTPS*]']),
     edge([[420, 610], [420, 820]], 420, 694, ['Envía notificaciones de', 'cambio de estado [SMTP]']),
     edge([[790, 515], [890, 515], [890, 820]], 890, 656, ['El agente consulta las carpetas', 'de los fondos y las envía a', 'Trackhive [HTTP en el mismo PC;', 'HTTPS* hacia Trackhive]']),
     edge([[230, 890], [110, 890], [110, 200]], 110, 520, ['Entrega los', 'correos de', 'estado', '[correo]']),
@@ -201,8 +201,8 @@ function containers() {
       'citas, historial y notificaciones.',
     ]),
     box(400, 800, 300, 170, COLOR.container, COLOR.containerStroke, ['Agente de Everything'], tag(['Python,', 'trackhive-agente.exe en el PC del CLENA]']), [
-      'Una vez al día envía a la API',
-      'las carpetas que indexa Everything.',
+      'Envía a la API las carpetas de',
+      'Everything: cada día y a pedido.',
     ], { titleSize: 17 }),
     box(780, 520, 300, 160, COLOR.external, COLOR.externalStroke, ['Servicio de correo'], ['[Sistema externo: servidor SMTP', '(Mailpit en desarrollo)]'], [
       'Entrega los correos de cambio',
@@ -218,7 +218,7 @@ function containers() {
     edge([[380, 420], [380, 520]], 380, 452, ['Llama a /api/v1 [HTTPS/JSON*]']),
     edge([[600, 600], [780, 600]], 660, 582, ['Envía correos', '[SMTP]']),
     edge([[220, 680], [220, 800]], 220, 718, ['Lee y escribe con', 'Prisma [SQL sobre TCP]']),
-    edge([[550, 800], [550, 680]], 550, 704, ['Envía las páginas a', '/api/v1/everything/', 'sync-runs [HTTPS/JSON*]']),
+    edge([[550, 800], [550, 680]], 550, 704, ['Pregunta si hay una corrida', 'pedida y envía las páginas a', '/api/v1/everything/sync-runs', '[HTTPS/JSON*]']),
     edge([[550, 970], [550, 1105], [780, 1105]], 550, 1020, ['Busca solo carpetas', '[HTTP en 127.0.0.1]']),
     legend(780, 230, 300, [
       [COLOR.person, COLOR.personStroke, 'Persona (actor)'],

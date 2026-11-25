@@ -53,6 +53,11 @@ const ROUTE_CASES: RouteCase[] = [
     path: ROUTES.adminRoomCapacity,
     role: 'ADMIN',
   },
+  {
+    name: 'sincronización con Everything',
+    path: ROUTES.adminEverythingSync,
+    role: 'ADMIN',
+  },
 ];
 
 /** A JWT the frontend can decode; the backend signature is never checked here. */
@@ -397,6 +402,37 @@ async function mockApi(page: Page): Promise<void> {
             requestCount: 3,
           },
         ],
+      });
+      return;
+    }
+
+    // HU-138: a run asked for days ago and a last sync with a long reason
+    if (pathname === '/api/v1/everything/sync-status') {
+      await json({
+        enabled: true,
+        currentRun: {
+          id: 'run-2',
+          status: 'PEDIDA',
+          requestedAt: '2026-11-21T15:00:00.000Z',
+          startedAt: null,
+          lastActivityAt: '2026-11-21T15:00:00.000Z',
+          finishedAt: null,
+          filesCount: 0,
+          errorMessage: null,
+          expired: false,
+        },
+        lastRun: {
+          id: 'run-1',
+          status: 'ERROR',
+          requestedAt: null,
+          startedAt: '2026-11-20T17:00:00.000Z',
+          lastActivityAt: '2026-11-20T17:00:04.000Z',
+          finishedAt: '2026-11-20T17:00:05.000Z',
+          filesCount: 1250,
+          errorMessage:
+            'Everything no devolvió ninguna carpeta bajo Z:\\Aha\\Fondo - Notarías\\Notarías\\Notaría Primera de Barranquilla: la unidad no está conectada, Everything aún no la carga o la raíz está mal escrita en agente.toml',
+        },
+        agentLastContactAt: '2026-11-21T14:58:00.000Z',
       });
       return;
     }

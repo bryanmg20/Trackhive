@@ -174,12 +174,18 @@ erDiagram
   }
   sync_runs {
     uuid id PK
-    timestamptz started_at
+    timestamptz started_at "NULL"
     timestamptz last_activity_at
     timestamptz finished_at "NULL"
     varchar status "max 10"
+    timestamptz requested_at "NULL"
+    uuid requested_by_id FK "NULL"
     int files_count "CHECK >= 0"
     varchar error_message "max 1000; NULL"
+  }
+  sync_agent {
+    int id PK "CHECK = 1"
+    timestamptz last_contact_at
   }
   sync_run_pages {
     uuid sync_run_id PK, FK
@@ -226,9 +232,10 @@ erDiagram
   appointments ||--o{ material_loans : entregas
   users ||--o{ material_loans : entrega_o_recibe
   sync_runs ||--o{ sync_run_pages : recibe
+  users |o--o{ sync_runs : pide
 ```
 
-**Figura 1.** Diagrama ER actualizado para HU-137, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
+**Figura 1.** Diagrama ER actualizado para HU-138, generado a partir del esquema Prisma. PK: clave primaria; FK: clave foránea; UK: valor único; NULL: campo opcional en persistencia. Las tablas siguientes detallan los CHECK e índices compuestos. La imagen y el PDF históricos corresponden a la entrega previa a HU-73.
 
 | Relación | Cardinalidad | Clave foránea |
 |---|---|---|
@@ -256,6 +263,7 @@ erDiagram
 | appointments – material_loans | 1 : 0..N | `material_loans.appointment_id` |
 | users – material_loans | 1 : 0..N (entrega) y 0..1 : 0..N (devolución) | `material_loans.handed_over_by_id`, `material_loans.returned_by_id` |
 | sync_runs – sync_run_pages | 1 : 0..N (solo mientras la corrida está en curso) | `sync_run_pages.sync_run_id` (`ON DELETE CASCADE`) |
+| users – sync_runs | 0..1 : 0..N (el administrador que pidió «Sincronizar ahora», HU-138) | `sync_runs.requested_by_id` |
 
 Decisiones principales:
 
@@ -484,19 +492,30 @@ Creada en HU-23 (migración `20261113000000_create_notifications`) y ampliada en
 
 ### sync_runs
 
-Creada en HU-134 (migración `20261118120000_material_digital_copy`). Cada fila es una corrida de la sincronización con Everything (HU-137), que inicia, alimenta y cierra el agente (HU-166) por los endpoints de ingesta, una vez al día o cuando se pide «Sincronizar ahora» (HU-138). HU-137 agregó `last_activity_at`.
+Creada en HU-134 (migración `20261118120000_material_digital_copy`). Cada fila es una corrida de la sincronización con Everything (HU-137), que inicia, alimenta y cierra el agente (HU-166) por los endpoints de ingesta, una vez al día o cuando un administrador pide «Sincronizar ahora» (HU-138). HU-137 agregó `last_activity_at`. HU-138 (migración `20261124000000_everything_sync_now`) agregó el estado `PEDIDA`, `requested_at` y `requested_by_id`, y dejó `started_at` en `NULL` mientras la corrida espera al agente.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | uuid | PK | |
-| started_at | timestamptz | DEFAULT now(), IDX | Inicio de la corrida |
-| last_activity_at | timestamptz | DEFAULT now() | Inicio o última página recibida. Una corrida `EN_CURSO` sin actividad por más de `EVERYTHING_RUN_TIMEOUT_MINUTES` vence: al iniciar otra queda en `ERROR` sin marcar nada como no encontrado |
-| finished_at | timestamptz | NULL, CHECK | Fin. `NULL` si, y solo si, la corrida está `EN_CURSO`; nunca antes de `started_at` |
-| status | varchar(10) | CHECK, DEFAULT `EN_CURSO` | `EN_CURSO`, `OK`, `ERROR` |
-| files_count | int | DEFAULT 0, CHECK ≥ 0 | Resultados que devolvió Everything en las páginas de la corrida (una página reenviada cuenta una vez) |
+| started_at | timestamptz | NULL, DEFAULT now(), CHECK, IDX | Inicio de la corrida. `NULL` si, y solo si, está `PEDIDA`: el agente todavía no la tomó |
+| last_activity_at | timestamptz | DEFAULT now() | Inicio o última página recibida; mientras está `PEDIDA`, el momento de la petición. Una corrida `EN_CURSO` sin actividad por más de `EVERYTHING_RUN_TIMEOUT_MINUTES` vence: al iniciar otra, o al pedir «Sincronizar ahora», queda en `ERROR` sin marcar nada como no encontrado. Una `PEDIDA` nunca vence |
+| finished_at | timestamptz | NULL, CHECK | Fin. `NULL` si, y solo si, la corrida está `PEDIDA` o `EN_CURSO`; nunca antes de `started_at` |
+| status | varchar(10) | CHECK, DEFAULT `EN_CURSO` | `PEDIDA` (espera al agente, HU-138), `EN_CURSO`, `OK`, `ERROR` |
+| requested_at | timestamptz | NULL, CHECK | Cuándo la pidió un administrador con «Sincronizar ahora» (HU-138). `NULL` en las que el agente inicia por su cuenta (la corrida diaria). Se conserva cuando el agente la toma |
+| requested_by_id | uuid | FK → users, NULL, CHECK | Quién la pidió. Tiene valor si, y solo si, `requested_at` lo tiene; una corrida `PEDIDA` siempre los tiene |
+| files_count | int | DEFAULT 0, CHECK ≥ 0 | Resultados que devolvió Everything en las páginas de la corrida (una página reenviada cuenta una vez). El agente solo pide carpetas, así que es el número de carpetas recibidas que muestra la pantalla de la sincronización |
 | error_message | varchar(1000) | NULL, CHECK | Motivo del error. Tiene valor si, y solo si, `status = 'ERROR'` |
 
-Un índice único parcial (`sync_runs_single_running_idx`, sobre `status = 'EN_CURSO'`) impide que haya dos corridas a la vez, aunque dos instancias del backend reciban el inicio al mismo tiempo: la segunda responde 409.
+Un índice único parcial (`sync_runs_single_open_idx`, sobre `status IN ('PEDIDA', 'EN_CURSO')`, en lugar del `sync_runs_single_running_idx` de HU-137) impide que haya dos corridas pedidas o en curso a la vez, aunque un administrador pida una mientras el agente inicia su corrida diaria o dos instancias del backend las reciban al mismo tiempo: la segunda responde 409. El agente toma la corrida `PEDIDA` al iniciar (`PEDIDA → EN_CURSO`, la misma fila).
+
+### sync_agent
+
+Creada en HU-138 (migración `20261124000000_everything_sync_now`). Tabla de una sola fila con el último contacto del agente del CLENA (HU-166). Se actualiza en cada llamada del agente que pasa su token: la pregunta por una corrida pedida y los endpoints de ingesta. La pantalla de la sincronización la muestra para saber si el PC del CLENA está encendido.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| id | int | PK, CHECK = 1, DEFAULT 1 | Una sola fila |
+| last_contact_at | timestamptz | | Última vez que el agente llamó a Trackhive con su token |
 
 ### sync_run_pages
 
@@ -562,7 +581,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | notifications | request_id | Correos de una solicitud |
 | notifications | status_history_id (UK) | Un cambio de estado dispara a lo sumo un correo |
 | sync_runs | started_at DESC | Última corrida, para el estado de la sincronización (HU-138) |
-| sync_runs | Único parcial `WHERE status = 'EN_CURSO'` | Una sola sincronización a la vez (HU-137) |
+| sync_runs | Único parcial `WHERE status IN ('PEDIDA', 'EN_CURSO')` | Una sola sincronización pedida o en curso a la vez (HU-137, HU-138) |
 | sync_run_pages | (sync_run_id, page_number) (PK) | Reemplazar una página reenviada y leer las páginas de la corrida en orden al cerrarla (HU-137) |
 | material_loans | (material_id, handed_over_at DESC) | Historial de custodia del material del más reciente al más antiguo (HU-72) |
 | material_loans | (appointment_id, material_id) | Préstamos registrados en una cita y salvaguardas del ciclo de vida (HU-72) |
@@ -599,6 +618,7 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | `20261120180000_drop_material_location_and_access_type` | HU-165 | Quita la ubicación física (`depot`, `shelf`, `box` y su `CHECK`) de `materials` y `access_type` de `request_items` |
 | `20261121000000_add_notification_templates` | HU-24 | Amplía el `CHECK` de `notifications.template` con las plantillas por estado y de cita |
 | `20261123000000_everything_sync_ingest` | HU-137 | `review_reason` en `materials`, `last_activity_at` en `sync_runs` y la tabla `sync_run_pages` |
+| `20261124000000_everything_sync_now` | HU-138 | Estado `PEDIDA`, `requested_at` y `requested_by_id` en `sync_runs`, con `started_at` opcional y sus `CHECK`; índice único de una corrida pedida o en curso; tabla `sync_agent` |
 
 **Semillas:**
 

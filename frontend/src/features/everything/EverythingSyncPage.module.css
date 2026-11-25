@@ -1,0 +1,214 @@
+/* Sincronización con Everything (HU-138, WF-14): cards stacked in one
+   column, also at 360 px */
+
+.sections {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 52rem;
+}
+
+.card {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.note,
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.stateTitle {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.stateText {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.exact {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.result {
+  justify-self: start;
+  margin: 0;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--success);
+  background: var(--success-surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.result[data-result='ERROR'] {
+  border-left-color: var(--seal);
+  background: var(--error-surface);
+  color: var(--seal-dark);
+}
+
+.facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.facts div {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 11rem) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.facts dt {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.reason {
+  white-space: pre-line;
+}
+
+.disabled {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--gold-text);
+  background: var(--surface);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  overflow-wrap: anywhere;
+}
+
+.panelTitle:focus {
+  outline: none;
+}
+
+.panelText {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.secondary {
+  min-height: 2.75rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary:hover {
+  background: var(--paper);
+}
+
+.secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.secondary:focus-visible {
+  outline: 3px solid var(--gold-text);
+  outline-offset: 2px;
+}
+
+.notice {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--success);
+  background: var(--success-surface);
+  color: var(--ink);
+}
+
+.notice p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.notice[data-kind='warning'] {
+  border-left-color: var(--gold-text);
+  background: var(--surface);
+}
+
+.notice[data-kind='error'] {
+  border-left-color: var(--seal);
+  background: var(--error-surface);
+  color: var(--seal-dark);
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 1rem;
+  }
+
+  .facts div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+
+  .actions > button {
+    width: 100%;
+  }
+
+  .exact {
+    white-space: normal;
+  }
+}

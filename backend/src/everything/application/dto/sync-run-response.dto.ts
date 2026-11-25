@@ -12,26 +12,42 @@ export class SyncRunResponseDto {
 
   @ApiProperty({
     description:
-      'EN_CURSO mientras el agente envía páginas; OK si se cerró completa; ' +
-      'ERROR si se cerró con error, no estaba completa o venció',
+      'PEDIDA mientras espera a que el agente la tome (HU-138); EN_CURSO mientras ' +
+      'el agente envía páginas; OK si se cerró completa; ERROR si se cerró con ' +
+      'error, no estaba completa o venció',
     enum: SYNC_RUN_STATUSES,
   })
   status: SyncRunStatus;
 
   @ApiProperty({
-    description: 'Inicio de la corrida (ISO 8601, UTC)',
-    example: '2026-11-23T11:00:00.000Z',
+    description:
+      'Cuándo la pidió un administrador con «Sincronizar ahora» (HU-138); null ' +
+      'si la inició el agente por su cuenta (su corrida diaria)',
+    nullable: true,
+    type: String,
+    example: '2026-11-23T10:58:00.000Z',
   })
-  startedAt: string;
+  requestedAt: string | null;
 
   @ApiProperty({
-    description: 'Última actividad: el inicio o la última página recibida',
+    description:
+      'Inicio de la corrida (ISO 8601, UTC); null mientras está PEDIDA',
+    nullable: true,
+    type: String,
+    example: '2026-11-23T11:00:00.000Z',
+  })
+  startedAt: string | null;
+
+  @ApiProperty({
+    description:
+      'Última actividad: el inicio o la última página recibida; la petición ' +
+      'mientras está PEDIDA',
     example: '2026-11-23T11:00:04.000Z',
   })
   lastActivityAt: string;
 
   @ApiProperty({
-    description: 'Fin de la corrida; null mientras está EN_CURSO',
+    description: 'Fin de la corrida; null mientras está PEDIDA o EN_CURSO',
     nullable: true,
     type: String,
   })

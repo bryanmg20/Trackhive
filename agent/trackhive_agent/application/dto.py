@@ -54,3 +54,18 @@ class SyncReport:
     pages: int
     error: str | None = None
     summary: RunSummary | None = None
+
+
+@dataclass(frozen=True)
+class RequestedRun:
+    """A run an administrator asked for with «Sincronizar ahora» (HU-138):
+    it waits PEDIDA in Trackhive until the agent starts the sync."""
+
+    # When it was asked for, as Trackhive says it (ISO 8601, UTC)
+    requested_at: str
+
+
+@dataclass(frozen=True)
+class WatchSettings:
+    # How often the agent asks Trackhive whether a run is requested
+    poll_seconds: float

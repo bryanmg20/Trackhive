@@ -38,6 +38,8 @@ export class PrismaSyncRunMapper {
     return new SyncRun({
       id: model.id,
       status: model.status,
+      requestedAt: model.requestedAt,
+      requestedById: model.requestedById,
       startedAt: model.startedAt,
       lastActivityAt: model.lastActivityAt,
       finishedAt: model.finishedAt,
@@ -46,15 +48,27 @@ export class PrismaSyncRunMapper {
     });
   }
 
+  /** A run the agent starts (EN_CURSO) or an administrator asks for (PEDIDA). */
   static toCreate(run: SyncRun): Prisma.SyncRunModelUncheckedCreateInput {
     return {
       id: run.id,
       status: run.status,
+      requestedAt: run.requestedAt,
+      requestedById: run.requestedById,
       startedAt: run.startedAt,
       lastActivityAt: run.lastActivityAt,
       finishedAt: run.finishedAt,
       filesCount: run.filesCount,
       errorMessage: run.errorMessage,
+    };
+  }
+
+  /** The agent took the run PEDIDA: it started (HU-138). */
+  static toTake(run: SyncRun): Prisma.SyncRunModelUncheckedUpdateManyInput {
+    return {
+      status: run.status,
+      startedAt: run.startedAt,
+      lastActivityAt: run.lastActivityAt,
     };
   }
 

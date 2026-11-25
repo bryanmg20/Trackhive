@@ -79,6 +79,13 @@ class DefaultsTest(unittest.TestCase):
         self.assertEqual(config.trackhive.close_timeout_seconds, 600)
         self.assertEqual(config.trackhive.attempts, 5)
         self.assertEqual(config.trackhive.retry_delay_seconds, 5)
+        self.assertEqual(config.trackhive.poll_seconds, 60)
+
+    def test_the_example_says_how_often_it_asks_for_a_requested_run(self) -> None:
+        # A key the example does not show would hardly ever be configured
+        text = EXAMPLE_CONFIG.read_text(encoding='utf-8').replace("token = ''", f"token = '{TOKEN}'")
+        self.assertIn('poll_seconds', tomllib.loads(text)['trackhive'])
+        self.assertEqual(parse_config(text, AGENT).trackhive.poll_seconds, 60)
 
     def test_secrets_never_show_in_the_representation(self) -> None:
         config = parse()
@@ -100,6 +107,14 @@ class TrackhiveRulesTest(unittest.TestCase):
             if token:
                 self.assertNotIn(token, str(refused.exception))
         self.assertEqual(parse(trackhive={'token': 'b' * 32}).trackhive.token, 'b' * 32)
+
+    def test_asks_for_a_requested_run_every_minute_by_default(self) -> None:
+        # «Sincronizar ahora» (HU-138), with --vigilar
+        self.assertEqual(parse().trackhive.poll_seconds, 60)
+        self.assertEqual(parse(trackhive={'poll_seconds': 30}).trackhive.poll_seconds, 30)
+        for poll in (0, -5, 3601, '60', True):
+            with self.subTest(poll=poll), self.assertRaises(InvalidConfigError):
+                parse(trackhive={'poll_seconds': poll})
 
     def test_retries_are_limited(self) -> None:
         for values in ({'attempts': 0}, {'attempts': 11}, {'retry_delay_seconds': 0}, {'attempts': 2.5}):
