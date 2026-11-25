@@ -123,8 +123,12 @@ describe('Everything sync, HU-137 (e2e, PostgreSQL)', () => {
     materials: await e2e.prisma.materialModel.count(),
   });
 
-  /** A run other files or tests left open would answer 409. */
+  /**
+   * A run other files or tests left open, or waiting for the agent (HU-138),
+   * would answer 409 or be taken by the start.
+   */
   const endOpenRuns = async () => {
+    await e2e.prisma.syncRunModel.deleteMany({ where: { status: 'PEDIDA' } });
     await e2e.prisma.syncRunModel.updateMany({
       where: { status: 'EN_CURSO' },
       data: {
