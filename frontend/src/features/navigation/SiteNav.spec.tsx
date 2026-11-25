@@ -23,6 +23,20 @@ function renderNav() {
 }
 
 describe('SiteNav', () => {
+  it.each(['PUBLICO', 'PERSONAL', 'ADMIN'])(
+    'offers the sync with Everything exclusively to ADMIN (%s, HU-138)',
+    (role) => {
+      sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
+      const view = renderNav();
+      const link = screen.queryByRole('link', { name: 'Sincronización' });
+      if (role === 'ADMIN') {
+        expect(link).toHaveAttribute('href', '/admin/sincronizacion');
+      } else {
+        expect(link).not.toBeInTheDocument();
+      }
+      view.unmount();
+    },
+  );
   it.each(['PUBLICO', 'PERSONAL', 'ADMIN'])('offers attention times exclusively to ADMIN (%s)', (role) => {
     sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
     const view = renderNav();

@@ -64,6 +64,11 @@ export const SECTIONS: readonly Section[] = [
     label: 'Usuarios',
     roles: ['ADMIN'],
   },
+  {
+    to: ROUTES.adminEverythingSync,
+    label: 'Sincronización',
+    roles: ['ADMIN'],
+  },
 ];
 
 export function sectionsForRole(role: UserRole | null): Section[] {
