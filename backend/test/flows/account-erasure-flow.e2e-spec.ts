@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { SendPendingNotificationsUseCase } from '../../src/notifications/application/use-cases/send-pending-notifications.use-case';
 import { randomUUID } from 'crypto';
+import { escapeHtml } from '../../src/common/html/escape-html';
 import {
   API,
   bearer,
@@ -290,6 +291,78 @@ describe('HU-33 account erasure (PostgreSQL)', () => {
         .expect(401);
     },
   );
+  it('cleans several third-party notifications in bulk, including changed templates and NULL HTML, and delivers them', async () => {
+    const staff = await signInStaffUser(e2e, 'PERSONAL');
+    const visitor = await signUpPublicUser(e2e.server, 'erase-batch');
+    const ids: string[] = [];
+    for (let index = 0; index < 3; index += 1) {
+      const material = await createMaterial(e2e.prisma);
+      const filed = await submitRequest(e2e.server, visitor, [material.id]);
+      const comment = `Privado ${staff.email} #${index} <&>\nlínea 'citada'`;
+      await changeStatus(e2e.server, staff, filed.id, {
+        status: 'EN_BUSQUEDA',
+        comment,
+      }).expect(200);
+      const queued = await e2e.prisma.notificationModel.findFirstOrThrow({
+        where: { requestId: filed.id, statusHistory: { userId: staff.userId } },
+      });
+      await e2e.prisma.notificationModel.update({
+        where: { id: queued.id },
+        data: {
+          scheduledAt: new Date(0),
+          ...(index > 0
+            ? {
+                body: `Formato cambiado: ${comment} | repetido: ${comment}`,
+                htmlBody:
+                  index === 2
+                    ? null
+                    : `<section>${escapeHtml(comment).replace(/\r?\n/g, '<br>')}</section>`,
+              }
+            : {}),
+        },
+      });
+      ids.push(queued.id);
+    }
+    const before = await e2e.prisma.notificationModel.findMany({
+      where: { id: { in: ids } },
+      orderBy: { id: 'asc' },
+    });
+    await remove(staff).expect(204);
+    const after = await e2e.prisma.notificationModel.findMany({
+      where: { id: { in: ids } },
+      orderBy: { id: 'asc' },
+    });
+    expect(after).toHaveLength(3);
+    for (const [index, row] of after.entries()) {
+      expect({
+        ...row,
+        body: before[index].body,
+        htmlBody: before[index].htmlBody,
+      }).toEqual(before[index]);
+      expect(row.body).not.toContain(staff.email);
+      expect(row.htmlBody ?? '').not.toContain(staff.email);
+      expect(row.body).toContain('[Comentario del personal suprimido]');
+    }
+    await e2e.app.get(SendPendingNotificationsUseCase).execute();
+    for (const row of after) {
+      expect(
+        (
+          await e2e.prisma.notificationModel.findUniqueOrThrow({
+            where: { id: row.id },
+          })
+        ).deliveryStatus,
+      ).toBe('ENVIADA');
+      expect(
+        e2e.mail.sent.find(
+          (mail) => mail.to === visitor.email && mail.subject === row.subject,
+        ),
+      ).toMatchObject({
+        text: row.body,
+        ...(row.htmlBody === null ? {} : { html: row.htmlBody }),
+      });
+    }
+  });
+
   it('rejects deletion of the last active ADMIN without changing data or sessions', async () => {
     const user = await signInStaffUser(e2e, 'ADMIN');
     const others = await e2e.prisma.userModel.findMany({

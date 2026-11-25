@@ -6,6 +6,7 @@ import { UserNotFoundError } from '../../../users/domain/errors/user-not-found.e
 import type { IAccountErasure } from '../../application/ports/account-erasure.port';
 import { assertCanEraseAccount } from '../../domain/policies/account-erasure';
 import { AccountErasureConflictError } from '../../domain/errors/account-erasure-conflict.error';
+const NOTIFICATION_BATCH_SIZE = 500;
 @Injectable()
 export class PrismaAccountErasure implements IAccountErasure {
   constructor(private readonly prisma: PrismaService) {}
@@ -36,13 +37,31 @@ export class PrismaAccountErasure implements IAccountErasure {
               statusHistory: { select: { comment: true } },
             },
           });
-          for (const notification of thirdPartyNotifications) {
-            const comment = notification.statusHistory?.comment;
-            if (comment)
-              await tx.notificationModel.update({
-                where: { id: notification.id },
-                data: Erasure.notification(notification, comment),
+          // One parameterized UPDATE per batch, not one round trip per email.
+          // Explicit text casts also support a batch whose html bodies are all NULL.
+          for (
+            let offset = 0;
+            offset < thirdPartyNotifications.length;
+            offset += NOTIFICATION_BATCH_SIZE
+          ) {
+            const values = thirdPartyNotifications
+              .slice(offset, offset + NOTIFICATION_BATCH_SIZE)
+              .flatMap((notification) => {
+                const comment = notification.statusHistory?.comment;
+                if (!comment || !comment.trim()) return [];
+                const redacted = Erasure.notification(notification, comment);
+                return [
+                  Prisma.sql`(${notification.id}::uuid, ${redacted.body}::text, ${redacted.htmlBody}::text)`,
+                ];
               });
+            if (values.length > 0) {
+              await tx.$executeRaw(Prisma.sql`
+                UPDATE "notifications" AS n
+                SET "body" = v.body, "html_body" = v.html_body
+                FROM (VALUES ${Prisma.join(values)}) AS v(id, body, html_body)
+                WHERE n.id = v.id
+              `);
+            }
           }
           // The trigger permits only clearing comments in this erasure scope.
           await tx.$queryRaw`SELECT set_config('trackhive.erasing_user', ${userId}, true)`;
@@ -96,7 +115,9 @@ export class PrismaAccountErasure implements IAccountErasure {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2034'
+        (error.code === 'P2034' ||
+          (error.code === 'P2010' &&
+            (error.meta?.code === '40001' || error.meta?.code === '40P01')))
       ) {
         throw new AccountErasureConflictError();
       }

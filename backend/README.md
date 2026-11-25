@@ -225,3 +225,11 @@ Para la integración desde nginx: en frontend,
 - Borrar PERSONAL/ADMIN conserva las notificaciones ajenas, incluidas pendientes; solo neutraliza el comentario del actor en texto/HTML. Los avisos propios sí se borran.
 - Cambio global de autenticación: el guard consulta la cuenta en PostgreSQL por cada petición autenticada. Desactivadas y suprimidas reciben 401 inmediatamente, incluso con JWT vigente. Detalles y coste de la lectura en D-12 de `docs/arquitectura.md`.
 - Las fichas no vinculadas por `requesters.user_id` no se suprimen por mera coincidencia de correo/documento: véase el límite y la verificación de titularidad en `docs/datos-personales.md`.
+
+La limpieza de avisos ajenos escribe lotes de hasta 500 filas con un único
+`UPDATE ... FROM (VALUES ...)` parametrizado por lote, dentro de la transacción.
+No ejecuta un UPDATE por notificación. El mapeador elimina también las apariciones
+restantes del comentario y sus variantes escapadas en HTML si cambia la plantilla;
+las pruebas incluyen el generador real del correo y formatos alternativos.
+Los conflictos nativos de SQL (40001/40P01, cuando Prisma los envuelve en P2010)
+se traducen al mismo 409 de reintento que P2034; otros errores SQL no se ocultan.
