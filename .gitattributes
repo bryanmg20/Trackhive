@@ -1,3 +1,8 @@
 # Real Everything responses (HU-133): kept byte for byte (CRLF and tabs)
 dev/fixtures/everything_* -text
 dev/everything-portable/*.ini text eol=crlf
+# Shell scripts run inside Linux containers or on the server: always LF, also
+# when Git for Windows checks out with core.autocrlf=true. With CRLF the shebang
+# reads "/bin/sh\r" and the frontend container stops on
+# "40-trackhive-tls.sh: not found"
+*.sh text eol=lf
