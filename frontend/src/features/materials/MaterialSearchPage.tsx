@@ -343,6 +343,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                     <th scope="col">Título</th>
                     <th scope="col">Tipo</th>
                     <th scope="col">Estado</th>
+                    <th scope="col">Copia digital</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -382,6 +383,19 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                           data-status={material.status}
                         >
                           {MATERIAL_STATUS_LABELS[material.status]}
+                        </span>
+                      </td>
+                      <td
+                        data-label="Copia digital"
+                        className={styles.digitalCell}
+                      >
+                        <span
+                          className={styles.digitalBadge}
+                          data-available={material.hasDigitalCopy}
+                        >
+                          {material.hasDigitalCopy
+                            ? 'Sí · Disponible en digital'
+                            : 'No'}
                         </span>
                       </td>
                     </tr>

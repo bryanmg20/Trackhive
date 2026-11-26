@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import {
+  MATERIAL_REVIEW_REASON_LABELS,
   MATERIAL_STATUS_LABELS,
   MATERIAL_TYPE_LABELS,
   MaterialsApiError,
@@ -469,6 +470,22 @@ export function RequestDetailPage() {
                     <span>
                       Copia digital: {material.hasDigitalCopy ? 'Sí' : 'No'}
                     </span>
+                    {material.hasDigitalCopy && material.digitalFolderName ? (
+                      <span className={styles.digitalFolder}>
+                        Carpeta en Everything:{' '}
+                        <code className={styles.folderName}>
+                          {material.digitalFolderName}
+                        </code>
+                      </span>
+                    ) : null}
+                    {material.needsReview ? (
+                      <span className={styles.reviewBadge}>
+                        Para revisión
+                        {material.reviewReason
+                          ? `: ${MATERIAL_REVIEW_REASON_LABELS[material.reviewReason]}`
+                          : ''}
+                      </span>
+                    ) : null}
                   </li>
                 ))}
               </ul>

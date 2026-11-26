@@ -33,6 +33,20 @@ export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
   OTRO: 'Otro',
 };
 
+export const MATERIAL_REVIEW_REASONS = [
+  'NO_PATTERN',
+  'DUPLICATE_CODE',
+] as const;
+export type MaterialReviewReason = (typeof MATERIAL_REVIEW_REASONS)[number];
+
+export const MATERIAL_REVIEW_REASON_LABELS: Record<
+  MaterialReviewReason,
+  string
+> = {
+  NO_PATTERN: 'Sin código válido',
+  DUPLICATE_CODE: 'Código duplicado',
+};
+
 export const MATERIAL_STATUS_LABELS: Record<MaterialStatus, string> = {
   DISPONIBLE: 'Disponible',
   EN_USO: 'En uso',
@@ -48,6 +62,10 @@ export interface Material {
   author: string | null;
   collection: string;
   status: MaterialStatus;
+  hasDigitalCopy: boolean;
+  digitalFolderName?: string | null;
+  needsReview?: boolean;
+  reviewReason?: MaterialReviewReason | null;
 }
 
 export interface MaterialPage {

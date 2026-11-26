@@ -1,6 +1,7 @@
 import { apiUrl } from '../../auth/api/api-base-url';
 import { authenticatedFetch } from '../../auth/api/authenticated-fetch';
 import type {
+  MaterialReviewReason,
   MaterialStatus,
   MaterialType,
 } from '../../materials/api/search-materials';
@@ -21,6 +22,10 @@ export interface RequestDetailMaterial {
   itemStatus: string;
   // Whether the Everything sync found its digital copy (HU-139)
   hasDigitalCopy: boolean;
+  // Leaf folder name in Everything and review flag for staff (HU-140)
+  digitalFolderName: string | null;
+  needsReview: boolean;
+  reviewReason: MaterialReviewReason | null;
 }
 
 export interface RequestDetailAppointmentMaterial {

@@ -27,6 +27,10 @@ function material(overrides: Record<string, unknown> = {}) {
     publicationDate: null,
     publisher: null,
     status: 'DISPONIBLE',
+    hasDigitalCopy: false,
+    digitalFolderName: null,
+    needsReview: false,
+    reviewReason: null,
     ...overrides,
   };
 }
@@ -93,6 +97,69 @@ describe('StaffMaterialsPage', () => {
       ).toBeInTheDocument();
     },
   );
+
+  it('shows digital copy status, Everything folder name and review notices without links or full paths (HU-140)', async () => {
+    fetchMock.mockResolvedValue(
+      listResponse([
+        material({
+          id: '00000000-0000-4000-8000-000000000001',
+          title: 'Protocolo enero',
+          hasDigitalCopy: true,
+          digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+          needsReview: false,
+          reviewReason: null,
+        }),
+        material({
+          id: '00000000-0000-4000-8000-000000000002',
+          title: 'Correspondencia 1902',
+          hasDigitalCopy: true,
+          digitalFolderName: '1902',
+          needsReview: true,
+          reviewReason: 'NO_PATTERN',
+        }),
+        material({
+          id: '00000000-0000-4000-8000-000000000003',
+          title: 'Protocolo duplicado',
+          hasDigitalCopy: true,
+          digitalFolderName: '1ra-1940 - Esc 1-161 - Ene',
+          needsReview: true,
+          reviewReason: 'DUPLICATE_CODE',
+        }),
+        material({
+          id: '00000000-0000-4000-8000-000000000004',
+          title: 'Protocolo sin copia',
+          hasDigitalCopy: false,
+          digitalFolderName: null,
+          needsReview: false,
+          reviewReason: null,
+        }),
+      ]),
+    );
+    renderPage('PERSONAL');
+
+    await screen.findByText('Protocolo enero');
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(within(rows[0]).getByText('Sí')).toBeInTheDocument();
+    expect(
+      within(rows[0]).getByText('1ra-1931 - Esc 0001-0109 - Ene'),
+    ).toBeInTheDocument();
+    expect(within(rows[0]).queryByText(/revisión/i)).not.toBeInTheDocument();
+
+    expect(within(rows[1]).getByText('1902')).toBeInTheDocument();
+    expect(
+      within(rows[1]).getByText('Para revisión: Sin código válido'),
+    ).toBeInTheDocument();
+
+    expect(
+      within(rows[2]).getByText('1ra-1940 - Esc 1-161 - Ene'),
+    ).toBeInTheDocument();
+    expect(
+      within(rows[2]).getByText('Para revisión: Código duplicado'),
+    ).toBeInTheDocument();
+
+    expect(within(rows[3]).getByText('No')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).queryByRole('link')).not.toBeInTheDocument();
+  });
 
   it.each(['PERSONAL', 'ADMIN'])(
     'lets %s pick materials and register a request with them',

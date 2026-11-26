@@ -245,6 +245,46 @@
   color: var(--seal-dark);
 }
 
+.digitalCell {
+  min-width: 0;
+}
+
+.digitalBadge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.digitalBadge[data-available='true'] {
+  background: var(--success-surface);
+  color: var(--success);
+}
+
+.folderName {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.reviewBadge {
+  display: inline-block;
+  margin-top: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--gold-text);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--gold-deep);
+  font-size: 0.78rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .empty {
   display: flex;
   flex-direction: column;
