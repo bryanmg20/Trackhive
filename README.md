@@ -104,6 +104,8 @@ Controladores, casos de uso, puertos, entidades e implementaciones, con las depe
 
 Estas instrucciones están pensadas para un **clon limpio** del repositorio.
 
+> **¿Un PC con Windows desde cero?** El [tutorial paso a paso](docs/tutorial-windows.md) va desde instalar las herramientas hasta sincronizar el catálogo con Everything (portable o instalado) a través del agente, incluido el script que genera las carpetas simuladas.
+
 ### Requisitos
 
 - [Git](https://git-scm.com/).
@@ -357,6 +359,7 @@ la navegación y los wireframes aprobados (HU-46 / HU-152), en escritorio y móv
 
 | Documento | Contenido |
 |---|---|
+| [`docs/tutorial-windows.md`](docs/tutorial-windows.md) | Tutorial: Trackhive desde cero en Windows, con el script de las carpetas simuladas, Everything portable o instalado y el agente de sincronización. |
 | [`docs/arquitectura.md`](docs/arquitectura.md) / [`docs/arquitectura.pdf`](docs/arquitectura.pdf) | Arquitectura C4, estructura del código y decisiones técnicas. |
 | [`docs/modelo-dominio.md`](docs/modelo-dominio.md) / [`docs/modelo-dominio.pdf`](docs/modelo-dominio.pdf) | Diagrama de clases, estados de la solicitud, reglas de negocio, glosario y casos de uso. |
 | [`docs/modelo-datos.md`](docs/modelo-datos.md) / [`docs/modelo-datos.pdf`](docs/modelo-datos.pdf) | Diagrama entidad-relación, tablas, índices, migraciones y datos personales. |
