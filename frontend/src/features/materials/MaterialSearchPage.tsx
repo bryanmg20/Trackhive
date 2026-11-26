@@ -21,6 +21,7 @@ import type {
   SearchMaterialsParams,
   SortOrder,
 } from './api/search-materials';
+import { DigitalCopyCell } from './DigitalCopyCell';
 import styles from './MaterialSearchPage.module.css';
 
 const PAGE_SIZE = 10;
@@ -343,6 +344,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                     <th scope="col">Título</th>
                     <th scope="col">Tipo</th>
                     <th scope="col">Estado</th>
+                    <th scope="col">Copia digital</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -384,6 +386,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                           {MATERIAL_STATUS_LABELS[material.status]}
                         </span>
                       </td>
+                      <DigitalCopyCell hasDigitalCopy={material.hasDigitalCopy} />
                     </tr>
                   ))}
                 </tbody>

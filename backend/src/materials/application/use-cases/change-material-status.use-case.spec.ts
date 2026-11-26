@@ -44,6 +44,7 @@ describe('ChangeMaterialStatusUseCase', () => {
       status: 'EN_RESTAURACION',
       reason: 'Humedad en las hojas',
       userId: 'user-1',
+      viewerRole: 'PERSONAL',
     });
 
     expect(saveStatusChange).toHaveBeenCalledTimes(1);
@@ -59,20 +60,39 @@ describe('ChangeMaterialStatusUseCase', () => {
       materialId: 'material-1',
       status: 'NO_CONSULTABLE',
       userId: 'user-1',
+      viewerRole: 'PERSONAL',
     });
 
     expect(saveStatusChange.mock.calls[0][0].statusChangeReason).toBeNull();
   });
 
-  it('returns the material with its new status and without a location', async () => {
+  it('returns the material with its new status and digital copy info without location or path', async () => {
+    findById.mockResolvedValue(
+      new Material({
+        ...buildMaterial(),
+        source: 'EVERYTHING',
+        digitalPath:
+          'Z:\\Aha\\Fondo - Notarías\\1ra-1931 - Esc 0001-0109 - Ene',
+        reviewReason: 'NO_PATTERN',
+      }),
+    );
+
     const result = await useCase.execute({
       materialId: 'material-1',
       status: 'NO_CONSULTABLE',
       userId: 'user-1',
+      viewerRole: 'PERSONAL',
     });
 
-    expect(result.status).toBe('NO_CONSULTABLE');
+    expect(result).toMatchObject({
+      status: 'NO_CONSULTABLE',
+      hasDigitalCopy: true,
+      digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+      needsReview: true,
+      reviewReason: 'NO_PATTERN',
+    });
     expect(result).not.toHaveProperty('location');
+    expect(result).not.toHaveProperty('digitalPath');
   });
 
   it('throws MaterialNotFoundError and saves nothing when it does not exist', async () => {
@@ -83,6 +103,7 @@ describe('ChangeMaterialStatusUseCase', () => {
         materialId: 'missing',
         status: 'EN_RESTAURACION',
         userId: 'user-1',
+        viewerRole: 'PERSONAL',
       }),
     ).rejects.toThrow(MaterialNotFoundError);
     expect(saveStatusChange).not.toHaveBeenCalled();

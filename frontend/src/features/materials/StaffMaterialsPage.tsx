@@ -15,6 +15,7 @@ import {
   formatBogotaDateTime,
   returnMaterial,
 } from './api/material-loans';
+import { DigitalCopyCell } from './DigitalCopyCell';
 import { LoanActionModal } from './LoanActionModal';
 import { MaterialHistoryModal } from './MaterialHistoryModal';
 import {
@@ -560,6 +561,7 @@ export function StaffMaterialsPage() {
                     <th scope="col">Título</th>
                     <th scope="col">Tipo</th>
                     <th scope="col">Estado</th>
+                    <th scope="col">Copia digital</th>
                     <th scope="col">
                       <span className="sr-only">Acciones</span>
                     </th>
@@ -605,6 +607,13 @@ export function StaffMaterialsPage() {
                             {MATERIAL_STATUS_LABELS[status]}
                           </span>
                         </td>
+                        <DigitalCopyCell
+                          hasDigitalCopy={material.hasDigitalCopy}
+                          showDetails
+                          digitalFolderName={material.digitalFolderName}
+                          needsReview={material.needsReview}
+                          reviewReason={material.reviewReason}
+                        />
                         <td>
                           <div className={styles.rowActions}>
                             {status === 'EN_USO' ? (

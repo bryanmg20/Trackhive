@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { MATERIAL_REVIEW_REASONS } from '../../../materials/domain/enums/material-review-reason';
+import type { MaterialReviewReason } from '../../../materials/domain/enums/material-review-reason';
 import { APPOINTMENT_STATUSES } from '../../domain/enums/appointment-status';
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import { DELIVERY_MODES } from '../../domain/enums/delivery-mode';
@@ -67,6 +69,31 @@ export class RequestDetailMaterialDto {
     example: true,
   })
   hasDigitalCopy: boolean;
+
+  @ApiProperty({
+    description:
+      'Nombre de la carpeta en Everything (HU-140), sin unidad ni ruta completa; null si no tiene copia digital',
+    example: '1ra-1931 - Esc 0001-0109 - Ene',
+    nullable: true,
+    type: String,
+  })
+  digitalFolderName: string | null;
+
+  @ApiProperty({
+    description:
+      'Indica si el material quedó marcado para revisión por código duplicado o sin código válido (HU-140)',
+    example: false,
+  })
+  needsReview: boolean;
+
+  @ApiProperty({
+    description:
+      'Motivo por el que la sincronización marcó el material para revisión; null si no requiere revisión (HU-140)',
+    enum: MATERIAL_REVIEW_REASONS,
+    nullable: true,
+    example: null,
+  })
+  reviewReason: MaterialReviewReason | null;
 }
 
 export class RequestDetailAppointmentMaterialDto {

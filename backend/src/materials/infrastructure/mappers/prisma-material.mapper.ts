@@ -3,11 +3,10 @@ import { Material } from '../../domain/entities/material.entity';
 import { InvalidMaterialStatusError } from '../../domain/errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../../domain/errors/invalid-material-type.error';
 import { InvalidMaterialSourceError } from '../../domain/errors/invalid-material-source.error';
-import { InvalidMaterialReviewReasonError } from '../../domain/errors/invalid-material-review-reason.error';
-import { isMaterialReviewReason } from '../../domain/enums/material-review-reason';
 import { isMaterialSource } from '../../domain/enums/material-source';
 import { isMaterialStatus } from '../../domain/enums/material-status';
 import { isMaterialType } from '../../domain/enums/material-type';
+import { parseMaterialReviewReason } from '../../domain/value-objects/material-digital-copy';
 
 export class PrismaMaterialMapper {
   static toDomain(model: MaterialModel): Material {
@@ -20,10 +19,7 @@ export class PrismaMaterialMapper {
     if (!isMaterialSource(model.source)) {
       throw new InvalidMaterialSourceError();
     }
-    const { reviewReason } = model;
-    if (reviewReason !== null && !isMaterialReviewReason(reviewReason)) {
-      throw new InvalidMaterialReviewReasonError();
-    }
+    const reviewReason = parseMaterialReviewReason(model.reviewReason);
     return new Material({
       id: model.id,
       catalogCode: model.catalogCode,

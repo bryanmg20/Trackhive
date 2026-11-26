@@ -14,6 +14,7 @@ import {
 } from '../materials/api/material-loans';
 import { LoanActionModal } from '../materials/LoanActionModal';
 import type { LoanActionMode } from '../materials/LoanActionModal';
+import { ReviewBadge } from '../materials/ReviewBadge';
 import { AppLayout } from '../layout/AppLayout';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import type { ChangeRequestStatusResult } from './api/change-request-status';
@@ -469,6 +470,18 @@ export function RequestDetailPage() {
                     <span>
                       Copia digital: {material.hasDigitalCopy ? 'Sí' : 'No'}
                     </span>
+                    {material.hasDigitalCopy && material.digitalFolderName ? (
+                      <span className={styles.digitalFolder}>
+                        Carpeta en Everything:{' '}
+                        <code className={styles.folderName}>
+                          {material.digitalFolderName}
+                        </code>
+                      </span>
+                    ) : null}
+                    <ReviewBadge
+                      needsReview={material.needsReview}
+                      reviewReason={material.reviewReason}
+                    />
                   </li>
                 ))}
               </ul>

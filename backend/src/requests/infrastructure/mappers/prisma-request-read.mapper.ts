@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { resolveMaterialDigitalCopy } from '../../../materials/domain/value-objects/material-digital-copy';
 import { isAppointmentStatus } from '../../domain/enums/appointment-status';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isMaterialReferenceKind } from '../../domain/enums/material-reference-kind';
@@ -370,18 +371,25 @@ export class PrismaRequestReadMapper {
         documentType: model.requester.documentType,
         documentNumber: model.requester.documentNumber,
       },
-      materials: model.items.map(({ material, itemStatus }) => ({
-        id: material.id,
-        catalogCode: material.catalogCode,
-        title: material.title,
-        materialType: material.materialType,
-        author: material.author,
-        collection: material.collection,
-        status: material.status,
-        itemStatus,
-        // NULL digital_path = no digital copy (HU-134); the path stays here
-        hasDigitalCopy: Boolean(material.digitalPath),
-      })),
+      materials: model.items.map(({ material, itemStatus }) => {
+        // Same digital-copy and review rules as Material (HU-134, HU-139, HU-140);
+        // only the leaf folder name leaves this mapper
+        const digitalCopy = resolveMaterialDigitalCopy({
+          digitalPath: material.digitalPath,
+          reviewReason: material.reviewReason,
+        });
+        return {
+          id: material.id,
+          catalogCode: material.catalogCode,
+          title: material.title,
+          materialType: material.materialType,
+          author: material.author,
+          collection: material.collection,
+          status: material.status,
+          itemStatus,
+          ...digitalCopy,
+        };
+      }),
       references: model.references.map((row) =>
         PrismaRequestReadMapper.toDetailReference(row),
       ),

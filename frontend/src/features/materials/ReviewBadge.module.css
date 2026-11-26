@@ -1,0 +1,13 @@
+.badge {
+  display: inline-block;
+  justify-self: start;
+  max-width: 100%;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--gold-text);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--gold-deep);
+  font-size: 0.78rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

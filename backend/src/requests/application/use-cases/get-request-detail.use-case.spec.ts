@@ -42,6 +42,9 @@ const buildDetail = (
       status: 'DISPONIBLE',
       itemStatus: 'LOCALIZADO',
       hasDigitalCopy: false,
+      digitalFolderName: null,
+      needsReview: false,
+      reviewReason: null,
     },
   ],
   references: [],
@@ -63,6 +66,9 @@ const material = (
   status,
   itemStatus: 'PENDIENTE',
   hasDigitalCopy,
+  digitalFolderName: hasDigitalCopy ? `folder-${id}` : null,
+  needsReview: false,
+  reviewReason: null,
 });
 
 describe('GetRequestDetailUseCase', () => {
@@ -116,8 +122,48 @@ describe('GetRequestDetailUseCase', () => {
         title: 'Acta de fundación de la villa',
         status: 'DISPONIBLE',
         itemStatus: 'LOCALIZADO',
+        hasDigitalCopy: false,
+        digitalFolderName: null,
+        needsReview: false,
+        reviewReason: null,
       }),
     ]);
+  });
+
+  it('includes the Everything folder name and review reason in materials (HU-140)', async () => {
+    findById.mockResolvedValue(
+      buildDetail({
+        materials: [
+          {
+            ...material('1', true),
+            digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+            needsReview: true,
+            reviewReason: 'NO_PATTERN',
+          },
+          {
+            ...material('2', true),
+            digitalFolderName: '1ra-1940 - Esc 1-161 - Ene',
+            needsReview: true,
+            reviewReason: 'DUPLICATE_CODE',
+          },
+        ],
+      }),
+    );
+
+    const result = await useCase.execute({ id: 'request-1' });
+
+    expect(result.materials[0]).toMatchObject({
+      hasDigitalCopy: true,
+      digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+      needsReview: true,
+      reviewReason: 'NO_PATTERN',
+    });
+    expect(result.materials[1]).toMatchObject({
+      hasDigitalCopy: true,
+      digitalFolderName: '1ra-1940 - Esc 1-161 - Ene',
+      needsReview: true,
+      reviewReason: 'DUPLICATE_CODE',
+    });
   });
 
   it('sends no committed date when the request is not scheduled', async () => {

@@ -145,3 +145,13 @@
   font-size: 0.85rem;
   cursor: pointer;
 }
+
+.digitalFolder {
+  overflow-wrap: anywhere;
+}
+
+.folderName {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}

@@ -199,6 +199,18 @@ describe('PrismaRequestRepository', () => {
           'a material that is not consultable',
           [{ digitalPath: COPY_PATH, status: 'NO_CONSULTABLE' }],
         ],
+        [
+          'a root-only drive path',
+          [{ digitalPath: 'C:\\', status: 'DISPONIBLE' }],
+        ],
+        [
+          'a bare UNC share path',
+          [{ digitalPath: '\\\\servidor\\Multimedia', status: 'DISPONIBLE' }],
+        ],
+        [
+          'a whitespace-only path',
+          [{ digitalPath: '   ', status: 'DISPONIBLE' }],
+        ],
       ])('keeps the search with %s', async (_case, materials) => {
         const request = await repositoryWith(digitalRow(materials)).findById(
           'request-1',

@@ -1,4 +1,5 @@
 import type { PrismaService } from '../../../prisma/prisma.service';
+import { InvalidMaterialReviewReasonError } from '../../../materials/domain/errors/invalid-material-review-reason.error';
 import { PrismaRequestQueryService } from './prisma-request-query.service';
 
 describe('PrismaRequestQueryService', () => {
@@ -344,8 +345,10 @@ describe('PrismaRequestQueryService', () => {
             collection: 'Actas del Cabildo',
             status: 'DISPONIBLE',
             // Internal: the detail only says whether there is a copy (HU-139)
+            // and its leaf folder name + review status (HU-140)
             digitalPath:
               'C:\\trackhive\\docs_simulados\\Aha\\Fondo - Correspondencia\\Telegramas\\1902',
+            reviewReason: null,
           },
         },
       ],
@@ -409,12 +412,15 @@ describe('PrismaRequestQueryService', () => {
             catalogCode: 'TH-DOC-0001',
             itemStatus: 'LOCALIZADO',
             hasDigitalCopy: true,
+            digitalFolderName: '1902',
+            needsReview: false,
+            reviewReason: null,
           },
         ],
       });
       // The physical location no longer exists (#165)
       expect(detail?.materials[0]).not.toHaveProperty('location');
-      // The path of the copy never leaves the repository (HU-134, HU-139)
+      // The path of the copy never leaves the repository (HU-134, HU-139, HU-140)
       expect(detail?.materials[0]).not.toHaveProperty('digitalPath');
     });
 
@@ -431,7 +437,73 @@ describe('PrismaRequestQueryService', () => {
 
       const detail = await repository.findDetail('request-1');
 
-      expect(detail?.materials[0].hasDigitalCopy).toBe(false);
+      expect(detail?.materials[0]).toMatchObject({
+        hasDigitalCopy: false,
+        digitalFolderName: null,
+      });
+    });
+
+    it.each(['C:\\', '\\\\servidor\\Multimedia'])(
+      'says a material has no digital copy when its path is root-only %s (HU-140)',
+      async (digitalPath) => {
+        const { repository } = repositoryWith({
+          ...model,
+          items: [
+            {
+              ...model.items[0],
+              material: { ...model.items[0].material, digitalPath },
+            },
+          ],
+        });
+
+        const detail = await repository.findDetail('request-1');
+
+        expect(detail?.materials[0]).toMatchObject({
+          hasDigitalCopy: false,
+          digitalFolderName: null,
+        });
+      },
+    );
+
+    it.each(['NO_PATTERN', 'DUPLICATE_CODE'] as const)(
+      'maps reviewReason %s and needsReview to true (HU-140)',
+      async (reviewReason) => {
+        const { repository } = repositoryWith({
+          ...model,
+          items: [
+            {
+              ...model.items[0],
+              material: { ...model.items[0].material, reviewReason },
+            },
+          ],
+        });
+
+        const detail = await repository.findDetail('request-1');
+
+        expect(detail?.materials[0]).toMatchObject({
+          needsReview: true,
+          reviewReason,
+        });
+      },
+    );
+
+    it('throws InvalidMaterialReviewReasonError when a stored reviewReason is invalid', async () => {
+      const { repository } = repositoryWith({
+        ...model,
+        items: [
+          {
+            ...model.items[0],
+            material: {
+              ...model.items[0].material,
+              reviewReason: 'DESCONOCIDO',
+            },
+          },
+        ],
+      });
+
+      await expect(repository.findDetail('request-1')).rejects.toThrow(
+        InvalidMaterialReviewReasonError,
+      );
     });
 
     it('returns null when the request does not exist', async () => {

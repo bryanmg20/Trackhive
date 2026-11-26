@@ -24,6 +24,7 @@ function material(index: number, overrides: Record<string, unknown> = {}) {
     publicationDate: null,
     publisher: null,
     status: 'DISPONIBLE',
+    hasDigitalCopy: false,
     ...overrides,
   };
 }
@@ -87,6 +88,36 @@ describe('MaterialSearchPage', () => {
     expect(within(items[0]).getByText('Disponible')).toBeInTheDocument();
     expect(within(items[1]).getByText('Periódico')).toBeInTheDocument();
     expect(within(items[1]).getByText('En restauración')).toBeInTheDocument();
+  });
+
+  it('shows only digital availability for PUBLICO, without folder name, review flag or download links (HU-140)', async () => {
+    fetchMock.mockResolvedValue(
+      page([
+        material(1, {
+          hasDigitalCopy: true,
+          // Even if extra fields existed, the public UI never renders them
+          digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+          needsReview: true,
+          reviewReason: 'NO_PATTERN',
+        }),
+        material(2, { hasDigitalCopy: false }),
+      ]),
+    );
+    renderPage('PUBLICO');
+
+    await screen.findByText('Acta 1');
+    const items = screen.getAllByRole('row').slice(1);
+    expect(
+      within(items[0]).getByText('Sí · Disponible en digital'),
+    ).toBeInTheDocument();
+    expect(within(items[1]).getByText('No')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/1ra-1931 - Esc 0001-0109 - Ene/),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/revisión/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/C:\\|docs_simulados/)).not.toBeInTheDocument();
+    expect(within(items[0]).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(items[0]).queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('sends the text, type and collection filters to the endpoint', async () => {

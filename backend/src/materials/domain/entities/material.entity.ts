@@ -1,13 +1,9 @@
-import { InvalidMaterialReviewReasonError } from '../errors/invalid-material-review-reason.error';
 import { InvalidMaterialSourceError } from '../errors/invalid-material-source.error';
 import { InvalidMaterialStatusError } from '../errors/invalid-material-status.error';
 import { InvalidMaterialTypeError } from '../errors/invalid-material-type.error';
 import { MaterialInUseError } from '../errors/material-in-use.error';
 import { MaterialStatusNotManualError } from '../errors/material-status-not-manual.error';
-import {
-  isMaterialReviewReason,
-  MaterialReviewReason,
-} from '../enums/material-review-reason';
+import type { MaterialReviewReason } from '../enums/material-review-reason';
 import { isMaterialSource, MaterialSource } from '../enums/material-source';
 import {
   isManualMaterialStatus,
@@ -15,6 +11,10 @@ import {
   MaterialStatus,
 } from '../enums/material-status';
 import { isMaterialType, MaterialType } from '../enums/material-type';
+import {
+  parseMaterialReviewReason,
+  resolveMaterialDigitalCopy,
+} from '../value-objects/material-digital-copy';
 
 export interface MaterialProps {
   id: string;
@@ -73,10 +73,7 @@ export class Material {
     if (!isMaterialSource(source)) {
       throw new InvalidMaterialSourceError();
     }
-    const reviewReason = props.reviewReason ?? null;
-    if (reviewReason !== null && !isMaterialReviewReason(reviewReason)) {
-      throw new InvalidMaterialReviewReasonError();
-    }
+    const reviewReason = parseMaterialReviewReason(props.reviewReason);
 
     this.id = props.id;
     this.catalogCode = props.catalogCode;
@@ -103,7 +100,20 @@ export class Material {
    * staff should review it.
    */
   get needsReview(): boolean {
-    return this.reviewReason !== null;
+    return resolveMaterialDigitalCopy(this).needsReview;
+  }
+
+  /**
+   * Name of the leaf folder in Everything, without drive letter or parent
+   * path (HU-140). Null when there is no valid digital copy.
+   */
+  get digitalFolderName(): string | null {
+    return resolveMaterialDigitalCopy(this).digitalFolderName;
+  }
+
+  /** Whether the material has a valid digital copy (HU-140). */
+  get hasDigitalCopy(): boolean {
+    return resolveMaterialDigitalCopy(this).hasDigitalCopy;
   }
 
   /**

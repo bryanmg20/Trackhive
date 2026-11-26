@@ -92,6 +92,10 @@ const material = {
   author: 'Archivo General de la Nación',
   collection: 'Actas del Cabildo',
   status: 'DISPONIBLE',
+  hasDigitalCopy: true,
+  digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+  needsReview: true,
+  reviewReason: 'DUPLICATE_CODE',
 };
 
 const myRequest = {
@@ -186,6 +190,10 @@ const requestDetail = {
       collection: material.collection,
       status: 'DISPONIBLE',
       itemStatus: 'LOCALIZADO',
+      hasDigitalCopy: true,
+      digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+      needsReview: true,
+      reviewReason: 'NO_PATTERN',
     },
   ],
   // HU-09.2: a resolved reference with its long material name

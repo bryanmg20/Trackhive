@@ -1,0 +1,32 @@
+.cell {
+  min-width: 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.badge[data-available='true'] {
+  background: var(--success-surface);
+  color: var(--success);
+}
+
+.folderName {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.review {
+  display: block;
+  width: fit-content;
+  margin-top: 0.3rem;
+}
