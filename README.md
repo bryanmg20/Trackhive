@@ -25,8 +25,6 @@ Trackhive es una aplicación web con la que el CLENA recibe las solicitudes de c
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Documentación](#documentación)
 - [Solución de problemas](#solución-de-problemas)
-- [Contribuir](#contribuir)
-- [Licencia y propiedad](#licencia-y-propiedad)
 
 ---
 
@@ -313,7 +311,7 @@ pip install -r dev/requirements.txt -r agent/requirements.txt
 python -m unittest discover -s agent/tests -t agent
 ```
 
-El CI también las corre en Linux y en Windows, contra el mock de Everything. En Windows construye `trackhive-agente.exe` con PyInstaller, lo prueba y lo publica como artefacto `trackhive-agente` ([agent/README.md](agent/README.md)).
+El CI también las corre en Linux y en Windows, contra el mock de Everything. En Windows construye `trackhive-agente.exe` con PyInstaller, lo prueba y lo publica como artefacto `trackhive-agente` ([docs/agente.md](docs/agente.md)).
 
 ## Estructura del repositorio
 
@@ -349,14 +347,13 @@ Trackhive/
 ├── docker-compose.yml       # producción: PostgreSQL, backend y frontend con HTTPS
 ├── docker-compose.dev.yml   # desarrollo: puertos de depuración, Mailpit y el mock de Everything
 ├── .env.example             # plantilla del entorno local
-└── README.md
+└── README.md            # este archivo; el resto de la documentación está en docs/
 ```
 
 ## Documentación
 
 El [mapa de pantallas y wireframes](docs/pantallas.md) incluye los roles,
-la navegación y los bocetos SVG y PNG de HU-46 / HU-152, en escritorio y móvil (360 px), con los logos institucionales. Son borradores de
-referencia con revisión y validación de G6 pendientes.
+la navegación y los wireframes aprobados (HU-46 / HU-152), en escritorio y móvil (360 px), con las diferencias entre los bocetos y la aplicación.
 
 | Documento | Contenido |
 |---|---|
@@ -365,12 +362,18 @@ referencia con revisión y validación de G6 pendientes.
 | [`docs/modelo-datos.md`](docs/modelo-datos.md) / [`docs/modelo-datos.pdf`](docs/modelo-datos.pdf) | Diagrama entidad-relación, tablas, índices, migraciones y datos personales. |
 | [`docs/manual-operacion.md`](docs/manual-operacion.md) | Operación, variables de entorno, correos, respaldos, diagnóstico e instalación del agente de Everything en el PC del CLENA (HU-166). |
 | [`docs/everything-desarrollo.md`](docs/everything-desarrollo.md) | Entorno de Everything con documentos simulados: estructura del CLENA, Everything portable e instalado, fixtures, mock y sincronización con el backend (HU-137). |
-| [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía del personal del CLENA (en elaboración). |
+| [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía de uso para el personal y el administrador del CLENA. |
 | [`docs/sprint-planning.md`](docs/sprint-planning.md), [`docs/daily-scrum.md`](docs/daily-scrum.md), [`docs/sprint-review.md`](docs/sprint-review.md), [`docs/sprint-retrospective.md`](docs/sprint-retrospective.md) | Ceremonias y evidencias Scrum. |
 | [`docs/evidencias.md`](docs/evidencias.md) | Grabaciones y material recibido de G6. |
 | [`docs/automatizacion-tablero.md`](docs/automatizacion-tablero.md) | Automatización del tablero Scrum en GitHub. |
-| [`backend/README.md`](backend/README.md) | API, Swagger, pruebas y comandos del backend. |
-| [`frontend/README.md`](frontend/README.md) | Rutas, pantallas, accesibilidad, responsive y pruebas del frontend. |
+| [`docs/backend.md`](docs/backend.md) | API, formato de errores, Swagger, comandos y notas por HU del backend. |
+| [`docs/frontend.md`](docs/frontend.md) | Rutas, pantallas, accesibilidad, responsive, pruebas y estructura del frontend. |
+| [`docs/agente.md`](docs/agente.md) | Agente de sincronización con Everything: qué hace, cómo se prueba y cómo se construye el `.exe` (HU-166). |
+| [`docs/pantallas.md`](docs/pantallas.md) | Mapa de pantallas, wireframes aprobados y diferencias con la aplicación. |
+| [`docs/datos-personales.md`](docs/datos-personales.md) | Datos personales que se piden, su finalidad y quién los ve. |
+| [`docs/inception.md`](docs/inception.md) / [`docs/inception.pdf`](docs/inception.pdf) | Acta de Inception. |
+
+Los videos no se suben al repositorio: viven en SharePoint y se enlazan desde `evidencias.md` e `inception.md`.
 
 ## Solución de problemas
 
@@ -426,18 +429,3 @@ Las imágenes de Docker no se actualizan solas:
 ```bash
 docker compose up -d --build
 ```
-
-## Contribuir
-
-1. Crea una rama desde `main` con el número del issue:
-   - `feat/<issue>-descripcion`
-   - `fix/<issue>-descripcion`
-   - `docs/<issue>-descripcion`
-2. Haz commits claros y enlaza el issue en el PR (`Closes #<issue>`).
-3. Antes de pedir revisión, ejecuta lint, pruebas y build del paquete que cambiaste.
-4. Abre el PR con la [plantilla del repositorio](.github/pull_request_template.md). Se requiere CI en verde y al menos una aprobación.
-5. Al crear la rama, la Action del tablero mueve el issue a **In Progress**; al abrir el PR, a **In review**; al fusionarlo, a **Done**.
-
-## Licencia y propiedad
-
-Proyecto académico del Grupo 1 para el curso Backend (Proyecto P4, «Soluciones para el CLENA»). La licencia y la propiedad del código están pendientes de definir con el CLENA y la universidad; hasta entonces, el repositorio se usa con fines educativos y de demostración.

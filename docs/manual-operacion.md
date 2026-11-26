@@ -386,7 +386,7 @@ El agente es un programa de consola, `trackhive-agente.exe`, que se instala en e
 
 ### 10.2 Instalación
 
-1. **Descargar el paquete.** En GitHub, **Actions → CI**, la última ejecución en `main`, artefacto `trackhive-agente`. Trae `trackhive-agente.exe`, `agente.example.toml` e `instalar-tarea.ps1`. También se puede construir en Windows ([agent/README.md](../agent/README.md)).
+1. **Descargar el paquete.** En GitHub, **Actions → CI**, la última ejecución en `main`, artefacto `trackhive-agente`. Trae `trackhive-agente.exe`, `agente.example.toml` e `instalar-tarea.ps1`. También se puede construir en Windows ([agente.md](agente.md)).
 2. **Copiarlo** a `C:\Trackhive\agente\`, con el usuario que trabaja en ese PC. Tiene que ser una carpeta en la que ese usuario pueda escribir: ahí quedan la configuración y el log.
 3. **Configurarlo.** Copiar `agente.example.toml` como `agente.toml` y completarlo con el Bloc de notas, guardando en UTF-8. Las rutas y las contraseñas van entre comillas simples (`'Z:\Aha\…'`).
 

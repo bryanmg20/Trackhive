@@ -1,9 +1,9 @@
-# agent: agente de sincronización con Everything (HU-166)
+# Agente de sincronización con Everything (HU-166)
 
-Programa de consola que se instala en el PC del CLENA. Consulta el servidor HTTP de *Everything* en ese mismo PC y envía cada página, **tal como la respondió Everything**, a los endpoints de ingesta de Trackhive (HU-137). Solo hace conexiones salientes por HTTPS: los servidores de Trackhive nunca tienen que llegar al PC del CLENA (decisión en [D-17](../docs/arquitectura.md#d-17-sin-integración-automática-con-everything-ni-lectura-de-buzón-imap)).
+Código en [`agent/`](../agent/). Programa de consola que se instala en el PC del CLENA. Consulta el servidor HTTP de *Everything* en ese mismo PC y envía cada página, **tal como la respondió Everything**, a los endpoints de ingesta de Trackhive (HU-137). Solo hace conexiones salientes por HTTPS: los servidores de Trackhive nunca tienen que llegar al PC del CLENA (decisión en [D-17](arquitectura.md#d-17-sin-integración-automática-con-everything-ni-lectura-de-buzón-imap)).
 
-- **Instalación y operación en el CLENA:** [docs/manual-operacion.md, sección 10](../docs/manual-operacion.md#10-agente-de-sincronización-con-everything-hu-166).
-- **Endpoints de ingesta y desarrollo con el mock:** [docs/everything-desarrollo.md, sección 7](../docs/everything-desarrollo.md#7-sincronización-con-el-backend-hu-137).
+- **Instalación y operación en el CLENA:** [docs/manual-operacion.md, sección 10](manual-operacion.md#10-agente-de-sincronización-con-everything-hu-166).
+- **Endpoints de ingesta y desarrollo con el mock:** [docs/everything-desarrollo.md, sección 7](everything-desarrollo.md#7-sincronización-con-el-backend-hu-137).
 
 ## Qué hace en cada ejecución
 
