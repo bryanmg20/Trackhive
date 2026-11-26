@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import {
   networkRequestApiError,
@@ -322,14 +323,11 @@ export function EverythingSyncPage() {
         className={searchStyles.hero}
         aria-labelledby="everything-sync-title"
       >
-        <p className={searchStyles.eyebrow}>Administración</p>
-        <h1 id="everything-sync-title" className={searchStyles.title}>
-          Sincronización con Everything
-        </h1>
-        <p className={styles.note}>
-          Consulte cómo terminó la última sincronización de las copias
-          digitales y pida una nueva cuando la necesite.
-        </p>
+        <PageHeader
+          titleId="everything-sync-title"
+          title="Sincronización con Everything"
+          description="Sincronice las referencias de copias digitales y consulte el resultado."
+        />
       </section>
 
       {!status && !loadError ? (

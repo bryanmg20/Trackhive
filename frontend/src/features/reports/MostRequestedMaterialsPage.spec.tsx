@@ -78,7 +78,8 @@ describe('MostRequestedMaterialsPage (HU-26)', () => {
     );
     renderPage();
 
-    const list = await screen.findByRole('list');
+    const main = await screen.findByRole('main');
+    const list = await within(main).findByRole('list');
     const rows = within(list).getAllByRole('listitem');
     expect(rows).toHaveLength(4);
     expect(rows[0]).toHaveTextContent('Puesto 1');
@@ -169,7 +170,9 @@ describe('MostRequestedMaterialsPage (HU-26)', () => {
     expect(
       await screen.findByText('No hay solicitudes en este periodo'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('main')).queryByRole('list'),
+    ).not.toBeInTheDocument();
   });
 
   it('explains a 403 in the words of the screen', async () => {

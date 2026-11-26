@@ -26,12 +26,13 @@
 .backLink {
   color: var(--gold-text);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-decoration: underline;
   text-underline-offset: 0.2em;
   text-transform: uppercase;
   overflow-wrap: anywhere;
+  font-weight: 600;
 }
 
 .backLink:hover {
@@ -51,27 +52,28 @@
   gap: 1rem;
   min-width: 0;
   padding: clamp(1.1rem, 3vw, 1.75rem);
-  border: 1px solid var(--line);
+  border: 0;
   border-top: 3px solid var(--gold);
-  border-radius: 6px;
   background: var(--surface-strong);
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
 
 .step {
   color: var(--gold-text);
   font-family: var(--font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .sectionTitle {
   color: var(--ink);
   font-family: var(--font-display);
   font-size: clamp(1.4rem, 2.4vw, 1.75rem);
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1.05;
 }
 
@@ -115,9 +117,10 @@
 .additional summary {
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .field input,
@@ -127,8 +130,8 @@
   min-width: 0;
   min-height: 2.75rem;
   padding: 0.6rem 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: 1px solid var(--sage-deep);
+  border-radius: var(--radius-control);
   background: var(--surface-strong);
   color: var(--ink);
   font: inherit;
@@ -159,7 +162,7 @@
   min-height: 2.75rem;
   padding: 0.6rem 1.25rem;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   background: var(--gold);
   color: var(--gold-ink);
   font: inherit;
@@ -178,8 +181,8 @@
   align-items: center;
   min-height: 2.75rem;
   padding: 0.6rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: 1px solid var(--sage-deep);
+  border-radius: var(--radius-pill);
   color: var(--ink);
   font-size: 0.9rem;
   font-weight: 600;
@@ -236,9 +239,10 @@
   border-radius: 3px;
   color: var(--success);
   font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.16em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .stamp[data-state='new'] {
@@ -254,7 +258,7 @@
   min-width: 0;
   padding: 1rem;
   border: 1px dashed var(--sage-deep);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--success-surface);
 }
 
@@ -273,6 +277,7 @@
   font-size: 1.25rem;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
+  font-weight: 800;
 }
 
 .foundData {
@@ -289,9 +294,10 @@
 .foundData dt {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .foundData dd {
@@ -364,7 +370,7 @@
   min-width: 0;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background: var(--surface);
 }
 
@@ -378,14 +384,15 @@
 .materialCode {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
+  font-weight: 600;
 }
 
 .emptyMaterials {
   padding: 1rem;
   border: 1px dashed var(--sage-deep);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.5;
@@ -399,7 +406,7 @@
   margin: 0;
   padding: 0.85rem;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
 }
 
 .delivery legend {
@@ -475,12 +482,12 @@
   right: clamp(1rem, 3vw, 1.75rem);
   padding: 0.35rem 0.7rem;
   border: 2px double var(--seal);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   color: var(--seal);
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   transform: rotate(-6deg);
 }
@@ -488,17 +495,18 @@
 .eyebrow {
   color: var(--gold-text);
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .receiptTitle {
   color: var(--ink);
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 400;
-  letter-spacing: -0.035em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
 
@@ -520,9 +528,10 @@
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: clamp(1.25rem, 5vw, 1.9rem);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   overflow-wrap: anywhere;
   text-align: center;
+  font-weight: 600;
 }
 
 .receiptData {
@@ -539,9 +548,10 @@
 .receiptData dt {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .receiptData dd {

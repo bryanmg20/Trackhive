@@ -77,6 +77,9 @@ function detail(overrides: Record<string, unknown> = {}) {
         status: 'DISPONIBLE',
         itemStatus: 'LOCALIZADO',
         hasDigitalCopy: false,
+        digitalFolderName: null,
+        needsReview: false,
+        reviewReason: null,
       },
     ],
     references: [],
@@ -512,12 +515,69 @@ describe('RequestDetailPage', () => {
       });
 
       it('shows which materials have a digital copy', async () => {
-        await setup(withCopy());
+        await setup(
+          detail({
+            status: 'RECIBIDA',
+            deliveryMode: 'DIGITAL',
+            committedDate: null,
+            allowedTransitions: ['DISPONIBLE', 'RECHAZADA'],
+            materials: [
+              {
+                ...detail().materials[0],
+                status: 'EN_RESTAURACION',
+                itemStatus: 'PENDIENTE',
+                hasDigitalCopy: true,
+                digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+                needsReview: false,
+                reviewReason: null,
+              },
+            ],
+          }),
+        );
 
         const materials = await screen.findByRole('region', {
           name: 'Material solicitado',
         });
         expect(materials).toHaveTextContent('Copia digital: Sí');
+        expect(materials).toHaveTextContent(
+          'Carpeta en Everything: 1ra-1931 - Esc 0001-0109 - Ene',
+        );
+        expect(within(materials).queryByRole('link')).not.toBeInTheDocument();
+        expect(within(materials).queryByRole('button')).not.toBeInTheDocument();
+      });
+
+      it('shows review indicators for NO_PATTERN and DUPLICATE_CODE materials (HU-140)', async () => {
+        await setup(
+          detail({
+            materials: [
+              {
+                ...detail().materials[0],
+                id: 'mat-1',
+                hasDigitalCopy: true,
+                digitalFolderName: '1925-03 Marzo',
+                needsReview: true,
+                reviewReason: 'NO_PATTERN',
+              },
+              {
+                ...detail().materials[0],
+                id: 'mat-2',
+                catalogCode: 'NOT-ABCD1234',
+                hasDigitalCopy: true,
+                digitalFolderName: '1ra-1940 - Esc 1-161 - Ene',
+                needsReview: true,
+                reviewReason: 'DUPLICATE_CODE',
+              },
+            ],
+          }),
+        );
+
+        const materials = await screen.findByRole('region', {
+          name: 'Material solicitado',
+        });
+        expect(materials).toHaveTextContent('1925-03 Marzo');
+        expect(materials).toHaveTextContent('Para revisión: Sin código válido');
+        expect(materials).toHaveTextContent('1ra-1940 - Esc 1-161 - Ene');
+        expect(materials).toHaveTextContent('Para revisión: Código duplicado');
       });
 
       it('says when a material has no digital copy', async () => {
@@ -527,6 +587,7 @@ describe('RequestDetailPage', () => {
           name: 'Material solicitado',
         });
         expect(materials).toHaveTextContent('Copia digital: No');
+        expect(materials).not.toHaveTextContent('Carpeta en Everything');
       });
 
       it('sends Disponible from Recibida and shows the confirmation', async () => {

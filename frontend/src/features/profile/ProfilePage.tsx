@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
+import { useDocumentTitle } from '../layout/use-document-title';
 import { RequestApiError } from '../requests/api/request-api-error';
 import { CharacterizationFields } from './CharacterizationFields';
 import {
@@ -12,6 +14,7 @@ import {
 } from './characterization';
 import { profileApi, type MyProfile } from './profile-api';
 import styles from './ProfilePage.module.css';
+import { DeleteAccountSection } from './DeleteAccountSection';
 
 function ProfileForm({ profile }: { profile: MyProfile }) {
   const [message, setMessage] = useState('');
@@ -83,6 +86,7 @@ function ProfileForm({ profile }: { profile: MyProfile }) {
 }
 
 export function ProfilePage() {
+  const [deleted, setDeleted] = useState(false);
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -112,12 +116,32 @@ export function ProfilePage() {
       ignore = true;
     };
   }, [attempt]);
+  // Same text as the PageHeader while the profile is shown, so the two
+  // effects never disagree; after deleting there is no PageHeader.
+  useDocumentTitle(deleted ? 'Cuenta eliminada' : 'Mi perfil');
+  if (deleted)
+    return (
+      <main className={styles.page}>
+        <h1>Cuenta eliminada</h1>
+        <p role="status">
+          Sus datos personales se han suprimido y sus sesiones se han cerrado.
+        </p>
+        <Link to={ROUTES.login}>Ir al inicio de sesión</Link>
+      </main>
+    );
   return (
     <AppLayout>
       <section className={styles.page} aria-labelledby="profile-title">
-        <h1 id="profile-title">Mi perfil</h1>
+        <PageHeader
+          titleId="profile-title"
+          title="Mi perfil"
+          description="Consulte y actualice sus datos de caracterización."
+        />
         {profile ? (
-          <ProfileForm profile={profile} />
+          <>
+            <ProfileForm profile={profile} />
+            <DeleteAccountSection onDeleted={() => setDeleted(true)} />
+          </>
         ) : error ? (
           <div role="alert">
             <p>{error}</p>

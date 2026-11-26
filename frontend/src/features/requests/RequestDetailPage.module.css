@@ -3,11 +3,12 @@
   margin-bottom: 1rem;
   color: var(--gold-text);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-decoration: underline;
   text-underline-offset: 0.2em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .heading {
@@ -19,22 +20,31 @@
 
 .badge {
   display: inline-block;
-  padding: 0.15rem 0.55rem;
-  border: 1px solid var(--line);
-  background: var(--paper);
+  padding: 0.2rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--chip-searching);
   color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Chip colours of the wireframes; the state is always written in text */
+.badge[data-status='RECIBIDA'],
+.badge[data-status='AGENDADA'] {
+  background: var(--chip-received);
+}
+
+.badge[data-status='DISPONIBLE'] {
+  background: var(--chip-available);
 }
 
 .badge[data-status='RECHAZADA'] {
-  background: var(--error-surface, var(--paper));
+  background: var(--chip-rejected);
 }
 
-.badge[data-status='DISPONIBLE'],
-.badge[data-status='AGENDADA'],
-.badge[data-status='ATENDIDA'] {
-  background: var(--success-surface);
+.badge[data-status='CERRADA'] {
+  background: var(--chip-closed);
 }
 
 .sections {
@@ -45,17 +55,20 @@
 
 .card {
   padding: 1.25rem;
-  border: 1px solid var(--line);
+  border: 0;
   background: var(--surface-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .cardTitle {
   margin: 0 0 1rem;
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .fields {
@@ -69,9 +82,10 @@
   margin-bottom: 0.2rem;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .field dd {
@@ -108,6 +122,7 @@
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .notice {
@@ -128,12 +143,14 @@
 
 .loanButton {
   padding: 0.35rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--sage-deep);
   background: var(--surface-strong);
   color: var(--ink);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
+  border-radius: var(--radius-pill);
+  min-height: 2.75rem;
 }
 
 .loanReturnButton {
@@ -144,4 +161,17 @@
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
+  border-radius: var(--radius-pill);
+  min-height: 2.75rem;
+}
+
+.digitalFolder {
+  overflow-wrap: anywhere;
+}
+
+.folderName {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  font-weight: 600;
 }

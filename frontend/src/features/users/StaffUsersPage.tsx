@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import {
   networkRequestApiError,
@@ -18,8 +19,19 @@ import {
   PASSWORD_MIN_LENGTH,
   STAFF_ROLE_LABELS,
   STAFF_ROLES,
+  STAFF_USER_SORT_FIELDS,
   updateStaffUser,
 } from './api/staff-users';
+import {
+  compact,
+  readBoolean,
+  readEnum,
+  readPage,
+  readText,
+  SORT_ORDERS,
+  useUrlParams,
+} from '../navigation/url-params';
+import { UnsavedChangesGuard } from '../navigation/UnsavedChangesGuard';
 import type {
   ListStaffUsersParams,
   SortOrder,
@@ -45,6 +57,27 @@ const STATUS_FILTERS = [
   { value: true, label: 'Activas' },
   { value: false, label: 'Desactivadas' },
 ] as const;
+
+const DEFAULT_PARAMS: ListStaffUsersParams = {
+  sort: 'lastName',
+  order: 'asc',
+  page: 1,
+  limit: PAGE_SIZE,
+};
+
+/** Search, filters, order and page kept in the URL, e.g. «?role=ADMIN». */
+function parseParams(search: URLSearchParams): ListStaffUsersParams {
+  return compact({
+    q: readText(search, 'q'),
+    role: readEnum(search, 'role', STAFF_ROLES),
+    active: readBoolean(search, 'active'),
+    sort:
+      readEnum(search, 'sort', STAFF_USER_SORT_FIELDS) ?? DEFAULT_PARAMS.sort,
+    order: readEnum(search, 'order', SORT_ORDERS) ?? DEFAULT_PARAMS.order,
+    page: readPage(search),
+    limit: PAGE_SIZE,
+  });
+}
 
 interface ListResponse {
   params: ListStaffUsersParams;
@@ -106,14 +139,12 @@ function formFromUser(user: StaffUser): FormState {
  * order and pages; create, edit, deactivate and reactivate them.
  */
 export function StaffUsersPage() {
-  const [text, setText] = useState('');
+  const [params, setParams, reloadParams] = useUrlParams(
+    parseParams,
+    DEFAULT_PARAMS,
+  );
+  const [text, setText] = useState(params.q ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [params, setParams] = useState<ListStaffUsersParams>({
-    sort: 'lastName',
-    order: 'asc',
-    page: 1,
-    limit: PAGE_SIZE,
-  });
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<ListResponse | null>(null);
 
@@ -156,7 +187,7 @@ export function StaffUsersPage() {
 
   /** Loads the same page again, so it shows the saved changes. */
   function reload() {
-    setParams((current) => ({ ...current }));
+    reloadParams();
   }
 
   function search(event: FormEvent<HTMLFormElement>) {
@@ -319,13 +350,24 @@ export function StaffUsersPage() {
       </p>
     ) : null;
 
+  // The open form differs from what it started with (empty, or the account)
+  const editorStart =
+    editor?.mode === 'edit' ? formFromUser(editor.user) : EMPTY_FORM;
+  const hasUnsavedChanges =
+    editor !== null &&
+    (Object.keys(EMPTY_FORM) as FormField[]).some(
+      (field) => form[field] !== editorStart[field],
+    );
+
   return (
     <AppLayout>
+      <UnsavedChangesGuard when={hasUnsavedChanges} />
       <section className={searchStyles.hero} aria-labelledby="staff-users-title">
-        <p className={searchStyles.eyebrow}>Administración</p>
-        <h1 id="staff-users-title" className={searchStyles.title}>
-          Usuarios del personal
-        </h1>
+        <PageHeader
+          titleId="staff-users-title"
+          title="Gestión de usuarios del personal"
+          description="Administre las cuentas del personal del CLENA."
+        />
         <form className={searchStyles.searchBar} onSubmit={search} role="search">
           <label htmlFor="staff-user-search" className="sr-only">
             Buscar por nombre o correo
@@ -336,7 +378,7 @@ export function StaffUsersPage() {
             maxLength={100}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Nombre o correo"
+            placeholder="Nombre o correo…"
           />
           <button className={searchStyles.primary} type="submit">
             Buscar
@@ -353,7 +395,7 @@ export function StaffUsersPage() {
         </p>
       </section>
 
-      <div className={searchStyles.layout}>
+      <div className={searchStyles.tableLayout}>
         <aside className={searchStyles.sidebar} aria-label="Filtros">
           <button
             type="button"

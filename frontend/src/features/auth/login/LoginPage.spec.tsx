@@ -73,7 +73,10 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderLoginPage();
 
-    await user.click(screen.getByRole('link', { name: /crear cuenta/i }));
+    const links = screen.getAllByRole('link', { name: /crear cuenta/i });
+    // WF-01: «Crear cuenta» in the header and under the form.
+    expect(links).toHaveLength(2);
+    await user.click(links[1]);
 
     expect(screen.getByText('Pantalla de registro')).toBeInTheDocument();
   });
@@ -216,6 +219,9 @@ describe('LoginPage', () => {
     );
     renderLoginPage();
 
+    // The header links of WF-01 come first: «Inicio de sesión», «Crear cuenta».
+    await user.tab();
+    await user.tab();
     await user.tab();
     expect(screen.getByLabelText('Correo electrónico')).toHaveFocus();
     await user.keyboard('ana@mail.com');
@@ -238,6 +244,12 @@ describe('LoginPage', () => {
     expect(screen.getByText('Correo electrónico')).toBeVisible();
     expect(screen.getByText('Contraseña')).toBeVisible();
 
+    await user.tab();
+    expect(
+      screen.getByRole('link', { name: 'Inicio de sesión' }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(screen.getAllByRole('link', { name: 'Crear cuenta' })[0]).toHaveFocus();
     await user.tab();
     expect(screen.getByLabelText('Correo electrónico')).toHaveFocus();
     await user.tab();

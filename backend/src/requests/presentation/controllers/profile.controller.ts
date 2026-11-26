@@ -1,6 +1,10 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Patch } from '@nestjs/common';
+import { ApiNoContentResponse } from '@nestjs/swagger';
+import { DeleteMyAccountDto } from '../../application/dto/delete-my-account.dto';
+import { DeleteMyAccountUseCase } from '../../application/use-cases/delete-my-account.use-case';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
@@ -23,7 +27,31 @@ export class ProfileController {
   constructor(
     private readonly getProfile: GetMyProfileUseCase,
     private readonly updateProfile: UpdateMyProfileUseCase,
+    private readonly deleteAccount: DeleteMyAccountUseCase,
   ) {}
+
+  // Authenticated self-erasure, with confirmation and the last-admin safeguard.
+  @Delete()
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Elimina mi cuenta y anonimiza mis datos (HU-33)' })
+  @ApiNoContentResponse({
+    description: 'Cuenta eliminada y sesiones invalidadas',
+  })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({
+    description:
+      'Último ADMIN activo o conflicto concurrente; no se completó la eliminación',
+    type: ErrorResponseDto,
+  })
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeleteMyAccountDto,
+  ): Promise<void> {
+    await this.deleteAccount.execute({
+      userId: user.id,
+      confirmation: dto.confirmation,
+    });
+  }
 
   // All authenticated roles can access their own profile. No client-supplied id.
   @Get()

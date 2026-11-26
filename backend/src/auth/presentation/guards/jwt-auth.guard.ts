@@ -6,6 +6,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { USER_REPOSITORY } from '../../../users/application/tokens';
+import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
 import type { Request } from 'express';
 import type { ITokenService } from '../../application/ports/token-service.port';
 import { TOKEN_SERVICE } from '../../application/tokens';
@@ -20,6 +22,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     @Inject(TOKEN_SERVICE) private readonly tokenService: ITokenService,
+    @Inject(USER_REPOSITORY) private readonly users: IUserRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -44,6 +47,9 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException(INVALID_TOKEN_MESSAGE);
     }
 
+    const user = await this.users.findById(payload.sub);
+    if (!user || !user.active)
+      throw new UnauthorizedException(INVALID_TOKEN_MESSAGE);
     request.user = { id: payload.sub, role: payload.role };
     return true;
   }

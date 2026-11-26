@@ -384,6 +384,18 @@ ofrece Disponible en vez de En búsqueda, la pasa a Disponible, revisa el
 historial y el correo en Mailpit (`localhost:8025`), y que la API responde 409
 a Disponible en las otras dos. Guarda capturas en `test-results/`.
 
+### Indicador de copia digital y carpeta para Everything (HU-140)
+
+Con `docker compose up -d --build` iniciado desde la raíz y la semilla
+(`RUN_SEED=true`), ejecutar desde `frontend`
+`pnpm test:e2e:docker digital-copy-indicator.spec.ts`. Verifica a través de
+Nginx (`http://localhost:8080`) que `/api/v1/materials` y
+`/api/v1/requests/:id` nunca devuelven `digitalPath`, que el personal ve en
+`/personal/materiales` y `/solicitudes/:id` «Copia digital: Sí/No», solo el
+nombre de la carpeta en Everything y el aviso «Para revisión» cuando aplica, y
+que el usuario público solo ve «Sí · Disponible en digital» o «No» en
+`/materiales`, sin enlaces ni botones para abrir o descargar archivos.
+
 ### Sincronización con Everything (HU-138)
 
 Con `docker compose up -d --build` iniciado desde la raíz y la semilla, ejecutar

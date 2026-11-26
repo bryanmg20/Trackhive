@@ -17,6 +17,7 @@ import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestsListPage } from './features/requests/RequestsListPage';
 import { RoomCapacityPage } from './features/requests/RoomCapacityPage';
 import { ROUTES } from './routes';
+import { RouteFocus } from './features/navigation/RouteFocus';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { StaffUsersPage } from './features/users/StaffUsersPage';
 import { EverythingSyncPage } from './features/everything/EverythingSyncPage';
@@ -30,45 +31,49 @@ function HomeRedirect() {
 
 function App() {
   return (
-    <Routes>
-      <Route path={ROUTES.register} element={<RegisterPage />} />
-      <Route path={ROUTES.login} element={<LoginPage />} />
-      <Route element={<AuthenticatedRoute />}>
-        <Route path={ROUTES.profile} element={<ProfilePage />} />
-        <Route path={ROUTES.materials} element={<MaterialSearchPage />} />
-      </Route>
-      <Route element={<ProtectedRoute />}>
-        <Route path={ROUTES.newRequest} element={<NewRequestPage />} />
-        <Route path={ROUTES.myRequests} element={<MyRequestsPage />} />
-      </Route>
-      <Route element={<StaffRoute />}>
-        <Route path={ROUTES.staffMaterials} element={<StaffMaterialsPage />} />
-        <Route path={ROUTES.requests} element={<RequestsListPage />} />
-        <Route path={ROUTES.requestDetail} element={<RequestDetailPage />} />
-        <Route path={ROUTES.calendar} element={<AppointmentsCalendarPage />} />
-        <Route
-          path={ROUTES.staffNewRequest}
-          element={<StaffNewRequestPage />}
-        />
-        <Route
-          path={ROUTES.mostRequestedMaterials}
-          element={<MostRequestedMaterialsPage />}
-        />
-      </Route>
-      <Route element={<AdminRoute />}>
-        <Route path={ROUTES.attentionTimes} element={<AttentionTimesPage />} />
-        <Route
-          path={ROUTES.adminRoomCapacity}
-          element={<RoomCapacityPage />}
-        />
-        <Route path={ROUTES.staffUsers} element={<StaffUsersPage />} />
-        <Route
-          path={ROUTES.adminEverythingSync}
-          element={<EverythingSyncPage />}
-        />
-      </Route>
-      <Route path="*" element={<HomeRedirect />} />
-    </Routes>
+    <>
+      {/* Before <Routes> on purpose: see RouteFocus */}
+      <RouteFocus />
+      <Routes>
+        <Route path={ROUTES.register} element={<RegisterPage />} />
+        <Route path={ROUTES.login} element={<LoginPage />} />
+        <Route element={<AuthenticatedRoute />}>
+          <Route path={ROUTES.profile} element={<ProfilePage />} />
+          <Route path={ROUTES.materials} element={<MaterialSearchPage />} />
+        </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path={ROUTES.newRequest} element={<NewRequestPage />} />
+          <Route path={ROUTES.myRequests} element={<MyRequestsPage />} />
+        </Route>
+        <Route element={<StaffRoute />}>
+          <Route path={ROUTES.staffMaterials} element={<StaffMaterialsPage />} />
+          <Route path={ROUTES.requests} element={<RequestsListPage />} />
+          <Route path={ROUTES.requestDetail} element={<RequestDetailPage />} />
+          <Route path={ROUTES.calendar} element={<AppointmentsCalendarPage />} />
+          <Route
+            path={ROUTES.staffNewRequest}
+            element={<StaffNewRequestPage />}
+          />
+          <Route
+            path={ROUTES.mostRequestedMaterials}
+            element={<MostRequestedMaterialsPage />}
+          />
+        </Route>
+        <Route element={<AdminRoute />}>
+          <Route path={ROUTES.attentionTimes} element={<AttentionTimesPage />} />
+          <Route
+            path={ROUTES.adminRoomCapacity}
+            element={<RoomCapacityPage />}
+          />
+          <Route path={ROUTES.staffUsers} element={<StaffUsersPage />} />
+          <Route
+            path={ROUTES.adminEverythingSync}
+            element={<EverythingSyncPage />}
+          />
+        </Route>
+        <Route path="*" element={<HomeRedirect />} />
+      </Routes>
+    </>
   );
 }
 

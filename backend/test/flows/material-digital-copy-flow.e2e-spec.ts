@@ -13,7 +13,12 @@ import {
 } from '../support/e2e-app';
 
 interface MaterialBody {
+  id: string;
   catalogCode: string;
+  hasDigitalCopy: boolean;
+  digitalFolderName?: string | null;
+  needsReview?: boolean;
+  reviewReason?: 'NO_PATTERN' | 'DUPLICATE_CODE' | null;
 }
 
 // Root of the simulated tree of Everything (HU-133) and the fund of notaries
@@ -22,13 +27,13 @@ const NOTARY_FUND =
   '1ra - Notaria Primera de Barranquilla - 1815 a 1979\\1931 - Esc 1-1290 (12) +';
 
 /**
- * Digital copy in `materials` and the `sync_runs` log (HU-134) against
+ * Digital copy in `materials` and the `sync_runs` log (HU-134, HU-140) against
  * PostgreSQL: the defaults of the existing rows, the CHECKs of the table and
  * the partial unique index that allows a single running sync. The API never
  * sends the path of the digital copy, and since #165 a material has no
  * physical location.
  */
-describe('Material digital copy, HU-134 (e2e, PostgreSQL)', () => {
+describe('Material digital copy, HU-134 & HU-140 (e2e, PostgreSQL)', () => {
   let e2e: E2eApp;
   let staff: Session;
   let publicUser: Session;
@@ -37,24 +42,35 @@ describe('Material digital copy, HU-134 (e2e, PostgreSQL)', () => {
    * A material as the Everything sync would save it from the simulated tree
    * (HU-133): a notarial protocol whose digital copy is a leaf folder.
    */
-  const createEverythingMaterial = async () => {
+  const createEverythingMaterial = async (options?: {
+    withCopy?: boolean;
+    reviewReason?: 'NO_PATTERN' | 'DUPLICATE_CODE' | null;
+  }) => {
     const id = randomUUID();
     const catalogCode = `E2E-EV-${id.slice(0, 8).toUpperCase()}`;
-    const digitalPath = `${NOTARY_FUND}\\1ra-1931 - Esc 0001-0109 - ${catalogCode}`;
+    const withCopy = options?.withCopy ?? true;
+    const folderName = `1ra-1931 - Esc 0001-0109 - ${catalogCode}`;
+    const digitalPath = withCopy ? `${NOTARY_FUND}\\${folderName}` : null;
     await e2e.prisma.materialModel.create({
       data: {
         id,
         catalogCode,
-        title: `1ra-1931 - Esc 0001-0109 - ${catalogCode}`,
+        title: folderName,
         materialType: 'PROTOCOLO_NOTARIAL',
         collection: 'Notarías',
         status: 'DISPONIBLE',
         source: 'EVERYTHING',
         digitalPath,
-        lastSeenAt: new Date(),
+        lastSeenAt: withCopy ? new Date() : null,
+        reviewReason: options?.reviewReason ?? null,
       },
     });
-    return { id, catalogCode, digitalPath };
+    return {
+      id,
+      catalogCode,
+      digitalPath,
+      folderName: withCopy ? folderName : null,
+    };
   };
 
   const searchByCode = async (session: Session, catalogCode: string) => {
@@ -168,6 +184,134 @@ describe('Material digital copy, HU-134 (e2e, PostgreSQL)', () => {
         itemStatus: 'PENDIENTE',
       });
       expect(items[0]).not.toHaveProperty('accessType');
+    });
+
+    it('exposes folder name and review reason only to staff in material search, never the full path (HU-140)', async () => {
+      const withCopy = await createEverythingMaterial();
+      const noPattern = await createEverythingMaterial({
+        reviewReason: 'NO_PATTERN',
+      });
+      const duplicate = await createEverythingMaterial({
+        reviewReason: 'DUPLICATE_CODE',
+      });
+      const withoutCopy = await createEverythingMaterial({ withCopy: false });
+
+      const staffClean = await searchByCode(staff, withCopy.catalogCode);
+      expect(staffClean).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: withCopy.folderName,
+        needsReview: false,
+        reviewReason: null,
+      });
+      expect(staffClean?.digitalFolderName).not.toMatch(/[\\/]|^[A-Za-z]:/);
+      expect(staffClean).not.toHaveProperty('digitalPath');
+
+      const staffNoPattern = await searchByCode(staff, noPattern.catalogCode);
+      expect(staffNoPattern).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: noPattern.folderName,
+        needsReview: true,
+        reviewReason: 'NO_PATTERN',
+      });
+
+      const staffDuplicate = await searchByCode(staff, duplicate.catalogCode);
+      expect(staffDuplicate).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: duplicate.folderName,
+        needsReview: true,
+        reviewReason: 'DUPLICATE_CODE',
+      });
+
+      const staffWithout = await searchByCode(staff, withoutCopy.catalogCode);
+      expect(staffWithout).toMatchObject({
+        hasDigitalCopy: false,
+        digitalFolderName: null,
+        needsReview: false,
+        reviewReason: null,
+      });
+
+      // Public user only sees digital availability, never folder name or review reason
+      const publicResponse = await request(e2e.server)
+        .get(`${API}/materials`)
+        .query({ q: withCopy.catalogCode })
+        .set('Authorization', bearer(publicUser))
+        .expect(200);
+      const publicBody = publicResponse.body as { items: MaterialBody[] };
+      const publicItem = publicBody.items.find(
+        (item) => item.catalogCode === withCopy.catalogCode,
+      );
+      expect(publicItem).toMatchObject({ hasDigitalCopy: true });
+      expect(publicItem).not.toHaveProperty('digitalFolderName');
+      expect(publicItem).not.toHaveProperty('needsReview');
+      expect(publicItem).not.toHaveProperty('reviewReason');
+      expect(publicItem).not.toHaveProperty('digitalPath');
+      expect(JSON.stringify(publicItem)).not.toContain(NOTARY_FUND);
+
+      const publicWithout = await searchByCode(
+        publicUser,
+        withoutCopy.catalogCode,
+      );
+      expect(publicWithout).toMatchObject({ hasDigitalCopy: false });
+      expect(publicWithout).not.toHaveProperty('digitalFolderName');
+      expect(publicWithout).not.toHaveProperty('needsReview');
+      expect(publicWithout).not.toHaveProperty('reviewReason');
+    });
+
+    it('exposes folder name and review reason in request detail without the full path (HU-140)', async () => {
+      const withCopy = await createEverythingMaterial();
+      const noPattern = await createEverythingMaterial({
+        reviewReason: 'NO_PATTERN',
+      });
+      const duplicate = await createEverythingMaterial({
+        reviewReason: 'DUPLICATE_CODE',
+      });
+      const withoutCopy = await createEverythingMaterial({ withCopy: false });
+
+      const created = await submitRequest(e2e.server, publicUser, [
+        withCopy.id,
+        noPattern.id,
+        duplicate.id,
+        withoutCopy.id,
+      ]);
+
+      const response = await request(e2e.server)
+        .get(`${API}/requests/${created.id}`)
+        .set('Authorization', bearer(staff))
+        .expect(200);
+
+      const { materials } = response.body as {
+        materials: Array<Record<string, unknown>>;
+      };
+      const byId = new Map(materials.map((item) => [item.id, item]));
+
+      expect(byId.get(withCopy.id)).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: withCopy.folderName,
+        needsReview: false,
+        reviewReason: null,
+      });
+      expect(byId.get(noPattern.id)).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: noPattern.folderName,
+        needsReview: true,
+        reviewReason: 'NO_PATTERN',
+      });
+      expect(byId.get(duplicate.id)).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: duplicate.folderName,
+        needsReview: true,
+        reviewReason: 'DUPLICATE_CODE',
+      });
+      expect(byId.get(withoutCopy.id)).toMatchObject({
+        hasDigitalCopy: false,
+        digitalFolderName: null,
+        needsReview: false,
+        reviewReason: null,
+      });
+      for (const item of materials) {
+        expect(item).not.toHaveProperty('digitalPath');
+      }
+      expect(JSON.stringify(response.body)).not.toContain(NOTARY_FUND);
     });
 
     it('rejects a source that is not MANUAL or EVERYTHING', async () => {

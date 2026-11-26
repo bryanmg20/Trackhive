@@ -14,7 +14,9 @@ import {
 } from '../materials/api/material-loans';
 import { LoanActionModal } from '../materials/LoanActionModal';
 import type { LoanActionMode } from '../materials/LoanActionModal';
+import { ReviewBadge } from '../materials/ReviewBadge';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import type { ChangeRequestStatusResult } from './api/change-request-status';
 import { getRequest } from './api/get-request';
@@ -220,17 +222,81 @@ export function RequestDetailPage() {
 
       {request ? (
         <article aria-labelledby="request-title">
-          <p className={searchStyles.eyebrow}>Detalle de la solicitud</p>
-          <div className={styles.heading}>
-            <h1 id="request-title" className={searchStyles.title}>
-              {request.trackingCode}
-            </h1>
-            <span className={styles.badge} data-status={request.status}>
-              {REQUEST_STATUS_LABELS[request.status]}
-            </span>
-          </div>
+          <PageHeader
+            titleId="request-title"
+            kicker="Detalle y cambio de estado"
+            title={request.trackingCode}
+            documentTitle={`Solicitud ${request.trackingCode}`}
+            description="Revise el material solicitado y gestione la atención."
+          >
+            <p className={styles.heading}>
+              <span className={styles.badge} data-status={request.status}>
+                {REQUEST_STATUS_LABELS[request.status]}
+              </span>
+            </p>
+          </PageHeader>
 
           <div className={styles.sections}>
+            <section className={styles.card} aria-labelledby="sec-materials">
+              <h2 id="sec-materials" className={styles.cardTitle}>
+                Material solicitado
+              </h2>
+              {request.materials.length === 0 ? (
+                <p className={searchStyles.muted}>
+                  Aún no hay material del catálogo: la solicitud solo trae
+                  referencias escritas.
+                </p>
+              ) : null}
+              <ul className={styles.materialList}>
+                {request.materials.map((material) => (
+                  <li key={material.id} className={styles.material}>
+                    <strong>{material.title}</strong>
+                    <span className={styles.meta}>
+                      {material.catalogCode} ·{' '}
+                      {MATERIAL_TYPE_LABELS[material.materialType]}
+                      {material.author ? ` · ${material.author}` : ''}
+                    </span>
+                    <span>
+                      Estado del material:{' '}
+                      {MATERIAL_STATUS_LABELS[material.status]}
+                    </span>
+                    <span>
+                      Búsqueda:{' '}
+                      {ITEM_STATUS_LABELS[material.itemStatus] ??
+                        material.itemStatus}
+                    </span>
+                    <span>
+                      Copia digital: {material.hasDigitalCopy ? 'Sí' : 'No'}
+                    </span>
+                    {material.hasDigitalCopy && material.digitalFolderName ? (
+                      <span className={styles.digitalFolder}>
+                        Carpeta en Everything:{' '}
+                        <code className={styles.folderName}>
+                          {material.digitalFolderName}
+                        </code>
+                      </span>
+                    ) : null}
+                    <ReviewBadge
+                      needsReview={material.needsReview}
+                      reviewReason={material.reviewReason}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {request.references.length > 0 ? (
+              <RequestReferencesSection
+                requestId={request.id}
+                references={request.references}
+                canResolveReferences={request.canResolveReferences}
+                onResolved={() => {
+                  setDetailVersion((version) => version + 1);
+                  setHistoryVersion((version) => version + 1);
+                }}
+              />
+            ) : null}
+
             <ScheduleAppointmentForm
               key={`appointment-${request.id}`}
               request={request}
@@ -438,53 +504,6 @@ export function RequestDetailPage() {
               />
             </section>
 
-            <section className={styles.card} aria-labelledby="sec-materials">
-              <h2 id="sec-materials" className={styles.cardTitle}>
-                Material solicitado
-              </h2>
-              {request.materials.length === 0 ? (
-                <p className={searchStyles.muted}>
-                  Aún no hay material del catálogo: la solicitud solo trae
-                  referencias escritas.
-                </p>
-              ) : null}
-              <ul className={styles.materialList}>
-                {request.materials.map((material) => (
-                  <li key={material.id} className={styles.material}>
-                    <strong>{material.title}</strong>
-                    <span className={styles.meta}>
-                      {material.catalogCode} ·{' '}
-                      {MATERIAL_TYPE_LABELS[material.materialType]}
-                      {material.author ? ` · ${material.author}` : ''}
-                    </span>
-                    <span>
-                      Estado del material:{' '}
-                      {MATERIAL_STATUS_LABELS[material.status]}
-                    </span>
-                    <span>
-                      Búsqueda:{' '}
-                      {ITEM_STATUS_LABELS[material.itemStatus] ??
-                        material.itemStatus}
-                    </span>
-                    <span>
-                      Copia digital: {material.hasDigitalCopy ? 'Sí' : 'No'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {request.references.length > 0 ? (
-              <RequestReferencesSection
-                requestId={request.id}
-                references={request.references}
-                canResolveReferences={request.canResolveReferences}
-                onResolved={() => {
-                  setDetailVersion((version) => version + 1);
-                  setHistoryVersion((version) => version + 1);
-                }}
-              />
-            ) : null}
           </div>
         </article>
       ) : null}

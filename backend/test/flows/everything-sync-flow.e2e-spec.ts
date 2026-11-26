@@ -269,6 +269,19 @@ describe('Everything sync, HU-137 (e2e, PostgreSQL)', () => {
 
     beforeAll(async () => {
       await endOpenRuns();
+      // HU-138 may already have imported the same static tree in another file.
+      // Keep its rows/foreign keys, but free this fixture's codes so the
+      // expected one update + N creations does not depend on test order.
+      const previous = await e2e.prisma.materialModel.findMany({
+        where: { catalogCode: { in: LEAF_CODES } },
+        select: { id: true },
+      });
+      for (const material of previous) {
+        await e2e.prisma.materialModel.update({
+          where: { id: material.id },
+          data: { catalogCode: `E2E-${randomUUID().toUpperCase()}` },
+        });
+      }
       // Already synced before: it keeps its id and its status
       existingId = await createSyncedMaterial(
         'NOT1-1931-0001-0109',

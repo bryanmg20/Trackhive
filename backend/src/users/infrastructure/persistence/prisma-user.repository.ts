@@ -42,19 +42,23 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async findAll(): Promise<User[]> {
-    const models = await this.prisma.userModel.findMany();
+    const models = await this.prisma.userModel.findMany({
+      where: { deletedAt: null },
+    });
     return models.map((model) => PrismaUserMapper.toDomain(model));
   }
 
   async findById(id: string): Promise<User | null> {
-    const model = await this.prisma.userModel.findUnique({ where: { id } });
+    const model = await this.prisma.userModel.findUnique({
+      where: { id, deletedAt: null },
+    });
     return model ? PrismaUserMapper.toDomain(model) : null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
     const model = await this.prisma.userModel.findFirst({
       // Registration normalizes emails, but existing rows may not be lowercase
-      where: { email: { equals: email, mode: 'insensitive' } },
+      where: { deletedAt: null, email: { equals: email, mode: 'insensitive' } },
     });
     return model ? PrismaUserMapper.toDomain(model) : null;
   }
@@ -86,6 +90,7 @@ export class PrismaUserRepository implements IUserRepository {
 
   private buildWhere(criteria: UserSearchCriteria): Prisma.UserModelWhereInput {
     const and: Prisma.UserModelWhereInput[] = [
+      { deletedAt: null },
       { role: { in: [...criteria.roles] } },
     ];
     if (criteria.active !== undefined) {

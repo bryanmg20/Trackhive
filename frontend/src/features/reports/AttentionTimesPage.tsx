@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import { REQUEST_STATUS_LABELS } from '../requests/api/list-requests';
 import {
   networkRequestApiError,
@@ -68,10 +69,10 @@ export function AttentionTimesPage() {
   return (
     <AppLayout>
       <section className={searchStyles.hero} aria-labelledby="attention-title">
-        <p className={searchStyles.eyebrow}>Reportes · Administración</p>
-        <h1 id="attention-title" className={searchStyles.title}>
-          Tiempos de atención
-        </h1>
+        <PageHeader
+          titleId="attention-title"
+          title="Tiempos de atención"
+        />
         <p className={styles.note}>
           Tiempo transcurrido desde Recibida hasta Atendida. Incluye las
           solicitudes que después se cerraron.

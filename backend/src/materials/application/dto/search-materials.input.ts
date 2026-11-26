@@ -1,3 +1,4 @@
+import type { UserRole } from '../../../users/domain/enums/user-role';
 import type { MaterialStatus } from '../../domain/enums/material-status';
 import type { MaterialType } from '../../domain/enums/material-type';
 import type {
@@ -5,7 +6,7 @@ import type {
   SortOrder,
 } from '../../domain/repositories/material.repository';
 
-/** The filters of the material search (HU-07). */
+/** The filters of the material search (HU-07, HU-140). */
 export interface SearchMaterialsInput {
   q?: string;
   type?: MaterialType;
@@ -15,4 +16,5 @@ export interface SearchMaterialsInput {
   order?: SortOrder;
   page?: number;
   limit?: number;
+  viewerRole: UserRole;
 }

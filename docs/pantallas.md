@@ -93,18 +93,18 @@ es orientativo y no constituye un contrato de API o de navegación.
 | WF-01 | Inicio de sesión | Sin sesión | `/login` | HU-02, HU-48 · existente | [Escritorio](wireframes/wf-01-inicio-sesion.png) · [Móvil 360 px](wireframes/wf-01-inicio-sesion-movil.png) |
 | WF-02 | Registro público | Sin sesión | `/registro` | HU-01, HU-31, HU-47, HU-73 · existente | [Escritorio](wireframes/wf-02-registro.png) · [Móvil 360 px](wireframes/wf-02-registro-movil.png) |
 | WF-03 | Mi perfil | PUBLICO, PERSONAL, ADMIN | `/mi-perfil` | HU-73 · existente | [Escritorio](wireframes/wf-03-mi-perfil.png) · [Móvil 360 px](wireframes/wf-03-mi-perfil-movil.png) |
-| WF-04 | Búsqueda de material pública | PUBLICO | `/materiales` | HU-07, HU-50 · existente; indicador HU-140 propuesto | [Escritorio](wireframes/wf-04-busqueda-material.png) · [Móvil 360 px](wireframes/wf-04-busqueda-material-movil.png) |
+| WF-04 | Búsqueda de material pública | PUBLICO | `/materiales` | HU-07, HU-50, HU-140 · existente | [Escritorio](wireframes/wf-04-busqueda-material.png) · [Móvil 360 px](wireframes/wf-04-busqueda-material-movil.png) |
 | WF-05 | Formulario de material | PERSONAL, ADMIN | — | **Descartada** (HU-165): HU-06 y HU-49 se cerraron sin hacer; el catálogo solo crece por la sincronización (D-26) | [Escritorio](wireframes/wf-05-formulario-material.png) · [Móvil 360 px](wireframes/wf-05-formulario-material-movil.png) |
 | WF-06 | Mis solicitudes | PUBLICO | `/mis-solicitudes` | HU-11 · existente | [Escritorio](wireframes/wf-06-mis-solicitudes.png) · [Móvil 360 px](wireframes/wf-06-mis-solicitudes-movil.png) |
 | WF-07 | Radicar solicitud | PUBLICO | `/solicitudes/nueva?materiales=…` | HU-09 · existente | [Escritorio](wireframes/wf-07-radicar-solicitud.png) · [Móvil 360 px](wireframes/wf-07-radicar-solicitud-movil.png) |
 | WF-08 | Registro de solicitud por personal | PERSONAL, ADMIN | `/personal/solicitudes/nueva?materiales=…` | HU-10, HU-93, HU-73 · existente | [Escritorio](wireframes/wf-08-solicitud-personal.png) · [Móvil 360 px](wireframes/wf-08-solicitud-personal-movil.png) |
-| WF-09 | Listado de solicitudes del personal | PERSONAL, ADMIN | `/solicitudes` | HU-12, HU-141 · existente | [Escritorio](wireframes/wf-09-listado-personal.png) · [Móvil 360 px](wireframes/wf-09-listado-personal-movil.png) |
-| WF-10 | Detalle y cambio de estado | PERSONAL, ADMIN | `/solicitudes/:id` | HU-13, HU-15, HU-16, HU-18 · existente; HU-140 propuesto | [Escritorio](wireframes/wf-10-detalle-solicitud.png) · [Móvil 360 px](wireframes/wf-10-detalle-solicitud-movil.png) |
-| WF-11 | Calendario | PERSONAL, ADMIN | `/calendario` | HU-19, HU-142, HU-74 · existente | [Escritorio](wireframes/wf-11-calendario.png) · [Móvil 360 px](wireframes/wf-11-calendario-movil.png) |
+| WF-09 | Listado de solicitudes del personal | PERSONAL, ADMIN | `/solicitudes` | HU-12, HU-12.1 (#141) · existente | [Escritorio](wireframes/wf-09-listado-personal.png) · [Móvil 360 px](wireframes/wf-09-listado-personal-movil.png) |
+| WF-10 | Detalle y cambio de estado | PERSONAL, ADMIN | `/solicitudes/:id` | HU-13, HU-15, HU-16, HU-18, HU-140 · existente | [Escritorio](wireframes/wf-10-detalle-solicitud.png) · [Móvil 360 px](wireframes/wf-10-detalle-solicitud-movil.png) |
+| WF-11 | Calendario | PERSONAL, ADMIN | `/calendario` | HU-19, HU-19.1 (#142), HU-74 · existente | [Escritorio](wireframes/wf-11-calendario.png) · [Móvil 360 px](wireframes/wf-11-calendario-movil.png) |
 | WF-12 | Gestión de usuarios del personal | ADMIN | `/admin/usuarios` | HU-05 · existente | [Escritorio](wireframes/wf-12-gestion-usuarios.png) · [Móvil 360 px](wireframes/wf-12-gestion-usuarios-movil.png) |
 | WF-13 | Capacidad de la sala | ADMIN | `/admin/capacidad-sala` | HU-20.1 / HU-74 · existente | [Escritorio](wireframes/wf-13-capacidad-sala.png) · [Móvil 360 px](wireframes/wf-13-capacidad-sala-movil.png) |
 | WF-14 | Sincronización con Everything | ADMIN | `/admin/sincronizacion` | HU-138 · existente | [Escritorio](wireframes/wf-14-sincronizacion-everything.png) · [Móvil 360 px](wireframes/wf-14-sincronizacion-everything-movil.png) |
-| WF-15 | Material para el personal | PERSONAL, ADMIN | `/personal/materiales` | HU-08, HU-109 · existente; HU-140 propuesto | [Escritorio](wireframes/wf-15-material-personal.png) · [Móvil 360 px](wireframes/wf-15-material-personal-movil.png) |
+| WF-15 | Material para el personal | PERSONAL, ADMIN | `/personal/materiales` | HU-08, HU-109, HU-140 · existente | [Escritorio](wireframes/wf-15-material-personal.png) · [Móvil 360 px](wireframes/wf-15-material-personal-movil.png) |
 
 Las rutas existentes se contrastaron con
 [`routes.ts`](../frontend/src/routes.ts), [`App.tsx`](../frontend/src/App.tsx)
@@ -413,6 +413,66 @@ alta manual de material (WF-05 descartada). HU-140 muestra **«COPIA DIGITAL: S�
 solo el nombre del archivo cuando existe y avisos de código duplicado o inválido.
 Nunca envía ni muestra rutas completas o unidad del disco; tampoco abre/descarga
 archivos. El acceso propuesto a WF-14 solo es visible para ADMIN.
+
+## Aplicación en el frontend (HU-46.1, #143)
+
+**26 de noviembre de 2026.** El frontend se ajustó a esta versión 3.0 de los
+bocetos. La revisión de G6 sigue pendiente (ver más abajo): el ajuste sigue los
+bocetos tal como están y, si G6 pide cambios, se aplican después en el mismo
+código compartido.
+
+Qué cambió en todas las pantallas con sesión (WF-03 a WF-15):
+
+- **Identidad.** Fondo crema `#F4F0E8`, texto `#171717`, amarillo `#F5C400`
+  para acciones principales y selección, Inter (la misma fuente local de
+  `wireframes/assets/`), tarjetas blancas redondeadas con sombra suave y tablas
+  con encabezado oscuro. Los colores viven como variables en
+  [`global.css`](../frontend/src/styles/global.css). La prueba de contraste
+  [`global.a11y.spec.ts`](../frontend/src/styles/global.a11y.spec.ts) comprueba
+  cada combinación de texto y fondo.
+- **Cabecera y menú.** Logos de CLENA y Universidad del Norte con la misma altura
+  (52 px en escritorio, 36 px en móvil). Menú lateral oscuro con iconos y la
+  sección actual en amarillo, también en pantallas hijas: «Solicitudes» queda
+  marcada en WF-08 y WF-10. A 900 px o menos, el menú se pliega tras la barra
+  **«Menú»**, que muestra el rol. El panel tiene las mismas opciones, se cierra
+  con Escape y devuelve el foco al botón. La cabecera enlaza a «Mi perfil».
+- **Banda de título.** Cada pantalla abre con el título y la frase de su
+  boceto, sobre la banda arena (`PageHeader`).
+- **Listados en móvil.** A 360 px, cada fila es una tarjeta con la etiqueta de
+  cada dato encima de su valor, como en las composiciones móviles.
+- **Escritorio.** El menú lateral mide 264 px, en proporción con los 300 px del
+  boceto de 1920 px, para que a 1280 px quepan filtros y tabla sin desplazamiento
+  horizontal.
+- **Acceso y registro** (WF-01, WF-02). Cabecera con «Inicio de sesión» y «Crear
+  cuenta», sin menú de sesión. WF-01 tiene el panel «La historia nos conecta» y la
+  tarjeta «Acceso a CLENA». WF-02 tiene la banda «Registro público», los datos de
+  la cuenta a la izquierda y la tarjeta «Datos de caracterización» a la derecha.
+
+Las pantallas nuevas del sprint quedan dentro del mismo sistema:
+sincronización con Everything (WF-14, #138), indicador de copia digital (WF-04,
+WF-10 y WF-15, #140), listado con actualización automática (WF-09, HU-12.1 #141)
+y calendario (WF-11, HU-19.1 #142).
+
+### Diferencias que se mantienen a propósito
+
+| Pantalla | Boceto | Aplicación | Motivo |
+|---|---|---|---|
+| Todas | Huecos rotulados «Fotografía de la ciudad» en la banda, el menú y el acceso | Sin hueco | Las fotografías no se han entregado. Un rótulo de espacio reservado en la aplicación real confunde a quien la usa. Se añadirán cuando lleguen. |
+| Todas con sesión | Buscador global «Buscar por código, título o solicitante» en la cabecera | No se muestra | No existe una búsqueda global en la API y esta HU no agrega funciones. Cada listado conserva su buscador. |
+| Todas con sesión | Dos círculos: persona e iniciales «AP» | Un enlace «Mi perfil» con el icono y el rol | La sesión no trae el nombre de la persona. El rol es lo que cambia el menú. En 360 px el enlace está dentro del menú. |
+| Menú PERSONAL / ADMIN | No incluye reportes | «Reportes» (PERSONAL y ADMIN, HU-26) y «Tiempos de atención» (solo ADMIN) | Son funciones existentes. Van después de «Calendario» y al final de las opciones de ADMIN. |
+| Menú ADMIN | «Everything *» | «Sincronización» | Ya registrado en HU-138. El nombre dice qué hace la pantalla. |
+| Todas con sesión | — | Enlace «Saltar al contenido» al tabular | Accesibilidad básica (HU-30): evita recorrer el menú en cada pantalla. |
+| Todas | Borde de campos ocre `#D8B477`; texto dorado | Borde `#977842`; texto dorado `#735600` | El ocre del boceto no llega a 3:1 sobre el fondo ni el amarillo a 4.5:1 como texto (HU-30). Se oscurecieron solo lo necesario. |
+| WF-04, WF-09, WF-11, WF-12, WF-15 | En escritorio, el buscador está en la columna de resultados, a la derecha de los filtros | El buscador va encima de filtros y resultados | Un único orden de lectura y de tabulación. Coincide con el boceto móvil (buscador → filtros → resultados). |
+| WF-04, WF-06, WF-09, WF-12, WF-15 | Columna de filtros siempre visible en escritorio | Con menos de 58rem (≈ 930 px) para filtros y resultados, por ejemplo a 1024 px con el menú lateral, los filtros se pliegan tras «Filtros». Con menos de 46rem, las filas pasan a tarjetas, como en tablet. | Así la tabla nunca se sale de la pantalla junto al menú lateral (HU-29). Se decide por el ancho disponible (*container query*), no por el de la ventana. |
+| WF-04, WF-09, WF-12, WF-15 | Filtros como listas desplegables | Opciones visibles (botones de opción) | Ya estaban así: se ven todos los valores sin abrir un desplegable. |
+| WF-04 (PUBLICO) | «DISPONIBLE EN DIGITAL» / «No» | «Sí · Disponible en digital» / «No» | Texto entregado y probado en #140 a través de Nginx. Las mayúsculas del boceto son notación de etiqueta. |
+| WF-10, WF-15 | «REVISAR MATERIAL: código duplicado / sin código válido» | «Para revisión: Código duplicado / Sin código válido» | «Para revisión» es el término del [glosario](modelo-dominio.md) y el texto entregado en #140. |
+| WF-10 | Título «Detalle y cambio de estado» | El título es el radicado (`SOL-…`) con su estado; «Detalle y cambio de estado» va encima | Identifica la solicitud para lectores de pantalla y al volver de otra pestaña. Las secciones del solicitante, la solicitud y el historial se conservan tras las acciones, porque el boceto las resume en una línea. |
+| WF-11 | Solo «Filtrar por material» | Filtros de estado, material, solicitante y fechas | Ya estaban implementados y el personal los usa para ubicar citas. |
+| WF-11 | Celdas de 124 px | Celdas más altas, todas iguales | Caben tres citas y «+N más» sin cortar texto (HU-19.1). La lista completa del día se abre en un diálogo. |
+| WF-11, 360 px | Agenda con las citas del día | Agenda del mes, día por día, incluidos los días sin citas con su ocupación | Muestra también la disponibilidad de cada día, que es lo que se consulta al agendar. |
 
 ## Criterios transversales para revisar
 

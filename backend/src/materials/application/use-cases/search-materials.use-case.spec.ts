@@ -45,21 +45,82 @@ describe('SearchMaterialsUseCase', () => {
         new Material({
           ...buildMaterial(),
           source: 'EVERYTHING',
-          digitalPath: 'D:\\Digitalizados\\M245.pdf',
+          digitalPath:
+            'C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\1ra\\1931\\1ra-1931 - Esc 0001-0109 - Ene',
+          reviewReason: 'NO_PATTERN',
         }),
       ],
       total: 1,
     });
 
-    const result = await useCase.execute({});
+    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
 
     expect(result.items[0]).not.toHaveProperty('location');
     expect(result.items[0]).not.toHaveProperty('digitalPath');
     expect(result.items[0]).not.toHaveProperty('source');
+    expect(result.items[0]).toMatchObject({ hasDigitalCopy: true });
+    expect(result.items[0]).not.toHaveProperty('digitalFolderName');
+    expect(result.items[0]).not.toHaveProperty('needsReview');
+    expect(result.items[0]).not.toHaveProperty('reviewReason');
   });
 
+  it.each(['PERSONAL', 'ADMIN'] as const)(
+    'sends %s only the leaf folder name and review info, never the full path (HU-140)',
+    async (viewerRole) => {
+      search.mockResolvedValue({
+        items: [
+          new Material({
+            ...buildMaterial(),
+            id: 'mat-copy',
+            source: 'EVERYTHING',
+            digitalPath:
+              'Z:\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera\\1931\\1ra-1931 - Esc 0001-0109 - Ene',
+            reviewReason: null,
+          }),
+          new Material({
+            ...buildMaterial(),
+            id: 'mat-review',
+            source: 'EVERYTHING',
+            digitalPath: 'Z:\\Aha\\Fondo - Periódicos\\1925-03 Marzo',
+            reviewReason: 'DUPLICATE_CODE',
+          }),
+          new Material({
+            ...buildMaterial(),
+            id: 'mat-none',
+            source: 'EVERYTHING',
+            digitalPath: null,
+            reviewReason: null,
+          }),
+        ],
+        total: 3,
+      });
+
+      const result = await useCase.execute({ viewerRole });
+
+      expect(result.items[0]).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: '1ra-1931 - Esc 0001-0109 - Ene',
+        needsReview: false,
+        reviewReason: null,
+      });
+      expect(result.items[0]).not.toHaveProperty('digitalPath');
+      expect(result.items[1]).toMatchObject({
+        hasDigitalCopy: true,
+        digitalFolderName: '1925-03 Marzo',
+        needsReview: true,
+        reviewReason: 'DUPLICATE_CODE',
+      });
+      expect(result.items[2]).toMatchObject({
+        hasDigitalCopy: false,
+        digitalFolderName: null,
+        needsReview: false,
+        reviewReason: null,
+      });
+    },
+  );
+
   it('uses page 1, 20 per page and title ascending by default', async () => {
-    const result = await useCase.execute({});
+    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
 
     expect(search).toHaveBeenCalledWith({
       q: undefined,
@@ -84,6 +145,7 @@ describe('SearchMaterialsUseCase', () => {
       order: 'desc',
       page: 2,
       limit: 5,
+      viewerRole: 'PERSONAL',
     });
 
     expect(search).toHaveBeenCalledWith({
@@ -100,7 +162,7 @@ describe('SearchMaterialsUseCase', () => {
   });
 
   it('sends the publication date without time', async () => {
-    const result = await useCase.execute({});
+    const result = await useCase.execute({ viewerRole: 'PUBLICO' });
 
     expect(result.items[0].publicationDate).toBe('1915-03-21');
   });

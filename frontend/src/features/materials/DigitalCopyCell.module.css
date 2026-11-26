@@ -1,0 +1,33 @@
+.cell {
+  min-width: 9rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: var(--chip-closed);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badge[data-available='true'] {
+  background: var(--chip-received);
+}
+
+.folderName {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.review {
+  display: block;
+  width: fit-content;
+  margin-top: 0.3rem;
+}

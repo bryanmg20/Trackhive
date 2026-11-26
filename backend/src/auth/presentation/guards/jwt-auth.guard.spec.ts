@@ -1,5 +1,6 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { IUserRepository } from '../../../users/domain/repositories/user.repository';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type {
   TokenPayload,
@@ -17,6 +18,7 @@ describe('JwtAuthGuard', () => {
   let isPublic: boolean;
   let verifyAccessToken: jest.Mock<Promise<TokenPayload | null>, [string]>;
   let guard: JwtAuthGuard;
+  let findById: jest.Mock;
 
   beforeEach(() => {
     isPublic = false;
@@ -29,7 +31,12 @@ describe('JwtAuthGuard', () => {
       ),
     );
     const tokenService = { verifyAccessToken } as unknown as ITokenService;
-    guard = new JwtAuthGuard(reflector, tokenService);
+    findById = jest
+      .fn()
+      .mockResolvedValue({ id: 'user-1', role: 'PUBLICO', active: true });
+    guard = new JwtAuthGuard(reflector, tokenService, {
+      findById,
+    } as unknown as IUserRepository);
   });
 
   it('lets a @Public() endpoint through without a token', async () => {
@@ -39,7 +46,20 @@ describe('JwtAuthGuard', () => {
       true,
     );
     expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(findById).not.toHaveBeenCalled();
   });
+
+  it.each([null, { id: 'user-1', active: false }])(
+    'rejects removed or inactive accounts despite a valid JWT',
+    async (account) => {
+      findById.mockResolvedValueOnce(account);
+      await expect(
+        guard.canActivate(
+          contextFor({ headers: { authorization: 'Bearer valid' } }),
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+    },
+  );
 
   it('puts the user from a valid token on the request', async () => {
     const request = { headers: { authorization: 'Bearer valid' } };

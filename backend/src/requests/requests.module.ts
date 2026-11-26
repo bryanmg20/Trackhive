@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { DeleteMyAccountUseCase } from './application/use-cases/delete-my-account.use-case';
+import { ACCOUNT_ERASURE } from './application/ports/account-erasure.port';
+import { PrismaAccountErasure } from './infrastructure/persistence/prisma-account-erasure';
 import { MaterialsModule } from '../materials/materials.module';
 import { UsersModule } from '../users/users.module';
 import { RequesterResolver } from './application/services/requester-resolver';
@@ -57,6 +60,8 @@ import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profil
     ReportController,
   ],
   providers: [
+    DeleteMyAccountUseCase,
+    { provide: ACCOUNT_ERASURE, useClass: PrismaAccountErasure },
     GetMyProfileUseCase,
     UpdateMyProfileUseCase,
     { provide: REQUEST_REPOSITORY, useClass: PrismaRequestRepository },

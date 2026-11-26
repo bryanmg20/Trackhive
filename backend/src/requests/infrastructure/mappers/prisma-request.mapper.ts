@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { hasValidDigitalCopy } from '../../../materials/domain/value-objects/material-digital-copy';
 import { Request } from '../../domain/entities/request.entity';
 import type { OriginChannel } from '../../domain/entities/request.entity';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
@@ -66,10 +67,10 @@ export class PrismaRequestMapper {
       references: model.references.map((row) =>
         PrismaRequestReferenceMapper.toDomain(row),
       ),
-      // NULL digital_path = no digital copy (HU-134)
+      // NULL or root-only digital_path = no valid digital copy (HU-134, HU-139, HU-140)
       ...summarizeDigitalCopies(
         model.items.map(({ material }) => ({
-          hasDigitalCopy: Boolean(material.digitalPath),
+          hasDigitalCopy: hasValidDigitalCopy(material.digitalPath),
           status: material.status,
         })),
       ),

@@ -5,6 +5,7 @@ import { ROUTES } from '../../routes';
 import { readSessionRole } from '../auth/session';
 import type { UserRole } from '../auth/session';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import type { SelectedMaterial } from '../requests/selected-materials';
 import { buildNewRequestPath } from '../requests/selected-materials';
 import {
@@ -21,9 +22,14 @@ import type {
   SearchMaterialsParams,
   SortOrder,
 } from './api/search-materials';
+import { useUrlParams } from '../navigation/url-params';
+import { DigitalCopyCell } from './DigitalCopyCell';
+import {
+  DEFAULT_MATERIAL_PARAMS,
+  parsePublicMaterialParams,
+} from './material-search-params';
 import styles from './MaterialSearchPage.module.css';
 
-const PAGE_SIZE = 10;
 const FORM_ID = 'material-search';
 
 interface SearchResponse {
@@ -53,15 +59,13 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
   // The public user picks the materials to request for themselves
   const canSelect = role === 'PUBLICO';
 
-  const [text, setText] = useState('');
-  const [collection, setCollection] = useState('');
+  const [params, setParams] = useUrlParams(
+    parsePublicMaterialParams,
+    DEFAULT_MATERIAL_PARAMS,
+  );
+  const [text, setText] = useState(params.q ?? '');
+  const [collection, setCollection] = useState(params.collection ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [params, setParams] = useState<SearchMaterialsParams>({
-    sort: 'title',
-    order: 'asc',
-    page: 1,
-    limit: PAGE_SIZE,
-  });
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [selected, setSelected] = useState<SelectedMaterial[]>([]);
@@ -171,10 +175,11 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
   return (
     <AppLayout footer={requestBar}>
       <section className={styles.hero} aria-labelledby="page-title">
-        <p className={styles.eyebrow}>Consulta documental</p>
-        <h1 id="page-title" className={styles.title}>
-          Buscar material
-        </h1>
+        <PageHeader
+          titleId="page-title"
+          title="Búsqueda de material"
+          description="Explore el catálogo y seleccione el material que necesita consultar."
+        />
         <form
           id={FORM_ID}
           className={styles.searchBar}
@@ -190,7 +195,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
             maxLength={100}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Título, autor o código"
+            placeholder="Título, autor o código…"
           />
           <button className={styles.primary} type="submit">
             Buscar
@@ -198,7 +203,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
         </form>
       </section>
 
-      <div className={styles.layout}>
+      <div className={styles.tableLayout}>
         <aside className={styles.sidebar} aria-label="Filtros">
           <button
             type="button"
@@ -343,6 +348,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                     <th scope="col">Título</th>
                     <th scope="col">Tipo</th>
                     <th scope="col">Estado</th>
+                    <th scope="col">Copia digital</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -384,6 +390,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                           {MATERIAL_STATUS_LABELS[material.status]}
                         </span>
                       </td>
+                      <DigitalCopyCell hasDigitalCopy={material.hasDigitalCopy} />
                     </tr>
                   ))}
                 </tbody>

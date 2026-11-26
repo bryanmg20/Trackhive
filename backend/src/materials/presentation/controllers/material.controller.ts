@@ -59,7 +59,9 @@ export class MaterialController {
     summary: 'Lista y busca material del archivo',
     description:
       'Devuelve el material paginado, con filtros por tipo, colección y ' +
-      'estado, búsqueda por texto y ordenamiento.',
+      'estado, búsqueda por texto y ordenamiento. Incluye si tiene copia ' +
+      'digital; solo PERSONAL y ADMIN ven el nombre de carpeta y la marca de ' +
+      'revisión, nunca la ruta completa (HU-140).',
   })
   @ApiOkResponse({
     description: 'Página de materiales',
@@ -79,8 +81,12 @@ export class MaterialController {
   })
   async search(
     @Query() query: SearchMaterialsQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<PaginatedMaterialsResponseDto> {
-    return this.searchMaterialsUseCase.execute({ ...query });
+    return this.searchMaterialsUseCase.execute({
+      ...query,
+      viewerRole: user.role,
+    });
   }
 
   @Patch(':id/status')
@@ -134,6 +140,7 @@ export class MaterialController {
       status: body.status,
       reason: body.reason,
       userId: user.id,
+      viewerRole: user.role,
     });
   }
 

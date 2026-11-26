@@ -20,6 +20,7 @@ model UserModel {
   // Allowed values (CHECK in the migration): ADMIN, PERSONAL, PUBLICO
   role                      String                   @db.VarChar(10)
   active                    Boolean                  @default(true)
+  deletedAt                 DateTime?                @map("deleted_at") @db.Timestamptz
   // Consent of public registrations (Ley 1581). NULL on seeded accounts.
   // Both columns are set together (CHECK in the migration).
   privacyPolicyAcceptedAt   DateTime?                @map("privacy_policy_accepted_at") @db.Timestamptz

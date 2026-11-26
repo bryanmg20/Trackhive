@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useModalDialog } from '../layout/use-modal-dialog';
 import { MAX_LOAN_NOTES_LENGTH } from './api/material-loans';
 import searchStyles from './MaterialSearchPage.module.css';
 import styles from './LoanActionModal.module.css';
@@ -27,16 +28,7 @@ export function LoanActionModal({
   onCancel,
 }: LoanActionModalProps) {
   const [notes, setNotes] = useState('');
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !submitting) {
-        onCancel();
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel, submitting]);
+  const dialog = useModalDialog();
 
   const isDeliver = mode === 'deliver';
   const title = isDeliver
@@ -56,62 +48,66 @@ export function LoanActionModal({
   }
 
   return (
-    <div className={styles.backdrop}>
-      <section
-        className={styles.dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="loan-action-title"
-      >
-        <h2 id="loan-action-title" className={styles.title}>
-          {title}
-        </h2>
-        <p className={styles.subtitle}>
-          <strong>{materialTitle}</strong> · {materialCatalogCode}
-        </p>
+    <dialog
+      ref={dialog}
+      className={styles.dialog}
+      aria-labelledby="loan-action-title"
+      onCancel={(event) => {
+        // Escape: the dialog stays mounted until the screen unmounts it
+        event.preventDefault();
+        if (!submitting) {
+          onCancel();
+        }
+      }}
+    >
+      <h2 id="loan-action-title" className={styles.title}>
+        {title}
+      </h2>
+      <p className={styles.subtitle}>
+        <strong>{materialTitle}</strong> · {materialCatalogCode}
+      </p>
 
-        <form onSubmit={handleSubmit}>
-          <div className={styles.field}>
-            <label htmlFor="loan-action-notes">Observaciones (opcional)</label>
-            <textarea
-              id="loan-action-notes"
-              rows={3}
-              maxLength={MAX_LOAN_NOTES_LENGTH}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder={
-                isDeliver
-                  ? 'Ej.: Entregado en sala con guantes'
-                  : 'Ej.: Devuelto completo y en buen estado'
-              }
-            />
-          </div>
+      <form onSubmit={handleSubmit}>
+        <div className={styles.field}>
+          <label htmlFor="loan-action-notes">Observaciones (opcional)</label>
+          <textarea
+            id="loan-action-notes"
+            rows={3}
+            maxLength={MAX_LOAN_NOTES_LENGTH}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={
+              isDeliver
+                ? 'Ej.: Entregado en sala con guantes'
+                : 'Ej.: Devuelto completo y en buen estado'
+            }
+          />
+        </div>
 
-          {error ? (
-            <p className={searchStyles.error} role="alert">
-              {error}
-            </p>
-          ) : null}
+        {error ? (
+          <p className={searchStyles.error} role="alert">
+            {error}
+          </p>
+        ) : null}
 
-          <div className={styles.actions}>
-            <button
-              type="submit"
-              className={searchStyles.primary}
-              disabled={submitting}
-            >
-              {submitLabel}
-            </button>
-            <button
-              type="button"
-              className={styles.secondary}
-              onClick={onCancel}
-              disabled={submitting}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </section>
-    </div>
+        <div className={styles.actions}>
+          <button
+            type="submit"
+            className={searchStyles.primary}
+            disabled={submitting}
+          >
+            {submitLabel}
+          </button>
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={onCancel}
+            disabled={submitting}
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </dialog>
   );
 }

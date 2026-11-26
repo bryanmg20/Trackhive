@@ -34,8 +34,9 @@
 .date {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .change {
@@ -67,7 +68,8 @@
 .commentLabel {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }

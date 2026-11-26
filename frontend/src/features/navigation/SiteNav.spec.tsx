@@ -55,7 +55,7 @@ describe('SiteNav', () => {
     renderNav();
 
     expect(
-      screen.getByRole('link', { name: 'Buscar material' }),
+      screen.getByRole('link', { name: 'Inicio' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Mis solicitudes' }),
@@ -70,7 +70,7 @@ describe('SiteNav', () => {
       screen.queryByRole('link', { name: 'Calendario' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: 'Material' }),
+      screen.queryByRole('link', { name: 'Archivo' }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'Registrar solicitud' }),
@@ -108,7 +108,7 @@ describe('SiteNav', () => {
     expect(
       screen.getByRole('link', { name: 'Calendario' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Material' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Archivo' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Reportes' })).toHaveAttribute(
       'href',
       '/reportes/material-mas-solicitado',
@@ -117,7 +117,7 @@ describe('SiteNav', () => {
       screen.queryByRole('link', { name: 'Registrar solicitud' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: 'Buscar material' }),
+      screen.queryByRole('link', { name: 'Inicio' }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'Nueva solicitud' }),
@@ -170,6 +170,58 @@ describe('SiteNav', () => {
     expect(
       screen.getByRole('link', { name: 'Solicitudes' }),
     ).toBeInTheDocument();
+  });
+
+  it('lists the sections in the wireframe order for each role', () => {
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PUBLICO'));
+    const view = renderNav();
+    expect(
+      screen.getAllByRole('link').map((link) => link.textContent),
+    ).toEqual(['Inicio', 'Mis solicitudes', 'Mi perfil']);
+    view.unmount();
+
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PERSONAL'));
+    renderNav();
+    expect(
+      screen.getAllByRole('link').map((link) => link.textContent),
+    ).toEqual(['Solicitudes', 'Archivo', 'Calendario', 'Reportes', 'Mi perfil']);
+  });
+
+  it('keeps «Solicitudes» selected on the request detail (WF-10)', () => {
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PERSONAL'));
+
+    render(
+      <MemoryRouter initialEntries={['/solicitudes/abc']}>
+        <SiteNav />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Solicitudes' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Calendario' }),
+    ).not.toHaveAttribute('aria-current');
+  });
+
+  it('opens the «Menú» panel and closes it with Escape, returning the focus', async () => {
+    sessionStorage.setItem('trackhive.accessToken', tokenWithRole('PERSONAL'));
+    const user = userEvent.setup();
+    renderNav();
+
+    const toggle = screen.getByRole('button', { name: /Menú/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('Personal');
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    screen.getByRole('link', { name: 'Calendario' }).focus();
+    await user.keyboard('{Escape}');
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveFocus();
   });
 
   it('shows no menu to a visitor without a session', () => {

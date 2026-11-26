@@ -1,55 +1,53 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { ROUTES } from '../../../routes';
+import { BrandLogos } from '../../brand/BrandLogos';
 import styles from './AuthLayout.module.css';
 
 interface AuthLayoutProps {
   children: ReactNode;
-  spineLabel?: string;
+  /**
+   * `access` (WF-01): welcome panel on the left and the form card on the
+   * right. `wide` (WF-02): the form uses the whole width under the header
+   * band that the page draws itself.
+   */
+  variant?: 'access' | 'wide';
 }
 
-export function AuthLayout({
-  children,
-  spineLabel = 'USUARIO PÚBLICO · REGISTRO',
-}: AuthLayoutProps) {
+/**
+ * Screens without a session (WF-01 login, WF-02 register): the CLENA and
+ * Uninorte logos with «Inicio de sesión» and «Crear cuenta», no session
+ * menu.
+ */
+export function AuthLayout({ children, variant = 'access' }: AuthLayoutProps) {
   return (
-    <main className={styles.page}>
-      <aside className={styles.panel} aria-label="Presentación de Trackhive">
-        <div className={styles.brand}>
-          <p className={styles.wordmark}>
-            Trackhive<span className={styles.wordmarkDot}>.</span>
-          </p>
-          <p className={styles.brandTag}>CLENA · Archivo</p>
-        </div>
+    <div className={styles.shell}>
+      <header className={styles.topbar}>
+        <BrandLogos />
+        <nav className={styles.actions} aria-label="Acceso">
+          <Link className={styles.loginLink} to={ROUTES.login}>
+            Inicio de sesión
+          </Link>
+          <Link className={styles.registerLink} to={ROUTES.register}>
+            Crear cuenta
+          </Link>
+        </nav>
+      </header>
 
-        <div className={styles.panelCopy}>
-          <p className={styles.eyebrow}>Consulta documental</p>
-          <p className={styles.statement}>
-            Pida material.
-            <br />
-            Siga su <em>solicitud</em>.
-          </p>
-          <p className={styles.panelBody}>
-            Una cuenta reúne sus solicitudes y su estado en un solo lugar.
-          </p>
-        </div>
-
-        <p className={styles.panelMeta}>
-          <span>Archivo</span>
-          <span>Consulta</span>
-          <span>Seguimiento</span>
-        </p>
-      </aside>
-
-      <section className={styles.content}>
-        <div className={styles.card}>
-          <div className={styles.spine} aria-hidden="true">
-            <span className={styles.spineText}>{spineLabel}</span>
-          </div>
-          <div className={styles.cardBody}>{children}</div>
-        </div>
-        <p className={styles.caption}>
-          Trackhive · Sistema de consulta y seguimiento
-        </p>
-      </section>
-    </main>
+      {variant === 'access' ? (
+        <main className={styles.access}>
+          <section className={styles.welcome} aria-label="Presentación">
+            <p className={styles.statement}>La historia nos conecta.</p>
+            <p className={styles.welcomeBody}>
+              Consulte el patrimonio documental del Archivo Histórico del
+              Atlántico.
+            </p>
+          </section>
+          <div className={styles.card}>{children}</div>
+        </main>
+      ) : (
+        <main className={styles.wide}>{children}</main>
+      )}
+    </div>
   );
 }
