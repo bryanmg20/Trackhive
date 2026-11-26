@@ -1,3 +1,4 @@
+import type { UserRole } from '../../../users/domain/enums/user-role';
 import { canViewDigitalCopyDetails } from './material-digital-copy-visibility';
 
 describe('canViewDigitalCopyDetails (HU-140)', () => {
@@ -6,7 +7,8 @@ describe('canViewDigitalCopyDetails (HU-140)', () => {
     expect(canViewDigitalCopyDetails('ADMIN')).toBe(true);
   });
 
-  it('hides folder name and review status from PUBLICO', () => {
+  it('hides folder name and review status from PUBLICO and unlisted roles', () => {
     expect(canViewDigitalCopyDetails('PUBLICO')).toBe(false);
+    expect(canViewDigitalCopyDetails('INVITADO' as UserRole)).toBe(false);
   });
 });

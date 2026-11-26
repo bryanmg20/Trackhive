@@ -155,15 +155,3 @@
   font-size: 0.85rem;
   overflow-wrap: anywhere;
 }
-
-.reviewBadge {
-  justify-self: start;
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--gold-text);
-  border-radius: 3px;
-  background: var(--surface);
-  color: var(--gold-deep);
-  font-size: 0.8rem;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}

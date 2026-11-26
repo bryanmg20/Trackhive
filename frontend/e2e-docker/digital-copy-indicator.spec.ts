@@ -18,11 +18,19 @@ interface Session {
   refreshToken: string;
 }
 
+// Demo seed catalog codes (`MATERIALS`) and tracking codes (`REQUESTS`) from
+// `backend/prisma/seed.ts`, loaded when the stack starts with `RUN_SEED=true`.
 const WITH_COPY_CODE = 'NOT1-1931-0001-0109';
 const WITH_COPY_FOLDER = '1ra-1931 - Esc 0001-0109 - Ene';
 const REVIEW_CODE = 'PER-7C52B4D6';
 const REVIEW_FOLDER = '1925-03 Marzo';
 const WITHOUT_COPY_CODE = 'NOT4-1956-0001-0180';
+
+const REQ_WITH_COPY_TRACKING = 'SOL-2026-90001';
+const REQ_WITH_COPY_MATERIAL = 'NOT1-1931-0207-0303';
+const REQ_WITH_COPY_FOLDER = '1ra-1931 - Esc 0207-0303 - Mar';
+const REQ_REVIEW_TRACKING = 'SOL-2026-90002';
+const REQ_WITHOUT_COPY_TRACKING = 'SOL-2026-90011';
 
 async function signIn(
   request: APIRequestContext,
@@ -207,14 +215,14 @@ test('Request detail shows Copia digital, Everything folder name and review noti
     findRequestIdByTracking(
       request,
       headers,
-      'SOL-2026-90001',
-      'NOT1-1931-0207-0303',
+      REQ_WITH_COPY_TRACKING,
+      REQ_WITH_COPY_MATERIAL,
     ),
-    findRequestIdByTracking(request, headers, 'SOL-2026-90002', REVIEW_CODE),
+    findRequestIdByTracking(request, headers, REQ_REVIEW_TRACKING, REVIEW_CODE),
     findRequestIdByTracking(
       request,
       headers,
-      'SOL-2026-90011',
+      REQ_WITHOUT_COPY_TRACKING,
       WITHOUT_COPY_CODE,
     ),
   ]);
@@ -235,7 +243,7 @@ test('Request detail shows Copia digital, Everything folder name and review noti
   const secCopy = page.getByRole('region', { name: 'Material solicitado' });
   await expect(secCopy).toContainText('Copia digital: Sí');
   await expect(secCopy).toContainText(
-    'Carpeta en Everything: 1ra-1931 - Esc 0207-0303 - Mar',
+    `Carpeta en Everything: ${REQ_WITH_COPY_FOLDER}`,
   );
   await expect(secCopy).not.toContainText('docs_simulados');
   await expect(secCopy.getByRole('link')).toHaveCount(0);

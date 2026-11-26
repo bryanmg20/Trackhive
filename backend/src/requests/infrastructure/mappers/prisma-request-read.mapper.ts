@@ -1,6 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { isMaterialReviewReason } from '../../../materials/domain/enums/material-review-reason';
-import { extractDigitalFolderName } from '../../../materials/domain/value-objects/digital-copy-name';
+import { resolveMaterialDigitalCopy } from '../../../materials/domain/value-objects/material-digital-copy';
 import { isAppointmentStatus } from '../../domain/enums/appointment-status';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isMaterialReferenceKind } from '../../domain/enums/material-reference-kind';
@@ -373,15 +372,12 @@ export class PrismaRequestReadMapper {
         documentNumber: model.requester.documentNumber,
       },
       materials: model.items.map(({ material, itemStatus }) => {
-        const reviewReason = material.reviewReason ?? null;
-        if (reviewReason !== null && !isMaterialReviewReason(reviewReason)) {
-          throw new Error(
-            `Material ${material.id} has an invalid stored review reason`,
-          );
-        }
-        const digitalFolderName = extractDigitalFolderName(
-          material.digitalPath,
-        );
+        // Same digital-copy and review rules as Material (HU-134, HU-139, HU-140);
+        // only the leaf folder name leaves this mapper
+        const digitalCopy = resolveMaterialDigitalCopy({
+          digitalPath: material.digitalPath,
+          reviewReason: material.reviewReason,
+        });
         return {
           id: material.id,
           catalogCode: material.catalogCode,
@@ -391,12 +387,7 @@ export class PrismaRequestReadMapper {
           collection: material.collection,
           status: material.status,
           itemStatus,
-          // NULL or root-only digital_path = no digital copy (HU-134, HU-140);
-          // only the leaf folder name leaves this mapper
-          hasDigitalCopy: digitalFolderName !== null,
-          digitalFolderName,
-          needsReview: reviewReason !== null,
-          reviewReason,
+          ...digitalCopy,
         };
       }),
       references: model.references.map((row) =>

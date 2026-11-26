@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import {
-  MATERIAL_REVIEW_REASON_LABELS,
   MATERIAL_STATUS_LABELS,
   MATERIAL_TYPE_LABELS,
   MaterialsApiError,
@@ -15,6 +14,7 @@ import {
 } from '../materials/api/material-loans';
 import { LoanActionModal } from '../materials/LoanActionModal';
 import type { LoanActionMode } from '../materials/LoanActionModal';
+import { ReviewBadge } from '../materials/ReviewBadge';
 import { AppLayout } from '../layout/AppLayout';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import type { ChangeRequestStatusResult } from './api/change-request-status';
@@ -478,14 +478,10 @@ export function RequestDetailPage() {
                         </code>
                       </span>
                     ) : null}
-                    {material.needsReview ? (
-                      <span className={styles.reviewBadge}>
-                        Para revisión
-                        {material.reviewReason
-                          ? `: ${MATERIAL_REVIEW_REASON_LABELS[material.reviewReason]}`
-                          : ''}
-                      </span>
-                    ) : null}
+                    <ReviewBadge
+                      needsReview={material.needsReview}
+                      reviewReason={material.reviewReason}
+                    />
                   </li>
                 ))}
               </ul>

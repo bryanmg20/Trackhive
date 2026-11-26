@@ -21,6 +21,7 @@ import type {
   SearchMaterialsParams,
   SortOrder,
 } from './api/search-materials';
+import { DigitalCopyCell } from './DigitalCopyCell';
 import styles from './MaterialSearchPage.module.css';
 
 const PAGE_SIZE = 10;
@@ -385,19 +386,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
                           {MATERIAL_STATUS_LABELS[material.status]}
                         </span>
                       </td>
-                      <td
-                        data-label="Copia digital"
-                        className={styles.digitalCell}
-                      >
-                        <span
-                          className={styles.digitalBadge}
-                          data-available={material.hasDigitalCopy}
-                        >
-                          {material.hasDigitalCopy
-                            ? 'Sí · Disponible en digital'
-                            : 'No'}
-                        </span>
-                      </td>
+                      <DigitalCopyCell hasDigitalCopy={material.hasDigitalCopy} />
                     </tr>
                   ))}
                 </tbody>

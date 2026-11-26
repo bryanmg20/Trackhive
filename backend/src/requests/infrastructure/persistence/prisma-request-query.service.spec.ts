@@ -1,4 +1,5 @@
 import type { PrismaService } from '../../../prisma/prisma.service';
+import { InvalidMaterialReviewReasonError } from '../../../materials/domain/errors/invalid-material-review-reason.error';
 import { PrismaRequestQueryService } from './prisma-request-query.service';
 
 describe('PrismaRequestQueryService', () => {
@@ -442,6 +443,28 @@ describe('PrismaRequestQueryService', () => {
       });
     });
 
+    it.each(['C:\\', '\\\\servidor\\Multimedia'])(
+      'says a material has no digital copy when its path is root-only %s (HU-140)',
+      async (digitalPath) => {
+        const { repository } = repositoryWith({
+          ...model,
+          items: [
+            {
+              ...model.items[0],
+              material: { ...model.items[0].material, digitalPath },
+            },
+          ],
+        });
+
+        const detail = await repository.findDetail('request-1');
+
+        expect(detail?.materials[0]).toMatchObject({
+          hasDigitalCopy: false,
+          digitalFolderName: null,
+        });
+      },
+    );
+
     it.each(['NO_PATTERN', 'DUPLICATE_CODE'] as const)(
       'maps reviewReason %s and needsReview to true (HU-140)',
       async (reviewReason) => {
@@ -464,7 +487,7 @@ describe('PrismaRequestQueryService', () => {
       },
     );
 
-    it('throws when a stored reviewReason is invalid', async () => {
+    it('throws InvalidMaterialReviewReasonError when a stored reviewReason is invalid', async () => {
       const { repository } = repositoryWith({
         ...model,
         items: [
@@ -479,7 +502,7 @@ describe('PrismaRequestQueryService', () => {
       });
 
       await expect(repository.findDetail('request-1')).rejects.toThrow(
-        /invalid stored review reason/i,
+        InvalidMaterialReviewReasonError,
       );
     });
 

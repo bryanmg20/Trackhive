@@ -15,10 +15,10 @@ import {
   formatBogotaDateTime,
   returnMaterial,
 } from './api/material-loans';
+import { DigitalCopyCell } from './DigitalCopyCell';
 import { LoanActionModal } from './LoanActionModal';
 import { MaterialHistoryModal } from './MaterialHistoryModal';
 import {
-  MATERIAL_REVIEW_REASON_LABELS,
   MATERIAL_STATUS_LABELS,
   MATERIAL_STATUSES,
   MATERIAL_TYPE_LABELS,
@@ -607,31 +607,13 @@ export function StaffMaterialsPage() {
                             {MATERIAL_STATUS_LABELS[status]}
                           </span>
                         </td>
-                        <td
-                          data-label="Copia digital"
-                          className={searchStyles.digitalCell}
-                        >
-                          <span
-                            className={searchStyles.digitalBadge}
-                            data-available={material.hasDigitalCopy}
-                          >
-                            {material.hasDigitalCopy ? 'Sí' : 'No'}
-                          </span>
-                          {material.hasDigitalCopy &&
-                          material.digitalFolderName ? (
-                            <code className={searchStyles.folderName}>
-                              {material.digitalFolderName}
-                            </code>
-                          ) : null}
-                          {material.needsReview ? (
-                            <span className={searchStyles.reviewBadge}>
-                              Para revisión
-                              {material.reviewReason
-                                ? `: ${MATERIAL_REVIEW_REASON_LABELS[material.reviewReason]}`
-                                : ''}
-                            </span>
-                          ) : null}
-                        </td>
+                        <DigitalCopyCell
+                          hasDigitalCopy={material.hasDigitalCopy}
+                          showDetails
+                          digitalFolderName={material.digitalFolderName}
+                          needsReview={material.needsReview}
+                          reviewReason={material.reviewReason}
+                        />
                         <td>
                           <div className={styles.rowActions}>
                             {status === 'EN_USO' ? (
