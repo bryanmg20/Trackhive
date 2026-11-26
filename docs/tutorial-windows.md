@@ -99,7 +99,13 @@ La forma más rápida es con `winget`, en una ventana de **PowerShell**:
 
 ```powershell
 winget install --id Git.Git -e
+```
+
+```powershell
 winget install --id Python.Python.3.12 -e
+```
+
+```powershell
 winget install --id Docker.DockerDesktop -e
 ```
 
@@ -113,7 +119,13 @@ Después:
 
    ```powershell
    git --version
+   ```
+
+   ```powershell
    python --version          # 3.11 o superior
+   ```
+
+   ```powershell
    docker compose version    # v2.24 o superior
    ```
 
@@ -125,7 +137,13 @@ En PowerShell:
 
 ```powershell
 cd $HOME
+```
+
+```powershell
 git clone https://github.com/bryanmg20/Trackhive.git
+```
+
+```powershell
 cd Trackhive
 ```
 
@@ -145,13 +163,35 @@ Todo en PowerShell, en la carpeta del repositorio.
 
    Los valores de la plantilla sirven tal cual para desarrollo. Solo falta uno: el token del agente.
 
-2. Genera el token (64 caracteres hexadecimales al azar) y cópialo al portapapeles:
+2. Genera el token (64 caracteres hexadecimales al azar) y cópialo al portapapeles. Ejecuta estos cinco comandos uno tras otro, en la misma ventana:
+
+   Reserva 32 bytes:
 
    ```powershell
    $b = New-Object byte[] 32
+   ```
+
+   Llénalos al azar con el generador criptográfico de Windows:
+
+   ```powershell
    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+   ```
+
+   Conviértelos en 64 caracteres hexadecimales:
+
+   ```powershell
    $token = -join ($b | ForEach-Object { $_.ToString('x2') })
+   ```
+
+   Cópialo al portapapeles:
+
+   ```powershell
    $token | Set-Clipboard
+   ```
+
+   Muéstralo en pantalla:
+
+   ```powershell
    $token
    ```
 
@@ -187,7 +227,7 @@ La primera vez construye las imágenes y tarda varios minutos. Al arrancar, el b
 docker compose ps
 ```
 
-Deben aparecer cuatro servicios: `postgres` y `mailpit` en `healthy`, y `backend` y `frontend` en `Up`.
+Deben aparecer cuatro servicios: `postgres` y `mailpit` en `healthy`, y `backend` y `frontend` en `Up`. Después:
 
 ```powershell
 curl.exe http://127.0.0.1:3000/api/v1/health
@@ -222,8 +262,15 @@ Otras direcciones útiles:
 
 El script [`dev/simulador/generar_docs.py`](../dev/simulador/generar_docs.py) crea un árbol de carpetas con la misma forma que el del CLENA, a partir de [`dev/simulador/convencion.yaml`](../dev/simulador/convencion.yaml). En la carpeta del repositorio:
 
+Instala sus dependencias:
+
 ```powershell
 python -m pip install -r dev\requirements.txt
+```
+
+Genera el árbol:
+
+```powershell
 python dev\simulador\generar_docs.py --salida C:\trackhive\docs_simulados --manifiesto C:\trackhive\manifiesto.json
 ```
 
@@ -292,12 +339,16 @@ Una instancia de Everything aparte, llamada `trackhive`, con su propio `.ini`. S
 
    Queda en segundo plano, con su icono en la bandeja del sistema. Si abres su ventana, solo verás las carpetas simuladas. Si Windows pregunta por el firewall, puedes cancelar: solo escucha en `127.0.0.1`.
 
-4. **Comprueba** que responde con usuario y contraseña, y que sin ellos responde 401:
+4. **Comprueba** que responde con usuario y contraseña:
 
    ```powershell
    curl.exe -u trackhive:trackhive-dev "http://127.0.0.1:8081/?search=folder:%20Ene&json=1&count=1"
    # Un JSON con "totalResults" mayor que 0 y, en "results", una carpeta de enero
+   ```
 
+   Y que sin ellos responde 401:
+
+   ```powershell
    curl.exe -i "http://127.0.0.1:8081/?json=1"
    # HTTP/1.1 401 Unauthorized
    ```
@@ -344,7 +395,11 @@ El Everything normal del PC, como el del CLENA. Indexa todo el disco `C:`, así 
    ```powershell
    curl.exe -u "trackhive:TU-CLAVE" "http://127.0.0.1:8082/?search=folder:%20%22C:%5Ctrackhive%5Cdocs_simulados%5C%22&json=1&count=1"
    # Un JSON con "totalResults" mayor que 0 y, en "results", una carpeta del árbol
+   ```
 
+   Y que sin usuario y contraseña responde 401:
+
+   ```powershell
    curl.exe -i "http://127.0.0.1:8082/?json=1"
    # HTTP/1.1 401 Unauthorized
    ```
@@ -372,15 +427,27 @@ El agente es `trackhive-agente.exe`: lleva Python dentro, así que en el PC del 
 
 **Opción A, construirlo** (en la carpeta del repositorio):
 
+Instala las dependencias de construcción:
+
 ```powershell
 python -m pip install -r agent\requirements-build.txt
+```
+
+Construye el `.exe`:
+
+```powershell
 python agent\construir_exe.py
 ```
 
-Termina con `Paquete del agente en …\agent\dist: agente.example.toml, instalar-tarea.ps1, trackhive-agente.exe`. Cópialo a `C:\trackhive\agente`:
+Termina con `Paquete del agente en …\agent\dist: agente.example.toml, instalar-tarea.ps1, trackhive-agente.exe`. Crea la carpeta `C:\trackhive\agente`:
 
 ```powershell
 New-Item -ItemType Directory -Force C:\trackhive\agente | Out-Null
+```
+
+Y copia el paquete en ella:
+
+```powershell
 Copy-Item agent\dist\* C:\trackhive\agente\
 ```
 
@@ -392,9 +459,21 @@ En los dos casos, `C:\trackhive\agente` queda con `trackhive-agente.exe`, `agent
 
 ### 6.2 Configurar `agente.toml`
 
+Entra en la carpeta del agente:
+
 ```powershell
 cd C:\trackhive\agente
+```
+
+Crea el `agente.toml` a partir del ejemplo:
+
+```powershell
 Copy-Item agente.example.toml agente.toml
+```
+
+Ábrelo con el Bloc de notas:
+
+```powershell
 notepad agente.toml
 ```
 
@@ -443,7 +522,15 @@ Con Docker arriba (paso 3), el árbol generado (paso 4) y tu Everything respondi
 
 ```powershell
 cd C:\trackhive\agente
+```
+
+```powershell
 .\trackhive-agente.exe
+```
+
+Cuando termine, mira con qué código salió:
+
+```powershell
 $LASTEXITCODE
 ```
 
@@ -476,6 +563,9 @@ El servidor no puede llamar al PC del CLENA, así que «Sincronizar ahora» deja
 
    ```powershell
    cd C:\trackhive\agente
+   ```
+
+   ```powershell
    .\trackhive-agente.exe --vigilar
    ```
 
@@ -506,20 +596,36 @@ Antes, **detén el `--vigilar` de la consola** (Ctrl+C) para no tener dos agente
 
    ```powershell
    cd C:\trackhive\agente
+   ```
+
+   ```powershell
    powershell -ExecutionPolicy Bypass -File .\instalar-tarea.ps1
-   # o con otra hora:  … -File .\instalar-tarea.ps1 -Hora 13:30
+   ```
+
+   O, si quieres otra hora para la diaria:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\instalar-tarea.ps1 -Hora 13:30
    ```
 
    Corren con tu usuario, solo mientras tienes la sesión iniciada, y no abren ninguna ventana. La de «Sincronizar ahora» queda iniciada de inmediato.
 
-2. **Comprueba** la vigilancia y lanza la diaria a mano:
+2. **Comprueba** que la vigilancia está corriendo:
 
    ```powershell
    (Get-ScheduledTask -TaskPath '\Trackhive\' -TaskName 'Atender Sincronizar ahora').State
    # Running
+   ```
 
+   Lanza la diaria a mano:
+
+   ```powershell
    Start-ScheduledTask -TaskPath '\Trackhive\' -TaskName 'Sincronizar con Everything'
-   # espera unos segundos
+   ```
+
+   Espera unos segundos y mira cómo terminó:
+
+   ```powershell
    (Get-ScheduledTaskInfo -TaskPath '\Trackhive\' -TaskName 'Sincronizar con Everything').LastTaskResult
    # 0 = corrida completa (267009 = todavía está corriendo: espera y vuelve a preguntar)
    ```
@@ -546,8 +652,21 @@ Las raíces y el token no cambian; solo la sección `[everything]` del `agente.t
 
 ```powershell
 cd C:\trackhive\agente
+```
+
+```powershell
 Copy-Item agente.toml agente-instalado.toml
-notepad agente-instalado.toml          # [everything]: url :8082, user y password del instalado
+```
+
+En el archivo nuevo, cambia `[everything]` por los datos del instalado (url `:8082`, `user` y `password`):
+
+```powershell
+notepad agente-instalado.toml
+```
+
+Y sincroniza con él:
+
+```powershell
 .\trackhive-agente.exe --config .\agente-instalado.toml
 ```
 
@@ -598,7 +717,7 @@ Una sincronización que termina **con error** (Everything apagado, una raíz sin
 
 | Síntoma | Causa y solución |
 |---|---|
-| El contenedor `frontend` se reinicia sin parar y `docker compose logs frontend` dice `40-trackhive-tls.sh: not found` | El script quedó con finales de línea de Windows (CRLF), en un clon anterior a la regla de `.gitattributes`. Actualiza el repositorio (`git pull`), vuelve a sacar el script con `Remove-Item frontend\nginx\40-trackhive-tls.sh; git checkout -- frontend/nginx/40-trackhive-tls.sh` y reconstruye: `docker compose up -d --build frontend` |
+| El contenedor `frontend` se reinicia sin parar y `docker compose logs frontend` dice `40-trackhive-tls.sh: not found` | El script quedó con finales de línea de Windows (CRLF), en un clon anterior a la regla de `.gitattributes`. Actualiza el repositorio (`git pull`), borra el script con `Remove-Item frontend\nginx\40-trackhive-tls.sh`, vuelve a sacarlo con `git checkout -- frontend/nginx/40-trackhive-tls.sh` y reconstruye: `docker compose up -d --build frontend` |
 | `docker compose` dice `Missing … in .env` | Falta el `.env`: `Copy-Item .env.example .env` (paso 2) |
 | `docker compose` no conecta con Docker | Docker Desktop no está abierto o no terminó de arrancar (*Engine running*) |
 | La pantalla Sincronización dice que la integración está desactivada | El `.env` no tiene `EVERYTHING_AGENT_TOKEN`, o el backend arrancó antes de ponerlo: `docker compose up -d` |
