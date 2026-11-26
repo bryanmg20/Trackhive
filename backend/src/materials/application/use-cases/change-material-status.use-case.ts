@@ -28,6 +28,6 @@ export class ChangeMaterialStatusUseCase {
     );
     await this.materialRepo.saveStatusChange(changed);
 
-    return MaterialResponseMapper.toDto(changed);
+    return MaterialResponseMapper.toDto(changed, input.viewerRole);
   }
 }

@@ -156,6 +156,37 @@ describe('Material', () => {
 
     expect(material.reviewReason).toBeNull();
     expect(material.needsReview).toBe(false);
+    expect(material.hasDigitalCopy).toBe(false);
+    expect(material.digitalFolderName).toBeNull();
+  });
+
+  it('exposes the leaf folder name and hasDigitalCopy for Windows and UNC paths (HU-140)', () => {
+    const windowsMaterial = new Material({
+      ...buildMaterial(),
+      source: 'EVERYTHING',
+      digitalPath:
+        'C:\\trackhive\\docs_simulados\\Aha\\Fondo - Notarías\\Notarías\\1ra - Notaria Primera\\1931\\1ra-1931 - Esc 0001-0109 - Ene',
+    });
+    const uncMaterial = new Material({
+      ...buildMaterial(),
+      source: 'EVERYTHING',
+      digitalPath: '\\\\servidor\\Multimedia\\Aha\\1902',
+    });
+
+    expect(windowsMaterial.hasDigitalCopy).toBe(true);
+    expect(windowsMaterial.digitalFolderName).toBe(
+      '1ra-1931 - Esc 0001-0109 - Ene',
+    );
+    expect(uncMaterial.hasDigitalCopy).toBe(true);
+    expect(uncMaterial.digitalFolderName).toBe('1902');
+
+    const changed = windowsMaterial.changeStatus(
+      'EN_RESTAURACION',
+      'user-1',
+      null,
+    );
+    expect(changed.hasDigitalCopy).toBe(true);
+    expect(changed.digitalFolderName).toBe('1ra-1931 - Esc 0001-0109 - Ene');
   });
 
   it.each(['NO_PATTERN', 'DUPLICATE_CODE'] as const)(

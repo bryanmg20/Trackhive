@@ -30,6 +30,10 @@ export class SearchMaterialsUseCase {
       limit,
     });
 
-    return MaterialResponseMapper.toPaginatedDto(items, { page, limit, total });
+    return MaterialResponseMapper.toPaginatedDto(
+      items,
+      { page, limit, total },
+      input.viewerRole,
+    );
   }
 }

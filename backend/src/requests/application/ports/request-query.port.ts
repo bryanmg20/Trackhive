@@ -1,3 +1,4 @@
+import type { MaterialReviewReason } from '../../../materials/domain/enums/material-review-reason';
 import type { AppointmentStatus } from '../../domain/enums/appointment-status';
 import type { DeliveryMode } from '../../domain/enums/delivery-mode';
 import type { RequestStatus } from '../../domain/enums/request-status';
@@ -166,8 +167,12 @@ export interface RequestDetail {
     collection: string;
     status: string;
     itemStatus: string;
-    // Whether the sync found its digital copy (HU-139); never the path
+    // Whether the sync found its digital copy (HU-139); never the full path
     hasDigitalCopy: boolean;
+    // Leaf folder name in Everything for staff search (HU-140)
+    digitalFolderName: string | null;
+    needsReview: boolean;
+    reviewReason: MaterialReviewReason | null;
   }[];
   // Written references (HU-09.2), oldest first
   references: RequestDetailReference[];

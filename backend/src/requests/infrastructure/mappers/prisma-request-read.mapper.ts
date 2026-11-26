@@ -1,4 +1,6 @@
 import type { Prisma } from '@prisma/client';
+import { isMaterialReviewReason } from '../../../materials/domain/enums/material-review-reason';
+import { extractDigitalFolderName } from '../../../materials/domain/value-objects/digital-copy-name';
 import { isAppointmentStatus } from '../../domain/enums/appointment-status';
 import { isDeliveryMode } from '../../domain/enums/delivery-mode';
 import { isMaterialReferenceKind } from '../../domain/enums/material-reference-kind';
@@ -370,18 +372,33 @@ export class PrismaRequestReadMapper {
         documentType: model.requester.documentType,
         documentNumber: model.requester.documentNumber,
       },
-      materials: model.items.map(({ material, itemStatus }) => ({
-        id: material.id,
-        catalogCode: material.catalogCode,
-        title: material.title,
-        materialType: material.materialType,
-        author: material.author,
-        collection: material.collection,
-        status: material.status,
-        itemStatus,
-        // NULL digital_path = no digital copy (HU-134); the path stays here
-        hasDigitalCopy: Boolean(material.digitalPath),
-      })),
+      materials: model.items.map(({ material, itemStatus }) => {
+        const reviewReason = material.reviewReason ?? null;
+        if (reviewReason !== null && !isMaterialReviewReason(reviewReason)) {
+          throw new Error(
+            `Material ${material.id} has an invalid stored review reason`,
+          );
+        }
+        const digitalFolderName = extractDigitalFolderName(
+          material.digitalPath,
+        );
+        return {
+          id: material.id,
+          catalogCode: material.catalogCode,
+          title: material.title,
+          materialType: material.materialType,
+          author: material.author,
+          collection: material.collection,
+          status: material.status,
+          itemStatus,
+          // NULL or root-only digital_path = no digital copy (HU-134, HU-140);
+          // only the leaf folder name leaves this mapper
+          hasDigitalCopy: digitalFolderName !== null,
+          digitalFolderName,
+          needsReview: reviewReason !== null,
+          reviewReason,
+        };
+      }),
       references: model.references.map((row) =>
         PrismaRequestReadMapper.toDetailReference(row),
       ),

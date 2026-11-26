@@ -1,4 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MATERIAL_REVIEW_REASONS } from '../../domain/enums/material-review-reason';
+import type { MaterialReviewReason } from '../../domain/enums/material-review-reason';
 import { MATERIAL_STATUSES } from '../../domain/enums/material-status';
 import type { MaterialStatus } from '../../domain/enums/material-status';
 import { MATERIAL_TYPES } from '../../domain/enums/material-type';
@@ -58,6 +60,39 @@ export class MaterialResponseDto {
 
   @ApiProperty({ description: 'Estado del material', enum: MATERIAL_STATUSES })
   status: MaterialStatus;
+
+  @ApiProperty({
+    description:
+      'Indica si el material cuenta con una copia digital indexada en Everything (HU-140)',
+    example: true,
+  })
+  hasDigitalCopy: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Solo para PERSONAL y ADMIN (HU-140): nombre de la carpeta en Everything, ' +
+      'sin unidad ni ruta completa. Omitido para PUBLICO.',
+    example: '1ra-1931 - Esc 0001-0109 - Ene',
+    nullable: true,
+    type: String,
+  })
+  digitalFolderName?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Solo para PERSONAL y ADMIN (HU-140): indica si el material está marcado para revisión.',
+    example: false,
+  })
+  needsReview?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Solo para PERSONAL y ADMIN (HU-140): motivo de revisión asignado por la sincronización.',
+    enum: MATERIAL_REVIEW_REASONS,
+    nullable: true,
+    example: null,
+  })
+  reviewReason?: MaterialReviewReason | null;
 }
 
 export class PaginatedMaterialsResponseDto {

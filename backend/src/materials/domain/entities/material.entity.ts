@@ -15,6 +15,7 @@ import {
   MaterialStatus,
 } from '../enums/material-status';
 import { isMaterialType, MaterialType } from '../enums/material-type';
+import { extractDigitalFolderName } from '../value-objects/digital-copy-name';
 
 export interface MaterialProps {
   id: string;
@@ -104,6 +105,19 @@ export class Material {
    */
   get needsReview(): boolean {
     return this.reviewReason !== null;
+  }
+
+  /**
+   * Name of the leaf folder in Everything, without drive letter or parent
+   * path (HU-140). Null when there is no valid digital copy.
+   */
+  get digitalFolderName(): string | null {
+    return extractDigitalFolderName(this.digitalPath);
+  }
+
+  /** Whether the material has a valid digital copy (HU-140). */
+  get hasDigitalCopy(): boolean {
+    return this.digitalFolderName !== null;
   }
 
   /**
