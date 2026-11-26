@@ -125,15 +125,16 @@
 /* A written reference of a material not in the catalog (HU-09.2) */
 .referenceTag {
   display: inline-block;
+  max-width: 100%;
   padding: 0 0.4rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  /* It may wrap in a narrow Material column, so not a full pill */
+  border-radius: 0.6rem;
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  white-space: nowrap;
   font-weight: 600;
 }
 
