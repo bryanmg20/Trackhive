@@ -39,7 +39,7 @@ async function signIn(
   const response = await request.post('/api/v1/auth/login', {
     data: {
       email,
-      password: process.env.SEED_DEMO_PASSWORD ?? '1',
+      password: process.env.SEED_DEMO_PASSWORD ?? '12345678',
     },
   });
   expect(response.ok()).toBeTruthy();

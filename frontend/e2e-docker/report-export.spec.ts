@@ -8,7 +8,7 @@ test('ADMIN downloads both filtered CSV reports through Nginx and other roles re
   const login = await request.post('/api/v1/auth/login', {
     data: {
       email: process.env.ADMIN_EMAIL ?? 'admin@example.com',
-      password: process.env.ADMIN_PASSWORD ?? '1',
+      password: process.env.ADMIN_PASSWORD ?? '12345678',
     },
   });
   expect(login.ok()).toBeTruthy();
@@ -81,7 +81,7 @@ test('ADMIN downloads both filtered CSV reports through Nginx and other roles re
   }
   for (const email of ['personal1@example.com', 'publico1@example.com']) {
     const login = await request.post('/api/v1/auth/login', {
-      data: { email, password: process.env.SEED_DEMO_PASSWORD ?? '1' },
+      data: { email, password: process.env.SEED_DEMO_PASSWORD ?? '12345678' },
     });
     expect(login.ok()).toBeTruthy();
     const session = (await login.json()) as { accessToken: string };

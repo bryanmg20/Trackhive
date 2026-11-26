@@ -103,7 +103,7 @@ poder leerlo el administrador del servidor (`chmod 600 .env`).
 | RUN_SEED | `true` carga los datos ficticios de demostración (usuarios, materiales, solicitudes) en cada arranque. En producción, `false` | false | Sí |
 | ADMIN_EMAIL | Correo del administrador inicial. El backend lo crea al arrancar si no existe ningún ADMIN (sección 8) | coordinacion@clena.example | Sí |
 | ADMIN_PASSWORD | Contraseña del administrador inicial. Con `RUN_SEED=false`, al menos 12 caracteres; si no, el backend no arranca. Solo se usa al crear la cuenta | | Sí |
-| SEED_DEMO_PASSWORD | Contraseña de los usuarios ficticios de la semilla. Con `RUN_SEED=false` no se exige | 1 | Solo con `RUN_SEED=true` |
+| SEED_DEMO_PASSWORD | Contraseña de los usuarios ficticios de la semilla. Con `RUN_SEED=false` no se exige | 12345678 | Solo con `RUN_SEED=true` |
 | JWT_SECRET | Secreto del access token. Cambiarlo cierra todas las sesiones | (`openssl rand -hex 32`) | Sí |
 | JWT_REFRESH_SECRET | Secreto del refresh token, distinto del anterior | (`openssl rand -hex 32`) | Sí |
 | SMTP_HOST | Servidor de correo. En desarrollo, `mailpit` | smtp.example.com | Sí |
