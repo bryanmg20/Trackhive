@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
 import { PageHeader } from '../layout/PageHeader';
+import { useDocumentTitle } from '../layout/use-document-title';
 import { RequestApiError } from '../requests/api/request-api-error';
 import { CharacterizationFields } from './CharacterizationFields';
 import {
@@ -115,6 +116,9 @@ export function ProfilePage() {
       ignore = true;
     };
   }, [attempt]);
+  // Same text as the PageHeader while the profile is shown, so the two
+  // effects never disagree; after deleting there is no PageHeader.
+  useDocumentTitle(deleted ? 'Cuenta eliminada' : 'Mi perfil');
   if (deleted)
     return (
       <main className={styles.page}>

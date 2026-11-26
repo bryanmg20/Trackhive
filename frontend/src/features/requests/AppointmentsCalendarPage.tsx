@@ -229,6 +229,12 @@ export function AppointmentsCalendarPage() {
   const [actionComment, setActionComment] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // Cancelling frees the material and notifies the requester: it takes a
+  // second, explicit step («Sí, cancelar cita») after «Cancelar cita».
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const cancelTrigger = useRef<HTMLButtonElement>(null);
+  const cancelQuestion = useRef<HTMLParagraphElement>(null);
+  const returnFocusToCancel = useRef(false);
   const [loanDialog, setLoanDialog] = useState<{
     mode: LoanActionMode;
     appointment: AppointmentListItem;
@@ -439,8 +445,23 @@ export function AppointmentsCalendarPage() {
     };
   }, [firstVisibleDate, lastVisibleDate, occupancyRangeKey, occupancyAttempt]);
 
+  useEffect(() => {
+    if (confirmingCancel) {
+      cancelQuestion.current?.focus();
+    } else if (returnFocusToCancel.current) {
+      returnFocusToCancel.current = false;
+      cancelTrigger.current?.focus();
+    }
+  }, [confirmingCancel]);
+
+  function keepAppointment() {
+    returnFocusToCancel.current = true;
+    setConfirmingCancel(false);
+  }
+
   function selectAppointment(id: string) {
     setSelectedId(id);
+    setConfirmingCancel(false);
     setRescheduleDate('');
     setActionComment('');
     setActionError(null);
@@ -488,6 +509,7 @@ export function AppointmentsCalendarPage() {
     appointment: AppointmentListItem,
   ) {
     event.preventDefault();
+    setConfirmingCancel(false);
     if (!rescheduleDate) {
       setActionError({
         message: 'Elija la nueva fecha de la cita.',
@@ -541,6 +563,7 @@ export function AppointmentsCalendarPage() {
           status: result.status,
         },
       });
+      setConfirmingCancel(false);
       setRescheduleDate('');
       setActionComment('');
       setActionNotice(
@@ -1334,23 +1357,70 @@ export function AppointmentsCalendarPage() {
                           />
                         </div>
                       </div>
-                      <div className={styles.manageActions}>
-                        <button
-                          className={searchStyles.primary}
-                          type="submit"
-                          disabled={rescheduling || cancelling}
+                      {confirmingCancel ? (
+                        <div
+                          className={styles.cancelConfirm}
+                          role="group"
+                          aria-labelledby="cancel-appointment-question"
                         >
-                          {rescheduling ? 'Reprogramando…' : 'Reprogramar cita'}
-                        </button>
-                        <button
-                          className={styles.cancelButton}
-                          type="button"
-                          disabled={rescheduling || cancelling}
-                          onClick={() => void handleCancel(selectedAppointment)}
-                        >
-                          {cancelling ? 'Cancelando…' : 'Cancelar cita'}
-                        </button>
-                      </div>
+                          <p
+                            id="cancel-appointment-question"
+                            ref={cancelQuestion}
+                            tabIndex={-1}
+                            className={styles.cancelQuestion}
+                          >
+                            ¿Cancelar la cita del{' '}
+                            {formatFullDay(selectedAppointment.date)}? El
+                            material quedará libre y la solicitud volverá a
+                            Disponible.
+                          </p>
+                          <div className={styles.manageActions}>
+                            <button
+                              className={styles.cancelButton}
+                              type="button"
+                              disabled={cancelling}
+                              onClick={() =>
+                                void handleCancel(selectedAppointment)
+                              }
+                            >
+                              {cancelling ? 'Cancelando…' : 'Sí, cancelar cita'}
+                            </button>
+                            <button
+                              className={styles.keepButton}
+                              type="button"
+                              disabled={cancelling}
+                              onClick={keepAppointment}
+                            >
+                              No, conservar cita
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={styles.manageActions}>
+                          <button
+                            className={searchStyles.primary}
+                            type="submit"
+                            disabled={rescheduling || cancelling}
+                          >
+                            {rescheduling
+                              ? 'Reprogramando…'
+                              : 'Reprogramar cita'}
+                          </button>
+                          <button
+                            ref={cancelTrigger}
+                            className={styles.cancelButton}
+                            type="button"
+                            disabled={rescheduling || cancelling}
+                            onClick={() => {
+                              setActionError(null);
+                              setActionNotice(null);
+                              setConfirmingCancel(true);
+                            }}
+                          >
+                            Cancelar cita
+                          </button>
+                        </div>
+                      )}
                     </form>
                   ) : null}
                 </section>

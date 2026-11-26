@@ -522,6 +522,39 @@
   background: var(--error-surface, var(--paper));
 }
 
+/* Second step before cancelling an appointment */
+.cancelConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--seal);
+  border-radius: var(--radius-control);
+  background: var(--error-surface);
+}
+
+.cancelQuestion {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.keepButton {
+  min-height: 2.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--sage-deep);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.keepButton:hover {
+  background: var(--paper);
+}
+
 @media (max-width: 900px) {
   .calendarGrid {
     grid-template-columns: minmax(0, 1fr);

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../routes';
 import { LoginApiError, loginUser } from '../api/login-user';
+import { useDocumentTitle } from '../../layout/use-document-title';
 import { AuthLayout } from '../components/AuthLayout';
 import { TextField } from '../components/TextField';
 import { HOME_BY_ROLE } from '../role-home';
@@ -25,6 +26,7 @@ interface LoginLocationState {
 }
 
 export function LoginPage() {
+  useDocumentTitle('Inicio de sesión');
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LoginLocationState | null;

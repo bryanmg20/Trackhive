@@ -226,6 +226,7 @@ export function RequestDetailPage() {
             titleId="request-title"
             kicker="Detalle y cambio de estado"
             title={request.trackingCode}
+            documentTitle={`Solicitud ${request.trackingCode}`}
             description="Revise el material solicitado y gestione la atención."
           >
             <p className={styles.heading}>

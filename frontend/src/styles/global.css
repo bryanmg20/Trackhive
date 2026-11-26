@@ -143,6 +143,12 @@ em {
   outline-offset: 3px;
 }
 
+/* Headings that receive the focus by script after a route change
+   (RouteFocus) are not controls: no ring on them. */
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
