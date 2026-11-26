@@ -42,21 +42,29 @@ describe('AppLayout', () => {
     );
   });
 
-  it('shows the archive tag and menu to a public account', () => {
+  it('shows the CLENA and Uninorte logos and the menu to a public account', () => {
     renderLayout('PUBLICO');
 
-    expect(screen.getByText('CLENA · Archivo')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'CLENA' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Universidad del Norte' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('link', { name: /Mi perfil/ })[0],
+    ).toHaveTextContent('Público');
     expect(
       screen.getByRole('navigation', { name: 'Secciones' }),
     ).toBeInTheDocument();
   });
 
   it.each(['PERSONAL', 'ADMIN'])(
-    'shows the staff tag and menu to %s',
+    'shows the role in the menu bar and the menu to %s',
     (role) => {
       renderLayout(role);
 
-      expect(screen.getByText('CLENA · Personal')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Menú/ })).toHaveTextContent(
+        role === 'ADMIN' ? 'Administrador' : 'Personal',
+      );
       expect(
         screen.getByRole('navigation', { name: 'Secciones' }),
       ).toBeInTheDocument();
@@ -75,7 +83,11 @@ describe('AppLayout', () => {
   it('keeps the brand for a visitor without a session and hides the menu', () => {
     renderLayout(null);
 
-    expect(screen.getByText('CLENA · Archivo')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'CLENA' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Crear cuenta' })).toHaveAttribute(
+      'href',
+      '/registro',
+    );
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
 });

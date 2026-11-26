@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import { RequestsApiError } from './api/list-requests';
 import {
@@ -125,13 +126,11 @@ export function RoomCapacityPage() {
   return (
     <AppLayout>
       <section className={searchStyles.hero} aria-labelledby="room-capacity-title">
-        <p className={searchStyles.eyebrow}>Administración de sala</p>
-        <h1 id="room-capacity-title" className={searchStyles.title}>
-          Capacidad de la sala
-        </h1>
-        <p className={styles.note}>
-          Configure el límite diario de citas de la sala de consulta.
-        </p>
+        <PageHeader
+          titleId="room-capacity-title"
+          title="Capacidad de la sala"
+          description="Configure el límite diario de citas de la sala de consulta."
+        />
       </section>
 
       <div className={styles.sections}>

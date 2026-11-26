@@ -7,26 +7,36 @@
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--ink);
+  font-weight: 600;
 }
 
 .badge {
   display: inline-block;
-  padding: 0.15rem 0.55rem;
-  border: 1px solid var(--line);
-  background: var(--paper);
+  padding: 0.2rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--chip-searching);
   color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Chip colours of the wireframes; the state is always written in text */
+.badge[data-status='RECIBIDA'],
+.badge[data-status='AGENDADA'] {
+  background: var(--chip-received);
+}
+
+.badge[data-status='DISPONIBLE'] {
+  background: var(--chip-available);
 }
 
 .badge[data-status='RECHAZADA'] {
-  background: var(--error-surface, var(--paper));
+  background: var(--chip-rejected);
 }
 
-.badge[data-status='DISPONIBLE'],
-.badge[data-status='AGENDADA'],
-.badge[data-status='ATENDIDA'] {
-  background: var(--success-surface);
+.badge[data-status='CERRADA'] {
+  background: var(--chip-closed);
 }
 
 .materials {
@@ -45,6 +55,7 @@
   gap: 1rem;
   font-family: var(--font-mono);
   font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .nav a {
@@ -63,12 +74,13 @@
   background: none;
   color: var(--gold-text);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   text-decoration: underline;
   text-underline-offset: 0.25em;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .clearButton:hover {
@@ -82,11 +94,12 @@
 .shortcut {
   color: var(--gold-text);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-decoration: underline;
   text-underline-offset: 0.2em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .shortcut:hover {
@@ -103,18 +116,26 @@
   color: var(--gold-text);
 }
 
+/* The radicado stays on one line, as in WF-09 */
+.detailLink strong {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
 /* A written reference of a material not in the catalog (HU-09.2) */
 .referenceTag {
   display: inline-block;
+  max-width: 100%;
   padding: 0 0.4rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  /* It may wrap in a narrow Material column, so not a full pill */
+  border-radius: 0.6rem;
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  white-space: nowrap;
+  font-weight: 600;
 }
 
 .referenceTag[data-status='PENDIENTE'] {

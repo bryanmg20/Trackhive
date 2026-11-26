@@ -3,6 +3,7 @@ node_modules/
 
 
 AGENTS.md
+.claude/agents
 CLAUDE.md
 .archify/
 #vscode

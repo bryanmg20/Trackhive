@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import type { SelectedMaterial } from '../requests/selected-materials';
 import { buildStaffNewRequestPath } from '../requests/selected-materials';
 import {
@@ -35,10 +36,14 @@ import type {
   SearchMaterialsParams,
   SortOrder,
 } from './api/search-materials';
+import { useUrlParams } from '../navigation/url-params';
+import {
+  DEFAULT_MATERIAL_PARAMS,
+  parseStaffMaterialParams,
+} from './material-search-params';
 import searchStyles from './MaterialSearchPage.module.css';
 import styles from './StaffMaterialsPage.module.css';
 
-const PAGE_SIZE = 10;
 const FORM_ID = 'staff-material-search';
 
 const SORT_LABELS: Record<MaterialSortField, string> = {
@@ -68,15 +73,13 @@ function toApiError(caught: unknown): MaterialsApiError {
  */
 export function StaffMaterialsPage() {
   const navigate = useNavigate();
-  const [text, setText] = useState('');
-  const [collection, setCollection] = useState('');
+  const [params, setParams] = useUrlParams(
+    parseStaffMaterialParams,
+    DEFAULT_MATERIAL_PARAMS,
+  );
+  const [text, setText] = useState(params.q ?? '');
+  const [collection, setCollection] = useState(params.collection ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [params, setParams] = useState<SearchMaterialsParams>({
-    sort: 'title',
-    order: 'asc',
-    page: 1,
-    limit: PAGE_SIZE,
-  });
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<SearchResponse | null>(null);
   // Statuses already saved in this session, so the list shows them without a new search
@@ -290,10 +293,11 @@ export function StaffMaterialsPage() {
   return (
     <AppLayout footer={requestBar}>
       <section className={searchStyles.hero} aria-labelledby="staff-title">
-        <p className={searchStyles.eyebrow}>Gestión del archivo</p>
-        <h1 id="staff-title" className={searchStyles.title}>
-          Estado del material
-        </h1>
+        <PageHeader
+          titleId="staff-title"
+          title="Material para el personal"
+          description="Consulte el catálogo y gestione la disponibilidad del material."
+        />
         <form
           id={FORM_ID}
           className={searchStyles.searchBar}
@@ -309,7 +313,7 @@ export function StaffMaterialsPage() {
             maxLength={100}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Título, autor o código"
+            placeholder="Título, autor o código…"
           />
           <button className={searchStyles.primary} type="submit">
             Buscar
@@ -317,7 +321,7 @@ export function StaffMaterialsPage() {
         </form>
       </section>
 
-      <div className={searchStyles.layout}>
+      <div className={searchStyles.tableLayout}>
         <aside className={searchStyles.sidebar} aria-label="Filtros">
           <button
             type="button"

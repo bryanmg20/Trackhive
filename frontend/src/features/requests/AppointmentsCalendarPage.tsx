@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { requestDetailPath, ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import {
   MATERIAL_STATUS_LABELS,
   MATERIAL_TYPE_LABELS,
@@ -79,6 +80,14 @@ const FULL_DAY_FORMAT = new Intl.DateTimeFormat('es-CO', {
   weekday: 'long',
 });
 
+// Day heading of the phone agenda (WF-11 móvil): «Martes, 15 de diciembre»
+const LONG_DAY_FORMAT = new Intl.DateTimeFormat('es-CO', {
+  timeZone: 'UTC',
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
+
 interface YearMonth {
   year: number;
   month: number; // 1..12
@@ -109,6 +118,13 @@ function formatFullDay(isoDate: string): string {
     new Date(`${isoDate.slice(0, 10)}T12:00:00Z`),
   );
   return `${weekday} ${formatDate(isoDate)}`;
+}
+
+/** "2026-12-15" -> "Martes, 15 de diciembre". */
+function formatLongDay(isoDate: string): string {
+  return capitalize(
+    LONG_DAY_FORMAT.format(new Date(`${isoDate.slice(0, 10)}T12:00:00Z`)),
+  );
 }
 
 /** "08:00" -> "8:00". */
@@ -142,6 +158,11 @@ function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth {
 
 function formatMonthTitle({ year, month }: YearMonth): string {
   return MONTH_FORMAT.format(new Date(Date.UTC(year, month - 1, 1, 12)));
+}
+
+/** «noviembre de 2026» → «Noviembre de 2026» (only the first letter). */
+function capitalize(text: string): string {
+  return text.charAt(0).toLocaleUpperCase('es-CO') + text.slice(1);
 }
 
 function toIsoDate(year: number, month: number, day: number): string {
@@ -184,6 +205,7 @@ function AppointmentCardButton({
   onSelect,
 }: AppointmentCardButtonProps) {
   const materialSummary = item.materials.map((m) => m.title).join(', ');
+  const firstName = item.requester.name.trim().split(/\s+/)[0];
   return (
     <button
       type="button"
@@ -192,13 +214,29 @@ function AppointmentCardButton({
       aria-pressed={selected}
       onClick={() => onSelect(item.id)}
     >
-      <span className={styles.eventDate}>
-        {formatDate(item.date)} · {item.request.trackingCode}
+      {/* Desktop month grid (WF-11): one line, «Ana · SOL-2026-00001» */}
+      <span className={styles.eventCompact}>
+        {firstName} · {item.request.trackingCode}
       </span>
-      <span className={styles.eventMaterial}>{materialSummary}</span>
-      <span className={styles.eventRequester}>{item.requester.name}</span>
-      <span className={styles.badge} data-status={item.status}>
-        {APPOINTMENT_STATUS_LABELS[item.status]}
+      {/* Phone agenda, day dialog and other lists: the labelled card */}
+      <span className={styles.eventDate}>{formatFullDay(item.date)}</span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Solicitud</span>
+        <span className={styles.eventCode}>{item.request.trackingCode}</span>
+      </span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Solicitante</span>
+        <span className={styles.eventRequester}>{item.requester.name}</span>
+      </span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Material</span>
+        <span className={styles.eventMaterial}>{materialSummary}</span>
+      </span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Estado</span>
+        <span className={styles.badge} data-status={item.status}>
+          {APPOINTMENT_STATUS_LABELS[item.status]}
+        </span>
       </span>
     </button>
   );
@@ -223,6 +261,12 @@ export function AppointmentsCalendarPage() {
   const [actionComment, setActionComment] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // Cancelling frees the material and notifies the requester: it takes a
+  // second, explicit step («Sí, cancelar cita») after «Cancelar cita».
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const cancelTrigger = useRef<HTMLButtonElement>(null);
+  const cancelQuestion = useRef<HTMLParagraphElement>(null);
+  const returnFocusToCancel = useRef(false);
   const [loanDialog, setLoanDialog] = useState<{
     mode: LoanActionMode;
     appointment: AppointmentListItem;
@@ -399,6 +443,20 @@ export function AppointmentsCalendarPage() {
     return () => dialog.close();
   }, [expandedDate]);
 
+  /**
+   * Opens the full agenda of a day. Escape closes the <dialog> at once but
+   * its «close» event arrives later; if the same day is asked for again in
+   * between, the state still holds it, so the dialog is reopened directly.
+   */
+  const openDayAgenda = (isoDate: string) => {
+    const dialog = dayDialog.current;
+    if (expandedDate === isoDate && dialog && !dialog.open) {
+      dialog.showModal();
+      return;
+    }
+    setExpandedDate(isoDate);
+  };
+
   useEffect(() => {
     if (!firstVisibleDate || !lastVisibleDate) return;
     let ignore = false;
@@ -419,8 +477,23 @@ export function AppointmentsCalendarPage() {
     };
   }, [firstVisibleDate, lastVisibleDate, occupancyRangeKey, occupancyAttempt]);
 
+  useEffect(() => {
+    if (confirmingCancel) {
+      cancelQuestion.current?.focus();
+    } else if (returnFocusToCancel.current) {
+      returnFocusToCancel.current = false;
+      cancelTrigger.current?.focus();
+    }
+  }, [confirmingCancel]);
+
+  function keepAppointment() {
+    returnFocusToCancel.current = true;
+    setConfirmingCancel(false);
+  }
+
   function selectAppointment(id: string) {
     setSelectedId(id);
+    setConfirmingCancel(false);
     setRescheduleDate('');
     setActionComment('');
     setActionError(null);
@@ -468,6 +541,7 @@ export function AppointmentsCalendarPage() {
     appointment: AppointmentListItem,
   ) {
     event.preventDefault();
+    setConfirmingCancel(false);
     if (!rescheduleDate) {
       setActionError({
         message: 'Elija la nueva fecha de la cita.',
@@ -521,6 +595,7 @@ export function AppointmentsCalendarPage() {
           status: result.status,
         },
       });
+      setConfirmingCancel(false);
       setRescheduleDate('');
       setActionComment('');
       setActionNotice(
@@ -643,10 +718,11 @@ export function AppointmentsCalendarPage() {
   return (
     <AppLayout>
       <section className={searchStyles.hero} aria-labelledby="calendar-title">
-        <p className={searchStyles.eyebrow}>Agenda de sala de lectura</p>
-        <h1 id="calendar-title" className={searchStyles.title}>
-          Calendario de citas
-        </h1>
+        <PageHeader
+          titleId="calendar-title"
+          title="Calendario de citas"
+          description="Organice las citas de consulta y revise la disponibilidad por día."
+        />
         <form
           id={FORM_ID}
           className={searchStyles.searchBar}
@@ -662,7 +738,7 @@ export function AppointmentsCalendarPage() {
             maxLength={100}
             value={requester}
             onChange={(event) => setRequester(event.target.value)}
-            placeholder="Solicitante: nombre, correo o documento"
+            placeholder="Solicitante: nombre, correo o documento…"
           />
           <button className={searchStyles.primary} type="submit">
             Buscar
@@ -670,8 +746,13 @@ export function AppointmentsCalendarPage() {
         </form>
       </section>
 
-      <div className={searchStyles.layout}>
-        <aside className={searchStyles.sidebar} aria-label="Filtros">
+      {/* WF-11: filters above the month, so the calendar takes the whole
+          width; below the tablet width they fold behind «Filtros» */}
+      <div className={styles.layout}>
+        <aside
+          className={`${searchStyles.sidebar} ${styles.filtersArea}`}
+          aria-label="Filtros"
+        >
           <button
             type="button"
             className={searchStyles.filtersToggle}
@@ -684,7 +765,7 @@ export function AppointmentsCalendarPage() {
 
           <div
             id="appointment-filters"
-            className={searchStyles.filters}
+            className={`${searchStyles.filters} ${styles.filterBar}`}
             data-open={filtersOpen}
           >
             <fieldset className={searchStyles.group}>
@@ -719,14 +800,16 @@ export function AppointmentsCalendarPage() {
                 maxLength={100}
                 value={material}
                 onChange={(event) => setMaterial(event.target.value)}
-                placeholder="Título o código"
+                placeholder="Título o código…"
               />
               <p className={searchStyles.hint}>
                 Pulse Enter o «Buscar» para aplicar.
               </p>
             </div>
 
-            <div className={`${searchStyles.group} ${listStyles.dates}`}>
+            <div
+              className={`${searchStyles.group} ${listStyles.dates} ${styles.dateRange}`}
+            >
               <label htmlFor="appointment-from">Fecha desde</label>
               <input
                 id="appointment-from"
@@ -808,7 +891,7 @@ export function AppointmentsCalendarPage() {
                 ‹ Mes anterior
               </button>
               <span className={styles.monthTitle} aria-live="polite">
-                {formatMonthTitle(activeMonth)}
+                {capitalize(formatMonthTitle(activeMonth))}
               </span>
               <button
                 type="button"
@@ -908,6 +991,18 @@ export function AppointmentsCalendarPage() {
                       : occupied >= nearCapacityThreshold
                         ? 'near'
                         : 'available';
+                  // WF-11: days of the neighbouring months stay blank
+                  if (!day.inCurrentMonth && dayItems.length === 0) {
+                    return (
+                      <div
+                        key={day.isoDate}
+                        className={`${styles.dayCell} ${styles.dayOutside}`}
+                        aria-hidden="true"
+                      />
+                    );
+                  }
+                  // Sundays are closed: «Cerrado» takes the occupancy's place
+                  const showClosed = day.isSunday && occupied === 0;
                   return (
                     <div
                       key={day.isoDate}
@@ -926,25 +1021,35 @@ export function AppointmentsCalendarPage() {
                             {day.dayNumber}
                           </span>
                           <span className={styles.mobileDate}>
-                            {formatFullDay(day.isoDate)}
+                            {formatLongDay(day.isoDate)}
                           </span>
                         </span>
-                        {day.isSunday ? (
+                        {showClosed ? (
                           <span className={styles.sundayTag}>Cerrado</span>
-                        ) : null}
+                        ) : (
+                          <span
+                            className={styles.occupancy}
+                            data-capacity={capacityState}
+                            aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${dailyCapacity}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
+                          >
+                            <span>
+                              {occupied}/{dailyCapacity}
+                            </span>
+                            {/* The month shows the figure and its colour
+                                (WF-11); the phone agenda spells it out */}
+                            <span className={styles.mobileOnly}>
+                              {dayItems.length === 0
+                                ? ' · Sin citas'
+                                : ` · ${dayItems.length} ${dayItems.length === 1 ? 'cita' : 'citas'}`}
+                              {capacityState === 'full'
+                                ? ' · Límite alcanzado'
+                                : capacityState === 'near'
+                                  ? ' · Cerca del límite'
+                                  : ''}
+                            </span>
+                          </span>
+                        )}
                       </div>
-                      <span
-                        className={styles.occupancy}
-                        data-capacity={capacityState}
-                        aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${dailyCapacity}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
-                      >
-                        {occupied}/{dailyCapacity}
-                        {capacityState === 'full'
-                          ? ' · Límite'
-                          : capacityState === 'near'
-                            ? ' · Cerca del límite'
-                            : ''}
-                      </span>
                       {dayItems.length > 0 ? (
                         <ul className={styles.dayEvents}>
                           {dayItems.map((item, index) => (
@@ -961,6 +1066,14 @@ export function AppointmentsCalendarPage() {
                                 selected={selectedId === item.id}
                                 onSelect={selectAppointment}
                               />
+                              {/* WF-11 móvil: each card links to WF-10 */}
+                              <Link
+                                className={styles.cardRequestLink}
+                                to={requestDetailPath(item.request.id)}
+                                aria-label={`Ver solicitud ${item.request.trackingCode}`}
+                              >
+                                Ver solicitud ›
+                              </Link>
                             </li>
                           ))}
                         </ul>
@@ -971,7 +1084,7 @@ export function AppointmentsCalendarPage() {
                           className={styles.moreButton}
                           aria-haspopup="dialog"
                           aria-label={`Ver las ${dayItems.length} citas del ${formatFullDay(day.isoDate)}; ${dayItems.length - PREVIEW_COUNT} más`}
-                          onClick={() => setExpandedDate(day.isoDate)}
+                          onClick={() => openDayAgenda(day.isoDate)}
                         >
                           +{dayItems.length - PREVIEW_COUNT} más
                         </button>
@@ -992,7 +1105,10 @@ export function AppointmentsCalendarPage() {
                   ref={dayDialog}
                   className={styles.dayDialog}
                   aria-labelledby="day-agenda-title"
-                  onClose={() => setExpandedDate(null)}
+                  onClose={(event) => {
+                    // A «close» queued before the day was opened again is stale.
+                    if (!event.currentTarget.open) setExpandedDate(null);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key !== 'Tab') return;
                     const buttons =
@@ -1306,27 +1422,74 @@ export function AppointmentsCalendarPage() {
                             onChange={(event) =>
                               setActionComment(event.target.value)
                             }
-                            placeholder="Motivo del cambio o cancelación"
+                            placeholder="Motivo del cambio o cancelación…"
                           />
                         </div>
                       </div>
-                      <div className={styles.manageActions}>
-                        <button
-                          className={searchStyles.primary}
-                          type="submit"
-                          disabled={rescheduling || cancelling}
+                      {confirmingCancel ? (
+                        <div
+                          className={styles.cancelConfirm}
+                          role="group"
+                          aria-labelledby="cancel-appointment-question"
                         >
-                          {rescheduling ? 'Reprogramando…' : 'Reprogramar cita'}
-                        </button>
-                        <button
-                          className={styles.cancelButton}
-                          type="button"
-                          disabled={rescheduling || cancelling}
-                          onClick={() => void handleCancel(selectedAppointment)}
-                        >
-                          {cancelling ? 'Cancelando…' : 'Cancelar cita'}
-                        </button>
-                      </div>
+                          <p
+                            id="cancel-appointment-question"
+                            ref={cancelQuestion}
+                            tabIndex={-1}
+                            className={styles.cancelQuestion}
+                          >
+                            ¿Cancelar la cita del{' '}
+                            {formatFullDay(selectedAppointment.date)}? El
+                            material quedará libre y la solicitud volverá a
+                            Disponible.
+                          </p>
+                          <div className={styles.manageActions}>
+                            <button
+                              className={styles.cancelButton}
+                              type="button"
+                              disabled={cancelling}
+                              onClick={() =>
+                                void handleCancel(selectedAppointment)
+                              }
+                            >
+                              {cancelling ? 'Cancelando…' : 'Sí, cancelar cita'}
+                            </button>
+                            <button
+                              className={styles.keepButton}
+                              type="button"
+                              disabled={cancelling}
+                              onClick={keepAppointment}
+                            >
+                              No, conservar cita
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={styles.manageActions}>
+                          <button
+                            className={searchStyles.primary}
+                            type="submit"
+                            disabled={rescheduling || cancelling}
+                          >
+                            {rescheduling
+                              ? 'Reprogramando…'
+                              : 'Reprogramar cita'}
+                          </button>
+                          <button
+                            ref={cancelTrigger}
+                            className={styles.cancelButton}
+                            type="button"
+                            disabled={rescheduling || cancelling}
+                            onClick={() => {
+                              setActionError(null);
+                              setActionNotice(null);
+                              setConfirmingCancel(true);
+                            }}
+                          >
+                            Cancelar cita
+                          </button>
+                        </div>
+                      )}
                     </form>
                   ) : null}
                 </section>

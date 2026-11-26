@@ -556,10 +556,54 @@ describe('AppointmentsCalendarPage', () => {
       within(detailSection).getByRole('button', { name: 'Cancelar cita' }),
     );
 
+    // First click only asks: nothing is sent yet
+    const question = within(detailSection).getByText(
+      /¿cancelar la cita del .*20\/11\/2026\?/i,
+    );
+    expect(question).toHaveFocus();
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH'),
+    ).toBe(false);
+
+    await user.click(
+      within(detailSection).getByRole('button', { name: 'Sí, cancelar cita' }),
+    );
+
     expect(await within(detailSection).findByRole('status')).toHaveTextContent(
       /cita cancelada\. el material quedó libre, la solicitud volvió a disponible/i,
     );
     expect(within(detailSection).getByText('Cancelada')).toBeInTheDocument();
     expect(within(detailSection).getByText('Disponible')).toBeInTheDocument();
+  });
+
+  it('keeps the appointment when staff step back from cancelling it', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(page([appointmentItem()])),
+    );
+
+    renderPage('PERSONAL');
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: /acta de fundación de la villa/i,
+      }),
+    );
+    const detailSection = await screen.findByRole('region', {
+      name: /detalle de la cita · SOL-2026-00001/i,
+    });
+    await user.click(
+      within(detailSection).getByRole('button', { name: 'Cancelar cita' }),
+    );
+    await user.click(
+      within(detailSection).getByRole('button', { name: 'No, conservar cita' }),
+    );
+
+    expect(
+      within(detailSection).getByRole('button', { name: 'Cancelar cita' }),
+    ).toHaveFocus();
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH'),
+    ).toBe(false);
   });
 });

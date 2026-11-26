@@ -62,13 +62,15 @@ test('busy days keep equal rows, expose all appointments by keyboard and become 
   await expect(calendar).toBeVisible();
   const busyDay = calendar.locator('[data-date="2026-11-20"]');
   await expect(busyDay.locator('li:visible')).toHaveCount(3);
+  // WF-11: the month shows the figure in its colour; the state is in the name
+  await expect(busyDay.getByText('15/15', { exact: true })).toBeVisible();
   await expect(
-    busyDay.getByText('15/15 · Límite', { exact: true }),
+    busyDay.getByLabel(/ocupación 15 de 15, capacidad alcanzada/),
   ).toBeVisible();
+  const nearDay = calendar.locator('[data-date="2026-11-21"]');
+  await expect(nearDay.getByText('12/15', { exact: true })).toBeVisible();
   await expect(
-    calendar
-      .locator('[data-date="2026-11-21"]')
-      .getByText('12/15 · Cerca del límite', { exact: true }),
+    nearDay.getByLabel(/ocupación 12 de 15, cerca del límite/),
   ).toBeVisible();
   const heights = await calendar
     .locator('[data-date]')
@@ -100,7 +102,7 @@ test('busy days keep equal rows, expose all appointments by keyboard and become 
   await expect(busyDay.locator('li:visible')).toHaveCount(15);
   await expect(more).not.toBeVisible();
   await expect(
-    busyDay.getByText('viernes 20/11/2026', { exact: true }),
+    busyDay.getByText('Viernes, 20 de noviembre', { exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),

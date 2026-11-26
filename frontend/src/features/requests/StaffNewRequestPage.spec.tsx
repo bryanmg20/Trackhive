@@ -114,13 +114,13 @@ describe('StaffNewRequestPage', () => {
     render(renderPage());
 
     expect(
-      screen.getByRole('heading', { name: 'Ficha de solicitud' }),
+      screen.getByRole('heading', { name: 'Registro de solicitud por personal' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByLabelText('Buscar en el archivo'),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText('Título, autor o código'),
+      screen.queryByPlaceholderText('Título, autor o código…'),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Cambiar materiales' }),

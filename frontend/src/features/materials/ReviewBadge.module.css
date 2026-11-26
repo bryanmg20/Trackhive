@@ -1,13 +1,14 @@
+/* «Para revisión» chip (HU-140): clay like the warning chips of the
+   wireframes; the reason is always written in text. */
 .badge {
   display: inline-block;
   justify-self: start;
   max-width: 100%;
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--gold-text);
-  border-radius: 3px;
-  background: var(--surface);
-  color: var(--gold-deep);
-  font-size: 0.78rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-control);
+  background: var(--chip-rejected);
+  color: var(--ink);
+  font-size: 0.8rem;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  line-height: 1.35;
 }

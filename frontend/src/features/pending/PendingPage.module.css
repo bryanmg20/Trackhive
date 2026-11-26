@@ -7,18 +7,19 @@
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   line-height: 1.4;
   text-transform: uppercase;
   color: var(--gold-text);
+  font-weight: 600;
 }
 
 .title {
   font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 2.75rem);
-  font-weight: 400;
-  letter-spacing: -0.04em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ink);
 }

@@ -20,8 +20,10 @@
   gap: 1rem;
   margin: 0 0 1.5rem;
   padding: 1.25rem;
-  border: 1px solid var(--line);
+  border: 0;
   background: var(--surface-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .panelTitle {
@@ -29,6 +31,7 @@
   font-family: var(--font-display);
   color: var(--ink);
   overflow-wrap: anywhere;
+  font-weight: 800;
 }
 
 .panelTitle:focus {
@@ -57,6 +60,7 @@
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--ink);
+  font-weight: 600;
 }
 
 .field input,
@@ -64,16 +68,18 @@
   width: 100%;
   min-width: 0;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--sage-deep);
   background: var(--surface-strong);
   color: var(--ink);
   font: inherit;
+  border-radius: var(--radius-control);
 }
 
 .fieldLabel {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--ink);
+  font-weight: 600;
 }
 
 .fixedValue {
@@ -113,11 +119,13 @@
 .secondary,
 .danger {
   padding: 0.45rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--sage-deep);
   background: var(--surface-strong);
   color: var(--ink);
   font: inherit;
   cursor: pointer;
+  border-radius: var(--radius-pill);
+  min-height: 2.75rem;
 }
 
 .danger {
@@ -148,6 +156,7 @@
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .badge[data-active='true'] {
@@ -161,12 +170,13 @@
   background: none;
   color: var(--gold-text);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   text-decoration: underline;
   text-underline-offset: 0.25em;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .clearButton:hover {

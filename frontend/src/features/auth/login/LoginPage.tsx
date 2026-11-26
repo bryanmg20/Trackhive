@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../routes';
 import { LoginApiError, loginUser } from '../api/login-user';
+import { useDocumentTitle } from '../../layout/use-document-title';
 import { AuthLayout } from '../components/AuthLayout';
 import { TextField } from '../components/TextField';
 import { HOME_BY_ROLE } from '../role-home';
@@ -25,6 +26,7 @@ interface LoginLocationState {
 }
 
 export function LoginPage() {
+  useDocumentTitle('Inicio de sesión');
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LoginLocationState | null;
@@ -90,12 +92,11 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout spineLabel="ACCESO · USUARIO">
+    <AuthLayout>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Acceso</p>
-        <h1 className={styles.title}>Inicie sesión</h1>
+        <h1 className={styles.title}>Acceso a CLENA</h1>
         <p className={styles.lede}>
-          Use el correo y la contraseña de su cuenta.
+          Entre con el correo y la contraseña de su cuenta.
         </p>
       </header>
 

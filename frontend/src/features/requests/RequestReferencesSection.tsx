@@ -111,7 +111,7 @@ function AssociatePanel({
             maxLength={100}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Título, autor o código"
+            placeholder="Título, autor o código…"
           />
           <button className={styles.primary} type="submit" disabled={isSearching}>
             {isSearching ? 'Buscando…' : 'Buscar'}

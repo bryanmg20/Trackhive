@@ -1,0 +1,31 @@
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.clena,
+.uninorte {
+  display: block;
+  width: auto;
+  height: 3.25rem;
+  max-width: none;
+}
+
+.divider {
+  align-self: stretch;
+  width: 2px;
+  background: var(--ochre);
+}
+
+@media (max-width: 480px) {
+  .brand {
+    gap: 0.5rem;
+  }
+
+  .clena,
+  .uninorte {
+    height: 2.25rem;
+  }
+}

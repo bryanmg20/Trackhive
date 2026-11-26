@@ -11,9 +11,10 @@
 .reasonLabel {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 /* «Ver historial» under the status (HU-17) */
@@ -26,12 +27,13 @@
   color: var(--gold-text);
   font: inherit;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-decoration: underline;
   text-underline-offset: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .historyToggle:focus-visible {
@@ -45,6 +47,17 @@
 }
 
 @media (max-width: 900px) {
+  /* The rows are cards here: the timeline joins the card above it */
+  .historyRow {
+    margin-top: calc(-0.75rem - 1px);
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}
+
+/* Same, when the table becomes cards because the content column is narrow */
+@container results (max-width: 46rem) {
   /* The rows are cards here: the timeline joins the card above it */
   .historyRow {
     margin-top: calc(-0.75rem - 1px);

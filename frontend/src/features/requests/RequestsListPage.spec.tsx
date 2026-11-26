@@ -49,12 +49,12 @@ function lastUrl(): URL {
   return new URL(calls[calls.length - 1][0] as string, 'http://localhost');
 }
 
-function renderPage(role?: string) {
+function renderPage(role?: string, path = '/solicitudes') {
   if (role) {
     sessionStorage.setItem('trackhive.accessToken', tokenWithRole(role));
   }
   return render(
-    <MemoryRouter initialEntries={['/solicitudes']}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route element={<StaffRoute />}>
           <Route path="/solicitudes" element={<RequestsListPage />} />
@@ -253,6 +253,22 @@ describe('RequestsListPage', () => {
     expect(url.searchParams.get('limit')).toBe('10');
   });
 
+  it('restores the search kept in the URL after a reload or «Atrás»', async () => {
+    fetchMock.mockResolvedValue(page([item()]));
+    renderPage(
+      'PERSONAL',
+      '/solicitudes?status=RECIBIDA&requester=juan&sort=desiredDate&page=2',
+    );
+    await screen.findByRole('table');
+
+    const url = lastUrl();
+    expect(url.searchParams.get('status')).toBe('RECIBIDA');
+    expect(url.searchParams.get('requester')).toBe('juan');
+    expect(url.searchParams.get('sort')).toBe('desiredDate');
+    expect(url.searchParams.get('page')).toBe('2');
+    expect(screen.getByLabelText('Solicitante')).toHaveValue('juan');
+  });
+
   it('sends a PUBLICO user to the public search and loads nothing', () => {
     renderPage('PUBLICO');
 
@@ -396,7 +412,7 @@ describe('RequestsListPage', () => {
     renderPage('PERSONAL');
     await screen.findByRole('table');
 
-    expect(screen.getByRole('link', { name: 'Material' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Archivo' })).toHaveAttribute(
       'href',
       '/personal/materiales',
     );

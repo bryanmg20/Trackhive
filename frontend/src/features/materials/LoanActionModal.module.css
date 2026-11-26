@@ -1,17 +1,20 @@
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
+/* Native <dialog> opened with showModal(): the browser centres it in the
+   top layer and draws ::backdrop behind it. */
+.dialog::backdrop {
   background: rgb(0 0 0 / 0.45);
 }
 
 .dialog {
-  width: min(100%, 32rem);
+  width: min(100% - 2rem, 32rem);
+  max-width: none;
   max-height: 90vh;
+  margin: auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Only while open: an author `display` would show a closed dialog. */
+.dialog[open] {
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
@@ -25,6 +28,7 @@
   font-family: var(--font-display);
   font-size: 1.25rem;
   color: var(--ink);
+  font-weight: 800;
 }
 
 .subtitle {
@@ -43,17 +47,19 @@
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--ink);
+  font-weight: 600;
 }
 
 .field textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--sage-deep);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
   resize: vertical;
+  border-radius: var(--radius-control);
 }
 
 .actions {
@@ -64,9 +70,11 @@
 
 .secondary {
   padding: 0.55rem 0.9rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--sage-deep);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
   cursor: pointer;
+  border-radius: var(--radius-pill);
+  min-height: 2.75rem;
 }
