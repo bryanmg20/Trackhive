@@ -195,9 +195,9 @@ El administrador inicial se crea siempre al arrancar el backend, con `RUN_SEED=t
 
 | Rol | Correos | Contraseña |
 |---|---|---|
-| `ADMIN` (administrador inicial) | `admin@example.com` (`ADMIN_EMAIL`) | `1` (`ADMIN_PASSWORD`) |
-| `PERSONAL` | `personal1@example.com`, `personal2@example.com` | `1` (`SEED_DEMO_PASSWORD`) |
-| `PUBLICO` | `publico1@example.com`, `publico2@example.com`, `publico3@example.com`, `publico4@example.com` | `1` (`SEED_DEMO_PASSWORD`) |
+| `ADMIN` (administrador inicial) | `admin@example.com` (`ADMIN_EMAIL`) | `12345678` (`ADMIN_PASSWORD`) |
+| `PERSONAL` | `personal1@example.com`, `personal2@example.com` | `12345678` (`SEED_DEMO_PASSWORD`) |
+| `PUBLICO` | `publico1@example.com`, `publico2@example.com`, `publico3@example.com`, `publico4@example.com` | `12345678` (`SEED_DEMO_PASSWORD`) |
 
 Son valores **solo para desarrollo**. En producción, `RUN_SEED=false` no carga datos de demostración y exige un `ADMIN_PASSWORD` de al menos 12 caracteres ([manual de operación](docs/manual-operacion.md#8-administrador-inicial-y-cambio-de-contraseñas)).
 
@@ -217,8 +217,8 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `COMPOSE_PATH_SEPARATOR` | Separador de `COMPOSE_FILE`, igual en Linux, macOS y Windows | `:` |
 | `RUN_SEED` | Carga la semilla de demostración al arrancar. En producción, `false` | `true` |
 | `ADMIN_EMAIL` | Correo del administrador inicial, creado al arrancar si no hay ningún `ADMIN` | `admin@example.com` |
-| `ADMIN_PASSWORD` | Contraseña del administrador inicial. Con `RUN_SEED=false`, al menos 12 caracteres | `1` |
-| `SEED_DEMO_PASSWORD` | Contraseña de los usuarios de la semilla. No se exige con `RUN_SEED=false` | `1` |
+| `ADMIN_PASSWORD` | Contraseña del administrador inicial. Con `RUN_SEED=false`, al menos 12 caracteres | `12345678` |
+| `SEED_DEMO_PASSWORD` | Contraseña de los usuarios de la semilla. No se exige con `RUN_SEED=false` | `12345678` |
 | `JWT_SECRET` | Secreto para firmar el access token | `change-me-access-secret` |
 | `JWT_REFRESH_SECRET` | Secreto para firmar el refresh token | `change-me-refresh-secret` |
 | `SMTP_HOST` | Servidor de correo. En Docker, `mailpit` | `mailpit` |
