@@ -120,7 +120,7 @@ describe('StaffNewRequestPage', () => {
       screen.queryByLabelText('Buscar en el archivo'),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText('Título, autor o código'),
+      screen.queryByPlaceholderText('Título, autor o código…'),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Cambiar materiales' }),

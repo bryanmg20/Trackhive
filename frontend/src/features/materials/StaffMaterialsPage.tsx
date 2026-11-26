@@ -313,7 +313,7 @@ export function StaffMaterialsPage() {
             maxLength={100}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Título, autor o código"
+            placeholder="Título, autor o código…"
           />
           <button className={searchStyles.primary} type="submit">
             Buscar

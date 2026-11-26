@@ -122,6 +122,22 @@ a {
   color: inherit;
 }
 
+/* Taps answer at once: no wait for a possible double-tap zoom (pinch
+   zoom still works), and a soft ink tint instead of the default blue. */
+a,
+button,
+input,
+label,
+select,
+summary,
+textarea {
+  touch-action: manipulation;
+}
+
+html {
+  -webkit-tap-highlight-color: rgb(23 23 23 / 0.08);
+}
+
 /* Placeholders are text too: keep them at the readable muted contrast. */
 ::placeholder {
   color: var(--muted);

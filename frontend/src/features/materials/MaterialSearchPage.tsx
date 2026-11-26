@@ -195,7 +195,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
             maxLength={100}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Título, autor o código"
+            placeholder="Título, autor o código…"
           />
           <button className={styles.primary} type="submit">
             Buscar

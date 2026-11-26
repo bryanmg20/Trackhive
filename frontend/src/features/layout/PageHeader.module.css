@@ -24,12 +24,15 @@
   line-height: 1.15;
   color: var(--ink);
   overflow-wrap: anywhere;
+  /* Even lines: a two-line title never leaves one word alone */
+  text-wrap: balance;
 }
 
 .description {
   max-width: 48rem;
   color: var(--muted);
   font-size: 1.1rem;
+  text-wrap: pretty;
 }
 
 @media (max-width: 480px) {

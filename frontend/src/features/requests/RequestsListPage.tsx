@@ -241,7 +241,7 @@ export function RequestsListPage() {
             maxLength={100}
             value={requester}
             onChange={(event) => setRequester(event.target.value)}
-            placeholder="Solicitante: nombre, correo o documento"
+            placeholder="Solicitante: nombre, correo o documento…"
           />
           <button className={searchStyles.primary} type="submit">
             Buscar
@@ -320,7 +320,7 @@ export function RequestsListPage() {
                 maxLength={100}
                 value={material}
                 onChange={(event) => setMaterial(event.target.value)}
-                placeholder="Título o código"
+                placeholder="Título o código…"
               />
               <p className={searchStyles.hint}>
                 Pulse Enter o «Buscar» para aplicar.

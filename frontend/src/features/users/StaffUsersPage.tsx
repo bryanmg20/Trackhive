@@ -378,7 +378,7 @@ export function StaffUsersPage() {
             maxLength={100}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Nombre o correo"
+            placeholder="Nombre o correo…"
           />
           <button className={searchStyles.primary} type="submit">
             Buscar

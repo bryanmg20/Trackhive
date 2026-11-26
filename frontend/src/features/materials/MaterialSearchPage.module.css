@@ -219,6 +219,8 @@
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   font-size: 0.9rem;
+  /* Codes and dates line up from one row to the next */
+  font-variant-numeric: tabular-nums;
   vertical-align: top;
 }
 
