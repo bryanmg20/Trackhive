@@ -22,10 +22,14 @@ import type {
   SearchMaterialsParams,
   SortOrder,
 } from './api/search-materials';
+import { useUrlParams } from '../navigation/url-params';
 import { DigitalCopyCell } from './DigitalCopyCell';
+import {
+  DEFAULT_MATERIAL_PARAMS,
+  parsePublicMaterialParams,
+} from './material-search-params';
 import styles from './MaterialSearchPage.module.css';
 
-const PAGE_SIZE = 10;
 const FORM_ID = 'material-search';
 
 interface SearchResponse {
@@ -55,15 +59,13 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
   // The public user picks the materials to request for themselves
   const canSelect = role === 'PUBLICO';
 
-  const [text, setText] = useState('');
-  const [collection, setCollection] = useState('');
+  const [params, setParams] = useUrlParams(
+    parsePublicMaterialParams,
+    DEFAULT_MATERIAL_PARAMS,
+  );
+  const [text, setText] = useState(params.q ?? '');
+  const [collection, setCollection] = useState(params.collection ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [params, setParams] = useState<SearchMaterialsParams>({
-    sort: 'title',
-    order: 'asc',
-    page: 1,
-    limit: PAGE_SIZE,
-  });
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [selected, setSelected] = useState<SelectedMaterial[]>([]);

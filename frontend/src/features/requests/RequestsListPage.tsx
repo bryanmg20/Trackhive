@@ -6,6 +6,16 @@ import { AppLayout } from '../layout/AppLayout';
 import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import {
+  compact,
+  readBoolean,
+  readDate,
+  readEnum,
+  readPage,
+  readText,
+  SORT_ORDERS,
+  useUrlParams,
+} from '../navigation/url-params';
+import {
   listRequests,
   REQUEST_STATUS_LABELS,
   REQUEST_STATUSES,
@@ -32,6 +42,31 @@ const SORT_LABELS: Record<RequestSortField, string> = {
   desiredDate: 'Fecha deseada',
 };
 
+const SORT_FIELDS: readonly RequestSortField[] = ['registeredAt', 'desiredDate'];
+
+const DEFAULT_PARAMS: ListRequestsParams = {
+  sort: 'registeredAt',
+  order: 'desc',
+  page: 1,
+  limit: PAGE_SIZE,
+};
+
+/** Search kept in the URL, e.g. «?status=RECIBIDA&page=2». */
+function parseParams(search: URLSearchParams): ListRequestsParams {
+  return compact({
+    status: readEnum(search, 'status', REQUEST_STATUSES),
+    desiredFrom: readDate(search, 'desiredFrom'),
+    desiredTo: readDate(search, 'desiredTo'),
+    requester: readText(search, 'requester'),
+    material: readText(search, 'material'),
+    pendingReferences: readBoolean(search, 'pendingReferences') || undefined,
+    sort: readEnum(search, 'sort', SORT_FIELDS) ?? DEFAULT_PARAMS.sort,
+    order: readEnum(search, 'order', SORT_ORDERS) ?? DEFAULT_PARAMS.order,
+    page: readPage(search),
+    limit: PAGE_SIZE,
+  });
+}
+
 interface ListResponse {
   params: ListRequestsParams;
   page: RequestPage | null;
@@ -46,17 +81,12 @@ function formatDate(isoDate: string): string {
 
 /** Staff screen (HU-12): list the requests with filters, order and pages. */
 export function RequestsListPage() {
-  const [requester, setRequester] = useState('');
-  const [material, setMaterial] = useState('');
-  const [desiredFrom, setDesiredFrom] = useState('');
-  const [desiredTo, setDesiredTo] = useState('');
+  const [params, setParams] = useUrlParams(parseParams, DEFAULT_PARAMS);
+  const [requester, setRequester] = useState(params.requester ?? '');
+  const [material, setMaterial] = useState(params.material ?? '');
+  const [desiredFrom, setDesiredFrom] = useState(params.desiredFrom ?? '');
+  const [desiredTo, setDesiredTo] = useState(params.desiredTo ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [params, setParams] = useState<ListRequestsParams>({
-    sort: 'registeredAt',
-    order: 'desc',
-    page: 1,
-    limit: PAGE_SIZE,
-  });
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<ListResponse | null>(null);
 

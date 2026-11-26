@@ -328,6 +328,19 @@
   box-shadow: 0 -8px 24px -18px rgba(17, 34, 29, 0.4);
 }
 
+/* While the sticky bar is on screen, a control reached with Tab scrolls
+   into view above it instead of hiding behind it. */
+:global(html):has(.requestBar) {
+  scroll-padding-bottom: 7rem;
+}
+
+@media (max-width: 480px) {
+  /* The bar wraps into two rows on a phone */
+  :global(html):has(.requestBar) {
+    scroll-padding-bottom: 10rem;
+  }
+}
+
 .requestBarInner {
   display: flex;
   align-items: center;

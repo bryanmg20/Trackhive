@@ -4,6 +4,13 @@ import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
 import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
+import {
+  compact,
+  readEnum,
+  readPage,
+  SORT_ORDERS,
+  useUrlParams,
+} from '../navigation/url-params';
 import { listMyRequests } from './api/list-my-requests';
 import { REFERENCE_DISPLAY_STATUS_LABELS } from './api/material-references';
 import type { ListMyRequestsParams, MyRequestPage } from './api/list-my-requests';
@@ -38,6 +45,26 @@ const REGISTERED_AT_FORMAT = new Intl.DateTimeFormat('es-CO', {
   year: 'numeric',
 });
 
+const SORT_FIELDS: readonly RequestSortField[] = ['registeredAt', 'desiredDate'];
+
+const DEFAULT_PARAMS: ListMyRequestsParams = {
+  sort: 'registeredAt',
+  order: 'desc',
+  page: 1,
+  limit: PAGE_SIZE,
+};
+
+/** Filter, order and page kept in the URL, e.g. «?status=AGENDADA». */
+function parseParams(search: URLSearchParams): ListMyRequestsParams {
+  return compact({
+    status: readEnum(search, 'status', REQUEST_STATUSES),
+    sort: readEnum(search, 'sort', SORT_FIELDS) ?? DEFAULT_PARAMS.sort,
+    order: readEnum(search, 'order', SORT_ORDERS) ?? DEFAULT_PARAMS.order,
+    page: readPage(search),
+    limit: PAGE_SIZE,
+  });
+}
+
 interface ListResponse {
   params: ListMyRequestsParams;
   page: MyRequestPage | null;
@@ -53,12 +80,7 @@ function formatDate(isoDate: string): string {
 /** Public user screen (HU-11): the status of my own requests. */
 export function MyRequestsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [params, setParams] = useState<ListMyRequestsParams>({
-    sort: 'registeredAt',
-    order: 'desc',
-    page: 1,
-    limit: PAGE_SIZE,
-  });
+  const [params, setParams] = useUrlParams(parseParams, DEFAULT_PARAMS);
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<ListResponse | null>(null);
   // The request whose timeline is open (HU-17), one at a time. It remembers

@@ -4,6 +4,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
 import { PageHeader } from '../layout/PageHeader';
+import { UnsavedChangesGuard } from '../navigation/UnsavedChangesGuard';
 import { createRequest } from './api/create-request';
 import type { MaterialReferencePayload } from './api/material-references';
 import { MaterialReferencesEditor } from './MaterialReferencesEditor';
@@ -67,8 +68,17 @@ export function NewRequestPage() {
     }
   }
 
+  // What the person typed here; the materials come from the URL and stay
+  const hasUnsavedChanges =
+    !trackingCode &&
+    (references.length > 0 ||
+      reason.trim() !== '' ||
+      desiredDate !== '' ||
+      deliveryMode !== 'PRESENCIAL');
+
   return (
     <AppLayout>
+      <UnsavedChangesGuard when={hasUnsavedChanges} />
       <div className={styles.page}>
         <PageHeader
           titleId="new-request-title"

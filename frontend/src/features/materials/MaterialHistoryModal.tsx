@@ -18,9 +18,20 @@ const PAGE_SIZE = 10;
 const NETWORK_ERROR_MESSAGE =
   'No pudimos conectar con el servidor. Revise su conexión e inténtelo de nuevo.';
 
+// Date-only values («2026-11-20»): read and written in UTC so no time zone
+// can move them to the day before
+const APPOINTMENT_DATE_FORMAT = new Intl.DateTimeFormat('es-CO', {
+  timeZone: 'UTC',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
+/** "2026-11-20" -> "20/11/2026". */
 function formatDate(isoDate: string): string {
-  const [year, month, day] = isoDate.slice(0, 10).split('-');
-  return `${day}/${month}/${year}`;
+  return APPOINTMENT_DATE_FORMAT.format(
+    new Date(`${isoDate.slice(0, 10)}T00:00:00Z`),
+  );
 }
 
 export interface MaterialHistoryModalProps {

@@ -4,6 +4,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
 import { PageHeader } from '../layout/PageHeader';
+import { UnsavedChangesGuard } from '../navigation/UnsavedChangesGuard';
 import { createRequestOnBehalf } from './api/create-request-on-behalf';
 import type {
   DeliveryMode,
@@ -521,9 +522,21 @@ export function StaffNewRequestPage() {
   const isLookupBusy = lookup.status === 'searching';
   const showContactFields = lookup.status === 'new';
   const showFoundProfile = lookup.status === 'found';
+  // Data typed for the visitor; the materials come from the URL and stay
+  const hasUnsavedChanges =
+    receipt === null &&
+    (email.trim() !== '' ||
+      (Object.keys(EMPTY_CONTACT) as (keyof ContactData)[]).some(
+        (field) => contact[field] !== EMPTY_CONTACT[field],
+      ) ||
+      references.length > 0 ||
+      reason.trim() !== '' ||
+      desiredDate !== '' ||
+      deliveryMode !== 'PRESENCIAL');
 
   return (
     <AppLayout>
+      <UnsavedChangesGuard when={hasUnsavedChanges} />
       <section className={styles.hero} aria-labelledby="staff-request-title">
         <PageHeader
           titleId="staff-request-title"

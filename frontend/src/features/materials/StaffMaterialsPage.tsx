@@ -36,10 +36,14 @@ import type {
   SearchMaterialsParams,
   SortOrder,
 } from './api/search-materials';
+import { useUrlParams } from '../navigation/url-params';
+import {
+  DEFAULT_MATERIAL_PARAMS,
+  parseStaffMaterialParams,
+} from './material-search-params';
 import searchStyles from './MaterialSearchPage.module.css';
 import styles from './StaffMaterialsPage.module.css';
 
-const PAGE_SIZE = 10;
 const FORM_ID = 'staff-material-search';
 
 const SORT_LABELS: Record<MaterialSortField, string> = {
@@ -69,15 +73,13 @@ function toApiError(caught: unknown): MaterialsApiError {
  */
 export function StaffMaterialsPage() {
   const navigate = useNavigate();
-  const [text, setText] = useState('');
-  const [collection, setCollection] = useState('');
+  const [params, setParams] = useUrlParams(
+    parseStaffMaterialParams,
+    DEFAULT_MATERIAL_PARAMS,
+  );
+  const [text, setText] = useState(params.q ?? '');
+  const [collection, setCollection] = useState(params.collection ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [params, setParams] = useState<SearchMaterialsParams>({
-    sort: 'title',
-    order: 'asc',
-    page: 1,
-    limit: PAGE_SIZE,
-  });
   // The answer remembers which params it belongs to: while they differ, it is loading
   const [response, setResponse] = useState<SearchResponse | null>(null);
   // Statuses already saved in this session, so the list shows them without a new search
