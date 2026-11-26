@@ -3,6 +3,8 @@
 # Encrypt certificate, copies it to deploy/tls and reloads nginx, without
 # restarting anything. certbot runs it as root with RENEWED_LINEAGE set to
 # /etc/letsencrypt/live/<domain>. docs/manual-operacion.md, section 4.
+# It always writes to deploy/tls, the default of TLS_CERT_DIR: with this hook
+# leave TLS_CERT_DIR unset, or nginx keeps serving the old certificate.
 set -eu
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
