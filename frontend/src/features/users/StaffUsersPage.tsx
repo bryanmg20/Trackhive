@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import {
   networkRequestApiError,
@@ -322,10 +323,11 @@ export function StaffUsersPage() {
   return (
     <AppLayout>
       <section className={searchStyles.hero} aria-labelledby="staff-users-title">
-        <p className={searchStyles.eyebrow}>Administración</p>
-        <h1 id="staff-users-title" className={searchStyles.title}>
-          Usuarios del personal
-        </h1>
+        <PageHeader
+          titleId="staff-users-title"
+          title="Gestión de usuarios del personal"
+          description="Administre las cuentas del personal del CLENA."
+        />
         <form className={searchStyles.searchBar} onSubmit={search} role="search">
           <label htmlFor="staff-user-search" className="sr-only">
             Buscar por nombre o correo
@@ -353,7 +355,7 @@ export function StaffUsersPage() {
         </p>
       </section>
 
-      <div className={searchStyles.layout}>
+      <div className={searchStyles.tableLayout}>
         <aside className={searchStyles.sidebar} aria-label="Filtros">
           <button
             type="button"

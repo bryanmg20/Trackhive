@@ -396,7 +396,7 @@ describe('RequestsListPage', () => {
     renderPage('PERSONAL');
     await screen.findByRole('table');
 
-    expect(screen.getByRole('link', { name: 'Material' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Archivo' })).toHaveAttribute(
       'href',
       '/personal/materiales',
     );

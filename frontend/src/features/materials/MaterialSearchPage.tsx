@@ -5,6 +5,7 @@ import { ROUTES } from '../../routes';
 import { readSessionRole } from '../auth/session';
 import type { UserRole } from '../auth/session';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import type { SelectedMaterial } from '../requests/selected-materials';
 import { buildNewRequestPath } from '../requests/selected-materials';
 import {
@@ -172,10 +173,11 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
   return (
     <AppLayout footer={requestBar}>
       <section className={styles.hero} aria-labelledby="page-title">
-        <p className={styles.eyebrow}>Consulta documental</p>
-        <h1 id="page-title" className={styles.title}>
-          Buscar material
-        </h1>
+        <PageHeader
+          titleId="page-title"
+          title="Búsqueda de material"
+          description="Explore el catálogo y seleccione el material que necesita consultar."
+        />
         <form
           id={FORM_ID}
           className={styles.searchBar}
@@ -199,7 +201,7 @@ function PublicMaterialSearch({ role }: { role: UserRole | null }) {
         </form>
       </section>
 
-      <div className={styles.layout}>
+      <div className={styles.tableLayout}>
         <aside className={styles.sidebar} aria-label="Filtros">
           <button
             type="button"

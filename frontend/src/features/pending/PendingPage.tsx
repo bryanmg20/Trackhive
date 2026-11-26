@@ -5,13 +5,12 @@ import styles from './PendingPage.module.css';
 
 interface PendingPageProps {
   title: string;
-  spineLabel: string;
 }
 
 /** Temporary destination until the real screen (HU-12) exists. */
-export function PendingPage({ title, spineLabel }: PendingPageProps) {
+export function PendingPage({ title }: PendingPageProps) {
   return (
-    <AuthLayout spineLabel={spineLabel}>
+    <AuthLayout>
       <header className={styles.header}>
         <p className={styles.eyebrow}>Sesión iniciada</p>
         <h1 className={styles.title}>{title}</h1>

@@ -90,12 +90,11 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout spineLabel="ACCESO · USUARIO">
+    <AuthLayout>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Acceso</p>
-        <h1 className={styles.title}>Inicie sesión</h1>
+        <h1 className={styles.title}>Acceso a CLENA</h1>
         <p className={styles.lede}>
-          Use el correo y la contraseña de su cuenta.
+          Entre con el correo y la contraseña de su cuenta.
         </p>
       </header>
 

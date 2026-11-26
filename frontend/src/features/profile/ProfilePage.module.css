@@ -2,25 +2,34 @@
   width: 100%;
   max-width: 48rem;
   margin: 0 auto;
-  padding: 2rem 1rem;
   overflow-wrap: anywhere;
 }
-.page h1 {
+/* Only the «Cuenta eliminada» screen; the profile uses PageHeader */
+.page > h1 {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 3rem;
-  font-weight: 400;
+  font-size: 2.5rem;
+  font-weight: 800;
 }
 .fields {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: 0.5rem;
-  padding: 1rem;
+  border: 0;
+  background: var(--surface-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 1.25rem;
   min-width: 0;
   margin: 1.5rem 0;
 }
 .fields legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0 0 0.75rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.15rem;
   font-weight: 600;
-  padding: 0 0.5rem;
+}
+.fields legend + * {
+  clear: both;
 }
 .fields > p {
   margin: 0 0 1rem;
@@ -43,7 +52,7 @@
   color: inherit;
   background: var(--surface-strong);
   border: 1px solid var(--sage-deep);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-control);
 }
 .field [aria-invalid='true'] {
   border-color: var(--seal);
@@ -53,13 +62,25 @@
   margin: 0;
 }
 .page button {
+  min-height: 2.75rem;
   font: inherit;
-  padding: 0.7rem 1rem;
+  font-weight: 600;
+  padding: 0.7rem 1.5rem;
   cursor: pointer;
-  color: var(--surface);
-  background: var(--ink);
-  border: 1px solid var(--ink);
-  border-radius: 0.25rem;
+  color: var(--ink);
+  background: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-pill);
+}
+/* WF-03: «Guardar» spans the form */
+.page form > button[type='submit'] {
+  width: 100%;
+}
+/* Destructive actions are never the yellow primary */
+.danger button {
+  color: var(--seal-dark);
+  background: var(--surface-strong);
+  border-color: var(--seal);
 }
 .page button:disabled {
   cursor: wait;
@@ -74,7 +95,7 @@
   max-width: min(32rem, calc(100vw - 3rem));
   box-sizing: border-box;
   border: 1px solid var(--seal);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   padding: 1.25rem;
   color: var(--ink);
   background: var(--surface);

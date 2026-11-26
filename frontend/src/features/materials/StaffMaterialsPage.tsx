@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import type { SelectedMaterial } from '../requests/selected-materials';
 import { buildStaffNewRequestPath } from '../requests/selected-materials';
 import {
@@ -290,10 +291,11 @@ export function StaffMaterialsPage() {
   return (
     <AppLayout footer={requestBar}>
       <section className={searchStyles.hero} aria-labelledby="staff-title">
-        <p className={searchStyles.eyebrow}>Gestión del archivo</p>
-        <h1 id="staff-title" className={searchStyles.title}>
-          Estado del material
-        </h1>
+        <PageHeader
+          titleId="staff-title"
+          title="Material para el personal"
+          description="Consulte el catálogo y gestione la disponibilidad del material."
+        />
         <form
           id={FORM_ID}
           className={searchStyles.searchBar}
@@ -317,7 +319,7 @@ export function StaffMaterialsPage() {
         </form>
       </section>
 
-      <div className={searchStyles.layout}>
+      <div className={searchStyles.tableLayout}>
         <aside className={searchStyles.sidebar} aria-label="Filtros">
           <button
             type="button"

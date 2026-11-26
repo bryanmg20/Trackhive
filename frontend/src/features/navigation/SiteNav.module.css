@@ -1,43 +1,146 @@
+/* Side menu of the wireframes: dark column, rounded items, yellow selection.
+   Below the tablet breakpoint it folds behind the dark «Menú» bar. */
+
 .nav {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--sidebar-text);
+}
+
+.toggle {
+  display: none;
+}
+
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem 1rem;
+}
+
+.kicker {
+  padding-left: 0.5rem;
+  color: var(--sidebar-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .link {
-  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 3.25rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-card);
+  background: var(--sidebar-item);
+  color: var(--sidebar-text);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
   text-decoration: none;
-  text-underline-offset: 0.25em;
 }
 
 .link:hover {
-  text-decoration: underline;
+  background: #3d3d3d;
 }
 
-.active {
-  font-weight: 700;
-  text-decoration: underline;
+.link:focus-visible,
+.logout:focus-visible,
+.toggle:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.active,
+.active:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.icon {
+  flex: none;
 }
 
 .logout {
-  padding: 0;
+  align-self: flex-start;
+  min-height: 2.75rem;
+  margin-top: auto;
+  padding: 0.5rem 0.5rem 0.5rem 1.1rem;
   border: 0;
   background: none;
-  color: var(--ink);
+  color: var(--sidebar-text);
   font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 0.25em;
+  font-weight: 500;
   cursor: pointer;
 }
 
 .logout:hover:not(:disabled) {
-  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
 }
 
 .logout:disabled {
   cursor: wait;
   opacity: 0.7;
+}
+
+/* Tablet and phone (see styles/global.css): the column becomes a «Menú»
+   bar; the panel opens below it with the same options. */
+@media (max-width: 900px) {
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.1rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--sidebar);
+    color: var(--sidebar-text);
+    font: inherit;
+    font-weight: 600;
+  }
+
+  .toggleLabel {
+    flex: 1;
+    text-align: left;
+  }
+
+  .roleTag {
+    color: var(--gold);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .panel {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 1rem;
+    border-radius: var(--radius-card);
+    background: var(--sidebar);
+  }
+
+  .panel[data-open='true'] {
+    display: flex;
+  }
+
+  .logout {
+    margin-top: 0.25rem;
+  }
 }

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import { createRequestOnBehalf } from './api/create-request-on-behalf';
 import type {
   DeliveryMode,
@@ -15,7 +16,6 @@ import { RequestApiError } from './api/request-api-error';
 import { MaterialReferencesEditor } from './MaterialReferencesEditor';
 import { readMaterialIds } from './selected-materials';
 import type { SelectedMaterial } from './selected-materials';
-import shellStyles from '../materials/MaterialSearchPage.module.css';
 import styles from './StaffNewRequestPage.module.css';
 import { CharacterizationFields } from '../profile/CharacterizationFields';
 import {
@@ -525,10 +525,11 @@ export function StaffNewRequestPage() {
   return (
     <AppLayout>
       <section className={styles.hero} aria-labelledby="staff-request-title">
-        <p className={shellStyles.eyebrow}>Mostrador · Solicitud</p>
-        <h1 id="staff-request-title" className={shellStyles.title}>
-          Ficha de solicitud
-        </h1>
+        <PageHeader
+          titleId="staff-request-title"
+          title="Registro de solicitud por personal"
+          description="Registre la consulta recibida y los datos del visitante."
+        />
         <p className={styles.lede}>
           Para personas que llegan o llaman sin cuenta. Busque el correo, elija
           el material y entregue el código de seguimiento.

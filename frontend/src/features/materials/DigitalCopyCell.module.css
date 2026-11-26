@@ -1,19 +1,19 @@
 .cell {
-  min-width: 0;
+  min-width: 9rem;
 }
 
 .badge {
   display: inline-block;
-  padding: 0.1rem 0.45rem;
-  border-radius: 3px;
-  background: var(--paper);
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: var(--chip-closed);
   color: var(--ink);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .badge[data-available='true'] {
-  background: var(--success-surface);
-  color: var(--success);
+  background: var(--chip-received);
 }
 
 .folderName {
@@ -21,8 +21,9 @@
   margin-top: 0.25rem;
   color: var(--ink-soft);
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
+  font-weight: 600;
 }
 
 .review {

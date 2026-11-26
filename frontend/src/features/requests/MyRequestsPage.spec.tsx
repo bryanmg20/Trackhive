@@ -318,7 +318,7 @@ describe('MyRequestsPage', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Secciones' });
     expect(
-      within(nav).getByRole('link', { name: 'Buscar material' }),
+      within(nav).getByRole('link', { name: 'Inicio' }),
     ).toHaveAttribute('href', '/materiales');
     expect(
       within(nav).getByRole('link', { name: 'Mis solicitudes' }),

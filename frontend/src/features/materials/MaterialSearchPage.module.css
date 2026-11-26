@@ -2,10 +2,11 @@
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-soft);
+  font-weight: 600;
 }
 
 .eyebrow {
@@ -22,8 +23,8 @@
 .title {
   font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 2.9rem);
-  font-weight: 400;
-  letter-spacing: -0.04em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ink);
 }
@@ -41,8 +42,8 @@
   min-width: 0;
   min-height: 2.75rem;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: 1px solid var(--sage-deep);
+  border-radius: var(--radius-control);
   background: var(--surface-strong);
   color: var(--ink);
   font: inherit;
@@ -54,9 +55,9 @@
 
 .primary {
   min-height: 2.75rem;
-  padding: 0.6rem 1.25rem;
+  padding: 0.6rem 1.5rem;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   background: var(--gold);
   color: var(--gold-ink);
   font: inherit;
@@ -65,8 +66,10 @@
 
 .primary:disabled,
 .pagination button:disabled {
+  border-color: transparent;
+  background: var(--chip-closed);
+  color: var(--muted);
   cursor: not-allowed;
-  opacity: 0.5;
 }
 
 .layout {
@@ -74,6 +77,12 @@
   grid-template-columns: 15rem minmax(0, 1fr);
   gap: 2rem;
   align-items: start;
+}
+
+.tableLayout {
+  composes: layout;
+  container: results / inline-size;
+  row-gap: 1.25rem;
 }
 
 .sidebar {
@@ -89,6 +98,10 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  padding: 1.4rem 1.25rem;
+  border-radius: var(--radius-card);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
 }
 
 .group {
@@ -107,9 +120,10 @@
   padding: 0;
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .option {
@@ -172,24 +186,32 @@
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  padding: 1rem;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--radius-card);
   background: var(--surface-strong);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
+/* Dark table header of the wireframes */
 .table th {
-  padding: 0.7rem 0.9rem;
-  background: var(--surface);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  padding: 0.85rem 0.9rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
   text-align: left;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--line);
+}
+
+.table th:first-child {
+  border-radius: 0.75rem 0 0 0.75rem;
+}
+
+.table th:last-child {
+  border-radius: 0 0.75rem 0.75rem 0;
 }
 
 .table td {
@@ -204,7 +226,7 @@
   border-bottom: 0;
 }
 
-.table tbody tr:hover {
+.table tbody tr:hover td {
   background: var(--surface);
 }
 
@@ -222,27 +244,28 @@
   margin-top: 0.2rem;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
+  font-weight: 600;
 }
 
 .status {
   display: inline-block;
-  padding: 0.1rem 0.45rem;
-  border-radius: 3px;
-  background: var(--paper);
-  font-size: 0.82rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: var(--chip-searching);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .status[data-status='DISPONIBLE'] {
-  background: var(--success-surface);
-  color: var(--success);
+  background: var(--chip-available);
 }
 
 .status[data-status='NO_CONSULTABLE'] {
-  background: var(--error-surface);
-  color: var(--seal-dark);
+  background: var(--chip-rejected);
 }
 
 .empty {
@@ -251,8 +274,8 @@
   gap: 0.35rem;
   padding: 1.5rem;
   border: 1px dashed var(--sage-deep);
-  border-radius: 6px;
-  background: var(--surface);
+  border-radius: var(--radius-card);
+  background: var(--surface-strong);
 }
 
 .emptyTitle {
@@ -264,8 +287,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  padding: 0.8rem;
-  border-left: 3px solid var(--seal);
+  padding: 0.9rem 1rem;
+  border-left: 4px solid var(--seal);
+  border-radius: var(--radius-control);
   background: var(--error-surface);
   color: var(--seal-dark);
   font-size: 0.9rem;
@@ -286,11 +310,11 @@
 
 .pagination button,
 .filtersToggle {
-  min-height: 2.5rem;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface-strong);
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--sage-deep);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
   color: var(--ink);
   font: inherit;
   font-weight: 600;
@@ -366,9 +390,6 @@
     display: none;
     margin-top: 1rem;
     padding: 1rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--surface-strong);
   }
 
   .filters[data-open='true'] {
@@ -385,8 +406,10 @@
   }
 
   .table {
+    padding: 0;
     border: 0;
     background: transparent;
+    box-shadow: none;
   }
 
   .table thead {
@@ -399,22 +422,31 @@
 
   .table tr {
     position: relative;
-    margin-bottom: 0.75rem;
-    padding: 0.85rem 0.9rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    margin-bottom: 0.9rem;
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-card);
     background: var(--surface-strong);
+    box-shadow: var(--shadow-card);
   }
 
   .table td {
-    padding: 0.15rem 0;
+    padding: 0.2rem 0;
     border: 0;
   }
 
+  .table tbody tr:hover td {
+    background: none;
+  }
+
+  /* Each value under its own label, as the mobile wireframes show them */
   .table td[data-label]::before {
-    content: attr(data-label) ': ';
+    content: attr(data-label);
+    display: block;
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .table tr:has(.checkCell) {
@@ -432,6 +464,107 @@
     justify-content: space-between;
   }
 }
+
+/* The side menu leaves less room than the viewport suggests. On the screens
+   with a table, these two container queries apply the tablet rules by the
+   width of the filters + results block, not the screen: below 58rem the
+   filters fold behind «Filtros»; below 46rem the table rows become cards. */
+@container results (max-width: 58rem) {
+  /* The filters and the results stack, each across the whole width */
+  .tableLayout > * {
+    grid-column: 1 / -1;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .filtersToggle {
+    display: inline-flex;
+  }
+
+  .filters {
+    display: none;
+    margin-top: 1rem;
+    padding: 1rem;
+  }
+
+  .filters[data-open='true'] {
+    display: flex;
+  }
+}
+
+@container results (max-width: 46rem) {
+
+  /* Table rows become stacked cards */
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .table tr {
+    position: relative;
+    margin-bottom: 0.9rem;
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-card);
+    background: var(--surface-strong);
+    box-shadow: var(--shadow-card);
+  }
+
+  .table td {
+    padding: 0.2rem 0;
+    border: 0;
+  }
+
+  .table tbody tr:hover td {
+    background: none;
+  }
+
+  /* Each value under its own label, as the mobile wireframes show them */
+  .table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .table tr:has(.checkCell) {
+    padding-left: 2.6rem;
+  }
+
+  .table td.checkCell {
+    position: absolute;
+    top: 0.95rem;
+    left: 0.9rem;
+    width: auto;
+  }
+
+  .pagination {
+    justify-content: space-between;
+  }
+}
+
 
 @media (max-width: 480px) {
   .searchBar {

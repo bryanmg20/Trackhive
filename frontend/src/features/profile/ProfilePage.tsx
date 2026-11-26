@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import { RequestApiError } from '../requests/api/request-api-error';
 import { CharacterizationFields } from './CharacterizationFields';
 import {
@@ -127,7 +128,11 @@ export function ProfilePage() {
   return (
     <AppLayout>
       <section className={styles.page} aria-labelledby="profile-title">
-        <h1 id="profile-title">Mi perfil</h1>
+        <PageHeader
+          titleId="profile-title"
+          title="Mi perfil"
+          description="Consulte y actualice sus datos de caracterización."
+        />
         {profile ? (
           <>
             <ProfileForm profile={profile} />

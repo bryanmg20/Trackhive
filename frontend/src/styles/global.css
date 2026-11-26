@@ -1,34 +1,62 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/InterVariable.woff2') format('woff2');
+}
+
 :root {
   color-scheme: light;
-  --ink: #11221d;
-  --ink-soft: #1e352d;
-  --paper: #e8eee9;
-  --paper-muted: #c9d6cd;
-  --surface: #fbfcfa;
+  /* CLENA identity from the approved wireframes (docs/pantallas.md, HU-46/HU-152) */
+  --ink: #171717;
+  --ink-soft: #2e2b27;
+  --paper: #f4f0e8;
+  --paper-muted: #e9dcc5;
+  --surface: #fbf9f5;
   --surface-strong: #ffffff;
-  /* Rojo reservado para errores de validación */
+  /* Page header band and the dark side menu */
+  --hero: #e9dcc5;
+  --sidebar: #202020;
+  --sidebar-item: #303030;
+  --sidebar-text: #f4f0e8;
+  --sidebar-muted: #beb8ae;
+  /* Red reserved for validation errors */
   --seal: #a32e2a;
   --seal-dark: #7f211d;
-  /* Acento de marca: dorado exacto para rellenos y formas */
-  --gold: #e8bc46;
-  /* Texto dorado con 4.5:1 sobre --paper, --surface y --surface-strong */
-  --gold-text: #806000;
-  --gold-deep: #6b5200;
-  --gold-ink: #11221d;
-  --sage: #b7c8bc;
-  /* Borde de controles con 3:1 sobre el fondo papel */
-  --sage-deep: #778c80;
-  --muted: #52645b;
-  --line: #d3ddd6;
+  /* Brand accent: CLENA yellow for fills and shapes, never for small text */
+  --gold: #f5c400;
+  /* Gold text with 4.5:1 on --paper, --surface and --surface-strong */
+  --gold-text: #735600;
+  --gold-deep: #5c4500;
+  --gold-ink: #171717;
+  --ochre: #d8b477;
+  --teal: #a9c7c5;
+  --clay: #a96f55;
+  --sage: #a9c7c5;
+  /* Control border (ochre, darkened to keep 3:1 over the paper background) */
+  --sage-deep: #977842;
+  --muted: #5e5950;
+  --line: #e6d9c5;
   --success: #2f6b4f;
-  --success-surface: #f2f8f4;
-  --error-surface: #fdf4f2;
-  --shadow-card:
-    0 24px 70px -34px rgba(17, 34, 29, 0.45),
-    0 2px 8px rgba(17, 34, 29, 0.05);
-  --font-display: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
-  --font-body: 'Archivo Variable', 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  --success-surface: #eef5f1;
+  --error-surface: #f8ece7;
+  /* Status chips (text stays --ink, so every chip keeps 4.5:1) */
+  --chip-received: #d3e3e0;
+  --chip-searching: #ebd9b8;
+  --chip-available: #fbe69b;
+  --chip-scheduled: #d3e3e0;
+  --chip-rejected: #e8d6cc;
+  --chip-closed: #e9e5de;
+  --radius-control: 0.9rem;
+  --radius-card: 1.5rem;
+  --radius-pill: 999px;
+  --shadow-card: 0 6px 20px rgba(23, 23, 23, 0.09);
+  --font-display: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-body: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  /* Small uppercase labels use Inter too, as in the wireframes */
+  --font-mono: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-code: Consolas, 'Liberation Mono', monospace;
 
   /* Breakpoints (single source of truth, HU-29).
      CSS Modules must use only these widths in their @media queries:

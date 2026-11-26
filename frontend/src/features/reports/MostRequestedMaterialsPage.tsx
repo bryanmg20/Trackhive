@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import { MATERIAL_TYPE_LABELS } from '../materials/api/search-materials';
 import type { MaterialType } from '../materials/api/search-materials';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
@@ -140,10 +141,10 @@ export function MostRequestedMaterialsPage() {
         className={searchStyles.hero}
         aria-labelledby="most-requested-title"
       >
-        <p className={searchStyles.eyebrow}>Reportes</p>
-        <h1 id="most-requested-title" className={searchStyles.title}>
-          Material más solicitado
-        </h1>
+        <PageHeader
+          titleId="most-requested-title"
+          title="Material más solicitado"
+        />
         <p className={styles.note}>
           Cuántas solicitudes incluyen cada material, para priorizar su
           conservación y atención. Cuenta las solicitudes de cualquier estado.

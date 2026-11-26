@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { requestDetailPath, ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import searchStyles from '../materials/MaterialSearchPage.module.css';
 import {
   listRequests,
@@ -190,10 +191,11 @@ export function RequestsListPage() {
   return (
     <AppLayout>
       <section className={searchStyles.hero} aria-labelledby="requests-title">
-        <p className={searchStyles.eyebrow}>Gestión del archivo</p>
-        <h1 id="requests-title" className={searchStyles.title}>
-          Solicitudes
-        </h1>
+        <PageHeader
+          titleId="requests-title"
+          title="Listado de solicitudes del personal"
+          description="Consulte y atienda las solicitudes de consulta del archivo."
+        />
         <form
           id={FORM_ID}
           className={searchStyles.searchBar}
@@ -222,7 +224,7 @@ export function RequestsListPage() {
         </p>
       </section>
 
-      <div className={searchStyles.layout}>
+      <div className={searchStyles.tableLayout}>
         <aside className={searchStyles.sidebar} aria-label="Filtros">
           <button
             type="button"
@@ -408,7 +410,7 @@ export function RequestsListPage() {
               <table className={searchStyles.table}>
                 <thead>
                   <tr>
-                    <th scope="col">Solicitud</th>
+                    <th scope="col">Radicado</th>
                     <th scope="col">Solicitante</th>
                     <th scope="col">Material</th>
                     <th scope="col">Fecha deseada</th>

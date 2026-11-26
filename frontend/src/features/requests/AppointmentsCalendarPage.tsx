@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { requestDetailPath, ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import {
   MATERIAL_STATUS_LABELS,
   MATERIAL_TYPE_LABELS,
@@ -142,6 +143,11 @@ function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth {
 
 function formatMonthTitle({ year, month }: YearMonth): string {
   return MONTH_FORMAT.format(new Date(Date.UTC(year, month - 1, 1, 12)));
+}
+
+/** «noviembre de 2026» → «Noviembre de 2026» (only the first letter). */
+function capitalize(text: string): string {
+  return text.charAt(0).toLocaleUpperCase('es-CO') + text.slice(1);
 }
 
 function toIsoDate(year: number, month: number, day: number): string {
@@ -399,6 +405,20 @@ export function AppointmentsCalendarPage() {
     return () => dialog.close();
   }, [expandedDate]);
 
+  /**
+   * Opens the full agenda of a day. Escape closes the <dialog> at once but
+   * its «close» event arrives later; if the same day is asked for again in
+   * between, the state still holds it, so the dialog is reopened directly.
+   */
+  const openDayAgenda = (isoDate: string) => {
+    const dialog = dayDialog.current;
+    if (expandedDate === isoDate && dialog && !dialog.open) {
+      dialog.showModal();
+      return;
+    }
+    setExpandedDate(isoDate);
+  };
+
   useEffect(() => {
     if (!firstVisibleDate || !lastVisibleDate) return;
     let ignore = false;
@@ -643,10 +663,11 @@ export function AppointmentsCalendarPage() {
   return (
     <AppLayout>
       <section className={searchStyles.hero} aria-labelledby="calendar-title">
-        <p className={searchStyles.eyebrow}>Agenda de sala de lectura</p>
-        <h1 id="calendar-title" className={searchStyles.title}>
-          Calendario de citas
-        </h1>
+        <PageHeader
+          titleId="calendar-title"
+          title="Calendario de citas"
+          description="Organice las citas de consulta y revise la disponibilidad por día."
+        />
         <form
           id={FORM_ID}
           className={searchStyles.searchBar}
@@ -808,7 +829,7 @@ export function AppointmentsCalendarPage() {
                 ‹ Mes anterior
               </button>
               <span className={styles.monthTitle} aria-live="polite">
-                {formatMonthTitle(activeMonth)}
+                {capitalize(formatMonthTitle(activeMonth))}
               </span>
               <button
                 type="button"
@@ -971,7 +992,7 @@ export function AppointmentsCalendarPage() {
                           className={styles.moreButton}
                           aria-haspopup="dialog"
                           aria-label={`Ver las ${dayItems.length} citas del ${formatFullDay(day.isoDate)}; ${dayItems.length - PREVIEW_COUNT} más`}
-                          onClick={() => setExpandedDate(day.isoDate)}
+                          onClick={() => openDayAgenda(day.isoDate)}
                         >
                           +{dayItems.length - PREVIEW_COUNT} más
                         </button>
@@ -992,7 +1013,10 @@ export function AppointmentsCalendarPage() {
                   ref={dayDialog}
                   className={styles.dayDialog}
                   aria-labelledby="day-agenda-title"
-                  onClose={() => setExpandedDate(null)}
+                  onClose={(event) => {
+                    // A «close» queued before the day was opened again is stale.
+                    if (!event.currentTarget.open) setExpandedDate(null);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key !== 'Tab') return;
                     const buttons =

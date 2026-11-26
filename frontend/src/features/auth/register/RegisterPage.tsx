@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../routes';
 import { RegisterApiError, registerUser } from '../api/register-user';
 import { AuthLayout } from '../components/AuthLayout';
+import { PageHeader } from '../../layout/PageHeader';
 import { TextField } from '../components/TextField';
 import { PrivacyConsent } from './PrivacyConsent';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy';
@@ -205,14 +206,16 @@ export function RegisterPage({
   }
 
   return (
-    <AuthLayout>
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>Registro</p>
-        <h1 className={styles.title}>Cree su cuenta</h1>
-        <p className={styles.lede}>
-          Los campos marcados como opcionales pueden quedar vacíos.
-        </p>
-      </header>
+    <AuthLayout variant="wide">
+      <PageHeader
+        titleId="register-title"
+        title="Registro público"
+        description="Cree su cuenta y registre sus datos una sola vez."
+      />
+      <p className={styles.lede}>
+        Los campos marcados como opcionales pueden quedar vacíos. Los datos de
+        caracterización se guardan una sola vez.
+      </p>
 
       {formError ? (
         <div
@@ -234,6 +237,8 @@ export function RegisterPage({
         aria-busy={isSubmitting}
         onSubmit={handleSubmit(onSubmit)}
       >
+        <div className={styles.columns}>
+        <div className={styles.accountFields}>
         <div className={styles.nameRow}>
           <TextField
             id="firstName"
@@ -303,7 +308,9 @@ export function RegisterPage({
           error={errors.confirmPassword?.message}
           registration={register('confirmPassword')}
         />
+        </div>
 
+        <div className={styles.characterization}>
         <CharacterizationFields
           municipalityInput={register('municipality')}
           ageRangeInput={register('ageRange')}
@@ -314,6 +321,8 @@ export function RegisterPage({
             populationGroup: errors.populationGroup?.message,
           }}
         />
+        </div>
+        </div>
 
         <PrivacyConsent
           error={errors.acceptedPrivacy?.message}

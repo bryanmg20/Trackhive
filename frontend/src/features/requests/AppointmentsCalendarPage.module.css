@@ -5,9 +5,10 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 0;
+  border-radius: var(--radius-card);
   background: var(--surface-strong);
+  box-shadow: var(--shadow-card);
 }
 
 .monthNav {
@@ -21,22 +22,21 @@
   min-width: 11rem;
   font-family: var(--font-display);
   font-size: 1.25rem;
-  font-weight: 500;
+  font-weight: 800;
   text-align: center;
-  text-transform: capitalize;
   color: var(--ink);
 }
 
 .navButton {
-  min-height: 2.35rem;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface);
+  min-height: 2.75rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--sage-deep);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .navButton:hover {
@@ -48,23 +48,22 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border-top: 1px solid var(--line);
   border-left: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   overflow: hidden;
   background: var(--surface-strong);
 }
 
+/* Dark weekday row of WF-11 */
 .weekdayHeader {
-  padding: 0.55rem 0.5rem;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
+  padding: 0.6rem 0.75rem;
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-align: center;
-  text-transform: uppercase;
+  text-align: left;
 }
 
 .dayCell {
@@ -85,7 +84,7 @@
 }
 
 .daySunday {
-  background: var(--surface);
+  background: #e8e1d5;
 }
 
 .dayHeader {
@@ -104,18 +103,20 @@
 
 .sundayTag {
   font-family: var(--font-mono);
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .capacityBadge {
   padding: 0.35rem 0.65rem;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .occupancyTag,
@@ -123,7 +124,7 @@
   padding: 0.08rem 0.32rem;
   border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -156,7 +157,7 @@
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--line);
   border-left: 3px solid var(--gold-text);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--ink);
   text-align: left;
@@ -196,28 +197,30 @@
 .moreButton {
   min-height: 2.5rem;
   margin-top: auto;
-  border: 1px solid var(--gold-text);
-  border-radius: 4px;
-  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--gold);
   color: var(--ink);
   font-weight: 600;
 }
 
+/* Occupancy chip of WF-11: teal, yellow near the limit, clay when full.
+   The text is always ink, so each chip keeps 4.5:1. */
 .occupancy {
-  font-size: 0.7rem;
-  padding: 0.2rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: #dfebe8;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .occupancy[data-capacity='near'] {
-  background: #fff1bf;
-  color: #604600;
+  background: var(--chip-available);
 }
 .occupancy[data-capacity='full'] {
-  background: #ffe0dc;
-  color: #852719;
+  background: #e8c7ba;
   font-weight: 700;
 }
 
@@ -226,7 +229,7 @@
   max-height: 85dvh;
   padding: 1.25rem;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--surface-strong);
   color: var(--ink);
 }
@@ -246,8 +249,9 @@
 
 .eventDate {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .eventMaterial {
@@ -269,7 +273,8 @@
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .badge[data-status='PROGRAMADA'],
@@ -303,7 +308,7 @@
   gap: 1rem;
   padding: 1.25rem;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--surface-strong);
 }
 
@@ -321,12 +326,14 @@
 
 .loanButton {
   padding: 0.35rem 0.7rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--sage-deep);
   background: var(--surface-strong);
   color: var(--ink);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
+  border-radius: var(--radius-pill);
+  min-height: 2.75rem;
 }
 
 .loanReturnButton {
@@ -337,6 +344,8 @@
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
+  border-radius: var(--radius-pill);
+  min-height: 2.75rem;
 }
 
 .detailHeader {
@@ -359,7 +368,7 @@
 .detailTitle {
   font-family: var(--font-display);
   font-size: 1.35rem;
-  font-weight: 500;
+  font-weight: 800;
   color: var(--ink);
 }
 
@@ -378,10 +387,11 @@
 
 .detailField dt {
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .detailField dd {
@@ -393,10 +403,11 @@
 
 .detailMaterialsTitle {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .detailMaterials {
@@ -414,22 +425,23 @@
   gap: 0.15rem;
   padding: 0.65rem 0.8rem;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   font-size: 0.88rem;
 }
 
 .detailMeta {
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .actionNotice {
   margin: 0;
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--gold-deep, var(--line));
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background: var(--success-surface, var(--paper));
   color: var(--ink);
   font-size: 0.88rem;
@@ -450,7 +462,7 @@
   margin: 0;
   font-family: var(--font-display);
   font-size: 1.05rem;
-  font-weight: 500;
+  font-weight: 800;
   color: var(--ink);
 }
 
@@ -470,7 +482,7 @@
 
 .manageField label {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--ink);
 }
@@ -480,8 +492,8 @@
   min-width: 0;
   min-height: 2.35rem;
   padding: 0.45rem 0.65rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: 1px solid var(--sage-deep);
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--ink);
   font-size: 0.88rem;
@@ -498,7 +510,7 @@
   min-height: 2.5rem;
   padding: 0.5rem 1rem;
   border: 1px solid var(--seal, var(--line));
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--seal, var(--ink));
   font-family: var(--font-mono);

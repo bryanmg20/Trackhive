@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes';
 import { AppLayout } from '../layout/AppLayout';
+import { PageHeader } from '../layout/PageHeader';
 import { createRequest } from './api/create-request';
 import type { MaterialReferencePayload } from './api/material-references';
 import { MaterialReferencesEditor } from './MaterialReferencesEditor';
@@ -69,9 +70,12 @@ export function NewRequestPage() {
   return (
     <AppLayout>
       <div className={styles.page}>
+        <PageHeader
+          titleId="new-request-title"
+          title="Radicar solicitud"
+          description="Complete su consulta y obtenga un código de seguimiento."
+        />
         <header className={styles.header}>
-          <p className={styles.eyebrow}>Consulta documental</p>
-          <h1 className={styles.title}>Radicar solicitud</h1>
           <p className={styles.intro}>
             Revise los materiales elegidos y complete la solicitud. Si un
             documento no está en el buscador, descríbalo con una referencia.
