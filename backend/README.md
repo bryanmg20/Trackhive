@@ -196,3 +196,40 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Supresión de cuenta (HU-33)
+
+`DELETE /api/v1/users/me/profile`, con access token y `{ "confirmation": true }`,
+responde 204. Sin sesión devuelve 401; confirmación ausente/falsa o campos ajenos
+se rechazan con 400. No usa `@Roles()` y toma el titular exclusivamente del token.
+Swagger documenta la operación. Aplicar la migración con `pnpm db:migrate` antes
+de arrancar el backend actualizado; Docker la aplica con su arranque habitual.
+
+`PrismaAccountErasure` coordina una transacción serializable y mapeadores de
+infraestructura para supresión. La excepción al historial inmutable permite solo
+limpiar comentarios en el alcance verificado por el trigger; conserva los datos
+para ranking y tiempos. Triggers impiden modificar identidades ya suprimidas.
+La autenticación consulta el estado de la cuenta en cada petición para invalidar
+access tokens previos, además de eliminar todos sus refresh tokens.
+
+Pruebas de flujo y rollback con PostgreSQL:
+`pnpm test:e2e -- --runInBand --testPathPatterns=account-erasure-flow`.
+Para la integración desde nginx: en frontend,
+`pnpm test:e2e:docker account-erasure.spec.ts` después de
+`docker compose up -d --build`; crea y suprime solo una cuenta ficticia de prueba.
+
+### Ajustes de revisión HU-33
+
+- La última cuenta ADMIN activa no puede suprimirse: 409 `LAST_ADMIN_CANNOT_BE_DELETED`, comprobado dentro de la transacción.
+- Prisma `P2034` devuelve 409 `ACCOUNT_ERASURE_CONFLICT`; no hay supresión parcial y el usuario puede reintentar.
+- Borrar PERSONAL/ADMIN conserva las notificaciones ajenas, incluidas pendientes; solo neutraliza el comentario del actor en texto/HTML. Los avisos propios sí se borran.
+- Cambio global de autenticación: el guard consulta la cuenta en PostgreSQL por cada petición autenticada. Desactivadas y suprimidas reciben 401 inmediatamente, incluso con JWT vigente. Detalles y coste de la lectura en D-12 de `docs/arquitectura.md`.
+- Las fichas no vinculadas por `requesters.user_id` no se suprimen por mera coincidencia de correo/documento: véase el límite y la verificación de titularidad en `docs/datos-personales.md`.
+
+La limpieza de avisos ajenos escribe lotes de hasta 500 filas con un único
+`UPDATE ... FROM (VALUES ...)` parametrizado por lote, dentro de la transacción.
+No ejecuta un UPDATE por notificación. El mapeador elimina también las apariciones
+restantes del comentario y sus variantes escapadas en HTML si cambia la plantilla;
+las pruebas incluyen el generador real del correo y formatos alternativos.
+Los conflictos nativos de SQL (40001/40P01, cuando Prisma los envuelve en P2010)
+se traducen al mismo 409 de reintento que P2034; otros errores SQL no se ocultan.

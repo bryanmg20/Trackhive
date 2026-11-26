@@ -22,6 +22,7 @@ erDiagram
     varchar password_hash "max 255"
     varchar role "max 10"
     boolean active
+    timestamptz deleted_at "NULL; cuenta suprimida"
     timestamptz privacy_policy_accepted_at "NULL"
     varchar privacy_policy_version "max 10; NULL"
     timestamptz last_login_at "NULL"
@@ -268,7 +269,7 @@ erDiagram
 Decisiones principales:
 
 - Las enumeraciones son `varchar` con `CHECK`. Las PK son `uuid`, salvo el historial, que usa `bigint` con identidad.
-- `status_history` solo admite `INSERT`: un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`. Es la auditoría y la base del reporte de tiempos de atención.
+- `status_history` conserva eventos inmutables: rechaza cambios de estados, fechas, actor, DELETE y TRUNCATE. HU-33 permite únicamente poner comentarios a NULL dentro de la transacción de supresión del titular; el trigger verifica su alcance. Sigue siendo la base del reporte de tiempos.
 - `appointment_materials` tiene el índice único `(material_id, booked_date)`, así que la base de datos impide reservar el mismo material dos veces el mismo día (HU-20).
 - Ninguna FK borra en cascada: todas son `RESTRICT`, salvo `materials.status_changed_by`, que es `SET NULL` (si se borrara el usuario, el material pierde solo el responsable del último cambio). Las solicitudes nunca se borran; los datos personales se anonimizan (§6).
 - No hay tabla de horario. El horario de atención (lunes a viernes de 8:00 a 17:00, sábados de 9:00 a 13:00) está en el dominio (`backend/src/requests/domain/value-objects/appointment-date.ts`). La capacidad diaria configurable de la sala se guarda en `reading_room_config` (HU-20.1; por defecto 15 citas/día si no hay fila).
@@ -292,6 +293,7 @@ Creada en HU-01 (migración `20261104224647_create_users`).
 | password_hash | varchar(255) | | Hash argon2, nunca la contraseña |
 | role | varchar(10) | CHECK | `ADMIN`, `PERSONAL`, `PUBLICO` |
 | active | boolean | DEFAULT true | `false` = cuenta desactivada |
+| deleted_at | timestamptz | NULL; CHECK exige `active = false` al suprimir | Marca de supresión irreversible (HU-33); el repositorio excluye estas cuentas y un trigger impide restaurarlas |
 | privacy_policy_accepted_at | timestamptz | NULL, CHECK con la versión | Fecha en que la persona aceptó el aviso; se llena en los registros públicos |
 | privacy_policy_version | varchar(10) | NULL, CHECK con la fecha | Versión del aviso aceptado. Las dos columnas van juntas: ambas con valor o ambas `NULL` |
 | last_login_at | timestamptz | NULL | |
@@ -325,13 +327,13 @@ Creada en HU-09 (migración `20261109000000_create_requests`).
 | last_name | varchar(40) | IDX trigram | Primer apellido |
 | second_last_name | varchar(40) | NULL, IDX trigram | Segundo apellido |
 | email | varchar(160) | NULL, IDX | Para las notificaciones |
-| phone | varchar(20) | NULL | `CHECK (email IS NOT NULL OR phone IS NOT NULL)` |
+| phone | varchar(20) | NULL | El CHECK exige correo o teléfono mientras `anonymized_at IS NULL`; tras la supresión ambos quedan NULL |
 | requester_type | varchar(15) | CHECK | `INVESTIGADOR`, `ESTUDIANTE`, `DOCENTE`, `CIUDADANO`, `ENTIDAD` |
 | institution | varchar(150) | NULL | |
 | municipality | varchar(120) | NULL, CHECK no vacío | Municipio o distrito; obligatorio para registros nuevos (HU-73) |
 | age_range | varchar(5) | NULL, CHECK | `0-5`, `6-11`, `12-17`, `18-28`, `29-59`, `60+` (HU-73) |
 | population_group | varchar(80) | NULL, CHECK | Opción del formato de asistencia o `PREFIERO_NO_RESPONDER`; opcional (HU-73) |
-| accepts_data_processing | boolean | CHECK = true | Consentimiento (Ley 1581) |
+| accepts_data_processing | boolean | CHECK = true salvo fila anonimizada | Constancia histórica del flujo; HU-33 la establece en false al suprimir, sin inventar una aceptación nueva |
 | consented_at | timestamptz | | |
 | privacy_policy_version | varchar(10) | | Versión del aviso aceptado |
 | anonymized_at | timestamptz | NULL | Fecha en que se anonimizó (§6) |
@@ -641,21 +643,50 @@ Las PK y las UK crean su índice automáticamente. Las FK se indexan a mano, por
 | Contraseña (solo el hash) | `users` | Acceso al sistema |
 | Consentimiento (fecha y versión del aviso) | `users`, `requesters` | Prueba de la autorización del titular |
 
-No se piden datos sensibles.
+El grupo poblacional es opcional y puede revelar información sensible; su necesidad específica y garantías siguen pendientes de validación con CLENA (véase `docs/datos-personales.md`).
 
 **Protección:**
 
 - Aviso de privacidad y casilla de aceptación sin marcar al crear la cuenta (HU-31). Cuando el personal registra a un solicitante sin cuenta, hoy el sistema llena `accepts_data_processing`, `consented_at` y `privacy_policy_version` sin preguntarle; recoger esa aceptación sigue pendiente.
 - Acceso según el rol: el usuario público solo ve sus solicitudes.
 - Contraseñas y refresh tokens guardados como hash.
-- `last_error` de `notifications` y los logs no guardan direcciones de correo.
+- La supresión elimina las notificaciones operativas del titular, incluidos sus errores. Los logs históricos y los proveedores externos requieren su procedimiento de conservación; no se afirma que carezcan de datos personales.
 - HTTPS al desplegar (D-24); hoy el entorno local usa HTTP.
 
-**Eliminar la cuenta (prevista, HU-33):** anonimizará en una sola transacción:
+**Eliminar la cuenta (HU-33):** `DELETE /api/v1/users/me/profile`, con sesión,
+sin `@Roles()` ni identificador de otra cuenta y cuerpo `{ "confirmation": true }`.
+Devuelve 204 al completar una transacción serializable; cualquier error revierte
+todos sus cambios. No marca solicitudes como atendidas o cerradas artificialmente.
 
-1. Cerrar las solicitudes en curso y liberar sus reservas.
-2. Reemplazar nombre, documento, correo y teléfono por valores neutros y marcar `anonymized_at`.
-3. Desactivar el usuario y revocar sus tokens.
-4. Borrar el correo y el cuerpo de sus notificaciones.
+1. Reemplaza los nombres por «Persona anonimizada», elimina segundos nombres y
+   apellidos, correo, teléfono, documento, institución, municipio, rango de edad
+   y grupo poblacional del solicitante vinculado. Marca `anonymized_at`, retira
+   la aceptación activa y neutraliza la versión del aviso del solicitante.
+2. Neutraliza el correo de la cuenta con un alias aleatorio bajo `anon.invalid`,
+   invalida la contraseña, limpia aceptación y último ingreso, desactiva la cuenta
+   y marca `users.deleted_at`. Los repositorios excluyen cuentas suprimidas de
+   login, consulta de cuenta y administración de personal.
+3. Elimina sus refresh tokens y comprueba en cada petición autenticada que la
+   cuenta sigue existiendo y activa: tampoco se reutiliza un access token anterior.
+4. Borra solo las notificaciones de las solicitudes propias, incluidos cuerpos y
+   errores. En avisos de otros titulares neutraliza el comentario del funcionario
+   en texto/HTML, conservando fila, destinatario, asunto, estado y registro de envío.
+   Limpia también motivo, descripción y notas de las solicitudes propias, ítems,
+   referencias y observaciones de préstamo. Un rechazo conserva una explicación
+   neutra para cumplir el CHECK de ese estado.
+5. Limpia los comentarios del historial de sus solicitudes y los escritos por esa
+   cuenta. La excepción D-08 usa una variable local de transacción y el trigger
+   solo permite ese borrado de texto: no modifica eventos, fechas, actores ni estados.
 
-Las solicitudes se conservan sin datos que identifiquen a la persona, para no perder las estadísticas.
+Los identificadores técnicos, relaciones, materiales, estados y fechas necesarios
+para auditoría y estadísticas se conservan. Los nombres del solicitante/actor se
+leen ya neutralizados; no hay un vínculo en la aplicación que permita recuperar
+su identidad anterior. El ranking y los promedios mantienen sus cantidades.
+`users.deleted_at` y `requesters.anonymized_at` activan triggers que impiden
+restaurar identidad o reactivar filas mediante una edición o petición antigua.
+Las solicitudes y reservas conservadas quedan bajo gestión del personal.
+
+La migración `20261126000000_account_erasure` agrega `users.deleted_at`, ajusta
+los CHECK de contacto/aceptación para solicitantes anonimizados y define esas
+protecciones. El ER de §2 incluye la columna nueva; no hay nuevas relaciones.
+La imagen/PDF del modelo anterior no sustituye este esquema actualizado.

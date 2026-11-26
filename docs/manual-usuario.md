@@ -157,3 +157,21 @@ digital no encontrada». Solo lo hace una que termina completa.
 (Aviso de privacidad, consentimiento y eliminación de cuenta.)
 
 ## 10. Preguntas frecuentes y solución de problemas
+
+## Eliminar mi cuenta (HU-33)
+
+En **Mi perfil**, pulse **Eliminar mi cuenta**. El diálogo explica que la acción
+es irreversible. Marque la confirmación y pulse **Confirmar eliminación**.
+**Cancelar** o Escape cierran el diálogo sin eliminar nada; se puede operar con
+Tab, Espacio y Enter, también en pantallas de 360 px.
+
+Al terminar verá **Cuenta eliminada**: se han suprimido sus datos personales y
+cerrado sus sesiones. Ya no podrá iniciar sesión con la cuenta anterior. Sus
+solicitudes se conservan con identidad neutralizada para mantener los reportes.
+Si ocurre un error, no se muestra éxito y puede reintentar. El botón no elimina
+archivos del fondo ni correos o CSV que ya estén fuera de Trackhive.
+
+Si es la última cuenta ADMIN activa, la eliminación se rechaza y su cuenta sigue
+funcionando: debe existir otro administrador activo. Si aparece un conflicto por
+otra operación simultánea, no se completó la eliminación y puede reintentar la
+confirmación. Ninguno de estos errores cierra la sesión ni muestra éxito.

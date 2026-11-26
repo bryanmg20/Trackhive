@@ -1,3 +1,4 @@
+import { USER_REPOSITORY } from '../src/users/application/tokens';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -37,6 +38,11 @@ describe('Material search (e2e)', () => {
       // The startup purge of expired tokens (HU-3.1) needs a repository
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
+      // HTTP fakes still need an active account for the global session check (HU-33).
+      .overrideProvider(USER_REPOSITORY)
+      .useValue({
+        findById: (id: string) => Promise.resolve({ id, active: true }),
+      })
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();
@@ -111,6 +117,11 @@ describe('Change material status (e2e)', () => {
       })
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
+      // HTTP fakes still need an active account for the global session check (HU-33).
+      .overrideProvider(USER_REPOSITORY)
+      .useValue({
+        findById: (id: string) => Promise.resolve({ id, active: true }),
+      })
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();
@@ -310,6 +321,11 @@ describe('Material loans HTTP authorization & routing, HU-72 (e2e)', () => {
       })
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
       .useValue(new InMemoryRefreshTokenRepository())
+      // HTTP fakes still need an active account for the global session check (HU-33).
+      .overrideProvider(USER_REPOSITORY)
+      .useValue({
+        findById: (id: string) => Promise.resolve({ id, active: true }),
+      })
       .overrideProvider(PrismaService)
       .useValue({})
       .compile();
