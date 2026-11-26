@@ -80,6 +80,14 @@ const FULL_DAY_FORMAT = new Intl.DateTimeFormat('es-CO', {
   weekday: 'long',
 });
 
+// Day heading of the phone agenda (WF-11 móvil): «Martes, 15 de diciembre»
+const LONG_DAY_FORMAT = new Intl.DateTimeFormat('es-CO', {
+  timeZone: 'UTC',
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
+
 interface YearMonth {
   year: number;
   month: number; // 1..12
@@ -110,6 +118,13 @@ function formatFullDay(isoDate: string): string {
     new Date(`${isoDate.slice(0, 10)}T12:00:00Z`),
   );
   return `${weekday} ${formatDate(isoDate)}`;
+}
+
+/** "2026-12-15" -> "Martes, 15 de diciembre". */
+function formatLongDay(isoDate: string): string {
+  return capitalize(
+    LONG_DAY_FORMAT.format(new Date(`${isoDate.slice(0, 10)}T12:00:00Z`)),
+  );
 }
 
 /** "08:00" -> "8:00". */
@@ -190,6 +205,7 @@ function AppointmentCardButton({
   onSelect,
 }: AppointmentCardButtonProps) {
   const materialSummary = item.materials.map((m) => m.title).join(', ');
+  const firstName = item.requester.name.trim().split(/\s+/)[0];
   return (
     <button
       type="button"
@@ -198,13 +214,29 @@ function AppointmentCardButton({
       aria-pressed={selected}
       onClick={() => onSelect(item.id)}
     >
-      <span className={styles.eventDate}>
-        {formatDate(item.date)} · {item.request.trackingCode}
+      {/* Desktop month grid (WF-11): one line, «Ana · SOL-2026-00001» */}
+      <span className={styles.eventCompact}>
+        {firstName} · {item.request.trackingCode}
       </span>
-      <span className={styles.eventMaterial}>{materialSummary}</span>
-      <span className={styles.eventRequester}>{item.requester.name}</span>
-      <span className={styles.badge} data-status={item.status}>
-        {APPOINTMENT_STATUS_LABELS[item.status]}
+      {/* Phone agenda, day dialog and other lists: the labelled card */}
+      <span className={styles.eventDate}>{formatFullDay(item.date)}</span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Solicitud</span>
+        <span className={styles.eventCode}>{item.request.trackingCode}</span>
+      </span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Solicitante</span>
+        <span className={styles.eventRequester}>{item.requester.name}</span>
+      </span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Material</span>
+        <span className={styles.eventMaterial}>{materialSummary}</span>
+      </span>
+      <span className={styles.eventField}>
+        <span className={styles.eventLabel}>Estado</span>
+        <span className={styles.badge} data-status={item.status}>
+          {APPOINTMENT_STATUS_LABELS[item.status]}
+        </span>
       </span>
     </button>
   );
@@ -714,8 +746,13 @@ export function AppointmentsCalendarPage() {
         </form>
       </section>
 
-      <div className={searchStyles.layout}>
-        <aside className={searchStyles.sidebar} aria-label="Filtros">
+      {/* WF-11: filters above the month, so the calendar takes the whole
+          width; below the tablet width they fold behind «Filtros» */}
+      <div className={styles.layout}>
+        <aside
+          className={`${searchStyles.sidebar} ${styles.filtersArea}`}
+          aria-label="Filtros"
+        >
           <button
             type="button"
             className={searchStyles.filtersToggle}
@@ -728,7 +765,7 @@ export function AppointmentsCalendarPage() {
 
           <div
             id="appointment-filters"
-            className={searchStyles.filters}
+            className={`${searchStyles.filters} ${styles.filterBar}`}
             data-open={filtersOpen}
           >
             <fieldset className={searchStyles.group}>
@@ -770,7 +807,9 @@ export function AppointmentsCalendarPage() {
               </p>
             </div>
 
-            <div className={`${searchStyles.group} ${listStyles.dates}`}>
+            <div
+              className={`${searchStyles.group} ${listStyles.dates} ${styles.dateRange}`}
+            >
               <label htmlFor="appointment-from">Fecha desde</label>
               <input
                 id="appointment-from"
@@ -952,6 +991,18 @@ export function AppointmentsCalendarPage() {
                       : occupied >= nearCapacityThreshold
                         ? 'near'
                         : 'available';
+                  // WF-11: days of the neighbouring months stay blank
+                  if (!day.inCurrentMonth && dayItems.length === 0) {
+                    return (
+                      <div
+                        key={day.isoDate}
+                        className={`${styles.dayCell} ${styles.dayOutside}`}
+                        aria-hidden="true"
+                      />
+                    );
+                  }
+                  // Sundays are closed: «Cerrado» takes the occupancy's place
+                  const showClosed = day.isSunday && occupied === 0;
                   return (
                     <div
                       key={day.isoDate}
@@ -970,25 +1021,35 @@ export function AppointmentsCalendarPage() {
                             {day.dayNumber}
                           </span>
                           <span className={styles.mobileDate}>
-                            {formatFullDay(day.isoDate)}
+                            {formatLongDay(day.isoDate)}
                           </span>
                         </span>
-                        {day.isSunday ? (
+                        {showClosed ? (
                           <span className={styles.sundayTag}>Cerrado</span>
-                        ) : null}
+                        ) : (
+                          <span
+                            className={styles.occupancy}
+                            data-capacity={capacityState}
+                            aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${dailyCapacity}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
+                          >
+                            <span>
+                              {occupied}/{dailyCapacity}
+                            </span>
+                            {/* The month shows the figure and its colour
+                                (WF-11); the phone agenda spells it out */}
+                            <span className={styles.mobileOnly}>
+                              {dayItems.length === 0
+                                ? ' · Sin citas'
+                                : ` · ${dayItems.length} ${dayItems.length === 1 ? 'cita' : 'citas'}`}
+                              {capacityState === 'full'
+                                ? ' · Límite alcanzado'
+                                : capacityState === 'near'
+                                  ? ' · Cerca del límite'
+                                  : ''}
+                            </span>
+                          </span>
+                        )}
                       </div>
-                      <span
-                        className={styles.occupancy}
-                        data-capacity={capacityState}
-                        aria-label={`${formatFullDay(day.isoDate)}: ocupación ${occupied} de ${dailyCapacity}${capacityState === 'full' ? ', capacidad alcanzada' : capacityState === 'near' ? ', cerca del límite' : ''}`}
-                      >
-                        {occupied}/{dailyCapacity}
-                        {capacityState === 'full'
-                          ? ' · Límite'
-                          : capacityState === 'near'
-                            ? ' · Cerca del límite'
-                            : ''}
-                      </span>
                       {dayItems.length > 0 ? (
                         <ul className={styles.dayEvents}>
                           {dayItems.map((item, index) => (
@@ -1005,6 +1066,14 @@ export function AppointmentsCalendarPage() {
                                 selected={selectedId === item.id}
                                 onSelect={selectAppointment}
                               />
+                              {/* WF-11 móvil: each card links to WF-10 */}
+                              <Link
+                                className={styles.cardRequestLink}
+                                to={requestDetailPath(item.request.id)}
+                                aria-label={`Ver solicitud ${item.request.trackingCode}`}
+                              >
+                                Ver solicitud ›
+                              </Link>
                             </li>
                           ))}
                         </ul>
