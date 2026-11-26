@@ -124,6 +124,7 @@
 
 .sidebar {
   display: flex;
+  border-top-right-radius: var(--radius-card);
   background: var(--sidebar);
 }
 

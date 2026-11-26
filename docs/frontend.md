@@ -1,11 +1,8 @@
-# Trackhive · Frontend
+# Frontend de Trackhive
 
-Interfaz web de Trackhive (React + TypeScript + Vite). Cubre el registro de
-investigadores (HU-47), el inicio de sesión, el buscador de material (HU-7.1),
-la pantalla de material del personal (HU-08 y #109), el registro de solicitudes del
-personal a nombre de un visitante (HU-93), el listado de solicitudes del
-personal (HU-12), el detalle de una solicitud con la acción de cambiar su
-estado (HU-13 y HU-15) y «Mis solicitudes» del usuario público (HU-11).
+Interfaz web de Trackhive en React, TypeScript y Vite. El código está en
+[`frontend/`](../frontend/); las pantallas siguen el [mapa de pantallas y
+wireframes](pantallas.md).
 
 ## Requisitos
 
@@ -27,28 +24,33 @@ pnpm test:e2e:docker # Con Docker activo: pruebas de integración a través de l
 
 ## Rutas
 
-| Ruta                             | Pantalla                                                   | Acceso           |
-| -------------------------------- | ---------------------------------------------------------- | ---------------- |
-| `/registro`                      | Registro de investigadores                                 | Público          |
-| `/login`                         | Inicio de sesión                                           | Público          |
-| `/mi-perfil`                     | Consultar y editar caracterización (HU-73)                  | Cualquier rol autenticado |
-| `/materiales`                    | Buscador de material (HU-7.1); el personal va a `/personal/materiales` | `PUBLICO`        |
-| `/solicitudes/nueva`             | Solicitud del usuario público (HU-10)                      | `PUBLICO`        |
-| `/mis-solicitudes`               | Mis solicitudes: estado de cada una (HU-11)                | `PUBLICO`        |
-| `/personal/materiales`           | Material del personal: estado (HU-08) y elegir para registrar solicitud (#109) | `PERSONAL`/`ADMIN` |
-| `/personal/solicitudes/nueva`    | Registrar solicitud a nombre de un visitante (HU-93)       | `PERSONAL`/`ADMIN` |
-| `/solicitudes`                   | Listar y filtrar solicitudes (HU-12)                       | `PERSONAL`/`ADMIN` |
-| `/solicitudes/:id`               | Detalle de una solicitud, cambio de estado y agendar cita (HU-13, HU-15, HU-18) | `PERSONAL`/`ADMIN` |
-| `/admin/usuarios`                | Gestión de usuarios del personal: crear, editar, desactivar y activar (HU-05) | `ADMIN`          |
-| `/admin/sincronizacion`          | Sincronización con Everything: última sincronización, contacto del agente y «Sincronizar ahora» (HU-138) | `ADMIN`          |
+| Ruta | Pantalla | Acceso |
+| --- | --- | --- |
+| `/registro` | Registro de investigadores (HU-47) | Público |
+| `/login` | Inicio de sesión | Público |
+| `/mi-perfil` | Consultar y editar caracterización (HU-73) y eliminar la cuenta (HU-33) | Cualquier rol autenticado |
+| `/materiales` | Buscador de material (HU-7.1); el personal va a `/personal/materiales` | `PUBLICO` |
+| `/solicitudes/nueva` | Solicitud del usuario público (HU-10) | `PUBLICO` |
+| `/mis-solicitudes` | Mis solicitudes: estado de cada una (HU-11) | `PUBLICO` |
+| `/personal/materiales` | Archivo: estado del material (HU-08), entregas y devoluciones (HU-72) y elegir material para registrar una solicitud (#109) | `PERSONAL`/`ADMIN` |
+| `/personal/solicitudes/nueva` | Registrar solicitud a nombre de un visitante (HU-93) | `PERSONAL`/`ADMIN` |
+| `/solicitudes` | Listar y filtrar solicitudes (HU-12) | `PERSONAL`/`ADMIN` |
+| `/solicitudes/:id` | Detalle de una solicitud, cambio de estado y agendar cita (HU-13, HU-15, HU-18) | `PERSONAL`/`ADMIN` |
+| `/calendario` | Calendario de citas (HU-142, WF-11) | `PERSONAL`/`ADMIN` |
+| `/reportes/material-mas-solicitado` | Material más solicitado | `PERSONAL`/`ADMIN` |
+| `/reportes/tiempos-de-atencion` | Tiempos de atención (HU-25) | `ADMIN` |
+| `/admin/usuarios` | Gestión de usuarios del personal: crear, editar, desactivar y activar (HU-05) | `ADMIN` |
+| `/admin/capacidad-sala` | Capacidad diaria de la sala de lectura | `ADMIN` |
+| `/admin/sincronizacion` | Sincronización con Everything: última sincronización, contacto del agente y «Sincronizar ahora» (HU-138) | `ADMIN` |
 
 Las rutas del usuario público viven dentro de `ProtectedRoute`; cualquier otro
 rol o una sesión vencida redirige a `/login`. Las rutas de personal viven dentro
 de `StaffRoute`; si el rol no es `PERSONAL`
 ni `ADMIN`, redirigen a `/materiales` o a `/login`. Las rutas de administración
 viven dentro de `AdminRoute`: un `PERSONAL` vuelve a `/solicitudes`, un
-`PUBLICO` a `/materiales` y sin sesión a `/login`. Cualquier otra ruta redirige
-a `/registro`.
+`PUBLICO` a `/materiales` y sin sesión a `/login`. Cualquier otra ruta lleva a la pantalla
+inicial del rol (`/materiales` para `PUBLICO`, `/solicitudes` para el
+personal) o, sin sesión, a `/login`.
 
 ## API
 
@@ -74,11 +76,11 @@ pnpm exec playwright test --config playwright.docker.config.ts
 ```
 
 La prueba crea una cuenta pública ficticia, un visitante y solicitudes locales.
-Usa `personal1@example.com` con contraseña `1`, o `SEED_DEMO_PASSWORD` del proceso.
+Usa `personal1@example.com` con contraseña `12345678`, o `SEED_DEMO_PASSWORD` del proceso.
 Comprueba registro, precarga, edición persistida, reutilización sin repetir los
 campos y 401 sin token. Deja una captura de «Mi perfil» en `test-results/`.
 El catálogo y la finalidad pendiente de confirmar con CLENA están en
-[`docs/datos-personales.md`](../docs/datos-personales.md).
+[`docs/datos-personales.md`](datos-personales.md).
 
 ### Actualización automática de solicitudes (HU-12.1, #141)
 
@@ -91,15 +93,18 @@ en la siguiente actualización. No se usan WebSocket ni SSE.
 
 La prueba de polling de `test:e2e:docker` requiere la semilla de demostración
 (`RUN_SEED=true`), al menos dos páginas de solicitudes y Chromium instalado.
-Usa `personal1@example.com`, con contraseña `1` o la variable
+Usa `personal1@example.com`, con contraseña `12345678` o la variable
 `SEED_DEMO_PASSWORD` del proceso que ejecuta la prueba. Crea una solicitud
 ficticia en la base local y comprueba una actualización real de 30 segundos,
 sin simular la API.
 
 En desarrollo, Vite reenvía las peticiones `/api` a `http://localhost:3000`
 (ver `vite.config.ts`). En el despliegue con Docker, nginx reenvía `/api/`,
-`/docs` y `/docs-json` al servicio `backend:3000` (ver `nginx.conf`), así que
-no hace falta definir `VITE_API_URL` en `docker compose`. Para desplegar el
+`/docs` y `/docs-json` al servicio `backend:3000` (ver `nginx/locations.conf`), así que
+no hace falta definir `VITE_API_URL` en `docker compose`. En producción nginx
+sirve HTTPS en el 443 con HSTS y redirige el 80 (`nginx/https.conf`); con
+`FRONTEND_TLS=off`, como en `docker-compose.dev.yml`, sirve HTTP en el 80
+(`nginx/http.conf`). Ver el manual de operación, sección 4. Para desplegar el
 frontend separado del backend, defina `VITE_API_URL` con el origen de la API
 (ver `.env.example`); si se omite, se usan rutas relativas.
 
@@ -266,26 +271,6 @@ propia cuenta).
   curso, y cada 30 s si no, así que el resultado nuevo aparece sin recargar
   cuando el agente termina. Se anuncia en una región `status`.
 
-## Estado y alcance
-
-- **HU-01 integrado:** el `POST /api/v1/users` acepta `firstName`,
-  `middleName`, `lastName`, `secondLastName` (issue #96), `email` y
-  `password`, guarda la contraseña como hash y responde `409` si el correo ya
-  existe.
-- **HU-31 (aviso de privacidad):** la pantalla exige aceptar el aviso antes de
-  enviar el formulario. El texto real, la versión y la fecha de vigencia están
-  en `src/features/auth/register/privacy-policy.ts` y
-  `PrivacyConsent.tsx`. **Pendiente:** el backend aún no recibe ni guarda la
-  aceptación, la fecha y la versión.
-- **HU-46:** el [mapa de pantallas y wireframes](../docs/pantallas.md) incluye
-  vistas PNG y archivos SVG importables en Figma. Son borradores de referencia;
-  la revisión y validación con G6 están pendientes y no bloquean otras HU.
-- **HU-48 no disponible:** `/login` es un marcador temporal; al registrarse se
-  redirige allí con un aviso y el correo registrado.
-- **HU-93 integrado:** la pantalla de mostrador permite buscar al solicitante,
-  elegir materiales en `/personal/materiales` (#109), registrar la solicitud y mostrar
-  el comprobante con el código de seguimiento. No modifica el backend.
-
 ## Accesibilidad
 
 - Los tokens de `src/styles/global.css` mantienen al menos 4.5:1 para texto y
@@ -336,9 +321,10 @@ sus bytes UTF-8, nombre y filtros a 360 px. El e2e del backend compara el archiv
 con los datos JSON sobre PostgreSQL real y comprueba 401/403.
 
 Con Docker iniciado desde la raíz con `docker compose up -d --build`, ejecutar
-desde `frontend` `pnpm test:e2e:docker report-export.spec.ts`. Usa las cuentas
-demo de ADMIN (`admin@example.com`), personal y público y sus contraseñas de
-seed (`SEED_ADMIN_PASSWORD` / `SEED_DEMO_PASSWORD`, por defecto local `1`).
+desde `frontend` `pnpm test:e2e:docker report-export.spec.ts`. Usa el
+administrador inicial (`ADMIN_EMAIL` / `ADMIN_PASSWORD`, por defecto local
+`admin@example.com` y `12345678`) y las cuentas demo de personal y público
+(`SEED_DEMO_PASSWORD`, por defecto local `12345678`).
 No crea solicitudes. Guarda los CSV y capturas de ambas pantallas en
 `test-results/` usando el frontend servido por nginx en `localhost:8080`.
 
@@ -362,11 +348,11 @@ pnpm test:e2e
 ```
 
 Con `docker compose up -d --build` iniciado desde la raíz, ejecutar desde
-`frontend` `pnpm test:e2e:docker attention-times.spec.ts`. Usa el seed de ADMIN
-(`admin@example.com`) y las cuentas demo de personal/público para comprobar
-los 403, sin crear solicitudes. Guarda capturas de escritorio y móvil en
-`test-results/`. Usa las contraseñas `SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD`
-del entorno de la prueba (por defecto local: `1`).
+`frontend` `pnpm test:e2e:docker attention-times.spec.ts`. Usa el administrador
+inicial (`ADMIN_EMAIL`, por defecto `admin@example.com`) y las cuentas demo de
+personal/público para comprobar los 403, sin crear solicitudes. Guarda capturas
+de escritorio y móvil en `test-results/`. Usa las contraseñas `ADMIN_PASSWORD` y
+`SEED_DEMO_PASSWORD` del entorno de la prueba (por defecto local: `12345678`).
 
 ### Disponible directo con copia digital (HU-139)
 
@@ -445,7 +431,7 @@ pnpm test:e2e:docker calendar.spec.ts
 
 Esta última prueba usa `http://localhost:8080`, la API real a través de nginx
 y la cuenta demo `personal1@example.com`. Requiere el seed y la contraseña
-`SEED_DEMO_PASSWORD` (por defecto local `1`). Crea cuatro solicitudes y sus
+`SEED_DEMO_PASSWORD` (por defecto local `12345678`). Crea cuatro solicitudes y sus
 citas en una fecha futura; conserva los registros para revisión manual y
 adjunta sus identificadores al reporte. Guarda capturas del mes, del diálogo
 y de la agenda móvil en `test-results/`. Las pruebas del navegador también
@@ -496,12 +482,25 @@ personal al destino correcto.
 ## Estructura
 
 ```text
-src/
-  features/auth/
-    api/            # cliente de registro y errores tipados
-    components/     # AuthLayout y TextField accesibles
-    login/          # marcador de posición de /login
-    register/       # pantalla, esquema Zod y pruebas
-  styles/           # tokens y estilos globales
-  test/             # configuración de Testing Library
+frontend/
+├── src/
+│   ├── App.tsx          # rutas (las de ROUTES en routes.ts) y sus guardas por rol
+│   ├── main.tsx         # router de datos (useBlocker) que envuelve <App />
+│   ├── assets/          # logos de CLENA y Uninorte y la fuente Inter
+│   ├── features/        # una carpeta por funcionalidad: pantallas, api/, CSS Modules y pruebas al lado
+│   │   ├── auth/        # registro, inicio de sesión, sesión y guardas por rol
+│   │   ├── layout/      # AppLayout, PageHeader, título de la pestaña y diálogos modales
+│   │   ├── navigation/  # menú por rol, foco al cambiar de ruta, filtros en la URL y aviso de cambios sin guardar
+│   │   ├── materials/   # buscador público, archivo del personal, entregas e historial de custodia
+│   │   ├── requests/    # solicitudes, detalle, citas, calendario y capacidad de la sala
+│   │   ├── reports/     # material más solicitado y tiempos de atención
+│   │   ├── users/       # gestión de usuarios del personal
+│   │   ├── everything/  # sincronización con Everything
+│   │   ├── profile/     # Mi perfil y eliminar la cuenta
+│   │   ├── brand/       # logos institucionales
+│   │   └── pending/     # marcador temporal de antes de HU-12; ninguna ruta lo usa
+│   ├── styles/          # tokens, breakpoints y estilos globales
+│   └── test/            # configuración de Vitest y Testing Library
+├── e2e/                 # Playwright: responsive a 360 px y pruebas contra Docker
+└── nginx/               # HTTPS (producción) o HTTP (desarrollo) y proxy hacia la API
 ```

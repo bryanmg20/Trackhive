@@ -45,6 +45,13 @@ export interface NewStaffUserProps {
   passwordHash: string;
 }
 
+/** The initial administrator, created from the .env (HU-42). */
+export interface NewInitialAdminProps {
+  id: string;
+  email: string;
+  passwordHash: string;
+}
+
 /**
  * What an administrator can change in a staff account (HU-05). A field left
  * undefined keeps its value; null clears an optional name. The role is not
@@ -126,6 +133,26 @@ export class User {
     return new User({
       ...props,
       role: 'PERSONAL',
+      active: true,
+      privacyPolicyAcceptedAt: null,
+      privacyPolicyVersion: null,
+    });
+  }
+
+  /**
+   * The first ADMIN account, created when the app starts from ADMIN_EMAIL and
+   * ADMIN_PASSWORD (HU-42). It is the only way an ADMIN is created. The .env
+   * gives no names, so it gets generic ones. It starts active and records no
+   * privacy consent, like every staff account (D-19).
+   */
+  static createInitialAdmin(props: NewInitialAdminProps): User {
+    return new User({
+      ...props,
+      firstName: 'Administrador',
+      middleName: null,
+      lastName: 'Trackhive',
+      secondLastName: null,
+      role: 'ADMIN',
       active: true,
       privacyPolicyAcceptedAt: null,
       privacyPolicyVersion: null,

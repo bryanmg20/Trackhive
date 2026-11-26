@@ -46,3 +46,9 @@ docs/superpowers/
 # Configuración real del agente de Everything (HU-166): lleva su token y la
 # contraseña de Everything. En el repositorio solo va agent/agente.example.toml
 agente.toml
+
+# Certificate and key of production (HU-42): only on the server
+deploy/tls/*
+!deploy/tls/.gitkeep
+deploy/acme-challenge/*
+!deploy/acme-challenge/.gitkeep

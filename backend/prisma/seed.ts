@@ -9,20 +9,14 @@ type SeedUser = {
   lastName: string;
   secondLastName: string | null;
   email: string;
-  role: 'ADMIN' | 'PERSONAL' | 'PUBLICO';
+  role: 'PERSONAL' | 'PUBLICO';
 };
 
-// Fictitious demo data. Passwords come from environment variables.
+// Fictitious demo data. Their password comes from SEED_DEMO_PASSWORD.
 // Some users have all four name fields and others only the required ones.
+// The administrator is not here: the backend creates it when it starts, from
+// ADMIN_EMAIL and ADMIN_PASSWORD, also in production (HU-42)
 const USERS: SeedUser[] = [
-  {
-    firstName: 'Admin',
-    middleName: null,
-    lastName: 'Demo',
-    secondLastName: null,
-    email: 'admin@example.com',
-    role: 'ADMIN',
-  },
   {
     firstName: 'Personal',
     middleName: 'Uno',
@@ -803,15 +797,12 @@ function readEnv(name: string): string {
 }
 
 async function main() {
-  const adminPassword = readEnv('SEED_ADMIN_PASSWORD');
   const demoPassword = readEnv('SEED_DEMO_PASSWORD');
 
   const prisma = new PrismaClient();
   try {
+    const passwordHash = await argon2.hash(demoPassword);
     for (const user of USERS) {
-      const password = user.role === 'ADMIN' ? adminPassword : demoPassword;
-      const passwordHash = await argon2.hash(password);
-
       // Upsert by email: running the seed again does not duplicate users
       await prisma.userModel.upsert({
         where: { email: user.email },

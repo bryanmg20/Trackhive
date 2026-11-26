@@ -13,6 +13,8 @@ Guía de HU-133 (#133, épica E11). Sirve para desarrollar y probar la integraci
 | Pruebas | `dev/tests/` | Generador, manifiesto y mock frente a los fixtures; corren en el CI en Linux y Windows |
 | Agente | `agent/` | Programa del PC del CLENA que consulta Everything y envía las páginas al backend (HU-166, sección 7) |
 
+No contiene imágenes reales ni datos personales del CLENA: las imágenes son archivos vacíos y los nombres solo copian la forma de las carpetas.
+
 Todo usa Python 3.10 o superior y una sola dependencia, PyYAML:
 
 ```bash
@@ -229,7 +231,7 @@ python dev/scripts/comparar_everything.py --url http://127.0.0.1:8081 --bytes
 
 ## 7. Sincronización con el backend (HU-137)
 
-El backend **no tiene cliente HTTP hacia Everything** y ya no usa `EVERYTHING_URL`, `EVERYTHING_USER` ni `EVERYTHING_PASSWORD`: esos datos están en la configuración del agente (`agente.toml`, claves `everything.url`, `user` y `password`; HU-166). Everything solo responde peticiones y el PC del CLENA no se alcanza desde los servidores de la universidad, así que el agente, instalado en ese PC, consulta Everything en `localhost` y envía al backend cada página **sin transformarla** (por HTTPS en producción, HU-42). El navegador nunca llama a Everything. El código del agente está en [`agent/`](../agent/README.md), y su instalación en el CLENA en el [manual de operación](manual-operacion.md), sección 10.
+El backend **no tiene cliente HTTP hacia Everything** y ya no usa `EVERYTHING_URL`, `EVERYTHING_USER` ni `EVERYTHING_PASSWORD`: esos datos están en la configuración del agente (`agente.toml`, claves `everything.url`, `user` y `password`; HU-166). Everything solo responde peticiones y el PC del CLENA no se alcanza desde los servidores de la universidad, así que el agente, instalado en ese PC, consulta Everything en `localhost` y envía al backend cada página **sin transformarla** (por HTTPS en producción, HU-42). El navegador nunca llama a Everything. El código del agente está en [`agent/`](../agent/) ([agente.md](agente.md)), y su instalación en el CLENA en el [manual de operación](manual-operacion.md), sección 10.
 
 ### Endpoints de ingesta
 
@@ -390,7 +392,7 @@ pip install -r dev/requirements.txt -r agent/requirements.txt
 python -m unittest discover -s agent/tests -t agent -v
 ```
 
-Prueban las reglas de la corrida (numeración, nunca completa tras un fallo), la configuración (`http://` solo contra `localhost`, token de 32 caracteres o más, raíces iguales a las de `backend/config/catalog-convention.json`), el caso de uso con fakes (reintentos con espera creciente, Everything caído o lento) y el agente como proceso contra el **mock de esta guía** y un Trackhive falso, también por HTTPS con un certificado de prueba. La consulta del agente es la misma de los fixtures (`carpetas_notarias_p1`), y la página que envía es, byte a byte, la que responde Everything. El job `agente` del CI las corre en Ubuntu y Windows; en Windows además construye `trackhive-agente.exe`, lo prueba igual y revisa la tarea programada ([agent/README.md](../agent/README.md)).
+Prueban las reglas de la corrida (numeración, nunca completa tras un fallo), la configuración (`http://` solo contra `localhost`, token de 32 caracteres o más, raíces iguales a las de `backend/config/catalog-convention.json`), el caso de uso con fakes (reintentos con espera creciente, Everything caído o lento) y el agente como proceso contra el **mock de esta guía** y un Trackhive falso, también por HTTPS con un certificado de prueba. La consulta del agente es la misma de los fixtures (`carpetas_notarias_p1`), y la página que envía es, byte a byte, la que responde Everything. El job `agente` del CI las corre en Ubuntu y Windows; en Windows además construye `trackhive-agente.exe`, lo prueba igual y revisa la tarea programada ([agente.md](agente.md)).
 
 ### Árbol, mock y fixtures
 

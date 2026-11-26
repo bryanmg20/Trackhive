@@ -22,7 +22,7 @@ Las figuras son imágenes exportadas a `docs/img/`. Cada una incluye su leyenda,
 
 **Figura 1.** Diagrama de contexto de Trackhive (C4, nivel 1).
 
-Leyenda: azul oscuro, persona; azul, el sistema Trackhive; gris, sistema externo; flecha, relación con su protocolo entre corchetes; el asterisco indica HTTPS al desplegar (hoy HTTP).
+Leyenda: azul oscuro, persona; azul, el sistema Trackhive; gris, sistema externo; flecha, relación con su protocolo entre corchetes; el asterisco indica HTTPS en producción (en desarrollo, HTTP).
 
 | Elemento | Tipo | Descripción |
 |---|---|---|
@@ -39,7 +39,7 @@ Leyenda: azul oscuro, persona; azul, el sistema Trackhive; gris, sistema externo
 
 **Figura 2.** Diagrama de contenedores de Trackhive (C4, nivel 2).
 
-Leyenda: azul oscuro, persona; azul, contenedor de Trackhive; gris, sistema externo; flecha, relación con su protocolo entre corchetes; el asterisco indica HTTPS al desplegar (hoy HTTP).
+Leyenda: azul oscuro, persona; azul, contenedor de Trackhive; gris, sistema externo; flecha, relación con su protocolo entre corchetes; el asterisco indica HTTPS en producción (en desarrollo, HTTP).
 
 | Contenedor | Tecnología | Responsabilidad |
 |---|---|---|
@@ -51,8 +51,8 @@ Leyenda: azul oscuro, persona; azul, contenedor de Trackhive; gris, sistema exte
 
 | Conexión | Protocolo | Detalle |
 |---|---|---|
-| Personas → Aplicación web | HTTPS al desplegar; hoy HTTP | El navegador descarga la SPA. |
-| Aplicación web → API REST | HTTPS/JSON al desplegar; hoy HTTP/JSON | Peticiones a `/api/v1` con `Authorization: Bearer <accessToken>`. Nginx reenvía `/api/` y `/docs` a la API. |
+| Personas → Aplicación web | HTTPS en producción; HTTP en desarrollo | El navegador descarga la SPA. El HTTP de producción solo redirige a HTTPS. |
+| Aplicación web → API REST | HTTPS/JSON en producción; HTTP/JSON en desarrollo | Peticiones a `/api/v1` con `Authorization: Bearer <accessToken>`. Nginx reenvía `/api/` y `/docs` a la API. |
 | API REST → Base de datos | SQL sobre TCP (puerto 5432) | Consultas de Prisma Client. Las migraciones se aplican con `prisma migrate deploy`. |
 | API REST → Servicio de correo | SMTP | Nodemailer, configurado con las variables `SMTP_*`. |
 | Agente de *Everything* → API REST | HTTPS/JSON, saliente desde el CLENA | `/api/v1/everything/sync-runs` con `Authorization: Bearer <EVERYTHING_AGENT_TOKEN>`: la pregunta por una corrida pedida (HU-138) y los endpoints de ingesta. Trackhive nunca se conecta al PC del CLENA. |
@@ -60,7 +60,7 @@ Leyenda: azul oscuro, persona; azul, contenedor de Trackhive; gris, sistema exte
 
 Trackhive no almacena archivos. Solo gestiona las solicitudes: las copias digitales del material las entrega el personal del CLENA fuera del sistema, por correo.
 
-**Estado actual de HTTPS:** hoy todas las conexiones del navegador usan HTTP. Nginx solo escucha en el puerto 80 y reenvía a la API con `proxy_pass http://backend:3000`. Las figuras marcan `HTTPS*` porque es el protocolo previsto: el certificado TLS lo pondrá la plataforma de despliegue, que sigue pendiente (D-24).
+**Estado actual de HTTPS (HU-42):** en producción, el Nginx del frontend escucha en el 443 con el certificado TLS del dominio (`deploy/tls/`, de Let's Encrypt o de la universidad) y envía `Strict-Transport-Security: max-age=31536000`; el 80 solo redirige a `https://` y responde el desafío de Let's Encrypt. Es el único contenedor que publica puertos: dentro de la red de Docker reenvía a la API con `proxy_pass http://backend:3000`, que no sale del servidor. El agente de *Everything* llega por ese mismo HTTPS. Si el alojamiento exige que el certificado lo ponga un proxy de la universidad, `FRONTEND_TLS=off` deja a Nginx en HTTP detrás de él, y el proxy redirige y envía HSTS. En desarrollo (`docker-compose.dev.yml`) todo va por HTTP en `localhost`. El procedimiento está en el [manual de operación](manual-operacion.md#4-despliegue-y-https), sección 4.
 
 ## 4. Nivel 3: Componentes de la API
 
@@ -68,7 +68,7 @@ Trackhive no almacena archivos. Solo gestiona las solicitudes: las copias digita
 
 **Figura 3.** Diagrama de componentes de la API de Trackhive (C4, nivel 3).
 
-Leyenda: azul claro, componente de la API; azul, contenedor de Trackhive; gris, sistema externo; flecha, dependencia o relación con su protocolo; el asterisco indica HTTPS al desplegar (hoy HTTP). Las franjas son las cuatro capas: presentación e infraestructura arriba, aplicación en medio y dominio abajo, de modo que todas las dependencias bajan hacia el dominio. La fila superior, fuera de la API, reúne lo que se comunica con ella.
+Leyenda: azul claro, componente de la API; azul, contenedor de Trackhive; gris, sistema externo; flecha, dependencia o relación con su protocolo; el asterisco indica HTTPS en producción (en desarrollo, HTTP). Las franjas son las cuatro capas: presentación e infraestructura arriba, aplicación en medio y dominio abajo, de modo que todas las dependencias bajan hacia el dominio. La fila superior, fuera de la API, reúne lo que se comunica con ella.
 
 **Regla de dependencia:** las dependencias apuntan hacia el dominio. El dominio no importa NestJS, Prisma ni librerías de infraestructura. Infraestructura implementa las interfaces que declaran el dominio y la aplicación.
 
@@ -255,7 +255,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 | D-21 | Pruebas: fakes en memoria para unitarias y PostgreSQL real para e2e | Implementada (HU-41) |
 | D-22 | Docker, docker-compose y GitHub Actions | Implementada |
 | D-23 | Configuración por entorno validada al arrancar y logs estructurados | Parcial (faltan los logs en JSON) |
-| D-24 | Plataforma de despliegue | Parcial (servidores de la universidad; falta el despliegue con HTTPS, HU-42) |
+| D-24 | Plataforma de despliegue | Aceptada (servidores de la universidad con docker-compose y HTTPS en el Nginx del frontend, HU-42) |
 | D-25 | Estructura de Clean Architecture del curso, verificada en el CI | Implementada |
 | D-26 | El catálogo solo crece por la sincronización con *Everything*; el material no digitalizado vive como referencia escrita | Implementada (HU-137) |
 
@@ -442,6 +442,7 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Alternativas:** instalación manual en el servidor del CLENA.
 - **Justificación:** es requisito y, además, es lo que permite que el CLENA opere el sistema sin el equipo. Un despliegue reproducible reduce el riesgo de que "funcione solo en una máquina".
 - **Consecuencias:** `docs/manual-operacion.md` debe cubrir variables de entorno, despliegue y respaldo de la base de datos.
+- **Producción y desarrollo (HU-42):** `docker-compose.yml` es el de producción: solo el frontend publica sus puertos (80 y 443), y no se levantan Mailpit ni el mock de *Everything*. `docker-compose.dev.yml` agrega los puertos de depuración en `127.0.0.1` (PostgreSQL y la API), Mailpit, el mock y el frontend por HTTP; `.env.example` lo carga con `COMPOSE_FILE`, así que en desarrollo `docker compose up` sigue levantando todo. Necesita Docker Compose 2.24 o superior (`!override`). El administrador inicial no viene de la semilla: el backend lo crea al arrancar desde `ADMIN_EMAIL` y `ADMIN_PASSWORD` si no hay ningún ADMIN, también con `RUN_SEED=false`.
 
 ### D-23. Configuración por entorno y logs estructurados
 
@@ -451,15 +452,16 @@ La columna «Estado» se revisó contra el código el 11 de noviembre de 2026. �
 - **Consecuencias:** hay que evitar registrar datos personales en los logs.
 - **Estado actual:** existen `.env.example` y `GET /api/v1/health`, y no hay secretos en el código. Los logs salen como texto con el `Logger` de NestJS (sección 7.3); pasarlos a JSON está pendiente y el curso lo exige para la entrega final. Validar las variables al arrancar es una meta del equipo; hoy `docker-compose` ya se niega a levantar si falta una variable.
 
-### D-24. Plataforma de despliegue *(parcial)*
+### D-24. Plataforma de despliegue
 
-- **Decisión (2026-11-20):** Trackhive se aloja en servidores de la universidad. El servidor, el dominio, el certificado TLS y el despliegue se completan en HU-42.
+- **Decisión (2026-11-20):** Trackhive se aloja en servidores de la universidad.
+- **Despliegue (HU-42):** un servidor Linux con Docker Compose levanta `docker-compose.yml`, el de producción. El Nginx del frontend termina el TLS: escucha en el 443 con el certificado de `deploy/tls/` (`fullchain.pem` y `privkey.pem`), envía HSTS de un año sin `includeSubDomains` (el dominio puede ser de la universidad) y en el 80 solo redirige a HTTPS y responde el desafío HTTP-01 de Let's Encrypt. El certificado lo emite Let's Encrypt con `certbot --webroot` y se renueva solo; `deploy/renovar-certificado.sh` lo copia y recarga Nginx sin cortar el servicio. Si la universidad entrega el certificado, se copia en la misma carpeta. Si exige su propio proxy con HTTPS delante, `FRONTEND_TLS=off` deja a Nginx en HTTP detrás de él y el proxy asume la redirección y HSTS. PostgreSQL y la API no publican puertos. Todo está en el [manual de operación](manual-operacion.md#4-despliegue-y-https).
 - **Opciones evaluadas:** un servicio gestionado con contenedores (Render, Railway, Fly.io) o un VPS con docker-compose.
 - **Criterios:** costo (idealmente gratuito o muy bajo para la demo), soporte de PostgreSQL 15+, URL pública estable y facilidad para que el CLENA lo mantenga.
-- **Consecuencias:** debe resolverse antes del Sprint 3. Cualquier opción debe poder reproducirse a partir del `docker-compose` del repositorio.
+- **Consecuencias:** el despliegue se reproduce a partir del `docker-compose.yml` del repositorio y un `.env` con `RUN_SEED=false`. Falta registrar en el manual de operación la URL definitiva cuando la universidad asigne el servidor y el dominio.
 - **Requisitos del agente de *Everything* (HU-166):** el CLENA no pertenece a la universidad y su PC no tiene IP pública, así que la sincronización depende de que el agente llegue a Trackhive desde internet (D-17):
-  - Los endpoints de ingesta (`/api/v1/everything/sync-runs`, a través del nginx del frontend) se publican por HTTPS con un certificado válido. El agente se niega a usar `http://` y verifica el certificado.
-  - El cierre de una corrida actualiza todo el catálogo, así que el tiempo de espera del proxy (`proxy_read_timeout` de nginx, 60 s por defecto) debe alcanzar para ese endpoint.
+  - Los endpoints de ingesta (`/api/v1/everything/sync-runs`, a través del nginx del frontend) se publican por HTTPS con un certificado válido. El agente se niega a usar `http://` y verifica el certificado. El manual de operación (sección 4.3) dice cómo comprobarlo desde internet.
+  - El cierre de una corrida actualiza todo el catálogo, así que el tiempo de espera del proxy debe alcanzar para ese endpoint: el nginx del frontend espera 300 s en `/api/v1/everything/` (60 s por defecto), y un proxy de la universidad delante debe esperar lo mismo.
   - El servidor nunca se conecta al PC del CLENA: allí no se abre ningún puerto.
   - Al desplegar, `base` de `backend/config/catalog-convention.json` deja de ser `C:\trackhive\docs_simulados` y pasa a ser la unidad o la ruta de red que informa *Everything* en el CLENA (`Z:\` o `\\<servidor>\Multimedia`). Las raíces de `agente.toml` usan esa misma ruta.
 

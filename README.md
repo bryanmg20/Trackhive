@@ -25,8 +25,6 @@ Trackhive es una aplicación web con la que el CLENA recibe las solicitudes de c
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Documentación](#documentación)
 - [Solución de problemas](#solución-de-problemas)
-- [Contribuir](#contribuir)
-- [Licencia y propiedad](#licencia-y-propiedad)
 
 ---
 
@@ -109,7 +107,7 @@ Estas instrucciones están pensadas para un **clon limpio** del repositorio.
 ### Requisitos
 
 - [Git](https://git-scm.com/).
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) con Docker Compose. En Windows o macOS, Docker Desktop debe estar iniciado.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) con Docker Compose **2.24 o superior** (el comando `docker compose`). En Windows o macOS, Docker Desktop debe estar iniciado.
 - Puertos libres: `8080` (frontend), `3000` (API), `5432` (PostgreSQL), `8025` y `1025` (Mailpit). Si alguno está ocupado, se cambia en el `.env` (ver [Solución de problemas](#solución-de-problemas)).
 
 No hace falta instalar Node.js, pnpm ni PostgreSQL para levantar el sistema con Docker.
@@ -136,16 +134,18 @@ Copy-Item .env.example .env
 ```bash
 # 3. Levanta backend, frontend, PostgreSQL y Mailpit.
 #    La primera vez construye las imágenes y puede tardar varios minutos.
-docker-compose up --build
+docker compose up --build
 ```
 
-> **Docker Compose v2:** si tu instalación solo tiene el comando moderno, usa `docker compose up --build`. El comando clásico `docker-compose up` también funciona: construye las imágenes si no existen y deja los contenedores en primer plano. Añade `-d` (`docker compose up -d --build`) para ejecutarlos en segundo plano.
+Añade `-d` (`docker compose up -d --build`) para dejarlos en segundo plano.
+
+> **Producción y desarrollo (HU-42):** [`docker-compose.yml`](docker-compose.yml) es la configuración de **producción**: solo el frontend publica sus puertos (80, que redirige a HTTPS, y 443), y no se levantan Mailpit ni el mock de Everything. [`docker-compose.dev.yml`](docker-compose.dev.yml) le agrega lo de desarrollo: los puertos de depuración en `127.0.0.1` (PostgreSQL y la API), Mailpit, el mock de Everything y el frontend por HTTP en `FRONTEND_PORT`. El `.env` copiado de `.env.example` carga los dos con `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml` (y `COMPOSE_PATH_SEPARATOR=:`), así que `docker compose up` levanta todo sin más. El despliegue en el servidor está en el [manual de operación](docs/manual-operacion.md). El comando antiguo `docker-compose` (v1) no entiende `docker-compose.dev.yml`.
 
 Al arrancar, el contenedor del backend ejecuta automáticamente:
 
 1. `prisma migrate deploy` — aplica las migraciones pendientes.
 2. `prisma db seed` — carga datos ficticios de demostración si `RUN_SEED=true`.
-3. `node dist/main` — inicia la API.
+3. `node dist/main` — crea el administrador inicial con `ADMIN_EMAIL` y `ADMIN_PASSWORD` si todavía no hay ningún `ADMIN`, e inicia la API.
 
 ### Verifica que todo quedó arriba
 
@@ -189,15 +189,15 @@ docker compose up -d --build
 
 El frontend también reenvía `/api/`, `/docs` y `/docs-json` al backend, así que <http://localhost:8080/api/v1/health> y <http://localhost:8080/docs> funcionan igual.
 
-Con la semilla de demostración (`RUN_SEED=true`) se crean estos usuarios ficticios:
+El administrador inicial se crea siempre al arrancar el backend, con `RUN_SEED=true` o `false`, a partir de `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env`, solo si no existe ningún `ADMIN`; en los arranques siguientes no se cambia su contraseña. Con la semilla de demostración (`RUN_SEED=true`) se crean además estos usuarios ficticios:
 
 | Rol | Correos | Contraseña |
 |---|---|---|
-| `ADMIN` | `admin@example.com` | `1` |
-| `PERSONAL` | `personal1@example.com`, `personal2@example.com` | `1` |
-| `PUBLICO` | `publico1@example.com`, `publico2@example.com`, `publico3@example.com`, `publico4@example.com` | `1` |
+| `ADMIN` (administrador inicial) | `admin@example.com` (`ADMIN_EMAIL`) | `1` (`ADMIN_PASSWORD`) |
+| `PERSONAL` | `personal1@example.com`, `personal2@example.com` | `1` (`SEED_DEMO_PASSWORD`) |
+| `PUBLICO` | `publico1@example.com`, `publico2@example.com`, `publico3@example.com`, `publico4@example.com` | `1` (`SEED_DEMO_PASSWORD`) |
 
-Las contraseñas salen de `SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD` en el `.env`. Son valores **solo para desarrollo**: cámbialos antes de cualquier despliegue real. Para arrancar sin datos de demostración, usa `RUN_SEED=false`.
+Son valores **solo para desarrollo**. En producción, `RUN_SEED=false` no carga datos de demostración y exige un `ADMIN_PASSWORD` de al menos 12 caracteres ([manual de operación](docs/manual-operacion.md#8-administrador-inicial-y-cambio-de-contraseñas)).
 
 ## Variables de entorno
 
@@ -210,10 +210,13 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `POSTGRES_PASSWORD` | Contraseña de PostgreSQL | `1234` |
 | `POSTGRES_PORT` | Puerto local de PostgreSQL | `5432` |
 | `BACKEND_PORT` | Puerto local de la API | `3000` |
-| `FRONTEND_PORT` | Puerto local de la aplicación web | `8080` |
-| `RUN_SEED` | Carga la semilla de demostración al arrancar | `true` |
-| `SEED_ADMIN_PASSWORD` | Contraseña del usuario administrador de la semilla | `1` |
-| `SEED_DEMO_PASSWORD` | Contraseña de los demás usuarios de la semilla | `1` |
+| `FRONTEND_PORT` | Puerto local de la aplicación web (solo desarrollo; en producción, 80 y 443) | `8080` |
+| `COMPOSE_FILE` | Archivos de Docker Compose. En desarrollo, el de producción más `docker-compose.dev.yml`; en producción se quita | `docker-compose.yml:docker-compose.dev.yml` |
+| `COMPOSE_PATH_SEPARATOR` | Separador de `COMPOSE_FILE`, igual en Linux, macOS y Windows | `:` |
+| `RUN_SEED` | Carga la semilla de demostración al arrancar. En producción, `false` | `true` |
+| `ADMIN_EMAIL` | Correo del administrador inicial, creado al arrancar si no hay ningún `ADMIN` | `admin@example.com` |
+| `ADMIN_PASSWORD` | Contraseña del administrador inicial. Con `RUN_SEED=false`, al menos 12 caracteres | `1` |
+| `SEED_DEMO_PASSWORD` | Contraseña de los usuarios de la semilla. No se exige con `RUN_SEED=false` | `1` |
 | `JWT_SECRET` | Secreto para firmar el access token | `change-me-access-secret` |
 | `JWT_REFRESH_SECRET` | Secreto para firmar el refresh token | `change-me-refresh-secret` |
 | `SMTP_HOST` | Servidor de correo. En Docker, `mailpit` | `mailpit` |
@@ -227,6 +230,8 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `EVERYTHING_PASSWORD` | Contraseña del mock de Everything. El backend no la usa; el agente lleva la suya en `agente.toml` | `trackhive-dev` |
 | `EVERYTHING_MOCK_PORT` | Puerto local del mock de Everything | `8081` |
 | `DATABASE_URL` | Conexión de Prisma cuando el backend corre fuera de Docker | `postgresql://...@localhost:5432/trackhive?schema=public` |
+
+Las variables propias del servidor (`FRONTEND_TLS`, `TLS_CERT_DIR`) y los valores de producción están en el [manual de operación](docs/manual-operacion.md#3-variables-de-entorno).
 
 ## Desarrollo local sin Docker
 
@@ -306,7 +311,7 @@ pip install -r dev/requirements.txt -r agent/requirements.txt
 python -m unittest discover -s agent/tests -t agent
 ```
 
-El CI también las corre en Linux y en Windows, contra el mock de Everything. En Windows construye `trackhive-agente.exe` con PyInstaller, lo prueba y lo publica como artefacto `trackhive-agente` ([agent/README.md](agent/README.md)).
+El CI también las corre en Linux y en Windows, contra el mock de Everything. En Windows construye `trackhive-agente.exe` con PyInstaller, lo prueba y lo publica como artefacto `trackhive-agente` ([docs/agente.md](docs/agente.md)).
 
 ## Estructura del repositorio
 
@@ -326,7 +331,7 @@ Trackhive/
 │   ├── src/features/        # pantallas y lógica por funcionalidad
 │   ├── src/styles/          # tokens, breakpoints y estilos globales
 │   ├── e2e/                 # pruebas Playwright
-│   └── nginx.conf           # servidor estático y proxy hacia la API
+│   └── nginx/               # sitio HTTPS (producción) o HTTP (desarrollo) y proxy hacia la API
 ├── agent/                   # agente de sincronización con Everything del PC del CLENA (HU-166)
 │   ├── trackhive_agent/     # dominio, aplicación, infraestructura y presentación
 │   ├── agente.example.toml  # configuración de ejemplo (la real, agente.toml, no se sube)
@@ -338,16 +343,17 @@ Trackhive/
 │   └── manifiesto.json      # lo que el parseo debe sacar de cada carpeta hoja
 ├── docs/                    # arquitectura, modelo de datos, manuales y Scrum
 │   └── img/                 # imágenes incrustadas en este README y en los informes
-├── docker-compose.yml       # PostgreSQL, backend, frontend, Mailpit y el mock de Everything
+├── deploy/                  # certificado TLS y webroot de certbot del servidor (HU-42; no se suben)
+├── docker-compose.yml       # producción: PostgreSQL, backend y frontend con HTTPS
+├── docker-compose.dev.yml   # desarrollo: puertos de depuración, Mailpit y el mock de Everything
 ├── .env.example             # plantilla del entorno local
-└── README.md
+└── README.md            # este archivo; el resto de la documentación está en docs/
 ```
 
 ## Documentación
 
 El [mapa de pantallas y wireframes](docs/pantallas.md) incluye los roles,
-la navegación y los bocetos SVG y PNG de HU-46 / HU-152, en escritorio y móvil (360 px), con los logos institucionales. Son borradores de
-referencia con revisión y validación de G6 pendientes.
+la navegación y los wireframes aprobados (HU-46 / HU-152), en escritorio y móvil (360 px), con las diferencias entre los bocetos y la aplicación.
 
 | Documento | Contenido |
 |---|---|
@@ -356,12 +362,18 @@ referencia con revisión y validación de G6 pendientes.
 | [`docs/modelo-datos.md`](docs/modelo-datos.md) / [`docs/modelo-datos.pdf`](docs/modelo-datos.pdf) | Diagrama entidad-relación, tablas, índices, migraciones y datos personales. |
 | [`docs/manual-operacion.md`](docs/manual-operacion.md) | Operación, variables de entorno, correos, respaldos, diagnóstico e instalación del agente de Everything en el PC del CLENA (HU-166). |
 | [`docs/everything-desarrollo.md`](docs/everything-desarrollo.md) | Entorno de Everything con documentos simulados: estructura del CLENA, Everything portable e instalado, fixtures, mock y sincronización con el backend (HU-137). |
-| [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía del personal del CLENA (en elaboración). |
+| [`docs/manual-usuario.md`](docs/manual-usuario.md) | Guía de uso para el personal y el administrador del CLENA. |
 | [`docs/sprint-planning.md`](docs/sprint-planning.md), [`docs/daily-scrum.md`](docs/daily-scrum.md), [`docs/sprint-review.md`](docs/sprint-review.md), [`docs/sprint-retrospective.md`](docs/sprint-retrospective.md) | Ceremonias y evidencias Scrum. |
 | [`docs/evidencias.md`](docs/evidencias.md) | Grabaciones y material recibido de G6. |
 | [`docs/automatizacion-tablero.md`](docs/automatizacion-tablero.md) | Automatización del tablero Scrum en GitHub. |
-| [`backend/README.md`](backend/README.md) | API, Swagger, pruebas y comandos del backend. |
-| [`frontend/README.md`](frontend/README.md) | Rutas, pantallas, accesibilidad, responsive y pruebas del frontend. |
+| [`docs/backend.md`](docs/backend.md) | API, formato de errores, Swagger, comandos y notas por HU del backend. |
+| [`docs/frontend.md`](docs/frontend.md) | Rutas, pantallas, accesibilidad, responsive, pruebas y estructura del frontend. |
+| [`docs/agente.md`](docs/agente.md) | Agente de sincronización con Everything: qué hace, cómo se prueba y cómo se construye el `.exe` (HU-166). |
+| [`docs/pantallas.md`](docs/pantallas.md) | Mapa de pantallas, wireframes aprobados y diferencias con la aplicación. |
+| [`docs/datos-personales.md`](docs/datos-personales.md) | Datos personales que se piden, su finalidad y quién los ve. |
+| [`docs/inception.md`](docs/inception.md) / [`docs/inception.pdf`](docs/inception.pdf) | Acta de Inception. |
+
+Los videos no se suben al repositorio: viven en SharePoint y se enlazan desde `evidencias.md` e `inception.md`.
 
 ## Solución de problemas
 
@@ -372,6 +384,8 @@ Mensaje similar a `Missing POSTGRES_DB in .env`. Falta el archivo `.env` o está
 ```bash
 cp .env.example .env
 ```
+
+Si el `.env` es anterior a HU-42, el mensaje es `Missing ADMIN_EMAIL in .env` o Mailpit no se levanta: agrega `COMPOSE_FILE`, `COMPOSE_PATH_SEPARATOR`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` como en `.env.example` y quita `SEED_ADMIN_PASSWORD`, que ya no se usa.
 
 ### Un puerto ya está en uso
 
@@ -415,18 +429,3 @@ Las imágenes de Docker no se actualizan solas:
 ```bash
 docker compose up -d --build
 ```
-
-## Contribuir
-
-1. Crea una rama desde `main` con el número del issue:
-   - `feat/<issue>-descripcion`
-   - `fix/<issue>-descripcion`
-   - `docs/<issue>-descripcion`
-2. Haz commits claros y enlaza el issue en el PR (`Closes #<issue>`).
-3. Antes de pedir revisión, ejecuta lint, pruebas y build del paquete que cambiaste.
-4. Abre el PR con la [plantilla del repositorio](.github/pull_request_template.md). Se requiere CI en verde y al menos una aprobación.
-5. Al crear la rama, la Action del tablero mueve el issue a **In Progress**; al abrir el PR, a **In review**; al fusionarlo, a **Done**.
-
-## Licencia y propiedad
-
-Proyecto académico del Grupo 1 para el curso Backend (Proyecto P4, «Soluciones para el CLENA»). La licencia y la propiedad del código están pendientes de definir con el CLENA y la universidad; hasta entonces, el repositorio se usa con fines educativos y de demostración.

@@ -88,7 +88,7 @@ test('registers, edits and reuses characterization through Nginx', async ({
   const login = await request.post('/api/v1/auth/login', {
     data: {
       email: 'personal1@example.com',
-      password: process.env.SEED_DEMO_PASSWORD ?? '1',
+      password: process.env.SEED_DEMO_PASSWORD ?? '12345678',
     },
   });
   expect(login.ok()).toBeTruthy();

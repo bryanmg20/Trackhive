@@ -37,6 +37,7 @@ const build = (found: { byUser?: Requester; byEmail?: Requester } = {}) => {
   const users: IUserRepository = {
     save: jest.fn(),
     findAll: jest.fn(),
+    findFirstByRole: jest.fn(),
     search: jest.fn(),
     findById,
     findByEmail,

@@ -4,6 +4,7 @@ import type {
   UserSearchCriteria,
   UserSearchResult,
 } from '../../src/users/domain/repositories/user.repository';
+import type { UserRole } from '../../src/users/domain/enums/user-role';
 
 /** Fake for unit and e2e tests (D-21). */
 export class InMemoryUserRepository implements IUserRepository {
@@ -26,6 +27,13 @@ export class InMemoryUserRepository implements IUserRepository {
   findByEmail(email: string): Promise<User | null> {
     const user = [...this.users.values()].find(
       (candidate) => candidate.email === email,
+    );
+    return Promise.resolve(user ?? null);
+  }
+
+  findFirstByRole(role: UserRole): Promise<User | null> {
+    const user = [...this.users.values()].find(
+      (candidate) => candidate.role === role,
     );
     return Promise.resolve(user ?? null);
   }

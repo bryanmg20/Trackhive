@@ -1,0 +1,48 @@
+# Development (HU-42): adds to docker-compose.yml the debug ports on
+# 127.0.0.1, Mailpit and the Everything mock, and serves the frontend over
+# plain HTTP on FRONTEND_PORT. .env.example loads it with COMPOSE_FILE, so
+# `docker compose up` starts everything. Never in production.
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:?Missing POSTGRES_PORT in .env}:5432"
+
+  backend:
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:?Missing BACKEND_PORT in .env}:3000"
+
+  # Development mail server (D-10): keeps the emails without sending them.
+  # Inbox at http://localhost:8025; the backend sends to mailpit:1025.
+  mailpit:
+    networks:
+      - trackhive-network
+    image: axllent/mailpit:v1.32.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+
+  # Mock of the Everything HTTP server over the simulated documents (HU-133),
+  # for those without Windows. Starts only with the profile:
+  #   docker compose --profile everything up -d
+  everything-mock:
+    profiles: ["everything"]
+    networks:
+      - trackhive-network
+    build:
+      context: .
+      dockerfile: dev/everything-mock/Dockerfile
+    restart: unless-stopped
+    environment:
+      EVERYTHING_USER: ${EVERYTHING_USER:-trackhive}
+      EVERYTHING_PASSWORD: ${EVERYTHING_PASSWORD:-trackhive-dev}
+    ports:
+      - "127.0.0.1:${EVERYTHING_MOCK_PORT:-8081}:8081"
+
+  # Plain HTTP and no certificate: it replaces the ports 80 and 443 of
+  # production
+  frontend:
+    environment:
+      FRONTEND_TLS: "off"
+    ports: !override
+      - "${FRONTEND_PORT:?Missing FRONTEND_PORT in .env}:80"

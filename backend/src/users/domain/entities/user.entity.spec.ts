@@ -202,6 +202,38 @@ describe('User staff accounts (HU-05)', () => {
     });
   });
 
+  describe('createInitialAdmin (HU-42)', () => {
+    it('creates an active ADMIN with generic names and no privacy consent', () => {
+      const user = User.createInitialAdmin({
+        id: 'admin-1',
+        email: '  ADMIN@CLENA.ORG ',
+        passwordHash: '$argon2id$hash',
+      });
+
+      expect(user).toMatchObject({
+        firstName: 'Administrador',
+        middleName: null,
+        lastName: 'Trackhive',
+        secondLastName: null,
+        email: 'admin@clena.org',
+        role: 'ADMIN',
+        active: true,
+        privacyPolicyAcceptedAt: null,
+        privacyPolicyVersion: null,
+      });
+    });
+
+    it('validates the email like any account', () => {
+      expect(() =>
+        User.createInitialAdmin({
+          id: 'admin-1',
+          email: 'no-es-correo',
+          passwordHash: '$argon2id$hash',
+        }),
+      ).toThrow(InvalidEmailError);
+    });
+  });
+
   describe('isStaff', () => {
     it('is false for a public account', () => {
       expect(new User(validProps()).isStaff()).toBe(false);
