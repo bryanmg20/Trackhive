@@ -477,7 +477,9 @@ Copy-Item agente.example.toml agente.toml
 notepad agente.toml
 ```
 
-Cambia solo estas claves. Los textos van **entre comillas simples** (`'...'`), así la barra invertida de Windows se lee tal cual.
+Hay que cambiar claves en **las dos secciones**, `[everything]` y `[trackhive]`. Las demás claves se quedan como vienen. Los textos van **entre comillas simples** (`'...'`), así la barra invertida de Windows se lee tal cual.
+
+**`[everything]`** depende del Everything que montaste en el paso 5. Usa **uno** de estos dos bloques.
 
 Con el **Everything portable** (5A):
 
@@ -487,20 +489,25 @@ url = 'http://127.0.0.1:8081'
 user = 'trackhive'
 password = 'trackhive-dev'
 # roots: no se cambian (ver abajo)
-
-[trackhive]
-url = 'http://127.0.0.1:3000'
-token = 'EL-MISMO-TOKEN-DEL-.env'
-poll_seconds = 10
 ```
 
-Con el **Everything instalado** (5B), cambia solo la sección `[everything]`:
+Con el **Everything instalado** (5B):
 
 ```toml
 [everything]
 url = 'http://127.0.0.1:8082'
 user = 'trackhive'
 password = 'TU-CLAVE'
+# roots: no se cambian (ver abajo)
+```
+
+**`[trackhive]`** es igual con los dos Everything y **hay que cambiarlo siempre**. El ejemplo trae `url = 'https://trackhive.example.org'`, una dirección que no existe: si se queda así, el agente termina con `Trackhive no responde en https://trackhive.example.org/: no se encontró el servidor (DNS)`.
+
+```toml
+[trackhive]
+url = 'http://127.0.0.1:3000'
+token = 'EL-MISMO-TOKEN-DEL-.env'
+poll_seconds = 10
 ```
 
 Qué es cada una:
@@ -728,7 +735,8 @@ Una sincronización que termina **con error** (Everything apagado, una raíz sin
 | `Everything rechazó el usuario o la contraseña (401)` | `everything.user` / `password` no coinciden con los del servidor HTTP de Everything |
 | `Everything no devolvió ninguna carpeta bajo <raíz>` | El árbol no está en `C:\trackhive\docs_simulados` (paso 4), Everything no lo indexa (5B, punto 2) o cambiaste `everything.roots` |
 | `Trackhive rechazó el token del agente (401 …)` | `trackhive.token` no es igual a `EVERYTHING_AGENT_TOKEN` del `.env`. Si cambiaste el `.env`, ejecuta `docker compose up -d` |
-| `Trackhive no responde …` | Docker no está arriba (`docker compose ps`) o `trackhive.url` no es `http://127.0.0.1:3000` |
+| `Trackhive no responde en https://trackhive.example.org/: no se encontró el servidor (DNS)` | En `agente.toml` quedó la `trackhive.url` del ejemplo. Cámbiala por `http://127.0.0.1:3000` (paso 6.2): esa sección se cambia con los dos Everything |
+| `Trackhive no responde …` (otra dirección) | Docker no está arriba (`docker compose ps`) o `trackhive.url` no es `http://127.0.0.1:3000` |
 | Cada paso del agente tarda unos 2 s | `trackhive.url` usa `localhost`; cámbialo por `127.0.0.1` |
 | El puerto 8081 está ocupado al arrancar el portable | Está corriendo el mock de Docker: `docker compose stop everything-mock` |
 | La pantalla se queda en «Pedida, esperando al agente» | Ningún agente está vigilando: arranca `--vigilar` (paso 8) o revisa que la tarea esté `Running` (paso 9) |
