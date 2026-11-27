@@ -1,5 +1,6 @@
 import {
   DEFAULT_RUN_TIMEOUT_MINUTES,
+  DEVELOPMENT_AGENT_TOKEN,
   loadEverythingSyncConfig,
   MIN_AGENT_TOKEN_LENGTH,
 } from './everything-sync.config';
@@ -37,6 +38,37 @@ describe('loadEverythingSyncConfig', () => {
         EVERYTHING_AGENT_TOKEN: 'x'.repeat(MIN_AGENT_TOKEN_LENGTH - 1),
       }),
     ).toThrow(/EVERYTHING_AGENT_TOKEN/);
+  });
+
+  it('acepta el token público de .env.example en desarrollo (RUN_SEED=true)', () => {
+    expect(
+      configFrom({
+        EVERYTHING_AGENT_TOKEN: DEVELOPMENT_AGENT_TOKEN,
+        RUN_SEED: 'true',
+      }).agentToken,
+    ).toBe(DEVELOPMENT_AGENT_TOKEN);
+  });
+
+  it.each([
+    ['RUN_SEED=false', 'false'],
+    ['sin RUN_SEED', undefined],
+  ])(
+    'no arranca con el token público de .env.example en producción (%s)',
+    (_case, runSeed) => {
+      expect(() =>
+        configFrom({
+          EVERYTHING_AGENT_TOKEN: ` ${DEVELOPMENT_AGENT_TOKEN} `,
+          RUN_SEED: runSeed,
+        }),
+      ).toThrow(/EVERYTHING_AGENT_TOKEN es el de \.env\.example/);
+    },
+  );
+
+  it('con RUN_SEED=false acepta un token propio', () => {
+    expect(
+      configFrom({ EVERYTHING_AGENT_TOKEN: TOKEN, RUN_SEED: 'false' })
+        .agentToken,
+    ).toBe(TOKEN);
   });
 
   it.each(['0', '-5', '1.5', 'media hora'])(

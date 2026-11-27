@@ -41,27 +41,34 @@ def parse(**sections: dict[str, Any]) -> Any:
     return parse_config(config_text(**sections), AGENT)
 
 
-class ExampleConfigTest(unittest.TestCase):
-    def test_the_example_has_no_secret_and_the_agent_refuses_it_as_it_is(self) -> None:
-        text = EXAMPLE_CONFIG.read_text(encoding='utf-8')
-        self.assertEqual(tomllib.loads(text)['trackhive']['token'], '')
-        with self.assertRaises(InvalidConfigError) as refused:
-            parse_config(text, AGENT)
-        self.assertIn('trackhive.token', str(refused.exception))
+def env_example_value(key: str) -> str:
+    for line in (AGENT.parent / '.env.example').read_text(encoding='utf-8').splitlines():
+        if line.startswith(f'{key}='):
+            return line.split('=', 1)[1]
+    raise AssertionError(f'{key} no está en .env.example')
 
-    def test_the_example_with_a_token_follows_the_contract_of_hu_137(self) -> None:
-        text = EXAMPLE_CONFIG.read_text(encoding='utf-8').replace("token = ''", f"token = '{TOKEN}'")
-        config = parse_config(text, AGENT)
-        self.assertEqual(config.everything.page_size, 200)
+
+class ExampleConfigTest(unittest.TestCase):
+    def test_the_example_works_as_it_is_against_docker_compose_and_the_portable_everything(self) -> None:
+        # Copied as it is, it reaches the Everything portable (or the mock) and
+        # the backend of docker compose with the public token of .env.example
+        config = parse_config(EXAMPLE_CONFIG.read_text(encoding='utf-8'), AGENT)
         self.assertEqual(config.everything.url, 'http://127.0.0.1:8081')
-        self.assertTrue(config.trackhive.url.startswith('https://'))
-        self.assertEqual(config.trackhive.token, TOKEN)
+        self.assertEqual((config.everything.user, config.everything.password), ('trackhive', 'trackhive-dev'))
+        self.assertEqual(config.everything.page_size, 200)
+        self.assertEqual(config.trackhive.url, f"http://127.0.0.1:{env_example_value('BACKEND_PORT')}")
+        self.assertEqual(config.trackhive.token, env_example_value('EVERYTHING_AGENT_TOKEN'))
         self.assertIsNone(config.trackhive.ca_file)
+
+    def test_the_example_token_is_the_public_one_of_development(self) -> None:
+        # The backend refuses it with RUN_SEED=false (everything-sync.config.ts)
+        token = tomllib.loads(EXAMPLE_CONFIG.read_text(encoding='utf-8'))['trackhive']['token']
+        self.assertIn('no-usar-en-produccion', token)
 
     def test_the_example_roots_are_the_funds_of_the_backend_convention(self) -> None:
         # The roots the backend parses (base + root): one missing would leave
         # its materials as «copia digital no encontrada»
-        text = EXAMPLE_CONFIG.read_text(encoding='utf-8').replace("token = ''", f"token = '{TOKEN}'")
+        text = EXAMPLE_CONFIG.read_text(encoding='utf-8')
         self.assertEqual(list(parse_config(text, AGENT).everything.roots), convention_roots())
 
     def test_the_real_configuration_is_ignored_by_git(self) -> None:
@@ -83,7 +90,7 @@ class DefaultsTest(unittest.TestCase):
 
     def test_the_example_says_how_often_it_asks_for_a_requested_run(self) -> None:
         # A key the example does not show would hardly ever be configured
-        text = EXAMPLE_CONFIG.read_text(encoding='utf-8').replace("token = ''", f"token = '{TOKEN}'")
+        text = EXAMPLE_CONFIG.read_text(encoding='utf-8')
         self.assertIn('poll_seconds', tomllib.loads(text)['trackhive'])
         self.assertEqual(parse_config(text, AGENT).trackhive.poll_seconds, 60)
 

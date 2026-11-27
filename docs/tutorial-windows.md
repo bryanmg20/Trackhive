@@ -20,7 +20,7 @@ Los pasos 0 a 4 y 6 a 11 son iguales para los dos. El paso 5 tiene una parte par
 - [Qué secretos vas a necesitar](#qué-secretos-vas-a-necesitar)
 - [Paso 0. Instalar las herramientas](#paso-0-instalar-las-herramientas)
 - [Paso 1. Clonar el repositorio](#paso-1-clonar-el-repositorio)
-- [Paso 2. Crear el `.env` y el token del agente](#paso-2-crear-el-env-y-el-token-del-agente)
+- [Paso 2. Crear el `.env`](#paso-2-crear-el-env)
 - [Paso 3. Levantar Trackhive con Docker](#paso-3-levantar-trackhive-con-docker)
 - [Paso 4. Generar las carpetas simuladas con el script](#paso-4-generar-las-carpetas-simuladas-con-el-script)
 - [Paso 5A. Everything portable](#paso-5a-everything-portable)
@@ -72,11 +72,11 @@ C:\trackhive\
 
 ## Qué secretos vas a necesitar
 
-Nadie tiene que pasarte ningún secreto. El único que hay que crear es el token del agente; el resto viene en la plantilla del `.env` o lo eliges tú:
+Nadie tiene que pasarte ningún secreto ni hay que generar ninguno: vienen en las plantillas del repositorio, con valores **solo para desarrollo**, o los eliges tú:
 
 | Secreto | De dónde sale | Dónde va |
 |---|---|---|
-| `EVERYTHING_AGENT_TOKEN` | Lo generas tú en el paso 2 (64 caracteres al azar) | En el `.env` (backend) **y** en `trackhive.token` del `agente.toml`. Tiene que ser **el mismo valor** en los dos |
+| `EVERYTHING_AGENT_TOKEN` | Ya viene en `.env.example` y en `agente.example.toml`: el mismo valor en los dos, público y solo para desarrollo | En el `.env` (backend) **y** en `trackhive.token` del `agente.toml`. Tiene que ser **el mismo valor** en los dos: si cambias uno, cambia el otro |
 | Usuario y contraseña de Everything | Portable: ya vienen en el `.ini` del repositorio (`trackhive` / `trackhive-dev`). Instalado: los eliges tú en el paso 5B | En Everything y en `everything.user` / `everything.password` del `agente.toml` |
 | Contraseñas de la base de datos, secretos JWT, usuarios de prueba | Ya vienen en `.env.example`, con valores **solo para desarrollo** | En el `.env` |
 
@@ -151,65 +151,17 @@ cd Trackhive
 
 A partir de aquí, «la carpeta del repositorio» es `%USERPROFILE%\Trackhive` (en PowerShell, `$HOME\Trackhive`).
 
-## Paso 2. Crear el `.env` y el token del agente
+## Paso 2. Crear el `.env`
 
-Todo en PowerShell, en la carpeta del repositorio.
+En PowerShell, en la carpeta del repositorio, crea el `.env` a partir de la plantilla:
 
-1. Crea el `.env` a partir de la plantilla:
+```powershell
+Copy-Item .env.example .env
+```
 
-   ```powershell
-   Copy-Item .env.example .env
-   ```
+No hay que cambiar nada: los valores de la plantilla sirven tal cual para desarrollo, también el token del agente.
 
-   Los valores de la plantilla sirven tal cual para desarrollo. Solo falta uno: el token del agente.
-
-2. Genera el token (64 caracteres hexadecimales al azar) y cópialo al portapapeles. Ejecuta estos cinco comandos uno tras otro, en la misma ventana:
-
-   Reserva 32 bytes:
-
-   ```powershell
-   $b = New-Object byte[] 32
-   ```
-
-   Llénalos al azar con el generador criptográfico de Windows:
-
-   ```powershell
-   [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
-   ```
-
-   Conviértelos en 64 caracteres hexadecimales:
-
-   ```powershell
-   $token = -join ($b | ForEach-Object { $_.ToString('x2') })
-   ```
-
-   Cópialo al portapapeles:
-
-   ```powershell
-   $token | Set-Clipboard
-   ```
-
-   Muéstralo en pantalla:
-
-   ```powershell
-   $token
-   ```
-
-3. Abre el `.env` con el Bloc de notas:
-
-   ```powershell
-   notepad .env
-   ```
-
-   Busca la línea `EVERYTHING_AGENT_TOKEN=` y pega el token justo después del `=`, sin espacios ni comillas. Guarda y cierra:
-
-   ```text
-   EVERYTHING_AGENT_TOKEN=3f9c0a…(64 caracteres)…e41b
-   ```
-
-   El mismo valor irá en el `agente.toml` en el paso 6. Si cierras la ventana, no lo pierdes: siempre puedes copiarlo del `.env`.
-
-Sin token, Trackhive funciona, pero la sincronización queda **desactivada**: los endpoints del agente responden 503 y la pantalla Sincronización lo dice. Un token de menos de 32 caracteres impide que el backend arranque.
+> **El token del agente ya viene puesto** (`EVERYTHING_AGENT_TOKEN=trackhive-dev-token-…`) y es el mismo que trae `agente.example.toml`, así que el agente funciona sin tocarlo. Es público y solo sirve en desarrollo: con `RUN_SEED=false` (producción) el backend se niega a arrancar con él. Si quieres uno propio, genéralo como en la [sección 10.5 del manual de operación](manual-operacion.md#105-rotar-el-token) y ponlo **en los dos archivos**. Si borras la línea, Trackhive funciona, pero la sincronización queda **desactivada**: los endpoints del agente responden 503 y la pantalla Sincronización lo dice.
 
 ## Paso 3. Levantar Trackhive con Docker
 
@@ -246,7 +198,7 @@ Abre <http://localhost:8080> e inicia sesión como administrador:
 
 (Son `ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD` del `.env`.)
 
-En el menú, abre **Sincronización**. Debe decir que todavía no hay sincronizaciones y tener el botón «Sincronizar ahora» disponible. Si dice que la integración con Everything está **desactivada**, el backend no recibió el token: revisa la línea del `.env` y ejecuta `docker compose up -d` para que el backend lo tome.
+En el menú, abre **Sincronización**. Debe decir que todavía no hay sincronizaciones y tener el botón «Sincronizar ahora» disponible. Si dice que la integración con Everything está **desactivada**, el backend no recibió el token: revisa que el `.env` tenga la línea `EVERYTHING_AGENT_TOKEN=` con el valor de `.env.example` (un `.env` copiado antes de que la plantilla lo trajera la tiene vacía) y ejecuta `docker compose up -d` para que el backend lo tome.
 
 Otras direcciones útiles:
 
@@ -471,27 +423,15 @@ Crea el `agente.toml` a partir del ejemplo:
 Copy-Item agente.example.toml agente.toml
 ```
 
-Ábrelo con el Bloc de notas:
+**Con el Everything portable (5A) ya está listo**, sin abrirlo: el ejemplo trae su servidor HTTP (`127.0.0.1:8081`, `trackhive` / `trackhive-dev`), las raíces del árbol simulado, el backend de Docker (`http://127.0.0.1:3000`) y el mismo token que el `.env.example`. Pasa al paso 7.
+
+**Con el Everything instalado (5B)** solo cambia la sección `[everything]`. Ábrelo con el Bloc de notas:
 
 ```powershell
 notepad agente.toml
 ```
 
-Hay que cambiar claves en **las dos secciones**, `[everything]` y `[trackhive]`. Las demás claves se quedan como vienen. Los textos van **entre comillas simples** (`'...'`), así la barra invertida de Windows se lee tal cual.
-
-**`[everything]`** depende del Everything que montaste en el paso 5. Usa **uno** de estos dos bloques.
-
-Con el **Everything portable** (5A):
-
-```toml
-[everything]
-url = 'http://127.0.0.1:8081'
-user = 'trackhive'
-password = 'trackhive-dev'
-# roots: no se cambian (ver abajo)
-```
-
-Con el **Everything instalado** (5B):
+Y pon el puerto y la contraseña que elegiste en el paso 5B. Los textos van **entre comillas simples** (`'...'`), así la barra invertida de Windows se lee tal cual:
 
 ```toml
 [everything]
@@ -501,25 +441,16 @@ password = 'TU-CLAVE'
 # roots: no se cambian (ver abajo)
 ```
 
-**`[trackhive]`** es igual con los dos Everything y **hay que cambiarlo siempre**. El ejemplo trae `url = 'https://trackhive.example.org'`, una dirección que no existe: si se queda así, el agente termina con `Trackhive no responde en https://trackhive.example.org/: no se encontró el servidor (DNS)`.
-
-```toml
-[trackhive]
-url = 'http://127.0.0.1:3000'
-token = 'EL-MISMO-TOKEN-DEL-.env'
-poll_seconds = 10
-```
-
-Qué es cada una:
+Qué trae el ejemplo:
 
 | Clave | Valor | Por qué |
 |---|---|---|
-| `everything.url` | `http://127.0.0.1:8081` (portable) o `:8082` (instalado) | El servidor HTTP de Everything. El agente solo acepta este mismo PC |
-| `everything.user`, `everything.password` | Los del servidor HTTP de Everything | Sin ellos Everything responde 401 |
+| `everything.url` | `http://127.0.0.1:8081` (portable). Con el instalado, `:8082` | El servidor HTTP de Everything. El agente solo acepta este mismo PC |
+| `everything.user`, `everything.password` | `trackhive` / `trackhive-dev`, los del portable | Sin los del servidor HTTP de Everything, responde 401 |
 | `everything.roots` | **Déjalas como vienen**: las tres raíces bajo `C:\trackhive\docs_simulados\Aha\…` | Son las mismas que espera el backend. Valen para los dos Everything porque el árbol está en la misma ruta. En el CLENA cambian a `Z:\Aha\…` o a la ruta de red |
 | `trackhive.url` | `http://127.0.0.1:3000` | El backend de Docker. Usa `127.0.0.1`, no `localhost`: con `localhost` Windows prueba primero IPv6 y cada petición tarda unos 2 s más. `http://` solo se acepta contra este PC; en el CLENA es `https://` |
-| `trackhive.token` | El `EVERYTHING_AGENT_TOKEN` del `.env` | El backend rechaza (401) cualquier otro |
-| `trackhive.poll_seconds` | `10` (opcional; por defecto 60) | Cada cuánto pregunta si alguien pidió «Sincronizar ahora». Con 10 la demo espera menos |
+| `trackhive.token` | El mismo de `.env.example` | El backend rechaza (401) cualquier otro: si cambiaste el del `.env`, pon aquí el mismo |
+| `trackhive.poll_seconds` | `60` | Cada cuánto pregunta si alguien pidió «Sincronizar ahora». Opcional: con `10` la demo del paso 8 espera menos |
 
 El resto de claves tiene valores por defecto que sirven; el archivo explica cada una.
 
@@ -576,7 +507,7 @@ El servidor no puede llamar al PC del CLENA, así que «Sincronizar ahora» deja
    .\trackhive-agente.exe --vigilar
    ```
 
-   Dice `Atendiendo «Sincronizar ahora»: se pregunta a Trackhive cada 10 s si hay una sincronización pedida` y se queda esperando.
+   Dice `Atendiendo «Sincronizar ahora»: se pregunta a Trackhive cada 60 s si hay una sincronización pedida` (o `cada 10 s`, si pusiste `poll_seconds = 10` en el paso 6.2) y se queda esperando.
 
 2. En <http://localhost:8080>, como administrador, abre **Sincronización**, pulsa **«Sincronizar ahora»** y confirma con **«Sí, sincronizar ahora»**. La pantalla muestra **«Pedida, esperando al agente»**.
 
@@ -727,15 +658,15 @@ Una sincronización que termina **con error** (Everything apagado, una raíz sin
 | El contenedor `frontend` se reinicia sin parar y `docker compose logs frontend` dice `40-trackhive-tls.sh: not found` | El script quedó con finales de línea de Windows (CRLF), en un clon anterior a la regla de `.gitattributes`. Actualiza el repositorio (`git pull`), borra el script con `Remove-Item frontend\nginx\40-trackhive-tls.sh`, vuelve a sacarlo con `git checkout -- frontend/nginx/40-trackhive-tls.sh` y reconstruye: `docker compose up -d --build frontend` |
 | `docker compose` dice `Missing … in .env` | Falta el `.env`: `Copy-Item .env.example .env` (paso 2) |
 | `docker compose` no conecta con Docker | Docker Desktop no está abierto o no terminó de arrancar (*Engine running*) |
-| La pantalla Sincronización dice que la integración está desactivada | El `.env` no tiene `EVERYTHING_AGENT_TOKEN`, o el backend arrancó antes de ponerlo: `docker compose up -d` |
-| El backend no arranca y su log habla del token | El token tiene menos de 32 caracteres. Genera otro con el paso 2 |
+| La pantalla Sincronización dice que la integración está desactivada | La línea `EVERYTHING_AGENT_TOKEN=` del `.env` está vacía (un `.env` copiado antes de que la plantilla trajera el token): copia el valor de `.env.example` y ejecuta `docker compose up -d` |
+| El backend no arranca y su log habla del token | El token tiene menos de 32 caracteres, o es el de `.env.example` con `RUN_SEED=false`. En desarrollo deja `RUN_SEED=true` y el token de la plantilla (paso 2) |
 | `python` no se reconoce o abre la Microsoft Store | Paso 0, punto 3: desactiva los alias o usa `py` |
 | El agente termina con código 2: `El agente no se ejecuta: …` | El `agente.toml` está mal. El mensaje dice qué: token de menos de 32 caracteres, `http://` contra algo que no es `127.0.0.1`, un texto sin comillas simples… |
 | `Everything no responde en …: rechazó la conexión` | Everything no está abierto, su servidor HTTP está apagado o el puerto de `everything.url` no es el suyo. Con el instalado, mira la nota del paso 5B sobre el servicio |
 | `Everything rechazó el usuario o la contraseña (401)` | `everything.user` / `password` no coinciden con los del servidor HTTP de Everything |
 | `Everything no devolvió ninguna carpeta bajo <raíz>` | El árbol no está en `C:\trackhive\docs_simulados` (paso 4), Everything no lo indexa (5B, punto 2) o cambiaste `everything.roots` |
-| `Trackhive rechazó el token del agente (401 …)` | `trackhive.token` no es igual a `EVERYTHING_AGENT_TOKEN` del `.env`. Si cambiaste el `.env`, ejecuta `docker compose up -d` |
-| `Trackhive no responde en https://trackhive.example.org/: no se encontró el servidor (DNS)` | En `agente.toml` quedó la `trackhive.url` del ejemplo. Cámbiala por `http://127.0.0.1:3000` (paso 6.2): esa sección se cambia con los dos Everything |
+| `Trackhive rechazó el token del agente (401 …)` | `trackhive.token` no es igual a `EVERYTHING_AGENT_TOKEN` del `.env`: pon el mismo en los dos (o vuelve a copiar las dos plantillas). Si cambiaste el `.env`, ejecuta `docker compose up -d` |
+| `Trackhive no responde en https://trackhive.example.org/: no se encontró el servidor (DNS)` | El `agente.toml` salió de un ejemplo anterior, que traía esa dirección. Vuelve a copiar `agente.example.toml` (paso 6.2) o cambia `trackhive.url` por `http://127.0.0.1:3000` |
 | `Trackhive no responde …` (otra dirección) | Docker no está arriba (`docker compose ps`) o `trackhive.url` no es `http://127.0.0.1:3000` |
 | Cada paso del agente tarda unos 2 s | `trackhive.url` usa `localhost`; cámbialo por `127.0.0.1` |
 | El puerto 8081 está ocupado al arrancar el portable | Está corriendo el mock de Docker: `docker compose stop everything-mock` |

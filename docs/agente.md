@@ -79,11 +79,10 @@ El job `agente` del CI las corre en Ubuntu y en Windows. En Windows además cons
 ## Probar contra el backend y el mock en Docker
 
 ```bash
-# En la raíz, con EVERYTHING_AGENT_TOKEN en el .env (openssl rand -hex 32)
+# En la raíz, con el .env copiado de .env.example: trae el mismo token que agente.example.toml
 docker compose --profile everything up -d --build backend everything-mock
 
-cp agent/agente.example.toml agent/agente.toml   # agente.toml no se sube (.gitignore)
-# En agent/agente.toml: [trackhive] url = 'http://127.0.0.1:3000' y token = el del .env
+cp agent/agente.example.toml agent/agente.toml   # sirve tal cual: el mock y http://127.0.0.1:3000 (no se sube, .gitignore)
 python agent/agente.py             # una sincronización
 python agent/agente.py --vigilar   # atiende «Sincronizar ahora» de http://localhost:8080/admin/sincronizacion
 ```

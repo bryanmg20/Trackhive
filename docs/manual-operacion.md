@@ -55,7 +55,10 @@ Edite el `.env` (sección 3):
    y `JWT_REFRESH_SECRET` (`openssl rand -hex 32` para cada uno),
    `ADMIN_EMAIL` y `ADMIN_PASSWORD` (sección 8).
 4. El servidor de correo real (`SMTP_*`, sección 9).
-5. `EVERYTHING_AGENT_TOKEN`, si ya se va a instalar el agente (sección 10).
+5. `EVERYTHING_AGENT_TOKEN`: el de `.env.example` es público, y con
+   `RUN_SEED=false` el backend no arranca con él. Genere uno
+   (`openssl rand -hex 32`) si ya se va a instalar el agente (sección 10), o
+   deje la línea vacía para desactivar la sincronización.
 
 Compruebe que solo quedan los servicios de producción (si aparece `mailpit`,
 el `.env` todavía tiene `COMPOSE_FILE`):
@@ -111,7 +114,7 @@ poder leerlo el administrador del servidor (`chmod 600 .env`).
 | SMTP_USER | Usuario del servidor de correo. Vacío si no pide inicio de sesión, como Mailpit | notificaciones@example.com | No |
 | SMTP_PASSWORD | Contraseña del servidor de correo | | No |
 | SMTP_FROM | Remitente de los correos | Trackhive <no-reply@example.com> | Sí |
-| EVERYTHING_AGENT_TOKEN | Token con el que el agente de Everything (HU-166) envía las carpetas a los endpoints de ingesta (HU-137). Al menos 32 caracteres: se genera con `openssl rand -hex 32` y se rota como dice la sección 10.5. El mismo valor va en `trackhive.token` de la configuración del agente (sección 10). Vacío: la sincronización está desactivada, esos endpoints responden 503 y la pantalla **Sincronización** lo indica con el botón «Sincronizar ahora» inactivo (HU-138) | | No |
+| EVERYTHING_AGENT_TOKEN | Token con el que el agente de Everything (HU-166) envía las carpetas a los endpoints de ingesta (HU-137). Al menos 32 caracteres: se genera con `openssl rand -hex 32` y se rota como dice la sección 10.5. El mismo valor va en `trackhive.token` de la configuración del agente (sección 10). El de `.env.example` es público, solo para desarrollo: con `RUN_SEED=false` el backend no arranca con él. Vacío: la sincronización está desactivada, esos endpoints responden 503 y la pantalla **Sincronización** lo indica con el botón «Sincronizar ahora» inactivo (HU-138) | | No |
 | EVERYTHING_RUN_TIMEOUT_MINUTES | Minutos sin recibir páginas tras los que una corrida de sincronización vence con error, sin marcar nada como no encontrado (HU-137) | 30 | No (30) |
 | FRONTEND_TLS | `on`: nginx sirve HTTPS en el 443 con el certificado de `TLS_CERT_DIR` y la cabecera HSTS, y el 80 solo redirige. `off`: HTTP en el 80, para un proxy de la universidad que ya pone HTTPS (sección 4.4) o para emitir el primer certificado | on | No (on) |
 | TLS_CERT_DIR | Carpeta del servidor con `fullchain.pem` y `privkey.pem` (sección 4) | ./deploy/tls | No (./deploy/tls) |
@@ -394,8 +397,8 @@ El agente es un programa de consola, `trackhive-agente.exe`, que se instala en e
    |---|---|
    | `everything.url`, `user`, `password` | Los del servidor HTTP de Everything, por ejemplo `'http://127.0.0.1:8081'`. Solo se acepta este mismo PC |
    | `everything.roots` | Las raíces de los fondos tal como las informa Everything: exactamente `base` + `root` de cada fondo de `backend/config/catalog-convention.json` en el servidor. En el CLENA, `base` deja de ser `C:\trackhive\docs_simulados` y pasa a ser `Z:\` o la ruta de red (`\\<servidor>\Multimedia`), según cómo indexe Everything; la raíz de notarías queda, por ejemplo, `'Z:\Aha\Fondo - Notarías\Notarías'`. **Una raíz que falte aquí deja todos sus materiales como «copia digital no encontrada».** Al revés, una raíz sin ninguna carpeta hace fallar cada corrida: un fondo que todavía no tiene carpetas no se pone. |
-   | `trackhive.url` | La dirección de Trackhive, con `https://`. El agente verifica su certificado y se niega a arrancar con `http://`, salvo contra `localhost` en desarrollo |
-   | `trackhive.token` | El mismo valor de `EVERYTHING_AGENT_TOKEN` en el `.env` del servidor (sección 3) |
+   | `trackhive.url` | **Hay que cambiarla:** el ejemplo trae `http://127.0.0.1:3000`, el backend de desarrollo. Va la dirección de Trackhive, con `https://`. El agente verifica su certificado y se niega a arrancar con `http://`, salvo contra este mismo PC en desarrollo |
+   | `trackhive.token` | **Hay que cambiarlo:** el ejemplo trae el token público de desarrollo. Va el mismo valor de `EVERYTHING_AGENT_TOKEN` en el `.env` del servidor (sección 3) |
 
    Las demás claves tienen valores por defecto que sirven: 30 s de espera por respuesta de Everything, 200 carpetas por página, hasta 5 minutos de espera a que Everything arranque, y 5 intentos hacia Trackhive. El archivo de ejemplo explica cada una.
 
@@ -464,7 +467,7 @@ Una corrida que termina con error nunca marca materiales como «copia digital no
 | `Las carpetas bajo <raíz> cambiaron mientras se leían` | Cerró la corrida con error: alguien creó o borró carpetas mientras se leía esa raíz por páginas, y una podía saltarse | Nada: la siguiente ejecución sincroniza. Si pasa seguido, programar la tarea a una hora en que no se esté copiando material |
 | `Everything no responde en …: no respondió en 30 s` | Cerró la corrida con error | Si pasa seguido (por ejemplo, mientras reindexa la unidad de red), subir `everything.timeout_seconds` |
 | `Everything rechazó el usuario o la contraseña (401)` | Cerró la corrida con error, sin esperar | Corregir `everything.user` y `everything.password` |
-| `Trackhive no responde …` o `Trackhive respondió 502/503/504` | Reintentó con espera creciente (5, 10, 20 y 40 s). Si no lo logró, cerró con error o, si Trackhive siguió sin responder, la dejó abierta: Trackhive la vence a los `EVERYTHING_RUN_TIMEOUT_MINUTES` (30) sin marcar nada | Revisar la conexión a internet y que Trackhive esté arriba. Si el cierre responde 504 en un catálogo grande, el proxy necesita más tiempo de espera para `/api/v1/everything/`: el nginx del frontend espera 300 s (sección 4.3); si hay un proxy de la universidad delante, también él (sección 4.4) |
+| `Trackhive no responde …` o `Trackhive respondió 502/503/504` | Reintentó con espera creciente (5, 10, 20 y 40 s). Si no lo logró, cerró con error o, si Trackhive siguió sin responder, la dejó abierta: Trackhive la vence a los `EVERYTHING_RUN_TIMEOUT_MINUTES` (30) sin marcar nada | Revisar la conexión a internet y que Trackhive esté arriba. Si la dirección del mensaje es `http://127.0.0.1:3000`, quedó la del ejemplo: poner la de Trackhive en `trackhive.url` (sección 10.2, paso 3). Si el cierre responde 504 en un catálogo grande, el proxy necesita más tiempo de espera para `/api/v1/everything/`: el nginx del frontend espera 300 s (sección 4.3); si hay un proxy de la universidad delante, también él (sección 4.4) |
 | `Trackhive rechazó el token del agente (401 …)` | Terminó sin reintentar | Poner en `trackhive.token` el `EVERYTHING_AGENT_TOKEN` del servidor |
 | `La sincronización está desactivada en Trackhive` (503) | Terminó sin reintentar | Configurar `EVERYTHING_AGENT_TOKEN` en el servidor |
 | `409 SYNC_RUN_ALREADY_RUNNING` | Terminó sin reintentar: ya hay una corrida en curso | Esperar a que termine. Una corrida cortada vence a los 30 minutos |
