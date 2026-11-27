@@ -5,7 +5,7 @@ test('refreshes through Nginx preserving filters, page and scroll', async ({ pag
   const login = await request.post('/api/v1/auth/login', {
     data: {
       email: 'personal1@example.com',
-      password: process.env.SEED_DEMO_PASSWORD ?? '12345678',
+      password: process.env.SEED_DEMO_PASSWORD ?? 'public12345678',
     },
   });
   expect(login.ok()).toBeTruthy();

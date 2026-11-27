@@ -43,7 +43,7 @@ const admin = (request: APIRequestContext) =>
   signIn(
     request,
     process.env.ADMIN_EMAIL ?? 'admin@example.com',
-    process.env.ADMIN_PASSWORD ?? '12345678',
+    process.env.ADMIN_PASSWORD ?? 'admin12345678',
   );
 
 const agentHeaders = { Authorization: `Bearer ${AGENT_TOKEN}` };
@@ -88,7 +88,7 @@ test('only ADMIN sees and asks for the sync: PERSONAL and PUBLICO get 403 throug
     const session = await signIn(
       request,
       email,
-      process.env.SEED_DEMO_PASSWORD ?? '12345678',
+      process.env.SEED_DEMO_PASSWORD ?? 'public12345678',
     );
     const headers = { Authorization: `Bearer ${session.accessToken}` };
     const status = await request.get('/api/v1/everything/sync-status', {

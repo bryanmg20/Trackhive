@@ -240,9 +240,9 @@ Abre <http://localhost:8080> e inicia sesión como administrador:
 
 | Rol | Correo | Contraseña |
 |---|---|---|
-| Administrador | `admin@example.com` | `12345678` |
-| Personal | `personal1@example.com` | `12345678` |
-| Público | `publico1@example.com` | `12345678` |
+| Administrador | `admin@example.com` | `admin12345678` |
+| Personal | `personal1@example.com` | `public12345678` |
+| Público | `publico1@example.com` | `public12345678` |
 
 (Son `ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD` del `.env`.)
 

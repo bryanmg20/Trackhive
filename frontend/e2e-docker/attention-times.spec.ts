@@ -8,7 +8,7 @@ test('ADMIN reads and filters attention times through Nginx; other roles receive
   const login = await request.post('/api/v1/auth/login', {
     data: {
       email: process.env.ADMIN_EMAIL ?? 'admin@example.com',
-      password: process.env.ADMIN_PASSWORD ?? '12345678',
+      password: process.env.ADMIN_PASSWORD ?? 'admin12345678',
     },
   });
   expect(login.ok(), await login.text()).toBeTruthy();
@@ -68,7 +68,7 @@ test('ADMIN reads and filters attention times through Nginx; other roles receive
   });
   for (const email of ['personal1@example.com', 'publico1@example.com']) {
     const signed = await request.post('/api/v1/auth/login', {
-      data: { email, password: process.env.SEED_DEMO_PASSWORD ?? '12345678' },
+      data: { email, password: process.env.SEED_DEMO_PASSWORD ?? 'public12345678' },
     });
     expect(signed.ok()).toBeTruthy();
     const { accessToken } = (await signed.json()) as { accessToken: string };

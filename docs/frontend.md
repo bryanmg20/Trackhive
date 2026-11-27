@@ -76,7 +76,7 @@ pnpm exec playwright test --config playwright.docker.config.ts
 ```
 
 La prueba crea una cuenta pública ficticia, un visitante y solicitudes locales.
-Usa `personal1@example.com` con contraseña `12345678`, o `SEED_DEMO_PASSWORD` del proceso.
+Usa `personal1@example.com` con contraseña `public12345678`, o `SEED_DEMO_PASSWORD` del proceso.
 Comprueba registro, precarga, edición persistida, reutilización sin repetir los
 campos y 401 sin token. Deja una captura de «Mi perfil» en `test-results/`.
 El catálogo y la finalidad pendiente de confirmar con CLENA están en
@@ -93,7 +93,7 @@ en la siguiente actualización. No se usan WebSocket ni SSE.
 
 La prueba de polling de `test:e2e:docker` requiere la semilla de demostración
 (`RUN_SEED=true`), al menos dos páginas de solicitudes y Chromium instalado.
-Usa `personal1@example.com`, con contraseña `12345678` o la variable
+Usa `personal1@example.com`, con contraseña `public12345678` o la variable
 `SEED_DEMO_PASSWORD` del proceso que ejecuta la prueba. Crea una solicitud
 ficticia en la base local y comprueba una actualización real de 30 segundos,
 sin simular la API.
@@ -323,8 +323,8 @@ con los datos JSON sobre PostgreSQL real y comprueba 401/403.
 Con Docker iniciado desde la raíz con `docker compose up -d --build`, ejecutar
 desde `frontend` `pnpm test:e2e:docker report-export.spec.ts`. Usa el
 administrador inicial (`ADMIN_EMAIL` / `ADMIN_PASSWORD`, por defecto local
-`admin@example.com` y `12345678`) y las cuentas demo de personal y público
-(`SEED_DEMO_PASSWORD`, por defecto local `12345678`).
+`admin@example.com` y `admin12345678`) y las cuentas demo de personal y público
+(`SEED_DEMO_PASSWORD`, por defecto local `public12345678`).
 No crea solicitudes. Guarda los CSV y capturas de ambas pantallas en
 `test-results/` usando el frontend servido por nginx en `localhost:8080`.
 
@@ -352,7 +352,7 @@ Con `docker compose up -d --build` iniciado desde la raíz, ejecutar desde
 inicial (`ADMIN_EMAIL`, por defecto `admin@example.com`) y las cuentas demo de
 personal/público para comprobar los 403, sin crear solicitudes. Guarda capturas
 de escritorio y móvil en `test-results/`. Usa las contraseñas `ADMIN_PASSWORD` y
-`SEED_DEMO_PASSWORD` del entorno de la prueba (por defecto local: `12345678`).
+`SEED_DEMO_PASSWORD` del entorno de la prueba (por defecto local: `admin12345678` y `public12345678`).
 
 ### Disponible directo con copia digital (HU-139)
 
@@ -431,7 +431,7 @@ pnpm test:e2e:docker calendar.spec.ts
 
 Esta última prueba usa `http://localhost:8080`, la API real a través de nginx
 y la cuenta demo `personal1@example.com`. Requiere el seed y la contraseña
-`SEED_DEMO_PASSWORD` (por defecto local `12345678`). Crea cuatro solicitudes y sus
+`SEED_DEMO_PASSWORD` (por defecto local `public12345678`). Crea cuatro solicitudes y sus
 citas en una fecha futura; conserva los registros para revisión manual y
 adjunta sus identificadores al reporte. Guarda capturas del mes, del diálogo
 y de la agenda móvil en `test-results/`. Las pruebas del navegador también

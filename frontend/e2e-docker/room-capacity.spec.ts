@@ -23,15 +23,15 @@ test('configures room daily capacity through Nginx and enforces ADMIN permission
 
   const adminSession = await loginAs(
     process.env.ADMIN_EMAIL ?? 'admin@example.com',
-    process.env.ADMIN_PASSWORD ?? '12345678',
+    process.env.ADMIN_PASSWORD ?? 'admin12345678',
   );
   const personalSession = await loginAs(
     'personal1@example.com',
-    process.env.SEED_DEMO_PASSWORD ?? '12345678',
+    process.env.SEED_DEMO_PASSWORD ?? 'public12345678',
   );
   const publicSession = await loginAs(
     'publico1@example.com',
-    process.env.SEED_DEMO_PASSWORD ?? '12345678',
+    process.env.SEED_DEMO_PASSWORD ?? 'public12345678',
   );
 
   // Save current capacity so we restore it at the end of the test
