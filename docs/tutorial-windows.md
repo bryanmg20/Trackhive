@@ -76,7 +76,7 @@ Nadie tiene que pasarte ningún secreto ni hay que generar ninguno: vienen en la
 
 | Secreto | De dónde sale | Dónde va |
 |---|---|---|
-| `EVERYTHING_AGENT_TOKEN` | Ya viene en `.env.example` y en `agente.example.toml`: el mismo valor en los dos, público y solo para desarrollo | En el `.env` (backend) **y** en `trackhive.token` del `agente.toml`. Tiene que ser **el mismo valor** en los dos: si cambias uno, cambia el otro |
+| `EVERYTHING_AGENT_TOKEN` | Ya viene en `.env.example` y en `agente.example.toml`: el mismo valor en los dos, público y solo para desarrollo. Si prefieres, generas uno propio en el paso 2 | En el `.env` (backend) **y** en `trackhive.token` del `agente.toml`. Tiene que ser **el mismo valor** en los dos: si cambias uno, cambia el otro |
 | Usuario y contraseña de Everything | Portable: ya vienen en el `.ini` del repositorio (`trackhive` / `trackhive-dev`). Instalado: los eliges tú en el paso 5B | En Everything y en `everything.user` / `everything.password` del `agente.toml` |
 | Contraseñas de la base de datos, secretos JWT, usuarios de prueba | Ya vienen en `.env.example`, con valores **solo para desarrollo** | En el `.env` |
 
@@ -161,7 +161,57 @@ Copy-Item .env.example .env
 
 No hay que cambiar nada: los valores de la plantilla sirven tal cual para desarrollo, también el token del agente.
 
-> **El token del agente ya viene puesto** (`EVERYTHING_AGENT_TOKEN=trackhive-dev-token-…`) y es el mismo que trae `agente.example.toml`, así que el agente funciona sin tocarlo. Es público y solo sirve en desarrollo: con `RUN_SEED=false` (producción) el backend se niega a arrancar con él. Si quieres uno propio, genéralo como en la [sección 10.5 del manual de operación](manual-operacion.md#105-rotar-el-token) y ponlo **en los dos archivos**. Si borras la línea, Trackhive funciona, pero la sincronización queda **desactivada**: los endpoints del agente responden 503 y la pantalla Sincronización lo dice.
+> **El token del agente ya viene puesto** (`EVERYTHING_AGENT_TOKEN=trackhive-dev-token-…`) y es el mismo que trae `agente.example.toml`, así que el agente funciona sin tocarlo. Es público y solo sirve en desarrollo: con `RUN_SEED=false` (producción) el backend se niega a arrancar con él. Si borras la línea, Trackhive funciona, pero la sincronización queda **desactivada**: los endpoints del agente responden 503 y la pantalla Sincronización lo dice.
+
+### Opcional: generar tu propio token
+
+Si prefieres no usar el token de la plantilla, genera uno. Si no, salta al paso 3.
+
+1. Genera el token (64 caracteres hexadecimales al azar) y cópialo al portapapeles. Ejecuta estos cinco comandos uno tras otro, en la misma ventana:
+
+   Reserva 32 bytes:
+
+   ```powershell
+   $b = New-Object byte[] 32
+   ```
+
+   Llénalos al azar con el generador criptográfico de Windows:
+
+   ```powershell
+   [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+   ```
+
+   Conviértelos en 64 caracteres hexadecimales:
+
+   ```powershell
+   $token = -join ($b | ForEach-Object { $_.ToString('x2') })
+   ```
+
+   Cópialo al portapapeles:
+
+   ```powershell
+   $token | Set-Clipboard
+   ```
+
+   Muéstralo en pantalla:
+
+   ```powershell
+   $token
+   ```
+
+2. Abre el `.env` con el Bloc de notas:
+
+   ```powershell
+   notepad .env
+   ```
+
+   Busca la línea `EVERYTHING_AGENT_TOKEN=`, borra el valor de la plantilla y pega el token justo después del `=`, sin espacios ni comillas. Guarda y cierra:
+
+   ```text
+   EVERYTHING_AGENT_TOKEN=3f9c0a…(64 caracteres)…e41b
+   ```
+
+3. **El mismo valor va en `trackhive.token` del `agente.toml`** en el paso 6.2: si no lo cambias ahí también, el backend rechaza al agente (401). Si cierras la ventana, no lo pierdes: siempre puedes copiarlo del `.env`.
 
 ## Paso 3. Levantar Trackhive con Docker
 
@@ -423,23 +473,32 @@ Crea el `agente.toml` a partir del ejemplo:
 Copy-Item agente.example.toml agente.toml
 ```
 
-**Con el Everything portable (5A) ya está listo**, sin abrirlo: el ejemplo trae su servidor HTTP (`127.0.0.1:8081`, `trackhive` / `trackhive-dev`), las raíces del árbol simulado, el backend de Docker (`http://127.0.0.1:3000`) y el mismo token que el `.env.example`. Pasa al paso 7.
+**Con el Everything portable (5A) y el token de la plantilla, ya está listo**, sin abrirlo: el ejemplo trae su servidor HTTP (`127.0.0.1:8081`, `trackhive` / `trackhive-dev`), las raíces del árbol simulado, el backend de Docker (`http://127.0.0.1:3000`) y el mismo token que el `.env.example`. Pasa al paso 7.
 
-**Con el Everything instalado (5B)** solo cambia la sección `[everything]`. Ábrelo con el Bloc de notas:
+Si usas el **Everything instalado (5B)** o **generaste tu propio token** en el paso 2, ábrelo con el Bloc de notas:
 
 ```powershell
 notepad agente.toml
 ```
 
-Y pon el puerto y la contraseña que elegiste en el paso 5B. Los textos van **entre comillas simples** (`'...'`), así la barra invertida de Windows se lee tal cual:
+Los textos van **entre comillas simples** (`'...'`), así la barra invertida de Windows se lee tal cual. Cambia solo lo que te toca:
 
-```toml
-[everything]
-url = 'http://127.0.0.1:8082'
-user = 'trackhive'
-password = 'TU-CLAVE'
-# roots: no se cambian (ver abajo)
-```
+- **Everything instalado (5B):** en `[everything]`, el puerto y la contraseña que elegiste en el paso 5B.
+
+  ```toml
+  [everything]
+  url = 'http://127.0.0.1:8082'
+  user = 'trackhive'
+  password = 'TU-CLAVE'
+  # roots: no se cambian (ver abajo)
+  ```
+
+- **Token propio (paso 2):** en `[trackhive]`, el mismo valor que pusiste en `EVERYTHING_AGENT_TOKEN` del `.env`.
+
+  ```toml
+  [trackhive]
+  token = 'EL-MISMO-TOKEN-DEL-.env'
+  ```
 
 Qué trae el ejemplo:
 
