@@ -44,14 +44,17 @@ roots = [
 ]
 
 [trackhive]
-# Dirección de Trackhive, con https://: el agente verifica su certificado.
-# Solo en desarrollo se acepta http:// contra este mismo PC
-# (http://127.0.0.1:3000 con docker compose).
-url = 'https://trackhive.example.org'
+# Dirección de Trackhive. Este valor es el backend de docker compose en este
+# mismo PC: http:// solo se acepta así, en desarrollo. En el CLENA va la
+# dirección con https:// (por ejemplo, 'https://trackhive.example.org') y el
+# agente verifica su certificado.
+url = 'http://127.0.0.1:3000'
 
 # El mismo valor de EVERYTHING_AGENT_TOKEN en el servidor de Trackhive, de al
-# menos 32 caracteres (openssl rand -hex 32). Vacío: el agente no arranca.
-token = ''
+# menos 32 caracteres y sin espacios. Este es el de .env.example, público y
+# solo para desarrollo: en el CLENA va el del servidor (openssl rand -hex 32).
+# Vacío: el agente no arranca.
+token = 'trackhive-dev-token-solo-desarrollo-no-usar-en-produccion'
 
 # Segundos que espera la respuesta al iniciar la corrida y a cada página.
 timeout_seconds = 60

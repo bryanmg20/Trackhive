@@ -293,22 +293,20 @@ El servidor no puede llamar al PC del CLENA, así que «Sincronizar ahora» deja
 
 | Variable | Qué hace |
 |---|---|
-| `EVERYTHING_AGENT_TOKEN` | Token del agente, de al menos 32 caracteres (`openssl rand -hex 32`). Va en el `.env` del servidor y en la configuración del agente, **nunca en el repositorio**. Vacío: la integración está desactivada y los endpoints responden **503** `EVERYTHING_SYNC_DISABLED` sin aceptar nada. Un token más corto detiene el arranque. |
+| `EVERYTHING_AGENT_TOKEN` | Token del agente, de al menos 32 caracteres (`openssl rand -hex 32`). Va en el `.env` del servidor y en la configuración del agente. `.env.example` y `agent/agente.example.toml` traen el mismo token público, solo para desarrollo: con `RUN_SEED=false` el backend no arranca con él. Un token real **nunca va en el repositorio**. Vacío: la integración está desactivada y los endpoints responden **503** `EVERYTHING_SYNC_DISABLED` sin aceptar nada. Un token más corto detiene el arranque. |
 | `EVERYTHING_RUN_TIMEOUT_MINUTES` | Minutos sin páginas tras los que una corrida vence. Por defecto, 30. |
 
 La convención de carpetas (raíces, patrones, tipos y exclusiones) se lee de `backend/config/catalog-convention.json` al arrancar. Un error en ese archivo detiene el arranque (sección 2).
 
 ### Probar con el agente
 
-El agente (HU-166) hace la corrida completa contra el backend y el mock en Docker. Por defecto el token está vacío y la sincronización desactivada, así que primero se arranca el backend con uno:
+El agente (HU-166) hace la corrida completa contra el backend y el mock en Docker. `.env.example` y `agent/agente.example.toml` traen el mismo token de desarrollo, y el ejemplo del agente apunta al mock (`127.0.0.1:8081`, con su usuario y contraseña) y al backend de Docker (`http://127.0.0.1:3000`), así que basta copiarlos:
 
 ```bash
-# En el .env: EVERYTHING_AGENT_TOKEN=<openssl rand -hex 32>
-docker compose --profile everything up -d --build backend everything-mock
+docker compose --profile everything up -d --build backend everything-mock   # con el .env copiado de .env.example
 
 pip install -r agent/requirements.txt
 cp agent/agente.example.toml agent/agente.toml   # agente.toml no se sube (.gitignore)
-# En agent/agente.toml: [trackhive] url = 'http://127.0.0.1:3000' y token = el EVERYTHING_AGENT_TOKEN del .env
 python agent/agente.py
 ```
 

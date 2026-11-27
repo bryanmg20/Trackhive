@@ -110,7 +110,8 @@ Estas instrucciones están pensadas para un **clon limpio** del repositorio.
 
 - [Git](https://git-scm.com/).
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) con Docker Compose **2.24 o superior** (el comando `docker compose`). En Windows o macOS, Docker Desktop debe estar iniciado.
-- Puertos libres: `8080` (frontend), `3000` (API), `5432` (PostgreSQL), `8025` y `1025` (Mailpit). Si alguno está ocupado, se cambia en el `.env` (ver [Solución de problemas](#solución-de-problemas)).
+- [Python](https://www.python.org/downloads/) **3.11 o superior**, para el agente que sincroniza el catálogo con Everything ([último paso](#sincroniza-el-catálogo-con-everything)).
+- Puertos libres: `8080` (frontend), `3000` (API), `5432` (PostgreSQL), `8025` y `1025` (Mailpit) y `8081` (mock de Everything). Si alguno está ocupado, se cambia en el `.env` (ver [Solución de problemas](#solución-de-problemas)).
 
 No hace falta instalar Node.js, pnpm ni PostgreSQL para levantar el sistema con Docker.
 
@@ -165,14 +166,67 @@ curl http://localhost:3000/api/v1/health
 
 También puedes abrir el frontend en <http://localhost:8080> y la documentación interactiva de la API (Swagger) en <http://localhost:3000/docs>.
 
+### Sincroniza el catálogo con Everything
+
+Con lo anterior la aplicación funciona, pero ningún material tiene todavía **copia digital** y la pantalla Sincronización no tiene ninguna sincronización. En el CLENA eso lo hace un agente instalado en el PC donde corre *Everything*: le envía a Trackhive las carpetas de las copias digitales. Aquí el agente corre en tu PC contra un **mock de Everything** en Docker, con un árbol de carpetas simuladas. Sirve en Windows, Linux o macOS y no hace falta instalar Everything.
+
+Desde la raíz del repositorio, con Python 3.11 o superior:
+
+```bash
+# 1. Agrega el mock de Everything (perfil everything) a lo que ya está arriba
+docker compose --profile everything up -d --build
+```
+
+```bash
+# 2. Instala la única dependencia del agente
+python -m pip install -r agent/requirements.txt
+```
+
+```bash
+# 3. Crea la configuración del agente. Sirve tal cual: apunta al mock y al
+#    backend de Docker, con el mismo token que trae .env.example
+cp agent/agente.example.toml agent/agente.toml
+```
+
+```bash
+# 4. Sincroniza una vez. Termina con «Corrida … completa con 3 páginas: 117 carpetas hoja: …»
+python agent/agente.py
+```
+
+```bash
+# 5. Deja el agente atendiendo el botón «Sincronizar ahora» de la web.
+#    Se queda corriendo: déjalo en esta terminal (Ctrl+C lo detiene)
+python agent/agente.py --vigilar
+```
+
+(En PowerShell, `cp` también funciona. Si `python` no se reconoce en Windows, usa `py`.)
+
+> **Sin el paso 5, «Sincronizar ahora» se queda en «Pedida, esperando al agente».** El servidor no puede llamar al PC donde está Everything: el botón deja la sincronización pedida y el agente, que pregunta cada minuto, la toma. En el CLENA eso lo hace una tarea programada de Windows; aquí, el `--vigilar` del paso 5.
+
+Comprueba en <http://localhost:8080>, como administrador (`admin@example.com` / `admin12345678`):
+
+- **Sincronización** muestra la sincronización del paso 4: cuántas carpetas recibió y cuándo se comunicó el agente. Pulsa **«Sincronizar ahora»** y confirma: la pantalla pasa a «Pedida, esperando al agente» y, en menos de un minuto, muestra sola el resultado nuevo.
+- En **Archivo**, al buscar `1931` aparecen los materiales de la Notaría Primera de Barranquilla con **Copia digital: Sí** y el nombre de su carpeta.
+
+El agente escribe cada paso en la consola, en `agent/logs/agente.log` (paso 4) y en `agent/logs/vigilancia.log` (paso 5).
+
+| Si pasa esto… | Solución |
+|---|---|
+| La pantalla se queda en «Pedida, esperando al agente» | Ningún agente está atendiendo: ejecuta el paso 5 y déjalo corriendo. Al arrancar toma la que está pedida |
+| `La sincronización está desactivada en Trackhive` (503) | Tu `.env` es anterior a que la plantilla trajera el token: copia la línea `EVERYTHING_AGENT_TOKEN=` de `.env.example` y ejecuta `docker compose up -d` |
+| `Trackhive rechazó el token del agente (401 …)` | `trackhive.token` de `agent/agente.toml` no es igual a `EVERYTHING_AGENT_TOKEN` del `.env`: pon el mismo en los dos |
+| `Everything no responde en http://127.0.0.1:8081…` | El mock no está arriba: repite el paso 1 con `--profile everything` (`docker compose ps` debe mostrar `everything-mock`) |
+
+Para probar con un **Everything real** en Windows (portable o instalado), con las tareas programadas como en el CLENA, sigue el [tutorial de Windows](docs/tutorial-windows.md). Cómo funciona el agente: [docs/agente.md](docs/agente.md) y [docs/everything-desarrollo.md](docs/everything-desarrollo.md).
+
 ### Detener y reiniciar
 
 ```bash
-# Detiene los contenedores sin borrar los datos
-docker compose down
+# Detiene los contenedores sin borrar los datos (--profile everything también detiene el mock)
+docker compose --profile everything down
 
 # Detiene y borra también el volumen de PostgreSQL (reinicia la base desde cero)
-docker compose down -v
+docker compose --profile everything down -v
 
 # Reconstruye después de cambiar código o dependencias
 docker compose up -d --build
@@ -226,7 +280,7 @@ El archivo `.env` se crea copiando [`.env.example`](.env.example) y **no se sube
 | `SMTP_USER` | Usuario SMTP. Vacío si el servidor no pide autenticación | *(vacío)* |
 | `SMTP_PASSWORD` | Contraseña SMTP | *(vacío)* |
 | `SMTP_FROM` | Remitente de los correos | `"Trackhive <no-reply@example.com>"` |
-| `EVERYTHING_AGENT_TOKEN` | Token con el que el agente de Everything (HU-166) llama a los endpoints de ingesta (HU-137). Vacío: la sincronización está desactivada, esos endpoints responden 503 y la pantalla Sincronización lo indica (HU-138). Mínimo 32 caracteres (`openssl rand -hex 32`); nunca se sube al repositorio ([guía](docs/everything-desarrollo.md#7-sincronización-con-el-backend-hu-137)) | *(vacío)* |
+| `EVERYTHING_AGENT_TOKEN` | Token con el que el agente de Everything (HU-166) llama a los endpoints de ingesta (HU-137). Vacío: la sincronización está desactivada, esos endpoints responden 503 y la pantalla Sincronización lo indica (HU-138). Mínimo 32 caracteres (`openssl rand -hex 32`). El de la plantilla es público y es el mismo de `agent/agente.example.toml`, para que el agente funcione en desarrollo sin cambiarlo; con `RUN_SEED=false` el backend no arranca con él. Un token real nunca se sube al repositorio ([guía](docs/everything-desarrollo.md#7-sincronización-con-el-backend-hu-137)) | `trackhive-dev-token-solo-desarrollo-no-usar-en-produccion` |
 | `EVERYTHING_RUN_TIMEOUT_MINUTES` | Minutos sin recibir páginas tras los que una corrida de sincronización vence con error | `30` |
 | `EVERYTHING_USER` | Usuario del mock de Everything. El backend no lo usa; el agente (HU-166) lleva el de Everything en su `agente.toml` | `trackhive` |
 | `EVERYTHING_PASSWORD` | Contraseña del mock de Everything. El backend no la usa; el agente lleva la suya en `agente.toml` | `trackhive-dev` |
