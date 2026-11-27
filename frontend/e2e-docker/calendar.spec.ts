@@ -8,7 +8,7 @@ test('shows a complete busy day through Nginx and the real backend', async ({
   const login = await request.post('/api/v1/auth/login', {
     data: {
       email: 'personal1@example.com',
-      password: process.env.SEED_DEMO_PASSWORD ?? '12345678',
+      password: process.env.SEED_DEMO_PASSWORD ?? 'public12345678',
     },
   });
   expect(login.ok()).toBeTruthy();
@@ -120,7 +120,7 @@ test('HU-21 · reschedules and cancels an appointment from the calendar through 
   const login = await request.post('/api/v1/auth/login', {
     data: {
       email: 'personal1@example.com',
-      password: process.env.SEED_DEMO_PASSWORD ?? '12345678',
+      password: process.env.SEED_DEMO_PASSWORD ?? 'public12345678',
     },
   });
   expect(login.ok()).toBeTruthy();
@@ -133,7 +133,7 @@ test('HU-21 · reschedules and cancels an appointment from the calendar through 
   const publicLogin = await request.post('/api/v1/auth/login', {
     data: {
       email: 'publico1@example.com',
-      password: process.env.SEED_DEMO_PASSWORD ?? '12345678',
+      password: process.env.SEED_DEMO_PASSWORD ?? 'public12345678',
     },
   });
   expect(publicLogin.ok()).toBeTruthy();
