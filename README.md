@@ -189,21 +189,30 @@ cp agent/agente.example.toml agent/agente.toml
 ```
 
 ```bash
-# 4. Sincroniza
+# 4. Sincroniza una vez. Termina con «Corrida … completa con 3 páginas: 117 carpetas hoja: …»
 python agent/agente.py
+```
+
+```bash
+# 5. Deja el agente atendiendo el botón «Sincronizar ahora» de la web.
+#    Se queda corriendo: déjalo en esta terminal (Ctrl+C lo detiene)
+python agent/agente.py --vigilar
 ```
 
 (En PowerShell, `cp` también funciona. Si `python` no se reconoce en Windows, usa `py`.)
 
-El agente escribe cada paso en la consola y en `agent/logs/agente.log`, y termina con `Corrida … completa con 3 páginas: 117 carpetas hoja: …`. Después, en <http://localhost:8080> como administrador (`admin@example.com` / `admin12345678`):
+> **Sin el paso 5, «Sincronizar ahora» se queda en «Pedida, esperando al agente».** El servidor no puede llamar al PC donde está Everything: el botón deja la sincronización pedida y el agente, que pregunta cada minuto, la toma. En el CLENA eso lo hace una tarea programada de Windows; aquí, el `--vigilar` del paso 5.
 
-- **Sincronización** muestra la última sincronización, cuántas carpetas recibió y cuándo se comunicó el agente.
+Comprueba en <http://localhost:8080>, como administrador (`admin@example.com` / `admin12345678`):
+
+- **Sincronización** muestra la sincronización del paso 4: cuántas carpetas recibió y cuándo se comunicó el agente. Pulsa **«Sincronizar ahora»** y confirma: la pantalla pasa a «Pedida, esperando al agente» y, en menos de un minuto, muestra sola el resultado nuevo.
 - En **Archivo**, al buscar `1931` aparecen los materiales de la Notaría Primera de Barranquilla con **Copia digital: Sí** y el nombre de su carpeta.
 
-**«Sincronizar ahora» desde la web.** Deja el agente vigilando en una terminal con `python agent/agente.py --vigilar`. En **Sincronización**, pulsa «Sincronizar ahora» y confirma. En menos de un minuto el agente la toma y la pantalla muestra sola el resultado. Ctrl+C detiene el agente.
+El agente escribe cada paso en la consola, en `agent/logs/agente.log` (paso 4) y en `agent/logs/vigilancia.log` (paso 5).
 
-| Si el agente dice… | Solución |
+| Si pasa esto… | Solución |
 |---|---|
+| La pantalla se queda en «Pedida, esperando al agente» | Ningún agente está atendiendo: ejecuta el paso 5 y déjalo corriendo. Al arrancar toma la que está pedida |
 | `La sincronización está desactivada en Trackhive` (503) | Tu `.env` es anterior a que la plantilla trajera el token: copia la línea `EVERYTHING_AGENT_TOKEN=` de `.env.example` y ejecuta `docker compose up -d` |
 | `Trackhive rechazó el token del agente (401 …)` | `trackhive.token` de `agent/agente.toml` no es igual a `EVERYTHING_AGENT_TOKEN` del `.env`: pon el mismo en los dos |
 | `Everything no responde en http://127.0.0.1:8081…` | El mock no está arriba: repite el paso 1 con `--profile everything` (`docker compose ps` debe mostrar `everything-mock`) |
